@@ -1,1 +1,3 @@
-struct SwiftFulcrum {}
+struct SwiftFulcrum {
+    let client: Client
+}
