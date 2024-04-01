@@ -1,12 +1,15 @@
 import Foundation
+import Combine
 
 extension Storage {
-    class ResultBox<Result: FulcrumRegularResponseResultInitializable>: Decodable {
-        var results: [UUID: Result?] = [:]
+    class ResultBox<Result: FulcrumRegularResponseResultInitializable> {
+        var results: [UUID: Result?] = .init()
+        var publisher: PassthroughSubject<UUID, Never> = .init()
         
         func store(result: Result?, for id: UUID) throws {
             guard self.results[id] == nil else { throw Storage.Error.resultExistence(issue: .alreadyExists, id: id) }
             self.results[id] = result
+            publisher.send(id)
         }
         
         func getResult(for id: UUID) throws -> Result? {

@@ -10,8 +10,18 @@ extension Client: ClientWebSocketMessagable {
     }
 }
 
-extension Client: ClientEventSubscribable {
-    func setupSubscriptions() {
+extension Client: ClientWebSocketEventHandlable {
+    func handleResponseData(_ data: Data) {
+        do {
+            try self.jsonRPC.storeResponse(from: data)
+        } catch {
+            print("While storing data(\(String(data: data, encoding: .utf8)!), we have a JSONRPC error: \(error)")
+        }
+    }
+}
+
+extension Client: ClientWebSocketEventSubscribable {
+    func setupWebSocketSubscriptions() {
         webSocket.receivedData
             .sink { [weak self] data in
                 self?.handleResponseData(data)
