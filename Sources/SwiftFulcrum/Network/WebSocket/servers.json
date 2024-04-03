@@ -1,0 +1,26 @@
+[
+    {
+    "host": "electrum.imaginary.cash",
+    "port": 50004
+    },
+    {
+    "host": "bch.imaginary.cash",
+    "port": 50004
+    },
+    {
+    "host": "cashnode.bch.ninja",
+    "port": 50004
+    },
+    {
+    "host": "electroncash.de",
+    "port": 60002
+    },
+    {
+    "host": "bch.soul-dev.com",
+    "port": 50004
+    },
+    {
+    "host": "electroncash.dk",
+    "port": 50004
+    }
+]

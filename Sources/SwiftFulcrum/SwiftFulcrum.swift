@@ -1,14 +1,23 @@
+import Foundation
+
 public struct SwiftFulcrum {
+    let storage: Storage
     let client: Client
     
-    func requestRelayFee() async throws -> Double {
-        let id = try await client.sendRequest(from: .blockchain(.relayFee))
+    public init() throws {
+        let servers = WebSocket.Server.samples
+        guard let server = servers.randomElement() else { throw WebSocket.Error.initializing(reason: .noURLAvailable, description: "Server list: \(servers)") }
+        let websocket = WebSocket(url: server)
         
-        let waitingTime = 5.0
-        try await Task.sleep(nanoseconds: UInt64(waitingTime * 1_000_000_000.0))
+        self.storage = Storage()
+        self.client = Client(webSocket: websocket, storage: storage)
+    }
+    
+    public init(urlString: String) throws {
+        guard let url = URL(string: urlString) else { throw WebSocket.Error.initializing(reason: .invalidURL, description: "URL: \(urlString)") }
+        let websocket = WebSocket(url: url)
         
-        guard let relayFee = try client.jsonRPC.storage.result.blockchain.relayFee.getResult(for: id) else { fatalError() }
-        
-        return relayFee.fee
+        self.storage = Storage()
+        self.client = Client(webSocket: websocket, storage: storage)
     }
 }

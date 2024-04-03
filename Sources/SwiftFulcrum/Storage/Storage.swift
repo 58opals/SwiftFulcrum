@@ -1,6 +1,6 @@
 import Foundation
 
-class Storage {
+final class Storage {
     var request: RequestBox = .init()
     var result: Response.Result.Box = .init()
     

@@ -2,12 +2,13 @@ import XCTest
 @testable import SwiftFulcrum
 
 final class SwiftFulcrumTests: XCTestCase {
-    let fulcrum = SwiftFulcrum(client: .init(webSocket: .init(url: .init(string: "wss://cashnode.bch.ninja:50004")!)))
-    
-    func testRelayFee() async throws {
-        let relayFee = try await fulcrum.requestRelayFee()
+    func testClient() async throws {
+        let fulcrum = try SwiftFulcrum()
         
-        let expectedValue = 1e-5
-        XCTAssertEqual(relayFee, expectedValue, accuracy: 1e-5, "The relay fee did not match the expected value.")
+        let relayFeeID = try await fulcrum.client.sendRequest(from: .blockchain(.relayFee))
+        try await Task.sleep(nanoseconds: 1_000_000_000)
+        guard let relayFeeResult = try fulcrum.storage.result.blockchain.relayFee.getResult(for: relayFeeID) else { fatalError() }
+        let relayFee = relayFeeResult.fee
+        XCTAssertEqual(relayFee, 1e-05)
     }
 }

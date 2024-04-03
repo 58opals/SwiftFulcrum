@@ -17,10 +17,10 @@ let package = Package(
             targets: ["SwiftFulcrum"]),
     ],
     targets: [
-        .target(
-            name: "SwiftFulcrum"),
+        .target(name: "SwiftFulcrum"),
         .testTarget(
             name: "SwiftFulcrumTests",
-            dependencies: ["SwiftFulcrum"]),
+            dependencies: ["SwiftFulcrum"]
+        )
     ]
 )

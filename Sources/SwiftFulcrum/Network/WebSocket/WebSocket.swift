@@ -2,11 +2,11 @@ import Foundation
 import Network
 import Combine
 
-class WebSocket {
+final class WebSocket {
     let url: URL
     private let task: URLSessionWebSocketTask
     
-    init(url: URL) {
+    public init(url: URL) {
         self.url = url
         self.task = URLSession.shared.webSocketTask(with: url)
     }
@@ -17,7 +17,7 @@ class WebSocket {
     // MARK: WebSocketReconnectable
     let reconnector: Reconnector = .init()
     
-    // // MARK: WebSocketEventPublishable
+    // MARK: WebSocketEventPublishable
     let receivedData: PassthroughSubject<Data, Never> = PassthroughSubject<Data, Never>()
     let receivedString: PassthroughSubject<String, Never> = PassthroughSubject<String, Never>()
 }

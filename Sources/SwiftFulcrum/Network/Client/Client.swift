@@ -1,11 +1,11 @@
 import Foundation
 import Combine
 
-class Client {
+final class Client {
     let webSocket: NetworkConnectable & WebSocketReconnectable & WebSocketMessagable & WebSocketEventPublishable
     
     init(webSocket: WebSocket,
-         storage: Storage = .init()) {
+         storage: Storage) {
         self.webSocket = webSocket
         self.webSocket.connect()
         
