@@ -11,7 +11,6 @@ class Client {
         
         self.jsonRPC = JSONRPC(storage: storage)
         self.setupWebSocketSubscriptions()
-        self.setupResultBoxSubscriptions()
     }
     
     // MARK: ClientJSONRPCMessagable
@@ -19,7 +18,4 @@ class Client {
     
     // MARK: ClientEventSubscribable
     var subscribers = Set<AnyCancellable>()
-    
-    // MARK: ClientResultBoxEventSubscribable
-    var onResultIDReceived: ((UUID) -> Void)?
 }
