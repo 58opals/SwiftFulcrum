@@ -14,13 +14,3 @@ extension Client: ClientJSONRPCMessagable {
         try await self.send(data: request.data)
     }
 }
-
-extension Client: ClientEventHandlable {
-    func handleResponseData(_ data: Data) {
-        do {
-            try self.jsonRPC.storeResponse(from: data)
-        } catch {
-            print("While storing data(\(String(data: data, encoding: .utf8)!), we have a JSONRPC error: \(error)")
-        }
-    }
-}

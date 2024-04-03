@@ -1,12 +1,15 @@
 import Foundation
+import Combine
 
 extension Storage {
-    class ResultBox<Result: FulcrumRegularResponseResultInitializable>: Decodable {
-        var results: [UUID: Result?] = [:]
+    class ResultBox<Result: FulcrumRegularResponseResultInitializable> {
+        var results: [UUID: Result?] = .init()
+        var publisher: PassthroughSubject<UUID, Never> = .init()
         
         func store(result: Result?, for id: UUID) throws {
             guard self.results[id] == nil else { throw Storage.Error.resultExistence(issue: .alreadyExists, id: id) }
             self.results[id] = result
+            self.publisher.send(id)
         }
         
         func getResult(for id: UUID) throws -> Result? {
@@ -15,13 +18,15 @@ extension Storage {
         }
     }
     
-    class NotificationBox<Notification: FulcrumSubscriptionResponseResultInitializable>: Decodable {
+    class NotificationBox<Notification: FulcrumSubscriptionResponseResultInitializable> {
         typealias SubscriptionIdentifier = String
         
         var notifications: [SubscriptionIdentifier: [Notification?]] = [:]
+        var publisher: PassthroughSubject<SubscriptionIdentifier, Never> = .init()
         
         func store(notification: Notification?, for subscriptionIdentifier: SubscriptionIdentifier) throws {
             self.notifications[subscriptionIdentifier, default: []].append(notification)
+            self.publisher.send(subscriptionIdentifier)
         }
         
         func getNotifications(for subscriptionIdentifier: SubscriptionIdentifier) throws -> [Notification?] {

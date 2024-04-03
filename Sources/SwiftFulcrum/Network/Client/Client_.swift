@@ -8,11 +8,13 @@ protocol ClientWebSocketMessagable {
 
 protocol ClientEventSubscribable {
     var subscribers: Set<AnyCancellable> { get }
-    
-    func setupSubscriptions()
 }
 
-protocol ClientEventHandlable {
+protocol ClientWebSocketEventSubscribable: ClientEventSubscribable {
+    func setupWebSocketSubscriptions()
+}
+
+protocol ClientWebSocketEventHandlable {
     func handleResponseData(_ data: Data)
 }
 

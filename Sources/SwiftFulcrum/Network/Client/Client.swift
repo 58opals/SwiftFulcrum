@@ -10,7 +10,7 @@ final class Client {
         self.webSocket.connect()
         
         self.jsonRPC = JSONRPC(storage: storage)
-        self.setupSubscriptions()
+        self.setupWebSocketSubscriptions()
     }
     
     // MARK: ClientJSONRPCMessagable
