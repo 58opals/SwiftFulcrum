@@ -1,11 +1,11 @@
 import Foundation
 
-enum Method {
+public enum Method {
     case blockchain(Blockchain)
     case mempool(Mempool)
     
-    enum Blockchain {
-        typealias numberOfBlocks = Int
+    public enum Blockchain {
+        public typealias numberOfBlocks = Int
         case estimateFee(numberOfBlocks)
         case relayFee
         
@@ -16,12 +16,12 @@ enum Method {
         case transaction(Transaction)
         case utxo(UTXO)
         
-        enum Address {
-            typealias address = String
-            typealias tokenFilter = CashTokens.TokenFilter
-            typealias fromHeight = UInt
-            typealias toHeight = UInt
-            typealias includeUnconfirmed = Bool
+        public enum Address {
+            public typealias address = String
+            public typealias tokenFilter = CashTokens.TokenFilter
+            public typealias fromHeight = UInt
+            public typealias toHeight = UInt
+            public typealias includeUnconfirmed = Bool
             
             case getBalance(address, tokenFilter?)
             case getFirstUse(address)
@@ -33,36 +33,36 @@ enum Method {
             case unsubscribe(address)
         }
         
-        enum Block {
-            typealias height = UInt
-            typealias checkpointHeight = UInt
-            typealias startHeight = UInt
-            typealias count = UInt
+        public enum Block {
+            public typealias height = UInt
+            public typealias checkpointHeight = UInt
+            public typealias startHeight = UInt
+            public typealias count = UInt
             
             case header(height, checkpointHeight)
             case headers(startHeight, count, checkpointHeight)
         }
         
-        enum Header {
-            typealias blockHash = String
+        public enum Header {
+            public typealias blockHash = String
             
             case get(blockHash)
         }
         
-        enum Headers {
+        public enum Headers {
             case getTip
             case subscribe
             case unsubscribe
         }
         
-        enum Transaction {
-            typealias rawTransaction = String
-            typealias transactionHash = String
-            typealias verbose = Bool
-            typealias includeHeader = Bool
-            typealias blockHeight = UInt
-            typealias transactionPosition = UInt
-            typealias includeMerkleProof = Bool
+        public enum Transaction {
+            public typealias rawTransaction = String
+            public typealias transactionHash = String
+            public typealias verbose = Bool
+            public typealias includeHeader = Bool
+            public typealias blockHeight = UInt
+            public typealias transactionPosition = UInt
+            public typealias includeMerkleProof = Bool
             
             case broadcast(rawTransaction)
             case get(transactionHash, verbose)
@@ -75,8 +75,8 @@ enum Method {
             
             case dsProof(DSProof)
             
-            enum DSProof {
-                typealias transactionHash = String
+            public enum DSProof {
+                public typealias transactionHash = String
                 
                 case get(transactionHash)
                 case list
@@ -85,22 +85,22 @@ enum Method {
             }
         }
         
-        enum UTXO {
-            typealias transactionHash = String
-            typealias outputIndex = UInt16
+        public enum UTXO {
+            public typealias transactionHash = String
+            public typealias outputIndex = UInt16
             
             case getInfo(transactionHash, outputIndex)
         }
     }
     
-    enum Mempool {
+    public enum Mempool {
         case getFeeHistogram
     }
 }
 
 // MARK: - CashTokens
 extension Method.Blockchain {
-    struct CashTokens {
+    public struct CashTokens {
         struct JSON: Codable {
             let amount: String
             let category: String
@@ -110,7 +110,7 @@ extension Method.Blockchain {
                 let capability: Capability
                 let commitment: String
                 
-                enum Capability: Codable {
+                public enum Capability: Codable {
                     case none
                     case mutable
                     case minting
@@ -118,7 +118,7 @@ extension Method.Blockchain {
             }
         }
         
-        enum TokenFilter: String, Codable {
+        public enum TokenFilter: String, Codable {
             case include = "include_tokens"
             case exclude = "exclude_tokens"
             case only = "tokens_only"

@@ -2,14 +2,18 @@ import Foundation
 
 extension WebSocket {
     class Reconnector {
-        private var reconnectionAttempts = 0
-        private let maxReconnectionAttempts = 5
-        private let reconnectionDelay = 2.0 // seconds
+        private let configuration: Configuration
+        private var reconnectionAttempts: Int
+        
+        init(_ configuration: Configuration, reconnectionAttempts: Int = 0) {
+            self.configuration = configuration
+            self.reconnectionAttempts = reconnectionAttempts
+        }
         
         func attemptReconnection(for webSocket: WebSocket) async throws {
             guard !webSocket.isConnected else { throw WebSocket.Error.connection(url: webSocket.url, reason: .alreadyConnected) }
-            if reconnectionAttempts < maxReconnectionAttempts {
-                let delay = min(pow(2.0, Double(reconnectionAttempts)) * reconnectionDelay, 120)
+            if reconnectionAttempts < self.configuration.maxReconnectionAttempts {
+                let delay = min(pow(2.0, Double(self.reconnectionAttempts)) * self.configuration.reconnectionDelay, 120)
                 try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
                 reconnectionAttempts += 1
                 webSocket.disconnect(with: "Reconnecting...")

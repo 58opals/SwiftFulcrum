@@ -8,6 +8,7 @@ extension WebSocket {
         
         enum InitializingIssue {
             case invalidURL
+            case unsupportedScheme
             case noURLAvailable
         }
         

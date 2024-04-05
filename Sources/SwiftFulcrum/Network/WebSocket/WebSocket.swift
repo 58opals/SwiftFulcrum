@@ -6,16 +6,17 @@ final class WebSocket {
     let url: URL
     private let task: URLSessionWebSocketTask
     
-    public init(url: URL) {
+    init(url: URL, reconnectConfiguration: Reconnector.Configuration = .defaultConfiguration) {
         self.url = url
         self.task = URLSession.shared.webSocketTask(with: url)
+        self.reconnector = Reconnector(reconnectConfiguration)
     }
     
     // MARK: NetworkConnectable
     var isConnected: Bool = false
     
     // MARK: WebSocketReconnectable
-    let reconnector: Reconnector = .init()
+    let reconnector: Reconnector
     
     // MARK: WebSocketEventPublishable
     let receivedData: PassthroughSubject<Data, Never> = PassthroughSubject<Data, Never>()
