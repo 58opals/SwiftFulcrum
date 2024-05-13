@@ -5,6 +5,11 @@ protocol FulcrumResponseResultInitializable: Decodable {
     init(jsonrpcResult: JSONRPC)
 }
 
+public protocol FulcrumResponseResultTypable {
+    associatedtype ResultType
+    var resultType: ResultType.Type { get }
+}
+
 protocol FulcrumRegularResponseResultInitializable: FulcrumResponseResultInitializable {}
 
 protocol FulcrumSubscriptionResponseResultInitializable: FulcrumResponseResultInitializable {

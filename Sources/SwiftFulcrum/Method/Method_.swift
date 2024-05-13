@@ -9,3 +9,10 @@ protocol FulcrumMethodPathable {
 protocol FulcrumMethodRequestable {
     var request: Request { get }
 }
+
+/*
+public protocol FulcrumMethodResultTypable {
+    associatedtype ResultType
+    var resultType: ResultType.Type { get }
+}
+*/

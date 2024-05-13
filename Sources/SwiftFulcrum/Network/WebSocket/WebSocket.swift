@@ -27,6 +27,7 @@ extension WebSocket: NetworkConnectable {
     func connect() {
         task.resume()
         isConnected = true
+        print("WebSocket (\(self.url.description)) is connected.")
         
         Task {
             try await listen()
