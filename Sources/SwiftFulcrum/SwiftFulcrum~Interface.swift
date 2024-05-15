@@ -2,9 +2,7 @@ import Foundation
 import Combine
 
 extension SwiftFulcrum {
-    func blockchainEstimateFee(for numberOfBlocks: Method.Blockchain.numberOfBlocks) {
-        
-    }
+    //mutating func blockchainEstimateFee(for numberOfBlocks: Method.Blockchain.numberOfBlocks) async throws -> Response.Result.Blockchain.EstimateFee {}
 }
 
 extension SwiftFulcrum: SwiftFulcrumPublicCommunicatable {

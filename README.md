@@ -33,8 +33,55 @@ import SwiftFulcrum
 Initialize the client and make a request to retrieve blockchain information:
 
 ```swift
-let client = Client(webSocket: WebSocket(url: URL(string: "wss://example.com:50004")!))
-try await client.sendRequest(from: Method.blockchain(.getInfo))
+var fulcrum = try SwiftFulcrum()
+
+await fulcrum.submitRequest(
+    .blockchain(.estimateFee(6)),
+    resultType: Response.Result.Blockchain.EstimateFee.self
+) { result in
+    switch result {
+    case .success(let estimateFeeResponse):
+        print("Estimate fee: \(estimateFeeResponse.fee)")
+    case .failure(let error):
+        fatalError("Estimate fee failed: \(error.localizedDescription)")
+    }
+}
+
+await fulcrum.submitRequest(
+    .blockchain(.headers(.getTip)),
+    resultType: Response.Result.Blockchain.Headers.GetTip.self
+) { result in
+    switch result {
+    case .success(let getTipResponse):
+        print("Headers tip height: \(getTipResponse.height)")
+    case .failure(let error):
+        fatalError("Get headers tip failed: \(error.localizedDescription)")
+    }
+}
+
+await fulcrum.submitRequest(.blockchain(
+    .transaction(.broadcast(sampleRawTransaction))),
+    resultType: Response.Result.Blockchain.Transaction.Broadcast.self
+) { result in
+    switch result {
+    case .success(let broadcastResponse):
+        print("Broadcast success: \(broadcastResponse.success)")
+    case .failure(let error):
+        fatalError("Broadcast transaction failed: \(error.localizedDescription)")
+    }
+}
+
+await fulcrum.submitSubscription(
+    .blockchain(.address(.subscribe(sampleAddress))),
+    notificationType: Response.Result.Blockchain.Address.SubscribeNotification.self
+) { result in
+    switch result {
+    case .success(let subscribeNotification):
+        print(subscribeNotification)
+    case .failure(let error):
+        fatalError("Address subscription failed: \(error.localizedDescription)")
+    }
+}
 ```
 
 ## Acknowledgments
