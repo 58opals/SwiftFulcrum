@@ -32,10 +32,6 @@ extension WebSocket.Server {
     {
     "host": "cashnode.bch.ninja",
     "port": 50004
-    },
-    {
-    "host": "bch.soul-dev.com",
-    "port": 50004
     }
 ]
 """

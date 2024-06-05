@@ -1,6 +1,6 @@
 import Foundation
 
-struct Response {
+public struct Response {
     struct Regular<Result: FulcrumRegularResponseResultInitializable>: FulcrumResponseInitializable {
         let id: UUID
         let result: Result

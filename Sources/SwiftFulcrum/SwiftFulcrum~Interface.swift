@@ -1,9 +1,20 @@
 import Foundation
 import Combine
 
-extension SwiftFulcrum {
-    //mutating func blockchainEstimateFee(for numberOfBlocks: Method.Blockchain.numberOfBlocks) async throws -> Response.Result.Blockchain.EstimateFee {}
-}
+//extension SwiftFulcrum {
+//    mutating func blockchainEstimateFee(for numberOfBlocks: Int) async throws -> Response.Result.Blockchain.EstimateFee {
+//        self.submitRequest(
+//            .blockchain(.estimateFee(numberOfBlocks)),
+//            resultType: Response.Result.Blockchain.EstimateFee) { result in
+//                switch result {
+//                case .success(let response):
+//                    return response
+//                case .failure(let error):
+//                    throw error
+//                }
+//            }
+//    }
+//}
 
 extension SwiftFulcrum: SwiftFulcrumPublicCommunicatable {
     func sendRequest(_ method: Method) async throws -> UUID {
