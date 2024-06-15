@@ -7,7 +7,7 @@ extension Response.Result {
         public struct EstimateFee: FulcrumRegularResponseResultInitializable {
             typealias JSONRPC = EstimateFeeJSONRPCResult
             
-            let fee: Double
+            public let fee: Double
             
             init(jsonrpcResult: JSONRPC) {
                 self.fee = jsonrpcResult
@@ -17,7 +17,7 @@ extension Response.Result {
         public struct RelayFee: FulcrumRegularResponseResultInitializable {
             typealias JSONRPC = EstimateFeeJSONRPCResult
             
-            let fee: Double
+            public let fee: Double
             
             init(jsonrpcResult: JSONRPC) {
                 self.fee = jsonrpcResult
@@ -28,8 +28,8 @@ extension Response.Result {
             public struct GetBalance: FulcrumRegularResponseResultInitializable {
                 typealias JSONRPC = GetBalanceJSONRPCResult
                 
-                let confirmed: UInt64
-                let unconfirmed: Int64
+                public let confirmed: UInt64
+                public let unconfirmed: Int64
                 
                 init(jsonrpcResult: JSONRPC) {
                     self.confirmed = jsonrpcResult.confirmed
@@ -40,9 +40,9 @@ extension Response.Result {
             public struct GetFirstUse: FulcrumRegularResponseResultInitializable {
                 typealias JSONRPC = GetFirstUseJSONRPCResult
                 
-                let blockHash: String
-                let height: UInt
-                let transactionHash: String
+                public let blockHash: String
+                public let height: UInt
+                public let transactionHash: String
                 
                 init(jsonrpcResult: JSONRPC) {
                     self.blockHash = jsonrpcResult.block_hash
@@ -54,11 +54,11 @@ extension Response.Result {
             public struct GetHistory: FulcrumRegularResponseResultInitializable {
                 typealias JSONRPC = [GetHistoryJSONRPCResult]
                 
-                let transactions: [Transaction]
-                struct Transaction: Decodable {
-                    let height: Int
-                    let transactionHash: String
-                    let fee: UInt?
+                public let transactions: [Transaction]
+                public struct Transaction: Decodable {
+                    public let height: Int
+                    public let transactionHash: String
+                    public let fee: UInt?
                 }
                 
                 init(jsonrpcResult: JSONRPC) {
@@ -69,11 +69,11 @@ extension Response.Result {
             public struct GetMempool: FulcrumRegularResponseResultInitializable {
                 typealias JSONRPC = [GetMempoolJSONRPCResult]
                 
-                let transactions: [Transaction]
-                struct Transaction: Decodable {
-                    let height: Int
-                    let transactionHash: String
-                    let fee: UInt?
+                public let transactions: [Transaction]
+                public struct Transaction: Decodable {
+                    public let height: Int
+                    public let transactionHash: String
+                    public let fee: UInt?
                 }
                 
                 init(jsonrpcResult: JSONRPC) {
@@ -84,7 +84,7 @@ extension Response.Result {
             public struct GetScriptHash: FulcrumRegularResponseResultInitializable {
                 typealias JSONRPC = GetScriptHashJSONRPCResult
                 
-                let hash: String
+                public let hash: String
                 
                 init(jsonrpcResult: JSONRPC) {
                     self.hash = jsonrpcResult
@@ -94,14 +94,14 @@ extension Response.Result {
             public struct ListUnspent: FulcrumRegularResponseResultInitializable {
                 typealias JSONRPC = ListUnspentJSONRPCResult
                 
-                let items: [Item]
+                public let items: [Item]
                 
-                struct Item: Decodable {
-                    let height: UInt
-                    let tokenData: Method.Blockchain.CashTokens.JSON?
-                    let transactionHash: String
-                    let transactionPosition: UInt
-                    let value: UInt64
+                public struct Item: Decodable {
+                    public let height: UInt
+                    public let tokenData: Method.Blockchain.CashTokens.JSON?
+                    public let transactionHash: String
+                    public let transactionPosition: UInt
+                    public let value: UInt64
                 }
                 
                 init(jsonrpcResult: JSONRPC) {
@@ -116,7 +116,7 @@ extension Response.Result {
             public struct Subscribe: FulcrumRegularResponseResultInitializable {
                 typealias JSONRPC = SubscribeJSONRPCResult
                 
-                let status: String
+                public let status: String
                 
                 init(jsonrpcResult: JSONRPC) {
                     self.status = jsonrpcResult
@@ -126,8 +126,8 @@ extension Response.Result {
             public struct SubscribeNotification: FulcrumSubscriptionResponseResultInitializable {
                 typealias JSONRPC = SubscribeJSONRPCNotification
                 
-                let subscriptionIdentifier: String
-                let status: String?
+                public let subscriptionIdentifier: String
+                public let status: String?
                 
                 init(jsonrpcResult: JSONRPC) {
                     self.subscriptionIdentifier = jsonrpcResult.address
@@ -138,7 +138,7 @@ extension Response.Result {
             public struct Unsubscribe: FulcrumRegularResponseResultInitializable {
                 typealias JSONRPC = UnsubscribeJSONRPCResult
                 
-                let success: Bool
+                public let success: Bool
                 
                 init(jsonrpcResult: JSONRPC) {
                     self.success = jsonrpcResult
@@ -150,9 +150,9 @@ extension Response.Result {
             public struct Header: FulcrumRegularResponseResultInitializable {
                 typealias JSONRPC = HeaderJSONRPCResult
                 
-                let branch: [String]
-                let header: String
-                let root: String
+                public let branch: [String]
+                public let header: String
+                public let root: String
                 
                 init(jsonrpcResult: JSONRPC) {
                     self.branch = jsonrpcResult.branch
@@ -164,9 +164,9 @@ extension Response.Result {
             public struct Headers: FulcrumRegularResponseResultInitializable {
                 typealias JSONRPC = HeadersJSONRPCResult
                 
-                let count: UInt
-                let hex: String
-                let max: UInt
+                public let count: UInt
+                public let hex: String
+                public let max: UInt
                 
                 init(jsonrpcResult: JSONRPC) {
                     self.count = jsonrpcResult.count
@@ -180,8 +180,8 @@ extension Response.Result {
             public struct Get: FulcrumRegularResponseResultInitializable {
                 typealias JSONRPC = GetJSONRPCResult
                 
-                let height: UInt
-                let hex: String
+                public let height: UInt
+                public let hex: String
                 
                 init(jsonrpcResult: JSONRPC) {
                     self.height = jsonrpcResult.height
@@ -194,8 +194,8 @@ extension Response.Result {
             public struct GetTip: FulcrumRegularResponseResultInitializable {
                 typealias JSONRPC = GetTipJSONRPCResult
                 
-                let height: UInt
-                let hex: String
+                public let height: UInt
+                public let hex: String
                 
                 init(jsonrpcResult: JSONRPC) {
                     self.height = jsonrpcResult.height
@@ -206,8 +206,8 @@ extension Response.Result {
             public struct Subscribe: FulcrumRegularResponseResultInitializable {
                 typealias JSONRPC = SubscribeJSONRPCResult
                 
-                let height: UInt
-                let hex: String
+                public let height: UInt
+                public let hex: String
                 
                 init(jsonrpcResult: JSONRPC) {
                     self.height = jsonrpcResult.height
@@ -218,11 +218,12 @@ extension Response.Result {
             public struct SubscribeNotification: FulcrumSubscriptionResponseResultInitializable {
                 typealias JSONRPC = SubscribeJSONRPCNotification
                 
-                let subscriptionIdentifier: String
-                let block: Block
-                struct Block: Decodable {
-                    let height: UInt
-                    let hex: String
+                public let subscriptionIdentifier: String
+                public let block: Block
+                
+                public struct Block: Decodable {
+                    public let height: UInt
+                    public let hex: String
                 }
                 
                 init(jsonrpcResult: JSONRPC) {
@@ -234,7 +235,7 @@ extension Response.Result {
             public struct Unsubscribe: FulcrumRegularResponseResultInitializable {
                 typealias JSONRPC = UnsubscribeJSONRPCResult
                 
-                let success: Bool
+                public let success: Bool
                 
                 init(jsonrpcResult: JSONRPC) {
                     self.success = jsonrpcResult
@@ -246,7 +247,7 @@ extension Response.Result {
             public struct Broadcast: FulcrumRegularResponseResultInitializable {
                 typealias JSONRPC = BroadcastJSONRPCResult
                 
-                let success: Bool
+                public let success: Bool
                 
                 init(jsonrpcResult: JSONRPC) {
                     self.success = jsonrpcResult
@@ -256,42 +257,42 @@ extension Response.Result {
             public struct Get: FulcrumRegularResponseResultInitializable {
                 typealias JSONRPC = GetJSONRPCResult
                 
-                let blockHash: String
-                let blocktime: UInt
-                let confirmations: UInt
-                let hash: String
-                let hex: String
-                let locktime: UInt
-                let size: UInt
-                let time: UInt
-                let transactionID: String
-                let version: UInt
-                let inputs: [Input]
-                let outputs: [Output]
+                public let blockHash: String
+                public let blocktime: UInt
+                public let confirmations: UInt
+                public let hash: String
+                public let hex: String
+                public let locktime: UInt
+                public let size: UInt
+                public let time: UInt
+                public let transactionID: String
+                public let version: UInt
+                public let inputs: [Input]
+                public let outputs: [Output]
                 
-                struct Input: Decodable {
-                    let scriptSig: ScriptSig
-                    let sequence: UInt
-                    let transactionID: String
-                    let indexNumberOfPreviousTransactionOutput: UInt
+                public struct Input: Decodable {
+                    public let scriptSig: ScriptSig
+                    public let sequence: UInt
+                    public let transactionID: String
+                    public let indexNumberOfPreviousTransactionOutput: UInt
                     
-                    struct ScriptSig: Decodable {
-                        let assemblyScriptLanguage: String
-                        let hex: String
+                    public struct ScriptSig: Decodable {
+                        public let assemblyScriptLanguage: String
+                        public let hex: String
                     }
                 }
                 
-                struct Output: Decodable {
-                    let index: UInt
-                    let scriptPubKey: ScriptPubKey
-                    let value: Double
+                public struct Output: Decodable {
+                    public let index: UInt
+                    public let scriptPubKey: ScriptPubKey
+                    public let value: Double
                     
-                    struct ScriptPubKey: Decodable {
-                        let addresses: [String]
-                        let assemblyScriptLanguage: String
-                        let hex: String
-                        let requiredSignatures: UInt
-                        let type: String
+                    public struct ScriptPubKey: Decodable {
+                        public let addresses: [String]
+                        public let assemblyScriptLanguage: String
+                        public let hex: String
+                        public let requiredSignatures: UInt
+                        public let type: String
                     }
                 }
                 
@@ -324,9 +325,9 @@ extension Response.Result {
             public struct GetConfirmedBlockHash: FulcrumRegularResponseResultInitializable {
                 typealias JSONRPC = GetConfirmedBlockHashJSONRPCResult
                 
-                let blockHash: String
-                let blockHeader: String?
-                let blockHeight: UInt
+                public let blockHash: String
+                public let blockHeader: String?
+                public let blockHeight: UInt
                 
                 init(jsonrpcResult: JSONRPC) {
                     self.blockHash = jsonrpcResult.block_hash
@@ -338,7 +339,7 @@ extension Response.Result {
             public struct GetHeight: FulcrumRegularResponseResultInitializable {
                 typealias JSONRPC = GetHeightJSONRPCResult
                 
-                let height: UInt
+                public let height: UInt
                 
                 init(jsonrpcResult: JSONRPC) {
                     self.height = jsonrpcResult
@@ -348,9 +349,9 @@ extension Response.Result {
             public struct GetMerkle: FulcrumRegularResponseResultInitializable {
                 typealias JSONRPC = GetMerkleJSONRPCResult
                 
-                let merkle: [String]
-                let blockHeight: UInt
-                let position: UInt
+                public let merkle: [String]
+                public let blockHeight: UInt
+                public let position: UInt
                 
                 init(jsonrpcResult: JSONRPC) {
                     self.merkle = jsonrpcResult.merkle
@@ -362,8 +363,8 @@ extension Response.Result {
             public struct IDFromPos: FulcrumRegularResponseResultInitializable {
                 typealias JSONRPC = IDFromPosJSONRPCResult
                 
-                let merkle: [String]
-                let transactionHash: String
+                public let merkle: [String]
+                public let transactionHash: String
                 
                 init(jsonrpcResult: JSONRPC) {
                     self.merkle = jsonrpcResult.merkle
@@ -374,7 +375,7 @@ extension Response.Result {
             public struct Subscribe: FulcrumRegularResponseResultInitializable {
                 typealias JSONRPC = SubscribeJSONRPCResult
                 
-                let height: UInt
+                public let height: UInt
                 
                 init(jsonrpcResult: JSONRPC) {
                     self.height = jsonrpcResult
@@ -384,9 +385,9 @@ extension Response.Result {
             public struct SubscribeNotification: FulcrumSubscriptionResponseResultInitializable {
                 typealias JSONRPC = SubscribeJSONRPCNotification
                 
-                let subscriptionIdentifier: String
-                let transactionHash: String
-                let height: UInt
+                public let subscriptionIdentifier: String
+                public let transactionHash: String
+                public let height: UInt
                 
                 init(jsonrpcResult: JSONRPC) {
                     self.subscriptionIdentifier = jsonrpcResult.transactionHash
@@ -398,7 +399,7 @@ extension Response.Result {
             public struct Unsubscribe: FulcrumRegularResponseResultInitializable {
                 typealias JSONRPC = UnsubscribeJSONRPCResult
                 
-                let success: Bool
+                public let success: Bool
                 
                 init(jsonrpcResult: JSONRPC) {
                     self.success = jsonrpcResult
@@ -409,15 +410,15 @@ extension Response.Result {
                 public struct Get: FulcrumRegularResponseResultInitializable {
                     typealias JSONRPC = GetJSONRPCResult
                     
-                    let dspID: String
-                    let transactionID: String
-                    let hex: String
-                    let outpoint: Outpoint
-                    let descendants: [String]
+                    public let dspID: String
+                    public let transactionID: String
+                    public let hex: String
+                    public let outpoint: Outpoint
+                    public let descendants: [String]
                     
-                    struct Outpoint: Decodable {
-                        let transactionID: String
-                        let vout: UInt
+                    public struct Outpoint: Decodable {
+                        public let transactionID: String
+                        public let vout: UInt
                     }
                     
                     init(jsonrpcResult: JSONRPC) {
@@ -433,7 +434,7 @@ extension Response.Result {
                 public struct List: FulcrumRegularResponseResultInitializable {
                     typealias JSONRPC = ListJSONRPCResult
                     
-                    let transactionHashes: [String]
+                    public let transactionHashes: [String]
                     
                     init(jsonrpcResult: JSONRPC) {
                         self.transactionHashes = jsonrpcResult
@@ -443,22 +444,23 @@ extension Response.Result {
                 public struct Subscribe: FulcrumRegularResponseResultInitializable {
                     typealias JSONRPC = SubscribeJSONRPCResult
                     
-                    let proof: Proof
-                    struct Proof: Decodable {
-                        let dspID: String
-                        let transactionID: String
-                        let hex: String
-                        let outpoint: Outpoint
-                        let descendants: [String]
+                    public let proof: Proof
+                    
+                    public struct Proof: Decodable {
+                        public let dspID: String
+                        public let transactionID: String
+                        public let hex: String
+                        public let outpoint: Outpoint
+                        public let descendants: [String]
                         
-                        struct Outpoint: Decodable {
-                            let transactionID: String
-                            let vout: UInt
+                        public struct Outpoint: Decodable {
+                            public let transactionID: String
+                            public let vout: UInt
                         }
                     }
                     
                     init(jsonrpcResult: JSONRPC) {
-                        print(jsonrpcResult)
+                        // print(jsonrpcResult)
                         self.proof = .init(dspID: jsonrpcResult.proof.dspid,
                                            transactionID: jsonrpcResult.proof.txid,
                                            hex: jsonrpcResult.proof.hex,
@@ -471,19 +473,20 @@ extension Response.Result {
                 public struct SubscribeNotification: FulcrumSubscriptionResponseResultInitializable {
                     typealias JSONRPC = SubscribeJSONRPCNotification
                     
-                    let subscriptionIdentifier: String
-                    let transactionHash: String
-                    let proof: Proof?
-                    struct Proof: Decodable {
-                        let dspID: String
-                        let transactionID: String
-                        let hex: String
-                        let outpoint: Outpoint
-                        let descendants: [String]
+                    public let subscriptionIdentifier: String
+                    public let transactionHash: String
+                    public let proof: Proof?
+                    
+                    public struct Proof: Decodable {
+                        public let dspID: String
+                        public let transactionID: String
+                        public let hex: String
+                        public let outpoint: Outpoint
+                        public let descendants: [String]
                         
-                        struct Outpoint: Decodable {
-                            let transactionID: String
-                            let vout: UInt
+                        public struct Outpoint: Decodable {
+                            public let transactionID: String
+                            public let vout: UInt
                         }
                     }
                     
@@ -506,7 +509,7 @@ extension Response.Result {
                 public struct Unsubscribe: FulcrumRegularResponseResultInitializable {
                     typealias JSONRPC = UnsubscribeJSONRPCResult
                     
-                    let success: Bool
+                    public let success: Bool
                     
                     init(jsonrpcResult: JSONRPC) {
                         self.success = jsonrpcResult
@@ -519,10 +522,10 @@ extension Response.Result {
             public struct GetInfo: FulcrumRegularResponseResultInitializable {
                 typealias JSONRPC = GetInfoJSONRPCResult
                 
-                let confirmedHeight: UInt?
-                let scriptHash: String
-                let value: UInt
-                let tokenData: Method.Blockchain.CashTokens.JSON?
+                public let confirmedHeight: UInt?
+                public let scriptHash: String
+                public let value: UInt
+                public let tokenData: Method.Blockchain.CashTokens.JSON?
                 
                 init(jsonrpcResult: JSONRPC) {
                     self.confirmedHeight = jsonrpcResult.confirmed_height
@@ -538,12 +541,12 @@ extension Response.Result {
         public struct GetFeeHistogram: FulcrumRegularResponseResultInitializable {
             typealias JSONRPC = GetFeeHistogramJSONRPCResult
             
-            struct Result: Decodable {
-                let fee: UInt
-                let virtualSize: UInt
+            public struct Result: Decodable {
+                public let fee: UInt
+                public let virtualSize: UInt
             }
             
-            let histogram: [Result]
+            public let histogram: [Result]
             
             init(jsonrpcResult: JSONRPC) {
                 self.histogram = .init()

@@ -101,14 +101,14 @@ public enum Method {
 // MARK: - CashTokens
 extension Method.Blockchain {
     public struct CashTokens {
-        struct JSON: Codable {
-            let amount: String
-            let category: String
-            let nft: NFT?
+        public struct JSON: Codable {
+            public let amount: String
+            public let category: String
+            public let nft: NFT?
             
-            struct NFT: Codable {
-                let capability: Capability
-                let commitment: String
+            public struct NFT: Codable {
+                public let capability: Capability
+                public let commitment: String
                 
                 public enum Capability: Codable {
                     case none
