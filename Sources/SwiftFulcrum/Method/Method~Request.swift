@@ -68,7 +68,8 @@ extension Method: FulcrumMethodRequestable {
                         func encode(to encoder: Encoder) throws {
                             var container = encoder.unkeyedContainer()
                             try container.encode(address)
-                            if let fromHeight = fromHeight { try container.encode(fromHeight) }
+                            //if let fromHeight = fromHeight { try container.encode(fromHeight) }
+                            if let fromHeight = fromHeight { try container.encode(fromHeight) } else { try container.encode(Int(0)) }
                             if includeUnconfirmed { try container.encode(Int(-1)) } else if let toHeight = toHeight { try container.encode(toHeight) }
                         }
                     }
