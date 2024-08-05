@@ -1,7 +1,7 @@
 import Foundation
 
 extension Response {
-    struct JSONRPCGeneric<Result: Decodable>: JSONRPCObjectable, Decodable {
+    struct JSONRPCGeneric<Result: Decodable>: Decodable {
         let jsonrpc: String
         
         // MARK: Regular
@@ -44,6 +44,23 @@ extension Response {
             } else {
                 throw DecodingError.dataCorruptedError(forKey: .id, in: container, debugDescription: "Invalid JSON-RPC response format.")
             }
+        }
+    }
+}
+
+extension Response.JSONRPCGeneric {
+    func getResponseType() throws -> Response.Kind<Result> {
+        switch (id, result, error, method, params) {
+        case let (id?, result?, _, _, _):
+            return .regular(Response.Regular(id: id, result: result))
+        case let (_, _, _, method?, params?):
+            return .subscription(Response.Subscription(methodPath: method, result: params))
+        case let (id?, .none, _, _, _):
+            return .empty(id)
+        case let (id?, _, error?, _, _):
+            return .error(Response.Error(id: id, error: error))
+        default:
+            throw JSONRPCResponseError.cannotIdentifyResponseType(id)
         }
     }
 }

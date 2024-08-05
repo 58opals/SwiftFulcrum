@@ -1,11 +1,10 @@
 import Foundation
 
-extension Client: ClientJSONRPCMessagable {
+extension Client {
     func sendRequest(from method: Method) async throws -> UUID {
         let request = method.request
         
         try await self.sendRequest(request)
-        try self.jsonRPC.storage.request.store(request: request)
         
         return request.id
     }

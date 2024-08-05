@@ -1,6 +1,6 @@
 import Foundation
 
-extension Client: ClientWebSocketMessagable {
+extension Client {
     func send(data: Data) async throws {
         try await webSocket.send(data: data)
     }
@@ -10,17 +10,17 @@ extension Client: ClientWebSocketMessagable {
     }
 }
 
-extension Client: ClientWebSocketEventHandlable {
+extension Client {
     func handleResponseData(_ data: Data) {
         do {
-            try self.jsonRPC.storeResponse(from: data)
+            try externalDataHandler?(data)
         } catch {
-            print("While storing data(\(String(data: data, encoding: .utf8)!), we have a JSONRPC error: \(error)")
+            print(error)
         }
     }
 }
 
-extension Client: ClientWebSocketEventSubscribable {
+extension Client {
     func setupWebSocketSubscriptions() {
         webSocket.receivedData
             .sink { [weak self] data in

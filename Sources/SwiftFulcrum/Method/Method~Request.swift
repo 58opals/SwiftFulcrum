@@ -1,6 +1,6 @@
 import Foundation
 
-extension Method: FulcrumMethodRequestable {
+extension Method {
     var request: Request {
         switch self {
         case .blockchain(let blockchain):
@@ -159,7 +159,7 @@ extension Method: FulcrumMethodRequestable {
                     }
                     return Request(method: self,
                                    params: Parameters(height: height,
-                                                      checkpointHeight: checkpointHeight))
+                                                      checkpointHeight: checkpointHeight ?? height + 1))
                     
                     // MARK: Blockchain.Block.headers
                 case .headers(let startHeight, let count, let checkpointHeight):
@@ -177,7 +177,7 @@ extension Method: FulcrumMethodRequestable {
                     return Request(method: self,
                                    params: Parameters(startHeight: startHeight,
                                                       count: count,
-                                                      checkpointHeight: checkpointHeight))
+                                                      checkpointHeight: checkpointHeight ?? 0))
                 }
                 
             case .header(let header):

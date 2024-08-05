@@ -1,15 +1,13 @@
 import Foundation
 
-struct Request: JSONRPCRequestInitializable {
+struct Request {
     let jsonrpc: String = "2.0"
     let id: UUID
     let method: String
     let requestedMethod: Method
     let params: Encodable
     
-    init(id: UUID = .init(),
-         method: Method,
-         params: Encodable) {
+    init(id: UUID = .init(), method: Method, params: Encodable) {
         self.id = id
         self.method = method.path
         self.requestedMethod = method
@@ -41,7 +39,7 @@ extension Request: Hashable {
     }
 }
 
-extension Request: JSONRPCRequestDataConvertible {
+extension Request {
     var data: Data {
         do {
             let encoder = JSONEncoder()

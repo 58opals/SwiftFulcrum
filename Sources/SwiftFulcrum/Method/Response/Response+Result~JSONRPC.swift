@@ -17,13 +17,15 @@ extension Response.Result.Blockchain.Address {
         let tx_hash: String
     }
     
-    struct GetHistoryJSONRPCResult: Decodable {
+    typealias GetHistoryJSONRPCResult = [GetHistoryJSONRPCResultItem]
+    struct GetHistoryJSONRPCResultItem: Decodable {
         let height: Int
         let tx_hash: String
         let fee: UInt?
     }
     
-    struct GetMempoolJSONRPCResult: Decodable {
+    typealias GetMempoolJSONRPCResult = [GetMempoolJSONRPCResultItem]
+    struct GetMempoolJSONRPCResultItem: Decodable {
         let height: Int
         let tx_hash: String
         let fee: UInt?
@@ -40,12 +42,13 @@ extension Response.Result.Blockchain.Address {
         let value: UInt64
     }
     
-    typealias SubscribeJSONRPCResult = String
+    typealias Status = String
+    typealias SubscribeJSONRPCResult = Status
     
     typealias SubscribeJSONRPCNotification = SubscribeJSONRPCNotificationParameters
     struct SubscribeJSONRPCNotificationParameters: Decodable {
         let address: String
-        let status: String?
+        let status: Status?
         
         init(from decoder: Decoder) throws {
             var container = try decoder.unkeyedContainer()

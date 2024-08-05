@@ -1,6 +1,6 @@
 import Foundation
 
-extension Method: FulcrumMethodPathable {
+extension Method {
     var path: String {
         switch self {
         case .blockchain(let blockchainPath): return "blockchain.\(blockchainPath.path)"
@@ -9,7 +9,7 @@ extension Method: FulcrumMethodPathable {
     }
 }
 
-extension Method.Blockchain: FulcrumMethodPathable {
+extension Method.Blockchain {
     var path: String {
         switch self {
         case .address(let addressPath): return "address.\(addressPath.path)"
@@ -25,7 +25,7 @@ extension Method.Blockchain: FulcrumMethodPathable {
     }
 }
 
-extension Method.Blockchain.Address: FulcrumMethodPathable {
+extension Method.Blockchain.Address {
     var path: String {
         switch self {
         case .getBalance: return "get_balance"
@@ -40,7 +40,7 @@ extension Method.Blockchain.Address: FulcrumMethodPathable {
     }
 }
 
-extension Method.Blockchain.Block: FulcrumMethodPathable {
+extension Method.Blockchain.Block {
     var path: String {
         switch self {
         case .header: return "header"
@@ -49,7 +49,7 @@ extension Method.Blockchain.Block: FulcrumMethodPathable {
     }
 }
 
-extension Method.Blockchain.Header: FulcrumMethodPathable {
+extension Method.Blockchain.Header {
     var path: String {
         switch self {
         case .get: return "get"
@@ -57,7 +57,7 @@ extension Method.Blockchain.Header: FulcrumMethodPathable {
     }
 }
 
-extension Method.Blockchain.Headers: FulcrumMethodPathable {
+extension Method.Blockchain.Headers {
     var path: String {
         switch self {
         case .getTip: return "get_tip"
@@ -67,7 +67,7 @@ extension Method.Blockchain.Headers: FulcrumMethodPathable {
     }
 }
 
-extension Method.Blockchain.Transaction: FulcrumMethodPathable {
+extension Method.Blockchain.Transaction {
     var path: String {
         switch self {
         case .dsProof(let dsProofPath): return "dsproof.\(dsProofPath.path)"
@@ -84,7 +84,7 @@ extension Method.Blockchain.Transaction: FulcrumMethodPathable {
     }
 }
 
-extension Method.Blockchain.Transaction.DSProof: FulcrumMethodPathable {
+extension Method.Blockchain.Transaction.DSProof {
     var path: String {
         switch self {
         case .get: return "get"
@@ -95,7 +95,7 @@ extension Method.Blockchain.Transaction.DSProof: FulcrumMethodPathable {
     }
 }
 
-extension Method.Blockchain.UTXO: FulcrumMethodPathable {
+extension Method.Blockchain.UTXO {
     var path: String {
         switch self {
         case .getInfo: return "get_info"
@@ -103,7 +103,7 @@ extension Method.Blockchain.UTXO: FulcrumMethodPathable {
     }
 }
 
-extension Method.Mempool: FulcrumMethodPathable {
+extension Method.Mempool {
     var path: String {
         switch self {
         case .getFeeHistogram: return "get_fee_histogram"
