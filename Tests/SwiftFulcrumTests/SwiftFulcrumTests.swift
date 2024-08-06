@@ -24,8 +24,10 @@ extension SwiftFulcrumTests {
     func testSubmitRequestSuccess() async throws {
         let expectation = self.expectation(description: "Request should succeed")
         
-        let (id, publisher) = try await fulcrum.submit(method: .blockchain(.estimateFee(numberOfBlocks: 6)),
-                                                       responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.EstimateFee>.self)
+        let (id, publisher) = try await fulcrum.submit(
+            method: .blockchain(.estimateFee(numberOfBlocks: 6)),
+            responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.EstimateFee>.self
+        )
         publisher
         .sink(
             receiveCompletion: { completion in
@@ -51,9 +53,10 @@ extension SwiftFulcrumTests {
         
         let address = "qrsrz5mzve6kyr6ne6lgsvlgxvs3hqm6huxhd8gqwj"
         
-        let (id, publisher) = try await fulcrum.submit(method: .blockchain(.address(.subscribe(address: address))),
-                                                       resultType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Address.Subscribe>.self,
-                                                       notificationType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Address.SubscribeNotification>.self)
+        let (id, publisher) = try await fulcrum.submit(
+            method: .blockchain(.address(.subscribe(address: address))),
+            responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Address.Subscribe>.self,
+            notificationType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Address.SubscribeNotification>.self)
         publisher
         .sink(
             receiveCompletion: { completion in

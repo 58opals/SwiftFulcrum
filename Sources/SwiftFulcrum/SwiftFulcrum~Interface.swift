@@ -39,7 +39,7 @@ extension SwiftFulcrum {
     
     public mutating func submit<JSONRPCResult: Decodable, JSONRPCNotification: Decodable>(
         method: Method,
-        resultType: Response.JSONRPC.Generic<JSONRPCResult>.Type,
+        responseType: Response.JSONRPC.Generic<JSONRPCResult>.Type,
         notificationType: Response.JSONRPC.Generic<JSONRPCNotification>.Type
     ) async throws -> (UUID, PassthroughSubject<JSONRPCNotification, Swift.Error>) {
         let localClient = self.client
