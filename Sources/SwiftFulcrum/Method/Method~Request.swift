@@ -1,6 +1,6 @@
 import Foundation
 
-extension Method: FulcrumMethodRequestable {
+extension Method {
     var request: Request {
         switch self {
         case .blockchain(let blockchain):
@@ -68,7 +68,8 @@ extension Method: FulcrumMethodRequestable {
                         func encode(to encoder: Encoder) throws {
                             var container = encoder.unkeyedContainer()
                             try container.encode(address)
-                            if let fromHeight = fromHeight { try container.encode(fromHeight) }
+                            //if let fromHeight = fromHeight { try container.encode(fromHeight) }
+                            if let fromHeight = fromHeight { try container.encode(fromHeight) } else { try container.encode(Int(0)) }
                             if includeUnconfirmed { try container.encode(Int(-1)) } else if let toHeight = toHeight { try container.encode(toHeight) }
                         }
                     }
@@ -158,7 +159,7 @@ extension Method: FulcrumMethodRequestable {
                     }
                     return Request(method: self,
                                    params: Parameters(height: height,
-                                                      checkpointHeight: checkpointHeight))
+                                                      checkpointHeight: checkpointHeight ?? height + 1))
                     
                     // MARK: Blockchain.Block.headers
                 case .headers(let startHeight, let count, let checkpointHeight):
@@ -176,7 +177,7 @@ extension Method: FulcrumMethodRequestable {
                     return Request(method: self,
                                    params: Parameters(startHeight: startHeight,
                                                       count: count,
-                                                      checkpointHeight: checkpointHeight))
+                                                      checkpointHeight: checkpointHeight ?? 0))
                 }
                 
             case .header(let header):

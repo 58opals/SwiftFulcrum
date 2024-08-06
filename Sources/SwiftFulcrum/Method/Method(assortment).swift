@@ -119,3 +119,120 @@ struct MethodAssortment {
         }
     }
 }
+
+extension MethodAssortment {
+    static var sampleMethods: [Method] {
+        return [
+            // Blockchain
+            .blockchain(
+                .estimateFee(numberOfBlocks: 6)),
+            .blockchain(
+                .relayFee),
+            
+            // Blockchain.Address
+            .blockchain(
+                .address(
+                    .getBalance(address: "qrmydkpmlgvxrafjv7rpdm4unlcdfnljmqss98ytuq", tokenFilter: .include))),
+            .blockchain(
+                .address(
+                    .getFirstUse(address: "qrmydkpmlgvxrafjv7rpdm4unlcdfnljmqss98ytuq"))),
+            .blockchain(
+                .address(
+                    .getHistory(address: "qrmydkpmlgvxrafjv7rpdm4unlcdfnljmqss98ytuq",
+                                fromHeight: nil,
+                                toHeight: nil,
+                                includeUnconfirmed: true))),
+            .blockchain(
+                .address(
+                    .getMempool(address: "qrmydkpmlgvxrafjv7rpdm4unlcdfnljmqss98ytuq"))),
+            .blockchain(
+                .address(
+                    .getScriptHash(address: "qrmydkpmlgvxrafjv7rpdm4unlcdfnljmqss98ytuq"))),
+            .blockchain(
+                .address(
+                    .listUnspent(address: "qrmydkpmlgvxrafjv7rpdm4unlcdfnljmqss98ytuq", tokenFilter: .include))),
+            .blockchain(
+                .address(
+                    .subscribe(address: "qrmydkpmlgvxrafjv7rpdm4unlcdfnljmqss98ytuq"))),
+            .blockchain(
+                .address(
+                    .unsubscribe(address: "qrmydkpmlgvxrafjv7rpdm4unlcdfnljmqss98ytuq"))),
+            
+            // Blockchain.Block
+            .blockchain(
+                .block(
+                    .header(height: 1, checkpointHeight: 0))),
+            .blockchain(
+                .block(
+                    .headers(startHeight: 1, count: 10, checkpointHeight: 0))),
+            
+            // Blockchain.Header
+            .blockchain(
+                .header(
+                    .get(blockHash: "0000000000000000029c2784e7453617ea6d8e73cbc91b293d06cf41cf3a5286"))),
+            
+            // Blockchain.Headers
+            .blockchain(
+                .headers(
+                    .getTip)),
+            .blockchain(
+                .headers(
+                    .subscribe)),
+            .blockchain(
+                .headers(
+                    .unsubscribe)),
+            
+            // Blockchain.Transaction
+            .blockchain(
+                .transaction(
+                    .broadcast(rawTransaction: "rawTx"))),
+            .blockchain(
+                .transaction(
+                    .get(transactionHash: "1452186edb3b7f8a0e64fefaf3c3879272e52bdccdbc329de8987e44f3f5bfd1", verbose: true))),
+            .blockchain(
+                .transaction(
+                    .getConfirmedBlockHash(transactionHash: "1452186edb3b7f8a0e64fefaf3c3879272e52bdccdbc329de8987e44f3f5bfd1", includeHeader: true))),
+            .blockchain(
+                .transaction(
+                    .getHeight(transactionHash: "1452186edb3b7f8a0e64fefaf3c3879272e52bdccdbc329de8987e44f3f5bfd1"))),
+            .blockchain(
+                .transaction(
+                    .getMerkle(transactionHash: "1452186edb3b7f8a0e64fefaf3c3879272e52bdccdbc329de8987e44f3f5bfd1"))),
+            .blockchain(
+                .transaction(
+                    .idFromPos(blockHeight: 1, transactionPosition: 0, includeMerkleProof: true))),
+            .blockchain(
+                .transaction(
+                    .subscribe(transactionHash: "1452186edb3b7f8a0e64fefaf3c3879272e52bdccdbc329de8987e44f3f5bfd1"))),
+            .blockchain(
+                .transaction(
+                    .unsubscribe(transactionHash: "1452186edb3b7f8a0e64fefaf3c3879272e52bdccdbc329de8987e44f3f5bfd1"))),
+            
+            // Blockchain.Transaction.DSProof
+            .blockchain(
+                .transaction(
+                    .dsProof(
+                        .get(transactionHash: "1452186edb3b7f8a0e64fefaf3c3879272e52bdccdbc329de8987e44f3f5bfd1")))),
+            .blockchain(
+                .transaction(
+                    .dsProof(
+                        .list))),
+            .blockchain(
+                .transaction(
+                    .dsProof(
+                        .subscribe(transactionHash: "1452186edb3b7f8a0e64fefaf3c3879272e52bdccdbc329de8987e44f3f5bfd1")))),
+            .blockchain(
+                .transaction(
+                    .dsProof(
+                        .unsubscribe(transactionHash: "1452186edb3b7f8a0e64fefaf3c3879272e52bdccdbc329de8987e44f3f5bfd1")))),
+            
+            // Blockchain.UTXO
+            .blockchain(
+                .utxo(
+                    .getInfo(transactionHash: "1452186edb3b7f8a0e64fefaf3c3879272e52bdccdbc329de8987e44f3f5bfd1", outputIndex: 0))),
+            
+            // Mempool
+            .mempool(.getFeeHistogram)
+        ]
+    }
+}

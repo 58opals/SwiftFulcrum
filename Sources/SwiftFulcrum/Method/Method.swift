@@ -5,8 +5,7 @@ public enum Method {
     case mempool(Mempool)
     
     public enum Blockchain {
-        public typealias numberOfBlocks = Int
-        case estimateFee(numberOfBlocks)
+        case estimateFee(numberOfBlocks: Int)
         case relayFee
         
         case address(Address)
@@ -17,36 +16,27 @@ public enum Method {
         case utxo(UTXO)
         
         public enum Address {
-            public typealias address = String
-            public typealias tokenFilter = CashTokens.TokenFilter
             public typealias fromHeight = UInt
             public typealias toHeight = UInt
             public typealias includeUnconfirmed = Bool
             
-            case getBalance(address, tokenFilter?)
-            case getFirstUse(address)
-            case getHistory(address, fromHeight?, toHeight?, includeUnconfirmed)
-            case getMempool(address)
-            case getScriptHash(address)
-            case listUnspent(address, tokenFilter?)
-            case subscribe(address)
-            case unsubscribe(address)
+            case getBalance(address: String, tokenFilter: CashTokens.TokenFilter?)
+            case getFirstUse(address: String)
+            case getHistory(address: String, fromHeight: UInt?, toHeight: UInt?, includeUnconfirmed: Bool)
+            case getMempool(address: String)
+            case getScriptHash(address: String)
+            case listUnspent(address: String, tokenFilter: CashTokens.TokenFilter?)
+            case subscribe(address: String)
+            case unsubscribe(address: String)
         }
         
         public enum Block {
-            public typealias height = UInt
-            public typealias checkpointHeight = UInt
-            public typealias startHeight = UInt
-            public typealias count = UInt
-            
-            case header(height, checkpointHeight)
-            case headers(startHeight, count, checkpointHeight)
+            case header(height: UInt, checkpointHeight: UInt? = nil)
+            case headers(startHeight: UInt, count: UInt, checkpointHeight: UInt? = nil)
         }
         
         public enum Header {
-            public typealias blockHash = String
-            
-            case get(blockHash)
+            case get(blockHash: String)
         }
         
         public enum Headers {
@@ -56,40 +46,27 @@ public enum Method {
         }
         
         public enum Transaction {
-            public typealias rawTransaction = String
-            public typealias transactionHash = String
-            public typealias verbose = Bool
-            public typealias includeHeader = Bool
-            public typealias blockHeight = UInt
-            public typealias transactionPosition = UInt
-            public typealias includeMerkleProof = Bool
-            
-            case broadcast(rawTransaction)
-            case get(transactionHash, verbose)
-            case getConfirmedBlockHash(transactionHash, includeHeader)
-            case getHeight(transactionHash)
-            case getMerkle(transactionHash)
-            case idFromPos(blockHeight, transactionPosition, includeMerkleProof)
-            case subscribe(transactionHash)
-            case unsubscribe(transactionHash)
+            case broadcast(rawTransaction: String)
+            case get(transactionHash: String, verbose: Bool)
+            case getConfirmedBlockHash(transactionHash: String, includeHeader: Bool)
+            case getHeight(transactionHash: String)
+            case getMerkle(transactionHash: String)
+            case idFromPos(blockHeight: UInt, transactionPosition: UInt, includeMerkleProof: Bool)
+            case subscribe(transactionHash: String)
+            case unsubscribe(transactionHash: String)
             
             case dsProof(DSProof)
             
             public enum DSProof {
-                public typealias transactionHash = String
-                
-                case get(transactionHash)
+                case get(transactionHash: String)
                 case list
-                case subscribe(transactionHash)
-                case unsubscribe(transactionHash)
+                case subscribe(transactionHash: String)
+                case unsubscribe(transactionHash: String)
             }
         }
         
         public enum UTXO {
-            public typealias transactionHash = String
-            public typealias outputIndex = UInt16
-            
-            case getInfo(transactionHash, outputIndex)
+            case getInfo(transactionHash: String, outputIndex: UInt16)
         }
     }
     
@@ -125,6 +102,3 @@ extension Method.Blockchain {
         }
     }
 }
-
-// MARK: - Initialize
-extension Method: FulcrumMethodInitializable {}

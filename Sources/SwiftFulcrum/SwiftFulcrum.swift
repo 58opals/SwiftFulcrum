@@ -3,7 +3,6 @@ import Combine
 
 public struct SwiftFulcrum {
     let client: Client
-    let storage: Storage
     var subscribers: Set<AnyCancellable>
     
     public init(url: String? = nil) throws {
@@ -19,8 +18,7 @@ public struct SwiftFulcrum {
             }
         }()
         
-        self.client = Client(webSocket: webSocket, storage: Storage())
-        self.storage = client.jsonRPC.storage
+        self.client = Client(webSocket: webSocket)
         self.subscribers = Set<AnyCancellable>()
     }
 }

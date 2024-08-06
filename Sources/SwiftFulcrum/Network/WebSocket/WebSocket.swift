@@ -3,27 +3,23 @@ import Network
 import Combine
 
 final class WebSocket {
-    let url: URL
-    private let task: URLSessionWebSocketTask
+    var url: URL
+    
+    private var task: URLSessionWebSocketTask
+    let receivedData: PassthroughSubject<Data, Never> = PassthroughSubject<Data, Never>()
+    let receivedString: PassthroughSubject<String, Never> = PassthroughSubject<String, Never>()
+    
+    var isConnected: Bool = false
+    let reconnector: Reconnector
     
     init(url: URL, reconnectConfiguration: Reconnector.Configuration = .defaultConfiguration) {
         self.url = url
         self.task = URLSession.shared.webSocketTask(with: url)
         self.reconnector = Reconnector(reconnectConfiguration)
     }
-    
-    // MARK: NetworkConnectable
-    var isConnected: Bool = false
-    
-    // MARK: WebSocketReconnectable
-    let reconnector: Reconnector
-    
-    // MARK: WebSocketEventPublishable
-    let receivedData: PassthroughSubject<Data, Never> = PassthroughSubject<Data, Never>()
-    let receivedString: PassthroughSubject<String, Never> = PassthroughSubject<String, Never>()
 }
 
-extension WebSocket: NetworkConnectable {
+extension WebSocket {
     func connect() {
         task.resume()
         isConnected = true
@@ -37,16 +33,20 @@ extension WebSocket: NetworkConnectable {
     func disconnect(with reason: String? = nil) {
         task.cancel(with: .goingAway, reason: reason?.data(using: .utf8))
         isConnected = false
+        print("WebSocket (\(self.url.description)) is disconnected.")
+    }
+    
+    func reconnect(with url: URL? = nil) async throws {
+        try await reconnector.attemptReconnection(for: self, with: url)
+    }
+    
+    func createNewTask(with url: URL? = nil) {
+        if let newURL = url { self.url = newURL }
+        self.task = URLSession.shared.webSocketTask(with: self.url)
     }
 }
 
-extension WebSocket: WebSocketReconnectable {
-    func reconnect() async throws {
-        try await reconnector.attemptReconnection(for: self)
-    }
-}
-
-extension WebSocket: WebSocketMessagable {
+extension WebSocket {
     func send(data: Data) async throws {
         let message = URLSessionWebSocketTask.Message.data(data)
         try await task.send(message)
@@ -97,7 +97,7 @@ extension WebSocket: WebSocketMessagable {
     }
 }
 
-extension WebSocket: WebSocketEventPublishable {
+extension WebSocket {
     func publish(message: URLSessionWebSocketTask.Message) throws {
         switch message {
         case .data(let data):

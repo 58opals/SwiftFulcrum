@@ -19,22 +19,22 @@ extension WebSocket {
 extension WebSocket.Server {
     static var samples: [URL] {
         let jsonString =
-"""
-[
-    {
-    "host": "electrum.imaginary.cash",
-    "port": 50004
-    },
-    {
-    "host": "bch.imaginary.cash",
-    "port": 50004
-    },
-    {
-    "host": "cashnode.bch.ninja",
-    "port": 50004
-    }
-]
-"""
+            """
+            [
+                {
+                "host": "electrum.imaginary.cash",
+                "port": 50004
+                },
+                {
+                "host": "bch.imaginary.cash",
+                "port": 50004
+                },
+                {
+                "host": "cashnode.bch.ninja",
+                "port": 50004
+                }
+            ]
+            """
         
         do {
             guard let data = jsonString.data(using: .utf8) else { fatalError() }

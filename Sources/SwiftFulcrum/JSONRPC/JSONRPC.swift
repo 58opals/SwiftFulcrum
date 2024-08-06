@@ -5,7 +5,6 @@ struct JSONRPC {
     typealias SubscriptionIdentifier = String
     
     let decoder = JSONDecoder()
-    let storage: Storage
 }
 
 extension JSONRPC {
@@ -18,14 +17,12 @@ extension JSONRPC {
         catch { return false }
     }
     
-    //func isRegularResponse(_ data: Data) -> Bool { do { _ = try extractID(from: data); return true } catch { return false } }
     func isRegularResponse(_ data: Data) -> Bool { isDecodable(as: IdentifiableResponse.self, from: data) }
     func extractID(from data: Data) throws -> UUID {
         let response = try decoder.decode(IdentifiableResponse.self, from: data)
         return response.id
     }
     
-    //func isSubscriptionResponse(_ data: Data) -> Bool { do { _ = try extractMethodPath(from: data); return true } catch { return false } }
     func isSubscriptionResponse(_ data: Data) -> Bool { isDecodable(as: MethodableResponse.self, from: data) }
     func extractMethodPath(from data: Data) throws -> MethodPath {
         let response = try decoder.decode(MethodableResponse.self, from: data)
@@ -34,7 +31,6 @@ extension JSONRPC {
         return methodString
     }
     
-    //func isErrorResponse(_ data: Data) -> Bool { do { _ = try extractError(from: data); return true } catch { return false } }
     func isErrorResponse(_ data: Data) -> Bool { isDecodable(as: ErrorableResponse.self, from: data) }
     func extractError(from data: Data) throws -> (UUID, Response.Error.Result) {
         let response = try decoder.decode(ErrorableResponse.self, from: data)
@@ -49,13 +45,9 @@ extension JSONRPC {
     }
     
     func determineResponseType(from data: Data) throws -> ResponseType {
-        if isRegularResponse(data) {
-            return .regular
-        } else if isSubscriptionResponse(data) {
-            return .subscription
-        } else {
-            return .error
-        }
+        if isRegularResponse(data) { return .regular }
+        else if isSubscriptionResponse(data) { return .subscription }
+        else { return .error }
     }
 }
 
@@ -65,7 +57,7 @@ extension JSONRPC {
         switch responseType {
         case .regular:
             let id = try self.extractID(from: data)
-            let methodPath = try self.storage.request.getRequest(for: id).method
+            let methodPath = "\(id)"//try extractMethodPath(from: data)
             return methodPath
         case .subscription:
             let methodPath = try self.extractMethodPath(from: data)
@@ -80,44 +72,43 @@ extension JSONRPC {
         return genericResponse
     }
 }
-
+/*
 extension JSONRPC {
-    func processRegularResponse<ResponseResult: FulcrumResponseResultInitializable>(data: Data, resultStorage: Storage.ResultBox<ResponseResult>) throws {
+    func processRegularResponse<ResponseResult: Decodable>(data: Data, resultStorage: Storage.ResultBox<ResponseResult>) throws {
         let methodPath = try self.getMethodPath(from: data)
         
         if isRegularResponse(data) {
-            let genericResponse: Response.JSONRPCGeneric<ResponseResult.JSONRPC> = try self.getGenericResponse(from: data)
+            let genericResponse: Response.JSONRPCGeneric<ResponseResult> = try self.getGenericResponse(from: data)
             guard let id = genericResponse.id else { throw Error.decodingFailure(reason: .idMissing, data: data, description: "Where is UUID for this regular response?") }
             
             if !isErrorResponse(data) {
                 if let jsonrpcResult = genericResponse.result {
-                    try resultStorage.store(result: ResponseResult(jsonrpcResult: jsonrpcResult), for: id)
+                    try resultStorage.store(result: jsonrpcResult, for: id)
                 } else {
                     try resultStorage.store(result: nil, for: id)
                 }
             } else {
-                guard let error = genericResponse.error else { throw Error.decodingFailure(reason: .errorMissing, data: data, description: "There should be an JSONRPC error message.") }
+                guard let error = genericResponse.error else { throw Error.decodingFailure(reason: .errorMissing, data: data, description: "There should be a JSONRPC error message.") }
                 throw Error.rpc(.init(id: id, error: error), methodPath: methodPath, description: "The JSONRPC error response is detected from the server.")
             }
         }
     }
     
-    func processSubscriptionResponse<ResponseNotification: FulcrumResponseResultInitializable>(data: Data, notificationStorage: Storage.NotificationBox<ResponseNotification>) throws {
-        //let responseString = String(data: data, encoding: .utf8)!
+    func processSubscriptionResponse<ResponseNotification: Decodable>(data: Data, notificationStorage: Storage.NotificationBox<ResponseNotification>) throws {
         let methodPath = try self.getMethodPath(from: data)
         
-        let genericResponse: Response.JSONRPCGeneric<ResponseNotification.JSONRPC> = try self.getGenericResponse(from: data)
+        let genericResponse: Response.JSONRPCGeneric<ResponseNotification> = try self.getGenericResponse(from: data)
         guard isSubscriptionResponse(data) else { return }
         
-        guard let method = genericResponse.method else { throw Error.decodingFailure(reason: .methodMissing, data: data, description: "Cannot identified the method.") }
+        guard let method = genericResponse.method else { throw Error.decodingFailure(reason: .methodMissing, data: data, description: "Cannot identify the method.") }
         guard method == methodPath else { throw Error.decodingFailure(reason: .unmatchedMethod(methodFromResponse: method, methodFromExtractor: methodPath), data: data, description: "The method from the response isn't matched with the storing method path.") }
         guard let params = genericResponse.params else { throw Error.decodingFailure(reason: .parametersMissing, data: data, description: "This subscription response needs params to be decoded.") }
         
-        let response = ResponseNotification(jsonrpcResult: params)
-        try notificationStorage.store(notification: response, for: response.subscriptionIdentifier)
+        try notificationStorage.store(notification: params, for: params.subscriptionIdentifier)
     }
 }
-
+*/
+/*
 extension JSONRPC {
     func storeResponse(from data: Data) throws {
         let methodPath = try self.getMethodPath(from: data)
@@ -264,3 +255,4 @@ extension JSONRPC {
         }
     }
 }
+*/
