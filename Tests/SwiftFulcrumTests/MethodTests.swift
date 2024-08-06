@@ -26,9 +26,9 @@ final class MethodTests: XCTestCase {
     
     private func performRegularTest<JSONRPCResult: Decodable>(
         with request: Request,
-        responseType: Response.JSONRPCGeneric<JSONRPCResult>.Type,
+        responseType: Response.JSONRPC.Generic<JSONRPCResult>.Type,
         expectationDescription: String = "Client receives response and decodes it successfully",
-        timeout: TimeInterval = 10.0
+        timeout: TimeInterval = 5.0
     ) async throws {
         let expectation = XCTestExpectation(description: expectationDescription)
         
@@ -45,6 +45,7 @@ final class MethodTests: XCTestCase {
                 
                 switch try response.getResponseType() {
                 case .regular(let result):
+                    print(" ↳ This is result: \(result)")
                     XCTAssertNotNil(result.result)
                 case .subscription:
                     XCTFail("Subscription response not expected")
@@ -68,8 +69,8 @@ final class MethodTests: XCTestCase {
     
     private func performSubscriptionTest<SubscribeResult: Decodable, NotificationResult: Decodable>(
             with request: Request,
-            responseType: Response.JSONRPCGeneric<SubscribeResult>.Type,
-            notificationType: Response.JSONRPCGeneric<NotificationResult>.Type,
+            responseType: Response.JSONRPC.Generic<SubscribeResult>.Type,
+            notificationType: Response.JSONRPC.Generic<NotificationResult>.Type,
             expectationDescription: String = "Client receives response and notification successfully",
             timeout: TimeInterval = (1.0 * 60) * 15
         ) async throws {
@@ -142,7 +143,7 @@ extension MethodTests {
             with: Method.blockchain(
                 .estimateFee(numberOfBlocks: 6)
             ).request,
-            responseType: Response.JSONRPCGeneric<Response.Result.Blockchain.EstimateFeeJSONRPCResult>.self
+            responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.EstimateFee>.self
         )
     }
     
@@ -151,7 +152,7 @@ extension MethodTests {
             with: Method.blockchain(
                 .relayFee
             ).request,
-            responseType: Response.JSONRPCGeneric<Response.Result.Blockchain.RelayFeeJSONRPCResult>.self
+            responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.RelayFee>.self
         )
     }
 }
@@ -163,7 +164,7 @@ extension MethodTests {
                 .getBalance(address: "qrmydkpmlgvxrafjv7rpdm4unlcdfnljmqss98ytuq",
                             tokenFilter: .include)
             )).request,
-            responseType: Response.JSONRPCGeneric<Response.Result.Blockchain.Address.GetBalanceJSONRPCResult>.self
+            responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Address.GetBalance>.self
         )
     }
     
@@ -172,7 +173,7 @@ extension MethodTests {
             with: Method.blockchain(.address(
                 .getFirstUse(address: "qrmydkpmlgvxrafjv7rpdm4unlcdfnljmqss98ytuq")
             )).request,
-            responseType: Response.JSONRPCGeneric<Response.Result.Blockchain.Address.GetFirstUseJSONRPCResult>.self
+            responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Address.GetFirstUse>.self
         )
     }
     
@@ -184,7 +185,7 @@ extension MethodTests {
                             toHeight: nil,
                             includeUnconfirmed: true)
             )).request,
-            responseType: Response.JSONRPCGeneric<Response.Result.Blockchain.Address.GetHistoryJSONRPCResult>.self
+            responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Address.GetHistory>.self
         )
     }
     
@@ -193,7 +194,7 @@ extension MethodTests {
             with: Method.blockchain(.address(
                 .getMempool(address: "qrmydkpmlgvxrafjv7rpdm4unlcdfnljmqss98ytuq")
             )).request,
-            responseType: Response.JSONRPCGeneric<Response.Result.Blockchain.Address.GetMempoolJSONRPCResult>.self
+            responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Address.GetMempool>.self
         )
     }
     
@@ -202,7 +203,7 @@ extension MethodTests {
             with: Method.blockchain(.address(
                 .getScriptHash(address: "qrmydkpmlgvxrafjv7rpdm4unlcdfnljmqss98ytuq")
             )).request,
-            responseType: Response.JSONRPCGeneric<Response.Result.Blockchain.Address.GetScriptHashJSONRPCResult>.self
+            responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Address.GetScriptHash>.self
         )
     }
     
@@ -212,7 +213,7 @@ extension MethodTests {
                 .listUnspent(address: "qrmydkpmlgvxrafjv7rpdm4unlcdfnljmqss98ytuq",
                              tokenFilter: .include)
             )).request,
-            responseType: Response.JSONRPCGeneric<Response.Result.Blockchain.Address.ListUnspentJSONRPCResult>.self
+            responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Address.ListUnspent>.self
         )
     }
     
@@ -221,7 +222,7 @@ extension MethodTests {
             with: Method.blockchain(.address(
                 .subscribe(address: "qq2qjesqhy78k5xznl39tqkyjphegmn5hum4sckvhp")
             )).request,
-            responseType: Response.JSONRPCGeneric<Response.Result.Blockchain.Address.SubscribeJSONRPCResult>.self
+            responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Address.Subscribe>.self
         )
     }
     
@@ -230,7 +231,7 @@ extension MethodTests {
             with: Method.blockchain(.address(
                 .unsubscribe(address: "qq2qjesqhy78k5xznl39tqkyjphegmn5hum4sckvhp")
             )).request,
-            responseType: Response.JSONRPCGeneric<Response.Result.Blockchain.Address.UnsubscribeJSONRPCResult>.self
+            responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Address.Unsubscribe>.self
         )
     }
 }
@@ -241,7 +242,7 @@ extension MethodTests {
             with: Method.blockchain(.block(
                 .header(height: 0)
             )).request,
-            responseType: Response.JSONRPCGeneric<Response.Result.Blockchain.Block.HeaderJSONRPCResult>.self
+            responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Block.Header>.self
         )
     }
     
@@ -250,7 +251,7 @@ extension MethodTests {
             with: Method.blockchain(.block(
                 .headers(startHeight: 0, count: 6)
             )).request,
-            responseType: Response.JSONRPCGeneric<Response.Result.Blockchain.Block.HeadersJSONRPCResult>.self
+            responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Block.Headers>.self
         )
     }
 }
@@ -261,7 +262,7 @@ extension MethodTests {
             with: Method.blockchain(.header(
                 .get(blockHash: "0000000000000000029c2784e7453617ea6d8e73cbc91b293d06cf41cf3a5286")
             )).request,
-            responseType: Response.JSONRPCGeneric<Response.Result.Blockchain.Header.GetJSONRPCResult>.self
+            responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Header.Get>.self
         )
     }
 }
@@ -272,7 +273,7 @@ extension MethodTests {
             with: Method.blockchain(.headers(
                 .getTip
             )).request,
-            responseType: Response.JSONRPCGeneric<Response.Result.Blockchain.Headers.GetTipJSONRPCResult>.self
+            responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Headers.GetTip>.self
         )
     }
     
@@ -281,7 +282,7 @@ extension MethodTests {
             with: Method.blockchain(.headers(
                 .subscribe
             )).request,
-            responseType: Response.JSONRPCGeneric<Response.Result.Blockchain.Headers.SubscribeJSONRPCResult>.self
+            responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Headers.Subscribe>.self
         )
     }
     
@@ -290,7 +291,7 @@ extension MethodTests {
             with: Method.blockchain(.headers(
                 .unsubscribe
             )).request,
-            responseType: Response.JSONRPCGeneric<Response.Result.Blockchain.Headers.UnsubscribeJSONRPCResult>.self
+            responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Headers.Unsubscribe>.self
         )
     }
 }
@@ -301,7 +302,7 @@ extension MethodTests {
             with: Method.blockchain(.transaction(
                 .broadcast(rawTransaction: "some raw transaction data")
             )).request,
-            responseType: Response.JSONRPCGeneric<Response.Result.Blockchain.Transaction.BroadcastJSONRPCResult>.self
+            responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Transaction.Broadcast>.self
         )
     }
     
@@ -311,7 +312,7 @@ extension MethodTests {
                 .get(transactionHash: "1452186edb3b7f8a0e64fefaf3c3879272e52bdccdbc329de8987e44f3f5bfd1",
                      verbose: true)
             )).request,
-            responseType: Response.JSONRPCGeneric<Response.Result.Blockchain.Transaction.GetJSONRPCResult>.self
+            responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Transaction.Get>.self
         )
     }
     
@@ -321,7 +322,7 @@ extension MethodTests {
                 .getConfirmedBlockHash(transactionHash: "1452186edb3b7f8a0e64fefaf3c3879272e52bdccdbc329de8987e44f3f5bfd1",
                                        includeHeader: true)
             )).request,
-            responseType: Response.JSONRPCGeneric<Response.Result.Blockchain.Transaction.GetConfirmedBlockHashJSONRPCResult>.self
+            responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Transaction.GetConfirmedBlockHash>.self
         )
     }
     
@@ -330,7 +331,7 @@ extension MethodTests {
             with: Method.blockchain(.transaction(
                 .getHeight(transactionHash: "1452186edb3b7f8a0e64fefaf3c3879272e52bdccdbc329de8987e44f3f5bfd1")
             )).request,
-            responseType: Response.JSONRPCGeneric<Response.Result.Blockchain.Transaction.GetHeightJSONRPCResult>.self
+            responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Transaction.GetHeight>.self
         )
     }
     
@@ -339,7 +340,7 @@ extension MethodTests {
             with: Method.blockchain(.transaction(
                 .getMerkle(transactionHash: "1452186edb3b7f8a0e64fefaf3c3879272e52bdccdbc329de8987e44f3f5bfd1")
             )).request,
-            responseType: Response.JSONRPCGeneric<Response.Result.Blockchain.Transaction.GetMerkleJSONRPCResult>.self
+            responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Transaction.GetMerkle>.self
         )
     }
     
@@ -350,7 +351,7 @@ extension MethodTests {
                            transactionPosition: 0,
                            includeMerkleProof: true)
             )).request,
-            responseType: Response.JSONRPCGeneric<Response.Result.Blockchain.Transaction.IDFromPosJSONRPCResult>.self
+            responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Transaction.IDFromPos>.self
         )
     }
     
@@ -359,7 +360,7 @@ extension MethodTests {
             with: Method.blockchain(.transaction(
                 .subscribe(transactionHash: "1452186edb3b7f8a0e64fefaf3c3879272e52bdccdbc329de8987e44f3f5bfd1")
             )).request,
-            responseType: Response.JSONRPCGeneric<Response.Result.Blockchain.Transaction.SubscribeJSONRPCResult>.self
+            responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Transaction.Subscribe>.self
         )
     }
     
@@ -368,7 +369,7 @@ extension MethodTests {
             with: Method.blockchain(.transaction(
                 .unsubscribe(transactionHash: "1452186edb3b7f8a0e64fefaf3c3879272e52bdccdbc329de8987e44f3f5bfd1")
             )).request,
-            responseType: Response.JSONRPCGeneric<Response.Result.Blockchain.Transaction.UnsubscribeJSONRPCResult>.self
+            responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Transaction.Unsubscribe>.self
         )
     }
 }
@@ -379,7 +380,7 @@ extension MethodTests {
             with: Method.blockchain(.transaction(.dsProof(
                 .get(transactionHash: "1452186edb3b7f8a0e64fefaf3c3879272e52bdccdbc329de8987e44f3f5bfd1")
             ))).request,
-            responseType: Response.JSONRPCGeneric<Response.Result.Blockchain.Transaction.DSProof.GetJSONRPCResult>.self
+            responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Transaction.DSProof.Get>.self
         )
     }
     
@@ -388,7 +389,7 @@ extension MethodTests {
             with: Method.blockchain(.transaction(.dsProof(
                 .list
             ))).request,
-            responseType: Response.JSONRPCGeneric<Response.Result.Blockchain.Transaction.DSProof.ListJSONRPCResult>.self
+            responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Transaction.DSProof.List>.self
         )
     }
     
@@ -397,7 +398,7 @@ extension MethodTests {
             with: Method.blockchain(.transaction(.dsProof(
                 .subscribe(transactionHash: "1452186edb3b7f8a0e64fefaf3c3879272e52bdccdbc329de8987e44f3f5bfd1")
             ))).request,
-            responseType: Response.JSONRPCGeneric<Response.Result.Blockchain.Transaction.DSProof.SubscribeJSONRPCResult>.self
+            responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Transaction.DSProof.Subscribe>.self
         )
     }
     
@@ -406,7 +407,7 @@ extension MethodTests {
             with: Method.blockchain(.transaction(.dsProof(
                 .unsubscribe(transactionHash: "1452186edb3b7f8a0e64fefaf3c3879272e52bdccdbc329de8987e44f3f5bfd1")
             ))).request,
-            responseType: Response.JSONRPCGeneric<Response.Result.Blockchain.Transaction.DSProof.UnsubscribeJSONRPCResult>.self
+            responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Transaction.DSProof.Unsubscribe>.self
         )
     }
 }
@@ -418,7 +419,7 @@ extension MethodTests {
                 .getInfo(transactionHash: "1452186edb3b7f8a0e64fefaf3c3879272e52bdccdbc329de8987e44f3f5bfd1",
                          outputIndex: 0)
             )).request,
-            responseType: Response.JSONRPCGeneric<Response.Result.Blockchain.UTXO.GetInfoJSONRPCResult>.self
+            responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.UTXO.GetInfo>.self
         )
     }
 }
@@ -429,7 +430,7 @@ extension MethodTests {
             with: Method.mempool(
                 .getFeeHistogram
             ).request,
-            responseType: Response.JSONRPCGeneric<Response.Result.Mempool.GetFeeHistogramJSONRPCResult>.self
+            responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Mempool.GetFeeHistogram>.self
         )
     }
 }
@@ -441,8 +442,8 @@ extension MethodTests {
             with: Method.blockchain(.address(
                 .subscribe(address: "qq2qjesqhy78k5xznl39tqkyjphegmn5hum4sckvhp")
             )).request,
-            responseType: Response.JSONRPCGeneric<Response.Result.Blockchain.Address.SubscribeJSONRPCResult>.self,
-            notificationType: Response.JSONRPCGeneric<Response.Result.Blockchain.Address.SubscribeJSONRPCNotification>.self
+            responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Address.Subscribe>.self,
+            notificationType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Address.SubscribeNotification>.self
         )
     }
     
@@ -451,8 +452,8 @@ extension MethodTests {
             with: Method.blockchain(.headers(
                 .subscribe
             )).request,
-            responseType: Response.JSONRPCGeneric<Response.Result.Blockchain.Headers.SubscribeJSONRPCResult>.self,
-            notificationType: Response.JSONRPCGeneric<Response.Result.Blockchain.Headers.SubscribeJSONRPCNotification>.self
+            responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Headers.Subscribe>.self,
+            notificationType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Headers.SubscribeNotification>.self
         )
     }
     
@@ -461,8 +462,8 @@ extension MethodTests {
             with: Method.blockchain(.transaction(
                 .subscribe(transactionHash: "6447aea54bcfe634c0fe579332ad3f99fe7ebbcb69b89b3876241a3c95f1b78e")
             )).request,
-            responseType: Response.JSONRPCGeneric<Response.Result.Blockchain.Transaction.SubscribeJSONRPCResult>.self,
-            notificationType: Response.JSONRPCGeneric<Response.Result.Blockchain.Transaction.SubscribeJSONRPCNotification>.self
+            responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Transaction.Subscribe>.self,
+            notificationType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Transaction.SubscribeNotification>.self
         )
     }
     
@@ -471,8 +472,8 @@ extension MethodTests {
             with: Method.blockchain(.transaction(.dsProof(
                 .subscribe(transactionHash: "1452186edb3b7f8a0e64fefaf3c3879272e52bdccdbc329de8987e44f3f5bfd1")
             ))).request,
-            responseType: Response.JSONRPCGeneric<Response.Result.Blockchain.Transaction.DSProof.SubscribeJSONRPCResult>.self,
-            notificationType: Response.JSONRPCGeneric<Response.Result.Blockchain.Transaction.DSProof.SubscribeJSONRPCNotification>.self
+            responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Transaction.DSProof.Subscribe>.self,
+            notificationType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Transaction.DSProof.SubscribeNotification>.self
         )
     }
 }

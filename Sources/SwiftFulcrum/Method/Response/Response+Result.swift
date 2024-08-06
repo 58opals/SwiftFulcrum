@@ -1,283 +1,283 @@
 import Foundation
 
-extension Response { public struct Result {} }
+extension Response { struct Result {} }
 
 extension Response.Result {
-    public struct Blockchain {
-        public struct EstimateFee: Decodable {
-            public let fee: Double
+    struct Blockchain {
+        struct EstimateFee: Decodable {
+            let fee: Double
         }
         
-        public struct RelayFee: Decodable {
-            public let fee: Double
+        struct RelayFee: Decodable {
+            let fee: Double
         }
         
-        public struct Address {
-            public struct GetBalance: Decodable {
-                public let confirmed: UInt64
-                public let unconfirmed: Int64
+        struct Address {
+            struct GetBalance: Decodable {
+                let confirmed: UInt64
+                let unconfirmed: Int64
             }
             
-            public struct GetFirstUse: Decodable {
-                public let blockHash: String
-                public let height: UInt
-                public let transactionHash: String
+            struct GetFirstUse: Decodable {
+                let blockHash: String
+                let height: UInt
+                let transactionHash: String
             }
             
-            public struct GetHistory: Decodable {
-                public let transactions: [Transaction]
-                public struct Transaction: Decodable {
-                    public let height: Int
-                    public let transactionHash: String
-                    public let fee: UInt?
+            struct GetHistory: Decodable {
+                let transactions: [Transaction]
+                struct Transaction: Decodable {
+                    let height: Int
+                    let transactionHash: String
+                    let fee: UInt?
                 }
             }
             
-            public struct GetMempool: Decodable {
-                public let transactions: [Transaction]
-                public struct Transaction: Decodable {
-                    public let height: Int
-                    public let transactionHash: String
-                    public let fee: UInt?
+            struct GetMempool: Decodable {
+                let transactions: [Transaction]
+                struct Transaction: Decodable {
+                    let height: Int
+                    let transactionHash: String
+                    let fee: UInt?
                 }
             }
             
-            public struct GetScriptHash: Decodable {
-                public let hash: String
+            struct GetScriptHash: Decodable {
+                let hash: String
             }
             
-            public struct ListUnspent: Decodable {
-                public let items: [Item]
+            struct ListUnspent: Decodable {
+                let items: [Item]
                 
-                public struct Item: Decodable {
-                    public let height: UInt
-                    public let tokenData: Method.Blockchain.CashTokens.JSON?
-                    public let transactionHash: String
-                    public let transactionPosition: UInt
-                    public let value: UInt64
+                struct Item: Decodable {
+                    let height: UInt
+                    let tokenData: Method.Blockchain.CashTokens.JSON?
+                    let transactionHash: String
+                    let transactionPosition: UInt
+                    let value: UInt64
                 }
             }
             
-            public struct Subscribe: Decodable {
-                public let status: String
+            struct Subscribe: Decodable {
+                let status: String
             }
             
-            public struct SubscribeNotification: Decodable {
-                public let subscriptionIdentifier: String
-                public let status: String?
+            struct SubscribeNotification: Decodable {
+                let subscriptionIdentifier: String
+                let status: String?
             }
             
-            public struct Unsubscribe: Decodable {
-                public let success: Bool
+            struct Unsubscribe: Decodable {
+                let success: Bool
             }
         }
         
-        public struct Block {
-            public struct Header: Decodable {
-                public let branch: [String]
-                public let header: String
-                public let root: String
+        struct Block {
+            struct Header: Decodable {
+                let branch: [String]
+                let header: String
+                let root: String
             }
             
-            public struct Headers: Decodable {
-                public let count: UInt
-                public let hex: String
-                public let max: UInt
+            struct Headers: Decodable {
+                let count: UInt
+                let hex: String
+                let max: UInt
             }
         }
         
-        public struct Header {
-            public struct Get: Decodable {
-                public let height: UInt
-                public let hex: String
+        struct Header {
+            struct Get: Decodable {
+                let height: UInt
+                let hex: String
             }
         }
         
-        public struct Headers {
-            public struct GetTip: Decodable {
-                public let height: UInt
-                public let hex: String
+        struct Headers {
+            struct GetTip: Decodable {
+                let height: UInt
+                let hex: String
             }
             
-            public struct Subscribe: Decodable {
-                public let height: UInt
-                public let hex: String
+            struct Subscribe: Decodable {
+                let height: UInt
+                let hex: String
             }
             
-            public struct SubscribeNotification: Decodable {
-                public let subscriptionIdentifier: String
-                public let block: Block
+            struct SubscribeNotification: Decodable {
+                let subscriptionIdentifier: String
+                let block: Block
                 
-                public struct Block: Decodable {
-                    public let height: UInt
-                    public let hex: String
+                struct Block: Decodable {
+                    let height: UInt
+                    let hex: String
                 }
             }
             
-            public struct Unsubscribe: Decodable {
-                public let success: Bool
+            struct Unsubscribe: Decodable {
+                let success: Bool
             }
         }
         
-        public struct Transaction {
-            public struct Broadcast: Decodable {
-                public let success: Bool
+        struct Transaction {
+            struct Broadcast: Decodable {
+                let success: Bool
             }
             
-            public struct Get: Decodable {
-                public let blockHash: String
-                public let blocktime: UInt
-                public let confirmations: UInt
-                public let hash: String
-                public let hex: String
-                public let locktime: UInt
-                public let size: UInt
-                public let time: UInt
-                public let transactionID: String
-                public let version: UInt
-                public let inputs: [Input]
-                public let outputs: [Output]
+            struct Get: Decodable {
+                let blockHash: String
+                let blocktime: UInt
+                let confirmations: UInt
+                let hash: String
+                let hex: String
+                let locktime: UInt
+                let size: UInt
+                let time: UInt
+                let transactionID: String
+                let version: UInt
+                let inputs: [Input]
+                let outputs: [Output]
                 
-                public struct Input: Decodable {
-                    public let scriptSig: ScriptSig
-                    public let sequence: UInt
-                    public let transactionID: String
-                    public let indexNumberOfPreviousTransactionOutput: UInt
+                struct Input: Decodable {
+                    let scriptSig: ScriptSig
+                    let sequence: UInt
+                    let transactionID: String
+                    let indexNumberOfPreviousTransactionOutput: UInt
                     
-                    public struct ScriptSig: Decodable {
-                        public let assemblyScriptLanguage: String
-                        public let hex: String
+                    struct ScriptSig: Decodable {
+                        let assemblyScriptLanguage: String
+                        let hex: String
                     }
                 }
                 
-                public struct Output: Decodable {
-                    public let index: UInt
-                    public let scriptPubKey: ScriptPubKey
-                    public let value: Double
+                struct Output: Decodable {
+                    let index: UInt
+                    let scriptPubKey: ScriptPubKey
+                    let value: Double
                     
-                    public struct ScriptPubKey: Decodable {
-                        public let addresses: [String]
-                        public let assemblyScriptLanguage: String
-                        public let hex: String
-                        public let requiredSignatures: UInt
-                        public let type: String
+                    struct ScriptPubKey: Decodable {
+                        let addresses: [String]
+                        let assemblyScriptLanguage: String
+                        let hex: String
+                        let requiredSignatures: UInt
+                        let type: String
                     }
                 }
             }
             
-            public struct GetConfirmedBlockHash: Decodable {
-                public let blockHash: String
-                public let blockHeader: String?
-                public let blockHeight: UInt
+            struct GetConfirmedBlockHash: Decodable {
+                let blockHash: String
+                let blockHeader: String?
+                let blockHeight: UInt
             }
             
-            public struct GetHeight: Decodable {
-                public let height: UInt
+            struct GetHeight: Decodable {
+                let height: UInt
             }
             
-            public struct GetMerkle: Decodable {
-                public let merkle: [String]
-                public let blockHeight: UInt
-                public let position: UInt
+            struct GetMerkle: Decodable {
+                let merkle: [String]
+                let blockHeight: UInt
+                let position: UInt
             }
             
-            public struct IDFromPos: Decodable {
-                public let merkle: [String]
-                public let transactionHash: String
+            struct IDFromPos: Decodable {
+                let merkle: [String]
+                let transactionHash: String
             }
             
-            public struct Subscribe: Decodable {
-                public let height: UInt
+            struct Subscribe: Decodable {
+                let height: UInt
             }
             
-            public struct SubscribeNotification: Decodable {
-                public let subscriptionIdentifier: String
-                public let transactionHash: String
-                public let height: UInt
+            struct SubscribeNotification: Decodable {
+                let subscriptionIdentifier: String
+                let transactionHash: String
+                let height: UInt
             }
             
-            public struct Unsubscribe: Decodable {
-                public let success: Bool
+            struct Unsubscribe: Decodable {
+                let success: Bool
             }
             
-            public struct DSProof {
-                public struct Get: Decodable {
-                    public let dspID: String
-                    public let transactionID: String
-                    public let hex: String
-                    public let outpoint: Outpoint
-                    public let descendants: [String]
+            struct DSProof {
+                struct Get: Decodable {
+                    let dspID: String
+                    let transactionID: String
+                    let hex: String
+                    let outpoint: Outpoint
+                    let descendants: [String]
                     
-                    public struct Outpoint: Decodable {
-                        public let transactionID: String
-                        public let vout: UInt
+                    struct Outpoint: Decodable {
+                        let transactionID: String
+                        let vout: UInt
                     }
                 }
                 
-                public struct List: Decodable {
-                    public let transactionHashes: [String]
+                struct List: Decodable {
+                    let transactionHashes: [String]
                 }
                 
-                public struct Subscribe: Decodable {
-                    public let proof: Proof
+                struct Subscribe: Decodable {
+                    let proof: Proof
                     
-                    public struct Proof: Decodable {
-                        public let dspID: String
-                        public let transactionID: String
-                        public let hex: String
-                        public let outpoint: Outpoint
-                        public let descendants: [String]
+                    struct Proof: Decodable {
+                        let dspID: String
+                        let transactionID: String
+                        let hex: String
+                        let outpoint: Outpoint
+                        let descendants: [String]
                         
-                        public struct Outpoint: Decodable {
-                            public let transactionID: String
-                            public let vout: UInt
+                        struct Outpoint: Decodable {
+                            let transactionID: String
+                            let vout: UInt
                         }
                     }
                 }
                 
-                public struct SubscribeNotification: Decodable {
-                    public let subscriptionIdentifier: String
-                    public let transactionHash: String
-                    public let proof: Proof?
+                struct SubscribeNotification: Decodable {
+                    let subscriptionIdentifier: String
+                    let transactionHash: String
+                    let proof: Proof?
                     
-                    public struct Proof: Decodable {
-                        public let dspID: String
-                        public let transactionID: String
-                        public let hex: String
-                        public let outpoint: Outpoint
-                        public let descendants: [String]
+                    struct Proof: Decodable {
+                        let dspID: String
+                        let transactionID: String
+                        let hex: String
+                        let outpoint: Outpoint
+                        let descendants: [String]
                         
-                        public struct Outpoint: Decodable {
-                            public let transactionID: String
-                            public let vout: UInt
+                        struct Outpoint: Decodable {
+                            let transactionID: String
+                            let vout: UInt
                         }
                     }
                 }
                 
-                public struct Unsubscribe: Decodable {
-                    public let success: Bool
+                struct Unsubscribe: Decodable {
+                    let success: Bool
                 }
             }
         }
         
-        public struct UTXO {
-            public struct GetInfo: Decodable {
-                public let confirmedHeight: UInt?
-                public let scriptHash: String
-                public let value: UInt
-                public let tokenData: Method.Blockchain.CashTokens.JSON?
+        struct UTXO {
+            struct GetInfo: Decodable {
+                let confirmedHeight: UInt?
+                let scriptHash: String
+                let value: UInt
+                let tokenData: Method.Blockchain.CashTokens.JSON?
             }
         }
     }
     
-    public struct Mempool {
-        public struct GetFeeHistogram: Decodable {
-            public struct Result: Decodable {
-                public let fee: UInt
-                public let virtualSize: UInt
+    struct Mempool {
+        struct GetFeeHistogram: Decodable {
+            struct Result: Decodable {
+                let fee: UInt
+                let virtualSize: UInt
             }
             
-            public let histogram: [Result]
+            let histogram: [Result]
         }
     }
 }

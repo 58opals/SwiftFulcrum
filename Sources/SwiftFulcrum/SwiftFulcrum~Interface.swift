@@ -4,7 +4,7 @@ import Combine
 extension SwiftFulcrum {
     public func submit<JSONRPCResult: Decodable>(
         method: Method,
-        responseType: Response.JSONRPCGeneric<JSONRPCResult>.Type
+        responseType: Response.JSONRPC.Generic<JSONRPCResult>.Type
     ) async throws -> (UUID, Future<JSONRPCResult, Swift.Error>) {
         let localClient = self.client
         let requestedID = try await localClient.sendRequest(from: method)
@@ -14,7 +14,7 @@ extension SwiftFulcrum {
             Task {
                 localClient.externalDataHandler = { receivedData in
                     do {
-                        let response = try JSONDecoder().decode(Response.JSONRPCGeneric<JSONRPCResult>.self, from: receivedData).getResponseType()
+                        let response = try JSONDecoder().decode(Response.JSONRPC.Generic<JSONRPCResult>.self, from: receivedData).getResponseType()
                         switch response {
                         case .empty(let uuid):
                             _ = uuid
@@ -39,8 +39,8 @@ extension SwiftFulcrum {
     
     public mutating func submit<JSONRPCResult: Decodable, JSONRPCNotification: Decodable>(
         method: Method,
-        resultType: Response.JSONRPCGeneric<JSONRPCResult>.Type,
-        notificationType: Response.JSONRPCGeneric<JSONRPCNotification>.Type
+        resultType: Response.JSONRPC.Generic<JSONRPCResult>.Type,
+        notificationType: Response.JSONRPC.Generic<JSONRPCNotification>.Type
     ) async throws -> (UUID, PassthroughSubject<JSONRPCNotification, Swift.Error>) {
         let localClient = self.client
         let requestedID = try await localClient.sendRequest(from: method)
@@ -50,7 +50,7 @@ extension SwiftFulcrum {
             Task {
                 localClient.externalDataHandler = { receivedData in
                     do {
-                        let response = try JSONDecoder().decode(Response.JSONRPCGeneric<JSONRPCResult>.self, from: receivedData).getResponseType()
+                        let response = try JSONDecoder().decode(Response.JSONRPC.Generic<JSONRPCResult>.self, from: receivedData).getResponseType()
                         switch response {
                         case .empty(let uuid):
                             _ = uuid
@@ -80,7 +80,7 @@ extension SwiftFulcrum {
                 receiveValue: { initialResponse in
                     localClient.externalDataHandler = { receivedData in
                         do {
-                            let response = try JSONDecoder().decode(Response.JSONRPCGeneric<JSONRPCNotification>.self, from: receivedData).getResponseType()
+                            let response = try JSONDecoder().decode(Response.JSONRPC.Generic<JSONRPCNotification>.self, from: receivedData).getResponseType()
                             switch response {
                             case .empty:
                                 notificationPublisher.send(completion: .failure(Error.resultNotFound(description: "Received an empty response during notification handling.")))
