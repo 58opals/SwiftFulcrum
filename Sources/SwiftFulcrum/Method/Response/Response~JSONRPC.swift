@@ -1,7 +1,7 @@
 import Foundation
 
 extension Response {
-    struct JSONRPCGeneric<Result: Decodable>: Decodable {
+    public struct JSONRPCGeneric<Result: Decodable>: Decodable {
         let jsonrpc: String
         
         // MARK: Regular
@@ -17,7 +17,7 @@ extension Response {
             case jsonrpc, id, result, error, method, params
         }
         
-        init(from decoder: Decoder) throws {
+        public init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             
             self.jsonrpc = try container.decode(String.self, forKey: .jsonrpc)
