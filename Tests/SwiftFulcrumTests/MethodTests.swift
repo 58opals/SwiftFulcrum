@@ -62,9 +62,8 @@ final class MethodTests: XCTestCase {
         await fulfillment(of: [expectation], timeout: timeout)
     }
     
-    private func performSubscriptionTest<SubscribeResult: Decodable, NotificationResult: Decodable>(
+    private func performSubscriptionTest<NotificationResult: Decodable>(
             with request: Request,
-            responseType: Response.JSONRPC.Generic<SubscribeResult>.Type,
             notificationType: Response.JSONRPC.Generic<NotificationResult>.Type,
             expectedFulfillmentCount: Int = 2,
             expectationDescription: String = "Client receives response and notification successfully",
@@ -81,7 +80,7 @@ final class MethodTests: XCTestCase {
                 
                 do {
                     if !receivedInitialResponse {
-                        let response = try JSONDecoder().decode(responseType, from: receivedData)
+                        let response = try JSONDecoder().decode(notificationType, from: receivedData)
                         
                         XCTAssertEqual(response.jsonrpc, request.jsonrpc)
                         XCTAssertEqual(response.id, request.id)
@@ -438,8 +437,7 @@ extension MethodTests {
             with: Method.blockchain(.address(
                 .subscribe(address: "qq2qjesqhy78k5xznl39tqkyjphegmn5hum4sckvhp")
             )).request,
-            responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Address.Subscribe>.self,
-            notificationType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Address.SubscribeNotification>.self
+            notificationType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Address.Subscribe>.self
         )
     }
     
@@ -448,8 +446,7 @@ extension MethodTests {
             with: Method.blockchain(.headers(
                 .subscribe
             )).request,
-            responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Headers.Subscribe>.self,
-            notificationType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Headers.SubscribeNotification>.self
+            notificationType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Headers.Subscribe>.self
         )
     }
     
@@ -458,8 +455,7 @@ extension MethodTests {
             with: Method.blockchain(.transaction(
                 .subscribe(transactionHash: "6447aea54bcfe634c0fe579332ad3f99fe7ebbcb69b89b3876241a3c95f1b78e")
             )).request,
-            responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Transaction.Subscribe>.self,
-            notificationType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Transaction.SubscribeNotification>.self
+            notificationType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Transaction.Subscribe>.self
         )
     }
     
@@ -468,8 +464,7 @@ extension MethodTests {
             with: Method.blockchain(.transaction(.dsProof(
                 .subscribe(transactionHash: "1452186edb3b7f8a0e64fefaf3c3879272e52bdccdbc329de8987e44f3f5bfd1")
             ))).request,
-            responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Transaction.DSProof.Subscribe>.self,
-            notificationType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Transaction.DSProof.SubscribeNotification>.self
+            notificationType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Transaction.DSProof.Subscribe>.self
         )
     }
 }

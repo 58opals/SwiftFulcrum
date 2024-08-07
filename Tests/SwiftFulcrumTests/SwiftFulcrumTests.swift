@@ -47,15 +47,14 @@ extension SwiftFulcrumTests {
         await fulfillment(of: [expectation], timeout: 10.0)
     }
     
-    func testSubmitSubscriptionSuccess() async throws {
+    func testSubmitAddressSubscriptionSuccess() async throws {
         let expectation = self.expectation(description: "Subscription should receive notifications")
         
-        let address = "qrsrz5mzve6kyr6ne6lgsvlgxvs3hqm6huxhd8gqwj"
+        let address = "qpfsvdn6lra722s5m3s82wkccpdrc6wutu8k096jj4"
         
         let (id, publisher) = try await fulcrum.submit(
             method: .blockchain(.address(.subscribe(address: address))),
-            responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Address.Subscribe>.self,
-            notificationType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Address.SubscribeNotification>.self)
+            notificationType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Address.Subscribe>.self)
         let subscription = publisher
             .sink(
                 receiveCompletion: { completion in
@@ -67,9 +66,117 @@ extension SwiftFulcrumTests {
                     }
                 },
                 receiveValue: { notification in
-                    print(notification)
-                    XCTAssertEqual(notification.address, address)
-                    expectation.fulfill()
+                    guard let notification = notification else { return }
+                    switch notification {
+                    case .status(let status):
+                        print(status)
+                    case .addressAndStatus(let addressAndStatus):
+                        print(addressAndStatus)
+                        expectation.fulfill()
+                    }
+                }
+            )
+        
+        fulcrum.subscriptionHub.add(subscription, for: id)
+        
+        await fulfillment(of: [expectation], timeout: (1.0 * 60) * 15)
+    }
+    
+    func testSubmitHeadersSubscriptionSuccess() async throws {
+        let expectation = self.expectation(description: "Subscription should receive notifications")
+        
+        let (id, publisher) = try await fulcrum.submit(
+            method: .blockchain(.headers(.subscribe)),
+            notificationType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Headers.Subscribe>.self)
+        let subscription = publisher
+            .sink(
+                receiveCompletion: { completion in
+                    switch completion {
+                    case .finished:
+                        print("\(id) finished.")
+                    case .failure(let error):
+                        XCTFail("Subscription failed with error: \(error.localizedDescription)")
+                    }
+                },
+                receiveValue: { notification in
+                    guard let notification = notification else { return }
+                    switch notification {
+                    case .topHeader(let header):
+                        print(header)
+                    case .newHeader(let header):
+                        print(header)
+                        expectation.fulfill()
+                    }
+                }
+            )
+        
+        fulcrum.subscriptionHub.add(subscription, for: id)
+        
+        await fulfillment(of: [expectation], timeout: (1.0 * 60) * 15)
+    }
+    
+    func testSubmitTransactionSubscriptionSuccess() async throws {
+        let expectation = self.expectation(description: "Subscription should receive notifications")
+        
+        let transactionHash = "77bca070d923c73fbc2819531e29669db8f51da0aee4aa2fd62b534789cbc375"
+        
+        let (id, publisher) = try await fulcrum.submit(
+            method: .blockchain(.transaction(.subscribe(transactionHash: transactionHash))),
+            notificationType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Transaction.Subscribe>.self)
+        let subscription = publisher
+            .sink(
+                receiveCompletion: { completion in
+                    switch completion {
+                    case .finished:
+                        print("\(id) finished.")
+                    case .failure(let error):
+                        XCTFail("Subscription failed with error: \(error.localizedDescription)")
+                    }
+                },
+                receiveValue: { notification in
+                    guard let notification = notification else { return }
+                    switch notification {
+                    case .height(let height):
+                        print(height)
+                    case .transactionHashAndHeight(let transactionHashAndHeight):
+                        print(transactionHashAndHeight)
+                        expectation.fulfill()
+                    }
+                }
+            )
+        
+        fulcrum.subscriptionHub.add(subscription, for: id)
+        
+        await fulfillment(of: [expectation], timeout: (1.0 * 60) * 15)
+    }
+    
+    func testSubmitTransactionDSProofSubscriptionSuccess() async throws {
+        let expectation = self.expectation(description: "Subscription should receive notifications")
+        
+        let transactionHash = "77bca070d923c73fbc2819531e29669db8f51da0aee4aa2fd62b534789cbc375"
+        
+        let (id, publisher) = try await fulcrum.submit(
+            method: .blockchain(.transaction(.dsProof(.subscribe(transactionHash: transactionHash)))),
+            notificationType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Transaction.DSProof.Subscribe>.self)
+        let subscription = publisher
+            .sink(
+                receiveCompletion: { completion in
+                    switch completion {
+                    case .finished:
+                        print("\(id) finished.")
+                    case .failure(let error):
+                        XCTFail("Subscription failed with error: \(error.localizedDescription)")
+                    }
+                },
+                receiveValue: { notification in
+                    guard let notification = notification else { return }
+                    switch notification {
+                    case .dsProof(let dsProof):
+                        print(dsProof)
+                    case .transactionHashAndDSProof(let transactionHashAndDSProof):
+                        print(transactionHashAndDSProof)
+                        expectation.fulfill()
+                    }
                 }
             )
         

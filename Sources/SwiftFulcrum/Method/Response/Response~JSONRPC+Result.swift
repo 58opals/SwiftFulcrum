@@ -44,18 +44,17 @@ extension Response.JSONRPC {
                     public let value: UInt64
                 }
                 
-                public typealias Status = String
-                public typealias Subscribe = Status
-                
-                public typealias SubscribeNotification = SubscribeNotificationParameters
-                public struct SubscribeNotificationParameters: Decodable {
-                    public let address: String
-                    public let status: Status?
+                public typealias Subscribe = SubscribeParameters
+                public enum SubscribeParameters: Decodable {
+                    case status(String)
+                    case addressAndStatus([String])
                     
                     public init(from decoder: Decoder) throws {
-                        var container = try decoder.unkeyedContainer()
-                        self.address = try container.decode(String.self)
-                        self.status = try container.decodeIfPresent(String.self)
+                        let container = try decoder.singleValueContainer()
+                        
+                        if let singleValue = try? container.decode(String.self) { self = .status(singleValue) }
+                        else if let multipleValues = try? container.decode([String].self) { self = .addressAndStatus(multipleValues) }
+                        else { throw DecodingError.typeMismatch(SubscribeParameters.self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Invalid type for JSONRPCResult")) }
                     }
                 }
                 
@@ -89,15 +88,18 @@ extension Response.JSONRPC {
                     public let hex: String
                 }
                 
-                public struct Subscribe: Decodable {
-                    public let height: UInt
-                    public let hex: String
-                }
-                
-                public typealias SubscribeNotification = [SubscribeNotificationParameters]
-                public struct SubscribeNotificationParameters: Decodable {
-                    public let height: UInt
-                    public let hex: String
+                public typealias Subscribe = SubscribeParameters
+                public enum SubscribeParameters: Decodable {
+                    case topHeader(GetTip)
+                    case newHeader([GetTip])
+                    
+                    public init(from decoder: Decoder) throws {
+                        let container = try decoder.singleValueContainer()
+                        
+                        if let singleValue = try? container.decode(GetTip.self) { self = .topHeader(singleValue) }
+                        else if let multipleValues = try? container.decode([GetTip].self) { self = .newHeader(multipleValues) }
+                        else { throw DecodingError.typeMismatch(SubscribeParameters.self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Invalid type for JSONRPCResult")) }
+                    }
                 }
                 
                 public typealias Unsubscribe = Bool
@@ -166,17 +168,30 @@ extension Response.JSONRPC {
                     public let tx_hash: String
                 }
                 
-                public typealias Subscribe = UInt
-                
-                public typealias SubscribeNotification = SubscribeNotificationParameters
-                public struct SubscribeNotificationParameters: Decodable {
-                    public let transactionHash: String
-                    public let height: UInt
+                public typealias Subscribe = SubscribeParameters
+                public enum SubscribeParameters: Decodable {
+                    case height(UInt)
+                    case transactionHashAndHeight(TransactionHashAndHeight)
+                    
+                    public enum TransactionHashAndHeight: Decodable {
+                        case transactionHash(String)
+                        case height(UInt)
+                        
+                        public init(from decoder: Decoder) throws {
+                            let container = try decoder.singleValueContainer()
+                            
+                            if let stringResult = try? container.decode(String.self) { self = .transactionHash(stringResult) }
+                            else if let uintResult = try? container.decode(UInt.self) { self = .height(uintResult) }
+                            else { throw DecodingError.typeMismatch(TransactionHashAndHeight.self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Invalid type for MixedArrayElement")) }
+                        }
+                    }
                     
                     public init(from decoder: Decoder) throws {
-                        var container = try decoder.unkeyedContainer()
-                        self.transactionHash = try container.decode(String.self)
-                        self.height = try container.decode(UInt.self)
+                        let container = try decoder.singleValueContainer()
+                        
+                        if let uintResult = try? container.decode(UInt.self) { self = .height(uintResult) }
+                        else if let stringAndUIntResult = try? container.decode(TransactionHashAndHeight.self) { self = .transactionHashAndHeight(stringAndUIntResult)
+                        } else { throw DecodingError.typeMismatch(SubscribeParameters.self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Invalid type for JSONRPCResult")) }
                     }
                 }
                 
@@ -198,19 +213,31 @@ extension Response.JSONRPC {
                     
                     public typealias List = [String]
                     
-                    public struct Subscribe: Decodable {
-                        public let proof: Get
-                    }
+                    public typealias Subscribe = SubscribeParameters
                     
-                    public typealias SubscribeNotification = SubscribeNotificationParameters
-                    public struct SubscribeNotificationParameters: Decodable {
-                        public let transactionHash: String
-                        public let dsProof: Get?
+                    public enum SubscribeParameters: Decodable {
+                        case dsProof(Get)
+                        case transactionHashAndDSProof(TransactionHashAndDSProof)
+                        
+                        public enum TransactionHashAndDSProof: Decodable {
+                            case transactionHash(String)
+                            case dsProof(Get)
+                            
+                            public init(from decoder: Decoder) throws {
+                                let container = try decoder.singleValueContainer()
+                                
+                                if let stringResult = try? container.decode(String.self) { self = .transactionHash(stringResult) }
+                                else if let getResult = try? container.decode(Get.self) { self = .dsProof(getResult) }
+                                else { throw DecodingError.typeMismatch(TransactionHashAndDSProof.self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Invalid type for MixedArrayElement")) }
+                            }
+                        }
                         
                         public init(from decoder: Decoder) throws {
-                            var container = try decoder.unkeyedContainer()
-                            self.transactionHash = try container.decode(String.self)
-                            self.dsProof = try container.decodeIfPresent(Get.self)
+                            let container = try decoder.singleValueContainer()
+                            
+                            if let getResult = try? container.decode(Get.self) { self = .dsProof(getResult) }
+                            else if let stringAndUGetResult = try? container.decode(TransactionHashAndDSProof.self) { self = .transactionHashAndDSProof(stringAndUGetResult)
+                            } else { throw DecodingError.typeMismatch(SubscribeParameters.self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Invalid type for JSONRPCResult")) }
                         }
                     }
                     

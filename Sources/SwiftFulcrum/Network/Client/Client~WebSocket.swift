@@ -15,7 +15,7 @@ extension Client {
         do {
             try externalDataHandler?(data)
         } catch {
-            print(error)
+            print("Oops. \(error)")
         }
     }
 }
@@ -26,7 +26,7 @@ extension Client {
             .sink { [weak self] data in
                 self?.handleResponseData(data)
             }
-            .store(in: &self.subscribers)
+            .store(in: &subscriptions)
         
         webSocket.receivedString
             .sink { [weak self] string in
@@ -37,6 +37,6 @@ extension Client {
                     print("Empty data is published because converting from string to data failed.")
                 }
             }
-            .store(in: &self.subscribers)
+            .store(in: &subscriptions)
     }
 }

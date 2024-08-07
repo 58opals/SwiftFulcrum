@@ -20,31 +20,12 @@ extension Response {
             
             public init(from decoder: Decoder) throws {
                 let container = try decoder.container(keyedBy: CodingKeys.self)
-                
                 self.jsonrpc = try container.decode(String.self, forKey: .jsonrpc)
-                
-                if let id = try? container.decodeIfPresent(UUID.self, forKey: .id) {
-                    // MARK: Regular - decode
-                    self.id = id
-                    
-                    self.result = try? container.decodeIfPresent(Result.self, forKey: .result)
-                    self.error = try? container.decodeIfPresent(Response.Error.Result.self, forKey: .error)
-                    
-                    self.method = nil
-                    self.params = nil
-                    
-                } else if let method = try? container.decodeIfPresent(String.self, forKey: .method) {
-                    // MARK: Subscription - decode
-                    self.id = nil
-                    self.result = nil
-                    self.error = nil
-                    
-                    self.method = method
-                    self.params = try? container.decodeIfPresent(Result.self, forKey: .params)
-                    
-                } else {
-                    throw DecodingError.dataCorruptedError(forKey: .id, in: container, debugDescription: "Invalid JSON-RPC response format.")
-                }
+                self.id = try container.decodeIfPresent(UUID.self, forKey: .id)
+                self.result = try container.decodeIfPresent(Result.self, forKey: .result)
+                self.error = try container.decodeIfPresent(Response.Error.Result.self, forKey: .error)
+                self.method = try container.decodeIfPresent(String.self, forKey: .method)
+                self.params = try container.decodeIfPresent(Result.self, forKey: .params)
             }
         }
     }

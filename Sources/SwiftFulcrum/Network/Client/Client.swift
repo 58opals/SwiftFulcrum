@@ -4,7 +4,7 @@ import Combine
 final class Client {
     let webSocket: WebSocket
     var jsonRPC: JSONRPC
-    var subscribers = Set<AnyCancellable>()
+    var subscriptions = Set<AnyCancellable>()
     var externalDataHandler: ((Data) throws -> Void)?
     
     init(webSocket: WebSocket) {

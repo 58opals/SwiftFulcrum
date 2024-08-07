@@ -14,7 +14,6 @@ extension Method {
         case BlockchainAddressGetScriptHash(Response.JSONRPC.Result.Blockchain.Address.GetScriptHash)
         case BlockchainAddressListUnspent(Response.JSONRPC.Result.Blockchain.Address.ListUnspent)
         case BlockchainAddressSubscribe(Response.JSONRPC.Result.Blockchain.Address.Subscribe)
-        case BlockchainAddressSubscribeNotification(Response.JSONRPC.Result.Blockchain.Address.SubscribeNotification)
         case BlockchainAddressUnsubscribe(Response.JSONRPC.Result.Blockchain.Address.Unsubscribe)
         
         // Blockchain.Block
@@ -27,7 +26,6 @@ extension Method {
         // Blockchain.Headers
         case BlockchainHeadersGetTip(Response.JSONRPC.Result.Blockchain.Headers.GetTip)
         case BlockchainHeadersSubscribe(Response.JSONRPC.Result.Blockchain.Headers.Subscribe)
-        case BlockchainHeadersSubscribeNotification(Response.JSONRPC.Result.Blockchain.Headers.SubscribeNotification)
         case BlockchainHeadersUnsubscribe(Response.JSONRPC.Result.Blockchain.Headers.Unsubscribe)
         
         // Blockchain.Transaction
@@ -38,14 +36,12 @@ extension Method {
         case BlockchainTransactionGetMerkle(Response.JSONRPC.Result.Blockchain.Transaction.GetMerkle)
         case BlockchainTransactionIDFromPos(Response.JSONRPC.Result.Blockchain.Transaction.IDFromPos)
         case BlockchainTransactionSubscribe(Response.JSONRPC.Result.Blockchain.Transaction.Subscribe)
-        case BlockchainTransactionSubscribeNotification(Response.JSONRPC.Result.Blockchain.Transaction.SubscribeNotification)
         case BlockchainTransactionUnsubscribe(Response.JSONRPC.Result.Blockchain.Transaction.Unsubscribe)
         
         // Blockchain.Transaction.DSProof
         case BlockchainTransactionDSProofGet(Response.JSONRPC.Result.Blockchain.Transaction.DSProof.Get)
         case BlockchainTransactionDSProofList(Response.JSONRPC.Result.Blockchain.Transaction.DSProof.List)
         case BlockchainTransactionDSProofSubscribe(Response.JSONRPC.Result.Blockchain.Transaction.DSProof.Subscribe)
-        case BlockchainTransactionDSProofSubscribeNotification(Response.JSONRPC.Result.Blockchain.Transaction.DSProof.SubscribeNotification)
         case BlockchainTransactionDSProofUnsubscribe(Response.JSONRPC.Result.Blockchain.Transaction.DSProof.Unsubscribe)
         
         // Blockchain.UTXO
