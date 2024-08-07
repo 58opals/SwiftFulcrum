@@ -9,7 +9,6 @@ extension SwiftFulcrum {
         let localClient = self.client
         let requestedID = try await localClient.sendRequest(from: method)
         
-        
         let resultPublisher = Future<JSONRPCResult, Swift.Error> { promise in
             Task {
                 localClient.externalDataHandler = { receivedData in
@@ -70,7 +69,7 @@ extension SwiftFulcrum {
             }
         }
         
-        resultPublisher
+        let subscription = resultPublisher
             .sink(
                 receiveCompletion: { completion in
                     if case .failure(let error) = completion {
@@ -96,7 +95,8 @@ extension SwiftFulcrum {
                         }
                     }
                 })
-            .store(in: &subscribers)
+        
+        subscriptionHub.add(subscription, for: requestedID)
         
         return (requestedID, notificationPublisher)
     }

@@ -1,9 +1,8 @@
 import Foundation
-import Combine
 
 public struct SwiftFulcrum {
     let client: Client
-    var subscribers: Set<AnyCancellable>
+    var subscriptionHub: SubscriptionHub
     
     public init(url: String? = nil) throws {
         let webSocket = try {
@@ -19,6 +18,6 @@ public struct SwiftFulcrum {
         }()
         
         self.client = Client(webSocket: webSocket)
-        self.subscribers = Set<AnyCancellable>()
+        self.subscriptionHub = SubscriptionHub()
     }
 }
