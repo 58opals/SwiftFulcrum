@@ -1,12 +1,9 @@
 import XCTest
 @testable import SwiftFulcrum
 
-import Combine
-
 final class MethodTests: XCTestCase {
     var client: Client!
     var webSocket: WebSocket!
-    var cancellableSubscriptions: Set<AnyCancellable>!
     
     override func setUp() {
         super.setUp()
@@ -14,13 +11,11 @@ final class MethodTests: XCTestCase {
         guard let url = servers.randomElement() else { fatalError("No server URL available") }
         webSocket = WebSocket(url: url)
         client = Client(webSocket: webSocket)
-        cancellableSubscriptions = Set<AnyCancellable>()
     }
     
     override func tearDown() {
         client = nil
         webSocket = nil
-        cancellableSubscriptions = nil
         super.tearDown()
     }
     
@@ -71,11 +66,12 @@ final class MethodTests: XCTestCase {
             with request: Request,
             responseType: Response.JSONRPC.Generic<SubscribeResult>.Type,
             notificationType: Response.JSONRPC.Generic<NotificationResult>.Type,
+            expectedFulfillmentCount: Int = 2,
             expectationDescription: String = "Client receives response and notification successfully",
             timeout: TimeInterval = (1.0 * 60) * 15
         ) async throws {
             let expectation = XCTestExpectation(description: expectationDescription)
-            expectation.expectedFulfillmentCount = 2
+            expectation.expectedFulfillmentCount = expectedFulfillmentCount
             
             var receivedInitialResponse = false
             
