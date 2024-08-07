@@ -6,7 +6,6 @@ import Combine
 final class ClientTests: XCTestCase {
     var client: Client!
     var webSocket: WebSocket!
-    var cancellableSubscriptions: Set<AnyCancellable>!
     
     override func setUp() {
         super.setUp()
@@ -14,13 +13,11 @@ final class ClientTests: XCTestCase {
         guard let url = servers.randomElement() else { fatalError("No server URL available") }
         webSocket = WebSocket(url: url)
         client = Client(webSocket: webSocket)
-        cancellableSubscriptions = Set<AnyCancellable>()
     }
     
     override func tearDown() {
         client = nil
         webSocket = nil
-        cancellableSubscriptions = nil
         super.tearDown()
     }
 }
