@@ -2,7 +2,7 @@ import Foundation
 
 public struct SwiftFulcrum {
     let client: Client
-    var subscriptionHub: SubscriptionHub
+    public var subscriptionHub: SubscriptionHub
     
     public init(url: String? = nil) throws {
         let webSocket = try {

@@ -1,7 +1,7 @@
 import Foundation
 import Combine
 
-class SubscriptionHub {
+public final class SubscriptionHub {
     private var subscriptions = [UUID: AnyCancellable]()
     
     func add(_ cancellable: AnyCancellable, for identifier: UUID) {
