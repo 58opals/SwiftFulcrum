@@ -13,8 +13,10 @@ extension SwiftFulcrum {
             Task {
                 localClient.externalDataHandler = { receivedData in
                     do {
-                        let response = try JSONDecoder().decode(Response.JSONRPC.Generic<JSONRPCResult>.self, from: receivedData).getResponseType()
-                        switch response {
+                        let response = try JSONDecoder().decode(Response.JSONRPC.Generic<JSONRPCResult>.self, from: receivedData)
+                        let responseType = try response.getResponseType()
+                        
+                        switch responseType {
                         case .empty(let uuid):
                             _ = uuid
                             promise(.failure(Error.resultNotFound(description: "The response was empty for request ID: \(uuid).")))

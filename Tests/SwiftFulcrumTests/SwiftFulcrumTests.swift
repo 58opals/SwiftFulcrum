@@ -118,7 +118,7 @@ extension SwiftFulcrumTests {
     func testSubmitTransactionSubscriptionSuccess() async throws {
         let expectation = self.expectation(description: "Subscription should receive notifications")
         
-        let transactionHash = "77bca070d923c73fbc2819531e29669db8f51da0aee4aa2fd62b534789cbc375"
+        let transactionHash = "58d40d5404c36794d6d4787bd57c52d5d32b74dc223b934e43fbff991d2d8e62"
         
         let (id, publisher) = try await fulcrum.submit(
             method: .blockchain(.transaction(.subscribe(transactionHash: transactionHash))),
@@ -172,7 +172,7 @@ extension SwiftFulcrumTests {
                     guard let notification = notification else { return }
                     switch notification {
                     case .dsProof(let dsProof):
-                        print(dsProof)
+                        print(dsProof ?? "empty!")
                     case .transactionHashAndDSProof(let transactionHashAndDSProof):
                         print(transactionHashAndDSProof)
                         expectation.fulfill()

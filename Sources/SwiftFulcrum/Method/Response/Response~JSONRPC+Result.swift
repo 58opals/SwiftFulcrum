@@ -171,7 +171,7 @@ extension Response.JSONRPC {
                 public typealias Subscribe = SubscribeParameters
                 public enum SubscribeParameters: Decodable {
                     case height(UInt)
-                    case transactionHashAndHeight(TransactionHashAndHeight)
+                    case transactionHashAndHeight([TransactionHashAndHeight])
                     
                     public enum TransactionHashAndHeight: Decodable {
                         case transactionHash(String)
@@ -190,7 +190,7 @@ extension Response.JSONRPC {
                         let container = try decoder.singleValueContainer()
                         
                         if let uintResult = try? container.decode(UInt.self) { self = .height(uintResult) }
-                        else if let stringAndUIntResult = try? container.decode(TransactionHashAndHeight.self) { self = .transactionHashAndHeight(stringAndUIntResult)
+                        else if let stringAndUIntResult = try? container.decode([TransactionHashAndHeight].self) { self = .transactionHashAndHeight(stringAndUIntResult)
                         } else { throw DecodingError.typeMismatch(SubscribeParameters.self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Invalid type for JSONRPCResult")) }
                     }
                 }
@@ -216,8 +216,8 @@ extension Response.JSONRPC {
                     public typealias Subscribe = SubscribeParameters
                     
                     public enum SubscribeParameters: Decodable {
-                        case dsProof(Get)
-                        case transactionHashAndDSProof(TransactionHashAndDSProof)
+                        case dsProof(Get?)
+                        case transactionHashAndDSProof([TransactionHashAndDSProof])
                         
                         public enum TransactionHashAndDSProof: Decodable {
                             case transactionHash(String)
@@ -235,9 +235,9 @@ extension Response.JSONRPC {
                         public init(from decoder: Decoder) throws {
                             let container = try decoder.singleValueContainer()
                             
-                            if let getResult = try? container.decode(Get.self) { self = .dsProof(getResult) }
-                            else if let stringAndUGetResult = try? container.decode(TransactionHashAndDSProof.self) { self = .transactionHashAndDSProof(stringAndUGetResult)
-                            } else { throw DecodingError.typeMismatch(SubscribeParameters.self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Invalid type for JSONRPCResult")) }
+                            if let getResult = try? container.decode(Get?.self) { self = .dsProof(getResult) }
+                            else if let stringAndUGetResult = try? container.decode([TransactionHashAndDSProof].self) { self = .transactionHashAndDSProof(stringAndUGetResult)
+                            } else { self = .dsProof(nil) }
                         }
                     }
                     
