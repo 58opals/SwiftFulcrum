@@ -38,10 +38,10 @@ extension Response.JSONRPC.Generic {
             return .regular(Response.Regular(id: id, result: result))
         case let (_, _, _, method?, params?):
             return .subscription(Response.Subscription(methodPath: method, result: params))
-        case let (id?, .none, _, _, _):
-            return .empty(id)
         case let (id?, _, error?, _, _):
             return .error(Response.Error(id: id, error: error))
+        case let (id?, .none, _, _, _):
+            return .empty(id)
         default:
             throw Error.cannotIdentifyResponseType(id)
         }

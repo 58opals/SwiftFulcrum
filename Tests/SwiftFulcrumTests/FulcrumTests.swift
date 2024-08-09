@@ -22,8 +22,8 @@ extension FulcrumTests {
         let expectation = self.expectation(description: "Request should succeed")
         
         let (id, publisher) = try await fulcrum.submit(
-            method: .blockchain(.estimateFee(numberOfBlocks: 6)),
-            responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.EstimateFee>.self
+            method: .blockchain(.transaction(.broadcast(rawTransaction: "rawtx"))),
+            responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Transaction.Broadcast>.self
         )
         let subscription = publisher
             .sink(
@@ -35,9 +35,8 @@ extension FulcrumTests {
                         XCTFail("Request failed with error: \(error.localizedDescription)")
                     }
                 },
-                receiveValue: { estimateFee in
-                    print("Hello, value!: \(estimateFee)")
-                    XCTAssertEqual(estimateFee, 0.00001)
+                receiveValue: { transactionHash in
+                    print("Hello, value!: \(transactionHash)")
                     expectation.fulfill()
                 }
             )
