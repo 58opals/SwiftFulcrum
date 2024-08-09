@@ -3,12 +3,12 @@ import XCTest
 
 import Combine
 
-final class SwiftFulcrumTests: XCTestCase {
-    var fulcrum: SwiftFulcrum!
+final class FulcrumTests: XCTestCase {
+    var fulcrum: Fulcrum!
     
     override func setUp() {
         super.setUp()
-        fulcrum = try! SwiftFulcrum()
+        fulcrum = try! Fulcrum()
     }
     
     override func tearDown() {
@@ -17,7 +17,7 @@ final class SwiftFulcrumTests: XCTestCase {
     }
 }
 
-extension SwiftFulcrumTests {
+extension FulcrumTests {
     func testSubmitRequestSuccess() async throws {
         let expectation = self.expectation(description: "Request should succeed")
         

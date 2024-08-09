@@ -1,6 +1,6 @@
 import Foundation
 
-extension SwiftFulcrum {
+extension Fulcrum {
     public enum Error: Swift.Error {
         case network(underlyingError: Swift.Error)
         case decoding(underlyingError: Swift.Error)

@@ -1,7 +1,7 @@
 import Foundation
 import Combine
 
-extension SwiftFulcrum {
+extension Fulcrum {
     public func submit<JSONRPCResult: Decodable>(
         method: Method,
         responseType: Response.JSONRPC.Generic<JSONRPCResult>.Type

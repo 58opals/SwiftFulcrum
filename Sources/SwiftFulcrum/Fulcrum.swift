@@ -1,6 +1,6 @@
 import Foundation
 
-public struct SwiftFulcrum {
+public struct Fulcrum {
     let client: Client
     public var subscriptionHub: SubscriptionHub
     
