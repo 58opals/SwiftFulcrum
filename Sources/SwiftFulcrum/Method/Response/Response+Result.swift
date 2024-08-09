@@ -121,7 +121,7 @@ extension Response.Result {
         
         struct Transaction {
             struct Broadcast: Decodable {
-                let success: Bool
+                let transactionHash: Data
             }
             
             struct Get: Decodable {

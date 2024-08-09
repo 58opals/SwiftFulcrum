@@ -295,7 +295,7 @@ extension MethodTests {
     func testBlockchainTransactionBroadcastMethod() async throws {
         try await performRegularTest(
             with: Method.blockchain(.transaction(
-                .broadcast(rawTransaction: "some raw transaction data")
+                .broadcast(rawTransaction: "some raw tx")
             )).request,
             responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Transaction.Broadcast>.self
         )

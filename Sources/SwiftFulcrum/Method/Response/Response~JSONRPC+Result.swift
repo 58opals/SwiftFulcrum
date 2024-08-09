@@ -106,7 +106,7 @@ extension Response.JSONRPC {
             }
             
             public struct Transaction {
-                public typealias Broadcast = Bool
+                public typealias Broadcast = Data
                 
                 public struct Get: Decodable {
                     public let blockhash: String
