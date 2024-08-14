@@ -109,9 +109,9 @@ extension Response.JSONRPC {
                 public typealias Broadcast = Data
                 
                 public struct Get: Decodable {
-                    public let blockhash: String
-                    public let blocktime: UInt
-                    public let confirmations: UInt
+                    public let blockhash: String?
+                    public let blocktime: UInt?
+                    public let confirmations: UInt?
                     public let hash: String
                     public let hex: String
                     public let locktime: UInt

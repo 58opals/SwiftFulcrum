@@ -304,7 +304,7 @@ extension MethodTests {
     func testBlockchainTransactionGetMethod() async throws {
         try await performRegularTest(
             with: Method.blockchain(.transaction(
-                .get(transactionHash: "1452186edb3b7f8a0e64fefaf3c3879272e52bdccdbc329de8987e44f3f5bfd1",
+                .get(transactionHash: "6f10c40f0163dd5da22f0a880fccbebf5553662c35df31f4f8ffd188d9caa651",
                      verbose: true)
             )).request,
             responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Transaction.Get>.self
