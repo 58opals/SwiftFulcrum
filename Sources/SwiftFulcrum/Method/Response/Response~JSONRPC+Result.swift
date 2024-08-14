@@ -116,7 +116,7 @@ extension Response.JSONRPC {
                     public let hex: String
                     public let locktime: UInt
                     public let size: UInt
-                    public let time: UInt
+                    public let time: UInt?
                     public let txid: String
                     public let version: UInt
                     public let vin: [Input]
