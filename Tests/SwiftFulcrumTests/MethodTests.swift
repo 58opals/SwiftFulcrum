@@ -5,18 +5,18 @@ final class MethodTests: XCTestCase {
     var client: Client!
     var webSocket: WebSocket!
     
-    override func setUp() {
-        super.setUp()
-        let servers = WebSocket.Server.samples
+    override func setUpWithError() throws {
+        try super.setUpWithError()
+        let servers = try WebSocket.Server.getServerList()
         guard let url = servers.randomElement() else { fatalError("No server URL available") }
         webSocket = WebSocket(url: url)
         client = Client(webSocket: webSocket)
     }
     
-    override func tearDown() {
+    override func tearDownWithError() throws {
         client = nil
         webSocket = nil
-        super.tearDown()
+        try super.tearDownWithError()
     }
     
     private func performRegularTest<JSONRPCResult: Decodable>(

@@ -11,8 +11,8 @@ public struct Fulcrum {
                 guard ["ws", "wss"].contains(url.scheme?.lowercased()) else { throw WebSocket.Error.initializing(reason: .unsupportedScheme, description: "URL: \(urlString)") }
                 return WebSocket(url: url)
             } else {
-                let servers = WebSocket.Server.samples
-                guard let server = servers.randomElement() else { throw WebSocket.Error.initializing(reason: .noURLAvailable, description: "Server list: \(servers)") }
+                let serverList = try WebSocket.Server.getServerList()
+                guard let server = serverList.randomElement() else { throw WebSocket.Error.initializing(reason: .noURLAvailable, description: "Server list: \(serverList)") }
                 return WebSocket(url: server)
             }
         }()

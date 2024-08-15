@@ -10,6 +10,7 @@ extension WebSocket {
             case invalidURL
             case unsupportedScheme
             case noURLAvailable
+            case cannotGetServerList
         }
         
         enum ConnectionIssue {
