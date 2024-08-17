@@ -3,51 +3,51 @@ import Foundation
 extension Method {
     enum ResponseType {
         // Blockchain
-        case BlockchainEstimateFee(Response.Result.Blockchain.EstimateFeeJSONRPCResult)
-        case BlockchainRelayFee(Response.Result.Blockchain.RelayFeeJSONRPCResult)
+        case BlockchainEstimateFee(Response.JSONRPC.Result.Blockchain.EstimateFee)
+        case BlockchainRelayFee(Response.JSONRPC.Result.Blockchain.RelayFee)
         
         // Blockchain.Address
-        case BlockchainAddressGetBalance(Response.Result.Blockchain.Address.GetBalanceJSONRPCResult)
-        case BlockchainAddressGetFirstUse(Response.Result.Blockchain.Address.GetFirstUseJSONRPCResult)
-        case BlockchainAddressGetHistory(Response.Result.Blockchain.Address.GetHistoryJSONRPCResult)
-        case BlockchainAddressGetMempool(Response.Result.Blockchain.Address.GetMempoolJSONRPCResult)
-        case BlockchainAddressGetScriptHash(Response.Result.Blockchain.Address.GetScriptHashJSONRPCResult)
-        case BlockchainAddressListUnspent(Response.Result.Blockchain.Address.ListUnspentJSONRPCResult)
-        case BlockchainAddressSubscribe(Response.Result.Blockchain.Address.SubscribeJSONRPCResult)
-        case BlockchainAddressUnsubscribe(Response.Result.Blockchain.Address.UnsubscribeJSONRPCResult)
+        case BlockchainAddressGetBalance(Response.JSONRPC.Result.Blockchain.Address.GetBalance)
+        case BlockchainAddressGetFirstUse(Response.JSONRPC.Result.Blockchain.Address.GetFirstUse)
+        case BlockchainAddressGetHistory(Response.JSONRPC.Result.Blockchain.Address.GetHistory)
+        case BlockchainAddressGetMempool(Response.JSONRPC.Result.Blockchain.Address.GetMempool)
+        case BlockchainAddressGetScriptHash(Response.JSONRPC.Result.Blockchain.Address.GetScriptHash)
+        case BlockchainAddressListUnspent(Response.JSONRPC.Result.Blockchain.Address.ListUnspent)
+        case BlockchainAddressSubscribe(Response.JSONRPC.Result.Blockchain.Address.Subscribe)
+        case BlockchainAddressUnsubscribe(Response.JSONRPC.Result.Blockchain.Address.Unsubscribe)
         
         // Blockchain.Block
-        case BlockchainBlockHeader(Response.Result.Blockchain.Block.HeaderJSONRPCResult)
-        case BlockchainBlockHeaders(Response.Result.Blockchain.Block.HeadersJSONRPCResult)
+        case BlockchainBlockHeader(Response.JSONRPC.Result.Blockchain.Block.Header)
+        case BlockchainBlockHeaders(Response.JSONRPC.Result.Blockchain.Block.Headers)
         
         // Blockchain.Header
-        case BlockchainHeaderGet(Response.Result.Blockchain.Header.GetJSONRPCResult)
+        case BlockchainHeaderGet(Response.JSONRPC.Result.Blockchain.Header.Get)
         
         // Blockchain.Headers
-        case BlockchainHeadersGetTip(Response.Result.Blockchain.Headers.GetTipJSONRPCResult)
-        case BlockchainHeadersSubscribe(Response.Result.Blockchain.Headers.SubscribeJSONRPCResult)
-        case BlockchainHeadersUnsubscribe(Response.Result.Blockchain.Headers.UnsubscribeJSONRPCResult)
+        case BlockchainHeadersGetTip(Response.JSONRPC.Result.Blockchain.Headers.GetTip)
+        case BlockchainHeadersSubscribe(Response.JSONRPC.Result.Blockchain.Headers.Subscribe)
+        case BlockchainHeadersUnsubscribe(Response.JSONRPC.Result.Blockchain.Headers.Unsubscribe)
         
         // Blockchain.Transaction
-        case BlockchainTransactionBroadcast(Response.Result.Blockchain.Transaction.BroadcastJSONRPCResult)
-        case BlockchainTransactionGet(Response.Result.Blockchain.Transaction.GetJSONRPCResult)
-        case BlockchainTransactionGetConfirmedBlockHash(Response.Result.Blockchain.Transaction.GetConfirmedBlockHashJSONRPCResult)
-        case BlockchainTransactionGetHeight(Response.Result.Blockchain.Transaction.GetHeightJSONRPCResult)
-        case BlockchainTransactionGetMerkle(Response.Result.Blockchain.Transaction.GetMerkleJSONRPCResult)
-        case BlockchainTransactionIDFromPos(Response.Result.Blockchain.Transaction.IDFromPosJSONRPCResult)
-        case BlockchainTransactionSubscribe(Response.Result.Blockchain.Transaction.SubscribeJSONRPCResult)
-        case BlockchainTransactionUnsubscribe(Response.Result.Blockchain.Transaction.UnsubscribeJSONRPCResult)
+        case BlockchainTransactionBroadcast(Response.JSONRPC.Result.Blockchain.Transaction.Broadcast)
+        case BlockchainTransactionGet(Response.JSONRPC.Result.Blockchain.Transaction.Get)
+        case BlockchainTransactionGetConfirmedBlockHash(Response.JSONRPC.Result.Blockchain.Transaction.GetConfirmedBlockHash)
+        case BlockchainTransactionGetHeight(Response.JSONRPC.Result.Blockchain.Transaction.GetHeight)
+        case BlockchainTransactionGetMerkle(Response.JSONRPC.Result.Blockchain.Transaction.GetMerkle)
+        case BlockchainTransactionIDFromPos(Response.JSONRPC.Result.Blockchain.Transaction.IDFromPos)
+        case BlockchainTransactionSubscribe(Response.JSONRPC.Result.Blockchain.Transaction.Subscribe)
+        case BlockchainTransactionUnsubscribe(Response.JSONRPC.Result.Blockchain.Transaction.Unsubscribe)
         
         // Blockchain.Transaction.DSProof
-        case BlockchainTransactionDSProofGet(Response.Result.Blockchain.Transaction.DSProof.GetJSONRPCResult)
-        case BlockchainTransactionDSProofList(Response.Result.Blockchain.Transaction.DSProof.ListJSONRPCResult)
-        case BlockchainTransactionDSProofSubscribe(Response.Result.Blockchain.Transaction.DSProof.SubscribeJSONRPCResult)
-        case BlockchainTransactionDSProofUnsubscribe(Response.Result.Blockchain.Transaction.DSProof.UnsubscribeJSONRPCResult)
+        case BlockchainTransactionDSProofGet(Response.JSONRPC.Result.Blockchain.Transaction.DSProof.Get)
+        case BlockchainTransactionDSProofList(Response.JSONRPC.Result.Blockchain.Transaction.DSProof.List)
+        case BlockchainTransactionDSProofSubscribe(Response.JSONRPC.Result.Blockchain.Transaction.DSProof.Subscribe)
+        case BlockchainTransactionDSProofUnsubscribe(Response.JSONRPC.Result.Blockchain.Transaction.DSProof.Unsubscribe)
         
         // Blockchain.UTXO
-        case BlockchainUTXOGet(Response.Result.Blockchain.UTXO.GetInfoJSONRPCResult)
+        case BlockchainUTXOGet(Response.JSONRPC.Result.Blockchain.UTXO.GetInfo)
         
         // Mempool
-        case MempoolGetFeeHistogram(Response.Result.Mempool.GetFeeHistogramJSONRPCResult)
+        case MempoolGetFeeHistogram(Response.JSONRPC.Result.Mempool.GetFeeHistogram)
     }
 }

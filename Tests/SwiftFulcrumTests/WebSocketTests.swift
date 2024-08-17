@@ -7,18 +7,18 @@ final class WebSocketTests: XCTestCase {
     var webSocket: WebSocket!
     var cancellables: Set<AnyCancellable>!
     
-    override func setUp() {
-        super.setUp()
-        let servers = WebSocket.Server.samples
+    override func setUpWithError() throws {
+        try super.setUpWithError()
+        let servers = try WebSocket.Server.getServerList()
         guard let url = servers.randomElement() else { fatalError() }
         webSocket = WebSocket(url: url)
         cancellables = Set<AnyCancellable>()
     }
     
-    override func tearDown() {
+    override func tearDownWithError() throws {
         webSocket = nil
         cancellables = nil
-        super.tearDown()
+        try super.tearDownWithError()
     }
 }
 
@@ -56,7 +56,7 @@ extension WebSocketTests {
         
         do {
             try await Task.sleep(for: .seconds(5))
-            try await self.webSocket.reconnect(with: WebSocket.Server.samples.randomElement())
+            try await self.webSocket.reconnect(with: WebSocket.Server.getServerList().randomElement())
             
             try await Task.sleep(for: .seconds(5))
             XCTAssertTrue(self.webSocket.isConnected)

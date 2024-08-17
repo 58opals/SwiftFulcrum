@@ -56,7 +56,7 @@ Task {
     do {
         let (id, publisher) = try await fulcrum.submit(
             method: .blockchain(.estimateFee(numberOfBlocks: 6)),
-            responseType: Response.JSONRPCGeneric<Response.Result.Blockchain.EstimateFeeJSONRPCResult>.self
+            responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.EstimateFee>.self
         )
         publisher
             .sink(
@@ -69,7 +69,7 @@ Task {
                     }
                 },
                 receiveValue: { estimateFee in
-                    print("Estimate fee: \(estimateFee.fee)")
+                    print("Estimate fee: \(estimateFee)")
                 }
             )
             .store(in: &cancellables)
@@ -89,8 +89,8 @@ Task {
         let address = "qrsrz5mzve6kyr6ne6lgsvlgxvs3hqm6huxhd8gqwj"
         let (id, publisher) = try await fulcrum.submit(
             method: .blockchain(.address(.subscribe(address: address))),
-            resultType: Response.JSONRPCGeneric<Response.Result.Blockchain.Address.SubscribeJSONRPCResult>.self,
-            notificationType: Response.JSONRPCGeneric<Response.Result.Blockchain.Address.SubscribeJSONRPCNotification>.self
+            responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Address.Subscribe>.self,
+            notificationType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Address.SubscribeNotification>.self
         )
         publisher
             .sink(
@@ -139,4 +139,3 @@ For more information on how to use the Combine framework, refer to the [official
 ### Acknowledgments
 
 - Thanks to the [Fulcrum Protocol](https://electrum-cash-protocol.readthedocs.io/) team for providing the specifications.
-- Contributors who have helped shape SwiftFulcrum into what it is today.

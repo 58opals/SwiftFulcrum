@@ -6,22 +6,19 @@ import Combine
 final class ClientTests: XCTestCase {
     var client: Client!
     var webSocket: WebSocket!
-    var cancellableSubscriptions: Set<AnyCancellable>!
     
-    override func setUp() {
-        super.setUp()
-        let servers = WebSocket.Server.samples
-        guard let url = servers.randomElement() else { fatalError("No server URL available") }
+    override func setUpWithError() throws {
+        try super.setUpWithError()
+        let serverList = try WebSocket.Server.getServerList()
+        guard let url = serverList.randomElement() else { throw WebSocket.Error.initializing(reason: .noURLAvailable, description: "Server list: \(serverList)") }
         webSocket = WebSocket(url: url)
         client = Client(webSocket: webSocket)
-        cancellableSubscriptions = Set<AnyCancellable>()
     }
     
-    override func tearDown() {
+    override func tearDownWithError() throws {
         client = nil
         webSocket = nil
-        cancellableSubscriptions = nil
-        super.tearDown()
+        try super.tearDownWithError()
     }
 }
 

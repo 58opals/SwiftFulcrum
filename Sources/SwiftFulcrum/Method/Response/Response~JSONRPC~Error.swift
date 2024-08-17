@@ -1,7 +1,7 @@
 import Foundation
 
-extension Response.JSONRPCGeneric {
-    enum JSONRPCResponseError: Swift.Error {
+extension Response.JSONRPC.Generic {
+    enum Error: Swift.Error {
         case idIsMissing
         case errorIsMissing
         case resultIsMissing

@@ -17,32 +17,12 @@ extension WebSocket {
 }
 
 extension WebSocket.Server {
-    static var samples: [URL] {
-        let jsonString =
-            """
-            [
-                {
-                "host": "electrum.imaginary.cash",
-                "port": 50004
-                },
-                {
-                "host": "bch.imaginary.cash",
-                "port": 50004
-                },
-                {
-                "host": "cashnode.bch.ninja",
-                "port": 50004
-                }
-            ]
-            """
-        
-        do {
-            guard let data = jsonString.data(using: .utf8) else { fatalError() }
-            let decoder = JSONDecoder()
-            let servers = try decoder.decode([WebSocket.Server].self, from: data)
-            return servers.compactMap { $0.url }
-        } catch {
-            fatalError(error.localizedDescription)
-        }
+    static func getServerList() throws -> [URL] {
+        guard let serverListPath = Bundle.module.path(forResource: "servers", ofType: "json") else { throw WebSocket.Error.initializing(reason: .cannotGetServerList, description: "Cannot get string from servers.json.") }
+        let serverListString = try String(contentsOfFile: serverListPath, encoding: .utf8)
+        guard let serverListData = serverListString.data(using: .utf8) else { throw WebSocket.Error.initializing(reason: .cannotGetServerList, description: "Failed to convert server list string to data.") }
+        let decoder = JSONDecoder()
+        let serverList = try decoder.decode([WebSocket.Server].self, from: serverListData)
+        return serverList.compactMap { $0.url }
     }
 }
