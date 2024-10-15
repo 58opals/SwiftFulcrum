@@ -1,17 +1,22 @@
 import Foundation
-import Combine
 
-final class Client {
+actor Client {
     let webSocket: WebSocket
     var jsonRPC: JSONRPC
-    var subscriptions = Set<AnyCancellable>()
-    var externalDataHandler: ((Data) throws -> Void)?
+    var regularResponseHandlers: [UUID: (Data) throws -> Void]
+    var subscriptionResponseHandlers: [String: (Data) throws -> Void]
     
     init(webSocket: WebSocket) {
         self.webSocket = webSocket
-        self.webSocket.connect()
-        
-        self.jsonRPC = JSONRPC()
-        self.setupWebSocketSubscriptions()
+        self.jsonRPC = .init()
+        self.regularResponseHandlers = .init()
+        self.subscriptionResponseHandlers = .init()
+    }
+    
+    func start() async throws {
+        try await self.webSocket.connect()
+        Task {
+            await receiveLoop()
+        }
     }
 }

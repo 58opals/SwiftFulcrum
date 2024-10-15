@@ -11,8 +11,8 @@ public struct Response {
         let result: Result
     }
     
-    public struct Error: Decodable {
-        public struct Result: Decodable {
+    public struct Error: Decodable, Sendable {
+        public struct Result: Decodable, Sendable {
             let code: Int
             let message: String
         }
@@ -28,5 +28,10 @@ extension Response {
         case regular(Response.Regular<Result>)
         case subscription(Response.Subscription<Result>)
         case error(Response.Error)
+    }
+    
+    public enum Identifier {
+        case uuid(UUID)
+        case string(String)
     }
 }

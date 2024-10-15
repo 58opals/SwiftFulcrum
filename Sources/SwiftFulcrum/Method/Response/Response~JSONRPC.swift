@@ -2,6 +2,11 @@ import Foundation
 
 extension Response {
     public struct JSONRPC {
+        struct IdentifierExtractable: Decodable {
+            let id: UUID?
+            let method: String?
+        }
+        
         public struct Generic<Result: Decodable>: Decodable {
             let jsonrpc: String
             
@@ -31,6 +36,20 @@ extension Response {
     }
 }
 
+extension Response.JSONRPC {
+    static func extractIdentifier(from data: Data) throws -> Response.Identifier {
+        let response = try JSONDecoder().decode(Response.JSONRPC.IdentifierExtractable.self, from: data)
+        switch (response.id, response.method) {
+        case let (id?, nil):
+            return .uuid(id)
+        case let (nil, string?):
+            return .string(string)
+        default:
+            throw Error.wrongResponseType
+        }
+    }
+}
+
 extension Response.JSONRPC.Generic {
     func getResponseType() throws -> Response.Kind<Result> {
         switch (id, result, error, method, params) {
@@ -43,7 +62,7 @@ extension Response.JSONRPC.Generic {
         case let (id?, .none, _, _, _):
             return .empty(id)
         default:
-            throw Error.cannotIdentifyResponseType(id)
+            throw Response.JSONRPC.Error.cannotIdentifyResponseType(id)
         }
     }
 }

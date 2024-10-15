@@ -18,6 +18,7 @@ extension WebSocket {
             case alreadyConnected
             case maximumAttemptsReached
             case reconnectFailed
+            case unknown
         }
         
         enum MessageIssue {

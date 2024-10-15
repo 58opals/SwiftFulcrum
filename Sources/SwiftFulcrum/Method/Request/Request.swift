@@ -7,7 +7,7 @@ struct Request {
     let requestedMethod: Method
     let params: Encodable
     
-    init(id: UUID = .init(), method: Method, params: Encodable) {
+    init(id: UUID, method: Method, params: Encodable) {
         self.id = id
         self.method = method.path
         self.requestedMethod = method
@@ -40,13 +40,14 @@ extension Request: Hashable {
 }
 
 extension Request {
-    var data: Data {
+    var data: Data? {
         do {
             let encoder = JSONEncoder()
             let data = try encoder.encode(self)
             return data
         } catch {
-            fatalError()
+            print(error.localizedDescription)
+            return nil
         }
     }
 }
