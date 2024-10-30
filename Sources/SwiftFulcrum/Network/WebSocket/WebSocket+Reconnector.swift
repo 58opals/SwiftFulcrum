@@ -25,28 +25,31 @@ extension WebSocket {
         
         func attemptReconnection(for webSocket: WebSocket, with url: URL? = nil) async throws {
             while reconnectionAttempts < self.configuration.maxReconnectionAttempts {
+                let delay = min(pow(2.0, Double(reconnectionAttempts)) * self.configuration.reconnectionDelay, 120)
+                print("Reconnection attempt \(reconnectionAttempts + 1) in \(delay) seconds...")
+                try await Task.sleep(for: .seconds(delay))
+                
+                reconnectionAttempts += 1
+                print("Attempting to reconnect (\(reconnectionAttempts))...")
+                
                 do {
-                    let delay = min(pow(2.0, Double(self.reconnectionAttempts)) * self.configuration.reconnectionDelay, 120)
-                    try await Task.sleep(for: .seconds(delay))
-                    
-                    reconnectionAttempts += 1
-                    await webSocket.disconnect(with: "Reconnecting...")
-                    await webSocket.createNewTask(with: url)
+                    if let newURL = url {
+                        await webSocket.createNewTask(with: newURL)
+                    }
                     try await webSocket.connect()
                     
                     if await webSocket.isConnected {
                         resetReconnectionAttemptCount()
+                        print("Reconnected successfully.")
                         return
                     }
-                } catch is CancellationError {
-                    print("Reconnection cancelled.")
-                    throw await WebSocket.Error.connection(url: webSocket.url, reason: .reconnectFailed)
                 } catch {
-                    print("Reconnection error: \(error)")
+                    print("Reconnection attempt \(reconnectionAttempts) failed: \(error.localizedDescription)")
                 }
             }
             
-            throw WebSocket.Error.connection(url: await webSocket.url, reason: .maximumAttemptsReached)
+            print("Maximum reconnection attempts reached.")
+            throw await WebSocket.Error.connection(url: webSocket.url, reason: .maximumAttemptsReached)
         }
     }
 }

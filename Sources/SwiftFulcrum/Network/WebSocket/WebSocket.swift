@@ -5,6 +5,8 @@ actor WebSocket {
     var url: URL
     private var task: URLSessionWebSocketTask?
     private var state: ConnectionState
+    
+    private var receiveTask: Task<Void, Never>?
     let reconnector: Reconnector
     
     var isConnected: Bool { state == .connected }
@@ -26,7 +28,6 @@ extension WebSocket {
         self.task = nil
         
         self.task = URLSession.shared.webSocketTask(with: self.url)
-        print("New WebSocket task created with URL: \(self.url)")
     }
 }
 
@@ -37,7 +38,6 @@ extension WebSocket {
         
         do {
             try await task?.send(ping)
-            print("Ping sent successfully.")
         } catch {
             print("Failed to send ping: \(error.localizedDescription)")
             return false
@@ -46,7 +46,6 @@ extension WebSocket {
         do {
             let response = try await task?.receive()
             if case .string(let message) = response, !message.isEmpty {
-                print("Received pong: \(message)")
                 return true
             } else {
                 print("Received empty pong.")
@@ -66,7 +65,6 @@ extension WebSocket {
         }
         
         guard let task else {
-            print("Failed to create WebSocket task.")
             throw Error.connection(url: url, reason: .failed)
         }
         
@@ -119,7 +117,6 @@ extension WebSocket {
         
         let message = URLSessionWebSocketTask.Message.data(data)
         try await task.send(message)
-        print("Sent data: \(Array<UInt8>(data))")
     }
 
     func send(string: String) async throws {
@@ -127,12 +124,49 @@ extension WebSocket {
         
         let message = URLSessionWebSocketTask.Message.string(string)
         try await task.send(message)
-        print("Sent string: \(string)")
     }
 
     
     func receive() async throws -> URLSessionWebSocketTask.Message {
         guard let task else { throw WebSocket.Error.connection(url: url, reason: .failed) }
         return try await task.receive()
+    }
+}
+
+// MARK: - Receive Loop
+extension WebSocket {
+    private func startReceiveLoop() {
+        receiveTask = Task {
+            await self.receiveLoop()
+        }
+    }
+    
+    private func receiveLoop() async {
+        guard let task else { return }
+        
+        while !Task.isCancelled {
+            do {
+                let message = try await task.receive()
+                
+                switch message {
+                case .data(let data):
+                    try await task.send(.data(data))
+                case .string(let string):
+                    try await task.send(.string(string))
+                @unknown default:
+                    throw Error.message(message: message, reason: .unsupported, description: "Unsupported message type: \(message)")
+                }
+            } catch {
+                print("Receive loop encountered an error: \(error.localizedDescription)")
+                await handleReceiveError(error)
+                break
+            }
+        }
+    }
+    
+    private func handleReceiveError(_ error: Swift.Error) async {
+        state = .disconnected
+        print("WebSocket (\(self.url.description)) is disconnected due to error.")
+        try? await reconnect()
     }
 }

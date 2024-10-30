@@ -12,7 +12,7 @@ extension Client {
         let request = method.createRequest(with: requestIdentifier)
         
         try await self.sendRequest(request)
-        print("Request sent with UUID: \(request.id)")
+        
         return (request.id, request.method)
     }
     
@@ -28,12 +28,10 @@ extension Client {
 extension Client {
     func addHandler(for identifier: RegularResponseIdentifier, handler: @escaping (Data) throws -> Void) {
         regularResponseHandlers[identifier] = handler
-        print("Regular handler added for identifier: \(identifier)")
     }
     
     func addHandler(for identifier: SubscriptionResponseIdentifier, handler: @escaping (Data) throws -> Void) {
         subscriptionResponseHandlers[identifier] = handler
-        print("Subscription handler added for identifier: \(identifier)")
     }
     
     func removeRegularResponseHandler(for id: RegularResponseIdentifier) {

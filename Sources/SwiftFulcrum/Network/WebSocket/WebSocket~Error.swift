@@ -25,6 +25,7 @@ extension WebSocket {
             case invalid
             case encoding
             case decoding
+            case unsupported
         }
     }
 }
