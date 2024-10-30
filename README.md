@@ -38,12 +38,12 @@ import SwiftFulcrum
 Initialize the client to interact with Fulcrum servers:
 
 ```swift
-let fulcrum = try Fulcrum(url: "wss://example-fulcrum-server.com")
+let fulcrum = try Fulcrum(url: "wss://example-fulcrum-server.com:50004")
 ```
 
 ### Making Requests
 
-SwiftFulcrum supports both *regular requests* and *subscription requests*. The framework now utilizes Swift's native concurrency (`async/await`) instead of Combine, simplifying the management of asynchronous operations.
+SwiftFulcrum supports both *regular requests* and *subscription requests*, leveraging Swift's native concurrency (`async/await`) for simplified management of asynchronous operations.
 
 #### Regular Requests
 
@@ -71,12 +71,17 @@ Submit a subscription request to receive real-time updates:
 Task {
     do {
         let address = "qrsrz5mzve6kyr6ne6lgsvlgxvs3hqm6huxhd8gqwj"
-        let (id, notificationStream): (UUID, AsyncStream<Response.JSONRPC.Result.Blockchain.Address.SubscribeNotification?>) = try await fulcrum.submit(
+        let (id, initialResponse, notificationStream): (UUID, Response.JSONRPC.Result.Blockchain.Address.SubscribeNotification?, AsyncStream<Response.JSONRPC.Result.Blockchain.Address.SubscribeNotification?>) = try await fulcrum.submit(
             method: .blockchain(.address(.subscribe(address: address))),
             notificationType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Address.SubscribeNotification>.self
         )
+
+        if let initialResponse {
+            print("Initial Response for request \(id): \(initialResponse)")
+        }
+
         for await notification in notificationStream {
-            if let notification = notification {
+            if let notification {
                 print("Notification received for request \(id): \(notification)")
             }
         }
@@ -101,8 +106,8 @@ SwiftFulcrum now uses Swift's native `actor` model for managing concurrency, ens
 
 ### Example: Subscription Request Flow
 
-1. **Submit the Subscription**: The `submit` method sends a subscription request and returns an `AsyncStream` for notifications.
-2. **Receive Notifications**: Use a `for await` loop to process incoming notifications as they arrive.
+1. **Submit the Subscription**: The `submit` method sends a subscription request and returns an initial response alongside an `AsyncStream` for notifications.
+2. **Receive Notifications**: Use a `for await` loop to process incoming notifications as they arrive, with the flexibility to handle the initial response as a regular result.
 
 ### Learn More about Swift Concurrency
 
