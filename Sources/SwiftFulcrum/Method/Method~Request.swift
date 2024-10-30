@@ -1,7 +1,7 @@
 import Foundation
 
 extension Method {
-    var request: Request {
+    func createRequest(with uuid: UUID) -> Request {
         switch self {
         case .blockchain(let blockchain):
             switch blockchain {
@@ -15,7 +15,8 @@ extension Method {
                         try container.encode(numberOfBlocks)
                     }
                 }
-                return Request(method: self,
+                return Request(id: uuid,
+                               method: self,
                                params: Parameters(numberOfBlocks: numberOfBlocks))
                 
                 // MARK: Blockchain.relayFee
@@ -25,7 +26,8 @@ extension Method {
                         _ = encoder.unkeyedContainer()
                     }
                 }
-                return Request(method: self,
+                return Request(id: uuid,
+                               method: self,
                                params: Parameters())
                 
             case .address(let address):
@@ -42,7 +44,8 @@ extension Method {
                             if let tokenFilter = tokenFilter { try container.encode(tokenFilter) }
                         }
                     }
-                    return Request(method: self,
+                    return Request(id: uuid,
+                                   method: self,
                                    params: Parameters(address: address,
                                                       tokenFilter: tokenFilter))
                     
@@ -55,7 +58,8 @@ extension Method {
                             try container.encode(address)
                         }
                     }
-                    return Request(method: self,
+                    return Request(id: uuid,
+                                   method: self,
                                    params: Parameters(address: address))
                     
                     // MARK: Blockchain.Address.getHistory
@@ -73,7 +77,8 @@ extension Method {
                             if includeUnconfirmed { try container.encode(Int(-1)) } else if let toHeight = toHeight { try container.encode(toHeight) }
                         }
                     }
-                    return Request(method: self,
+                    return Request(id: uuid,
+                                   method: self,
                                    params: Parameters(address: address,
                                                       fromHeight: fromHeight,
                                                       toHeight: toHeight,
@@ -88,7 +93,8 @@ extension Method {
                             try container.encode(address)
                         }
                     }
-                    return Request(method: self,
+                    return Request(id: uuid,
+                                   method: self,
                                    params: Parameters(address: address))
                     
                     // MARK: Blockchain.Address.getScriptHash
@@ -100,7 +106,8 @@ extension Method {
                             try container.encode(address)
                         }
                     }
-                    return Request(method: self,
+                    return Request(id: uuid,
+                                   method: self,
                                    params: Parameters(address: address))
                     
                     // MARK: Blockchain.Address.listUnspent
@@ -114,7 +121,8 @@ extension Method {
                             if let tokenFilter = tokenFilter { try container.encode(tokenFilter) }
                         }
                     }
-                    return Request(method: self,
+                    return Request(id: uuid,
+                                   method: self,
                                    params: Parameters(address: address,
                                                       tokenFilter: tokenFilter))
                     
@@ -127,7 +135,8 @@ extension Method {
                             try container.encode(address)
                         }
                     }
-                    return Request(method: self,
+                    return Request(id: uuid,
+                                   method: self,
                                    params: Parameters(address: address))
                     
                     // MARK: Blockchain.Address.unsubscribe
@@ -139,7 +148,8 @@ extension Method {
                             try container.encode(address)
                         }
                     }
-                    return Request(method: self,
+                    return Request(id: uuid,
+                                   method: self,
                                    params: Parameters(address: address))
                 }
                 
@@ -157,7 +167,8 @@ extension Method {
                             try container.encode(checkpointHeight)
                         }
                     }
-                    return Request(method: self,
+                    return Request(id: uuid,
+                                   method: self,
                                    params: Parameters(height: height,
                                                       checkpointHeight: checkpointHeight ?? height + 1))
                     
@@ -174,7 +185,8 @@ extension Method {
                             try container.encode(checkpointHeight)
                         }
                     }
-                    return Request(method: self,
+                    return Request(id: uuid,
+                                   method: self,
                                    params: Parameters(startHeight: startHeight,
                                                       count: count,
                                                       checkpointHeight: checkpointHeight ?? 0))
@@ -192,7 +204,8 @@ extension Method {
                             try container.encode(blockHash)
                         }
                     }
-                    return Request(method: self,
+                    return Request(id: uuid,
+                                   method: self,
                                    params: Parameters(blockHash: blockHash))
                 }
             case .headers(let headers):
@@ -205,7 +218,8 @@ extension Method {
                             _ = encoder.unkeyedContainer()
                         }
                     }
-                    return Request(method: self,
+                    return Request(id: uuid,
+                                   method: self,
                                    params: Parameters())
                     
                     // MARK: Blockchain.Headers.subscribe
@@ -215,7 +229,8 @@ extension Method {
                             _ = encoder.unkeyedContainer()
                         }
                     }
-                    return Request(method: self,
+                    return Request(id: uuid,
+                                   method: self,
                                    params: Parameters())
                     
                     // MARK: Blockchain.Headers.unsubscribe
@@ -225,7 +240,8 @@ extension Method {
                             _ = encoder.unkeyedContainer()
                         }
                     }
-                    return Request(method: self,
+                    return Request(id: uuid,
+                                   method: self,
                                    params: Parameters())
                 }
             case .transaction(let transaction):
@@ -240,7 +256,8 @@ extension Method {
                             try container.encode(rawTransaction)
                         }
                     }
-                    return Request(method: self,
+                    return Request(id: uuid,
+                                   method: self,
                                    params: Parameters(rawTransaction: rawTransaction))
                     
                     // MARK: Blockchain.Transaction.get
@@ -254,7 +271,8 @@ extension Method {
                             try container.encode(verbose)
                         }
                     }
-                    return Request(method: self,
+                    return Request(id: uuid,
+                                   method: self,
                                    params: Parameters(transactionHash: transactionHash,
                                                       verbose: verbose))
                     
@@ -269,7 +287,8 @@ extension Method {
                             try container.encode(includeHeader)
                         }
                     }
-                    return Request(method: self,
+                    return Request(id: uuid,
+                                   method: self,
                                    params: Parameters(transactionHash: transactionHash,
                                                       includeHeader: includeHeader))
                     
@@ -282,7 +301,8 @@ extension Method {
                             try container.encode(transactionHash)
                         }
                     }
-                    return Request(method: self,
+                    return Request(id: uuid,
+                                   method: self,
                                    params: Parameters(transactionHash: transactionHash))
                     
                     // MARK: Blockchain.Transaction.getMerkle
@@ -294,7 +314,8 @@ extension Method {
                             try container.encode(transactionHash)
                         }
                     }
-                    return Request(method: self,
+                    return Request(id: uuid,
+                                   method: self,
                                    params: Parameters(transactionHash: transactionHash))
                     
                     // MARK: Blockchain.Transaction.idFromPos
@@ -310,7 +331,8 @@ extension Method {
                             try container.encode(includeMerkleProof)
                         }
                     }
-                    return Request(method: self,
+                    return Request(id: uuid,
+                                   method: self,
                                    params: Parameters(blockHeight: blockHeight,
                                                       transactionPosition: transactionPosition,
                                                       includeMerkleProof: includeMerkleProof))
@@ -324,7 +346,8 @@ extension Method {
                             try container.encode(transactionHash)
                         }
                     }
-                    return Request(method: self,
+                    return Request(id: uuid,
+                                   method: self,
                                    params: Parameters(transactionHash: transactionHash))
                     
                     // MARK: Blockchain.Transaction.unsubscribe
@@ -336,7 +359,8 @@ extension Method {
                             try container.encode(transactionHash)
                         }
                     }
-                    return Request(method: self,
+                    return Request(id: uuid,
+                                   method: self,
                                    params: Parameters(transactionHash: transactionHash))
                     
                 case .dsProof(let dSProof):
@@ -351,7 +375,8 @@ extension Method {
                                 try container.encode(transactionHash)
                             }
                         }
-                        return Request(method: self,
+                        return Request(id: uuid,
+                                       method: self,
                                        params: Parameters(transactionHash: transactionHash))
                         
                         // MARK: Blockchain.Transaction.DSProof.list
@@ -361,7 +386,8 @@ extension Method {
                                 _ = encoder.unkeyedContainer()
                             }
                         }
-                        return Request(method: self,
+                        return Request(id: uuid,
+                                       method: self,
                                        params: Parameters())
                         
                         // MARK: Blockchain.Transaction.DSProof.subscribe
@@ -373,7 +399,8 @@ extension Method {
                                 try container.encode(transactionHash)
                             }
                         }
-                        return Request(method: self,
+                        return Request(id: uuid,
+                                       method: self,
                                        params: Parameters(transactionHash: transactionHash))
                         
                         // MARK: Blockchain.Transaction.DSProof.unsubscribe
@@ -385,7 +412,8 @@ extension Method {
                                 try container.encode(transactionHash)
                             }
                         }
-                        return Request(method: self,
+                        return Request(id: uuid,
+                                       method: self,
                                        params: Parameters(transactionHash: transactionHash))
                     }
                 }
@@ -404,11 +432,13 @@ extension Method {
                             try container.encode(outputIndex)
                         }
                     }
-                    return Request(method: self,
+                    return Request(id: uuid,
+                                   method: self,
                                    params: Parameters(transactionHash: transactionHash,
                                                       outputIndex: outputIndex))
                 }
             }
+            
         case .mempool(let mempool):
             switch mempool {
                 
@@ -419,7 +449,8 @@ extension Method {
                         _ = encoder.unkeyedContainer()
                     }
                 }
-                return Request(method: self,
+                return Request(id: uuid,
+                               method: self,
                                params: Parameters())
             }
         }

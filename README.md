@@ -6,7 +6,7 @@ SwiftFulcrum is an innovative Swift framework designed to facilitate easy and ef
 
 - **Type-Safe API**: Leverages Swift's strong type system for safer Bitcoin Cash transactions and queries.
 - **Real-Time Updates**: Subscribe to blockchain changes and mempool events with WebSocket support.
-- **Concurrency Support**: Utilizes the Combine framework for robust and efficient concurrency management.
+- **Swift Concurrency**: Uses Swift's modern concurrency features like `async/await` and `actor` for efficient and thread-safe operations.
 - **Extensible**: Designed with modularity in mind, allowing for easy customization.
 
 ## Getting Started
@@ -31,7 +31,6 @@ To start using SwiftFulcrum, import it into your Swift file:
 
 ```swift
 import SwiftFulcrum
-import Combine
 ```
 
 #### Initializing the Client
@@ -39,13 +38,12 @@ import Combine
 Initialize the client to interact with Fulcrum servers:
 
 ```swift
-var fulcrum = try SwiftFulcrum()
-var cancellables = Set<AnyCancellable>()
+let fulcrum = try Fulcrum(url: "wss://example-fulcrum-server.com:50004")
 ```
 
 ### Making Requests
 
-SwiftFulcrum supports both *regular requests* and *subscription requests*. The framework leverages Combine for handling asynchronous operations, providing a powerful and flexible concurrency model.
+SwiftFulcrum supports both *regular requests* and *subscription requests*, leveraging Swift's native concurrency (`async/await`) for simplified management of asynchronous operations.
 
 #### Regular Requests
 
@@ -54,25 +52,11 @@ Submit a regular request to retrieve blockchain information:
 ```swift
 Task {
     do {
-        let (id, publisher) = try await fulcrum.submit(
+        let (id, result): (UUID, Response.JSONRPC.Result.Blockchain.EstimateFee) = try await fulcrum.submit(
             method: .blockchain(.estimateFee(numberOfBlocks: 6)),
             responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.EstimateFee>.self
         )
-        publisher
-            .sink(
-                receiveCompletion: { completion in
-                    switch completion {
-                    case .finished:
-                        print("\(id) finished.")
-                    case .failure(let error):
-                        print("Request failed with error: \(error.localizedDescription)")
-                    }
-                },
-                receiveValue: { estimateFee in
-                    print("Estimate fee: \(estimateFee)")
-                }
-            )
-            .store(in: &cancellables)
+        print("Request \(id) completed. Estimated fee: \(result)")
     } catch {
         print("Failed to submit request: \(error.localizedDescription)")
     }
@@ -87,54 +71,47 @@ Submit a subscription request to receive real-time updates:
 Task {
     do {
         let address = "qrsrz5mzve6kyr6ne6lgsvlgxvs3hqm6huxhd8gqwj"
-        let (id, publisher) = try await fulcrum.submit(
+        let (id, initialResponse, notificationStream): (UUID, Response.JSONRPC.Result.Blockchain.Address.SubscribeNotification?, AsyncStream<Response.JSONRPC.Result.Blockchain.Address.SubscribeNotification?>) = try await fulcrum.submit(
             method: .blockchain(.address(.subscribe(address: address))),
-            responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Address.Subscribe>.self,
             notificationType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Address.SubscribeNotification>.self
         )
-        publisher
-            .sink(
-                receiveCompletion: { completion in
-                    switch completion {
-                    case .finished:
-                        print("\(id) finished.")
-                    case .failure(let error):
-                        print("Subscription failed with error: \(error.localizedDescription)")
-                    }
-                },
-                receiveValue: { notification in
-                    print(notification)
-                }
-            )
-            .store(in: &cancellables)
+
+        if let initialResponse {
+            print("Initial Response for request \(id): \(initialResponse)")
+        }
+
+        for await notification in notificationStream {
+            if let notification {
+                print("Notification received for request \(id): \(notification)")
+            }
+        }
     } catch {
         print("Failed to submit subscription: \(error.localizedDescription)")
     }
 }
 ```
 
-## Concurrency Support with Combine
+## Concurrency with Swift Actors
 
-SwiftFulcrum leverages the Combine framework to handle concurrency in a declarative manner. This approach provides several benefits:
+SwiftFulcrum now uses Swift's native `actor` model for managing concurrency, ensuring that operations are handled in a thread-safe manner.
 
-- **Asynchronous Programming**: Combine allows you to handle asynchronous operations with publishers and subscribers, making it easier to manage complex data flows and state changes.
-- **Error Handling**: Combine provides built-in support for handling errors in the data stream, enabling robust and resilient applications.
-- **Type Safety**: Combine's use of Swift's strong type system ensures that your asynchronous code is type-safe, reducing runtime errors.
-- **Composability**: Combine's operators allow you to compose complex data processing pipelines, making your code more modular and reusable
+- **Actors for Thread Safety**: Components like `Fulcrum`, `Client`, and `WebSocket` are implemented as `actors`, which naturally prevent race conditions.
+- **Async/Await for Simplicity**: Instead of using Combine, `async/await` is used for handling asynchronous operations, making the code easier to read and maintain.
+- **Continuation API**: SwiftFulcrum also leverages `withCheckedThrowingContinuation` to bridge callback-based APIs to the modern async-await pattern.
 
 ### Example: Regular Request Flow
 
-1. **Submit the Request**: The `submit` method sends a request and returns a `Future` publisher.
-2. **Handle the Response**: The `sink` operator subscribes to the `Future` and handles the response or any errors.
+1. **Submit the Request**: The `submit` method sends a request and returns a response asynchronously.
+2. **Handle the Response**: Use the `await` keyword to process the response directly, simplifying error handling and data flow.
 
 ### Example: Subscription Request Flow
 
-1. **Submit the Subscription**: The `submit` method sends a subscription request and returns a `PassthroughSubject`.
-2. **Receive Notifications**: The `sink` operator subscribes to the `PassthroughSubject` and processes incoming notifications or any errors.
+1. **Submit the Subscription**: The `submit` method sends a subscription request and returns an initial response alongside an `AsyncStream` for notifications.
+2. **Receive Notifications**: Use a `for await` loop to process incoming notifications as they arrive, with the flexibility to handle the initial response as a regular result.
 
-### Learn More about Combine
+### Learn More about Swift Concurrency
 
-For more information on how to use the Combine framework, refer to the [official Apple developer documentation](https://developer.apple.com/documentation/combine).
+For more information on Swift concurrency, refer to the [official Apple developer documentation](https://developer.apple.com/documentation/swift/concurrency).
 
 ### Acknowledgments
 

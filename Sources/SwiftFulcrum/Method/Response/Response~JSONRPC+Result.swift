@@ -8,26 +8,26 @@ extension Response.JSONRPC {
             public typealias RelayFee = Double
             
             public struct Address {
-                public struct GetBalance: Decodable {
+                public struct GetBalance: Decodable, Sendable {
                     public let confirmed: UInt64
                     public let unconfirmed: Int64
                 }
                 
-                public struct GetFirstUse: Decodable {
+                public struct GetFirstUse: Decodable, Sendable {
                     public let block_hash: String
                     public let height: UInt
                     public let tx_hash: String
                 }
                 
                 public typealias GetHistory = [GetHistoryItem]
-                public struct GetHistoryItem: Decodable {
+                public struct GetHistoryItem: Decodable, Sendable {
                     public let height: Int
                     public let tx_hash: String
                     public let fee: UInt?
                 }
                 
                 public typealias GetMempool = [GetMempoolItem]
-                public struct GetMempoolItem: Decodable {
+                public struct GetMempoolItem: Decodable, Sendable {
                     public let height: Int
                     public let tx_hash: String
                     public let fee: UInt?
@@ -36,7 +36,7 @@ extension Response.JSONRPC {
                 public typealias GetScriptHash = String
                 
                 public typealias ListUnspent = [ListUnspentItem]
-                public struct ListUnspentItem: Decodable {
+                public struct ListUnspentItem: Decodable, Sendable {
                     public let height: UInt
                     public let token_data: Method.Blockchain.CashTokens.JSON?
                     public let tx_hash: String
@@ -45,15 +45,15 @@ extension Response.JSONRPC {
                 }
                 
                 public typealias Subscribe = SubscribeParameters
-                public enum SubscribeParameters: Decodable {
+                public enum SubscribeParameters: Decodable, Sendable {
                     case status(String)
-                    case addressAndStatus([String])
+                    case addressAndStatus([String?])
                     
                     public init(from decoder: Decoder) throws {
                         let container = try decoder.singleValueContainer()
                         
                         if let singleValue = try? container.decode(String.self) { self = .status(singleValue) }
-                        else if let multipleValues = try? container.decode([String].self) { self = .addressAndStatus(multipleValues) }
+                        else if let multipleValues = try? container.decode([String?].self) { self = .addressAndStatus(multipleValues) }
                         else { throw DecodingError.typeMismatch(SubscribeParameters.self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Invalid type for JSONRPCResult")) }
                     }
                 }
@@ -62,13 +62,13 @@ extension Response.JSONRPC {
             }
             
             public struct Block {
-                public struct Header: Decodable {
+                public struct Header: Decodable, Sendable {
                     public let branch: [String]
                     public let header: String
                     public let root: String
                 }
                 
-                public struct Headers: Decodable {
+                public struct Headers: Decodable, Sendable {
                     public let count: UInt
                     public let hex: String
                     public let max: UInt
@@ -76,20 +76,20 @@ extension Response.JSONRPC {
             }
             
             public struct Header {
-                public struct Get: Decodable {
+                public struct Get: Decodable, Sendable {
                     public let height: UInt
                     public let hex: String
                 }
             }
             
             public struct Headers {
-                public struct GetTip: Decodable {
+                public struct GetTip: Decodable, Sendable {
                     public let height: UInt
                     public let hex: String
                 }
                 
                 public typealias Subscribe = SubscribeParameters
-                public enum SubscribeParameters: Decodable {
+                public enum SubscribeParameters: Decodable, Sendable {
                     case topHeader(GetTip)
                     case newHeader([GetTip])
                     
@@ -108,7 +108,7 @@ extension Response.JSONRPC {
             public struct Transaction {
                 public typealias Broadcast = Data
                 
-                public struct Get: Decodable {
+                public struct Get: Decodable, Sendable {
                     public let blockhash: String?
                     public let blocktime: UInt?
                     public let confirmations: UInt?
@@ -122,34 +122,34 @@ extension Response.JSONRPC {
                     public let vin: [Input]
                     public let vout: [Output]
                     
-                    public struct Input: Decodable {
+                    public struct Input: Decodable, Sendable {
                         public let scriptSig: ScriptSig
                         public let sequence: UInt
                         public let txid: String
                         public let vout: UInt
                         
-                        public struct ScriptSig: Decodable {
+                        public struct ScriptSig: Decodable, Sendable {
                             public let asm: String
                             public let hex: String
                         }
                     }
                     
-                    public struct Output: Decodable {
+                    public struct Output: Decodable, Sendable {
                         public let n: UInt
                         public let scriptPubKey: ScriptPubKey
                         public let value: Double
                         
-                        public struct ScriptPubKey: Decodable {
-                            public let addresses: [String]
+                        public struct ScriptPubKey: Decodable, Sendable {
+                            public let addresses: [String]?
                             public let asm: String
                             public let hex: String
-                            public let reqSigs: UInt
+                            public let reqSigs: UInt?
                             public let type: String
                         }
                     }
                 }
                 
-                public struct GetConfirmedBlockHash: Decodable {
+                public struct GetConfirmedBlockHash: Decodable, Sendable {
                     public let block_hash: String
                     public let block_header: String?
                     public let block_height: UInt
@@ -157,23 +157,23 @@ extension Response.JSONRPC {
                 
                 public typealias GetHeight = UInt
                 
-                public struct GetMerkle: Decodable {
+                public struct GetMerkle: Decodable, Sendable {
                     public let merkle: [String]
                     public let block_height: UInt
                     public let pos: UInt
                 }
                 
-                public struct IDFromPos: Decodable {
+                public struct IDFromPos: Decodable, Sendable {
                     public let merkle: [String]
                     public let tx_hash: String
                 }
                 
                 public typealias Subscribe = SubscribeParameters
-                public enum SubscribeParameters: Decodable {
+                public enum SubscribeParameters: Decodable, Sendable {
                     case height(UInt)
                     case transactionHashAndHeight([TransactionHashAndHeight])
                     
-                    public enum TransactionHashAndHeight: Decodable {
+                    public enum TransactionHashAndHeight: Decodable, Sendable {
                         case transactionHash(String)
                         case height(UInt)
                         
@@ -198,14 +198,14 @@ extension Response.JSONRPC {
                 public typealias Unsubscribe = Bool
                 
                 public struct DSProof {
-                    public struct Get: Decodable {
+                    public struct Get: Decodable, Sendable {
                         public let dspid: String
                         public let txid: String
                         public let hex: String
                         public let outpoint: Outpoint
                         public let descendants: [String]
                         
-                        public struct Outpoint: Decodable {
+                        public struct Outpoint: Decodable, Sendable {
                             public let txid: String
                             public let vout: UInt
                         }
@@ -214,12 +214,11 @@ extension Response.JSONRPC {
                     public typealias List = [String]
                     
                     public typealias Subscribe = SubscribeParameters
-                    
-                    public enum SubscribeParameters: Decodable {
+                    public enum SubscribeParameters: Decodable, Sendable {
                         case dsProof(Get?)
                         case transactionHashAndDSProof([TransactionHashAndDSProof])
                         
-                        public enum TransactionHashAndDSProof: Decodable {
+                        public enum TransactionHashAndDSProof: Decodable, Sendable {
                             case transactionHash(String)
                             case dsProof(Get)
                             
@@ -246,7 +245,7 @@ extension Response.JSONRPC {
             }
             
             public struct UTXO {
-                public struct GetInfo: Decodable {
+                public struct GetInfo: Decodable, Sendable {
                     public let confirmed_height: UInt?
                     public let scripthash: String
                     public let value: UInt

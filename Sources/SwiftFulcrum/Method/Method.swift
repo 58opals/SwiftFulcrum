@@ -102,3 +102,20 @@ extension Method.Blockchain {
         }
     }
 }
+
+extension Method: Sendable {}
+extension Method.Blockchain: Sendable {}
+extension Method.Blockchain.Address: Sendable {}
+extension Method.Blockchain.Block: Sendable {}
+extension Method.Blockchain.Header: Sendable {}
+extension Method.Blockchain.Headers: Sendable {}
+extension Method.Blockchain.Transaction: Sendable {}
+extension Method.Blockchain.Transaction.DSProof: Sendable {}
+extension Method.Blockchain.UTXO: Sendable {}
+extension Method.Blockchain.CashTokens: Sendable {}
+extension Method.Blockchain.CashTokens.TokenFilter: Sendable {}
+extension Method.Blockchain.CashTokens.JSON: Sendable {}
+extension Method.Blockchain.CashTokens.JSON.NFT: Sendable {}
+extension Method.Blockchain.CashTokens.JSON.NFT.Capability: Sendable {}
+extension Method.Mempool: Sendable {}
+

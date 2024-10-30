@@ -1,50 +1,41 @@
-import XCTest
+import Testing
+import Foundation
 @testable import SwiftFulcrum
 
-import Combine
-
-final class ClientTests: XCTestCase {
-    var client: Client!
-    var webSocket: WebSocket!
+@Suite("Client Tests")
+struct ClientTests {
+    let client: Client
     
-    override func setUpWithError() throws {
-        try super.setUpWithError()
-        let serverList = try WebSocket.Server.getServerList()
-        guard let url = serverList.randomElement() else { throw WebSocket.Error.initializing(reason: .noURLAvailable, description: "Server list: \(serverList)") }
-        webSocket = WebSocket(url: url)
-        client = Client(webSocket: webSocket)
+    init() async throws {
+        let url = try WebSocket.Server.getServerList().randomElement()!
+        let webSocket = WebSocket(url: url)
+        self.client = Client(webSocket: webSocket)
+        
+        try await self.client.start()
     }
     
-    override func tearDownWithError() throws {
-        client = nil
-        webSocket = nil
-        try super.tearDownWithError()
-    }
-}
-
-extension ClientTests {
-    func testClientInitialization() async throws {
-        let expectation = XCTestExpectation(description: "Client initializes and connects WebSocket successfully")
+    @Test func testClientConnection() async throws {
+        let isConnected = await client.webSocket.isConnected
         
-        try await Task.sleep(for: .seconds(5))
-        XCTAssertTrue(self.webSocket.isConnected, "WebSocket should be connected")
-        expectation.fulfill()
-        
-        await fulfillment(of: [expectation], timeout: 10.0)
+        #expect(isConnected, "Client should establish a WebSocket connection.")
     }
     
-    func testClientSendRequestAndReceiveResponse() async throws {
-        let expectation = XCTestExpectation(description: "Client sends request and receives response successfully")
+    @Test func testReconnection() async throws {
+        let faultyWebSocket = WebSocket(url: URL(string: "wss://invalid-url")!)
+        let validURL = URL(string:"wss://electroncash.de:60002")!
         
-        let request = Method.blockchain(.estimateFee(numberOfBlocks: 6)).request
-        client.externalDataHandler = { receivedData in
-            XCTAssertNotNil(receivedData, "Received data should not be nil")
-            print("Received data: \(String(data: receivedData, encoding: .utf8)!)")
-            expectation.fulfill()
+        let faultyClient = Client(webSocket: faultyWebSocket)
+        
+        await #expect(throws: WebSocket.Error.self) {
+            try await faultyClient.webSocket.connect()
         }
         
-        try await client.sendRequest(request)
+        await #expect(throws: WebSocket.Error.self) {
+            try await faultyClient.webSocket.reconnect()
+        }
         
-        await fulfillment(of: [expectation], timeout: 10.0)
+        try await faultyClient.webSocket.reconnect(with: validURL)
+        let isConnected = await faultyClient.webSocket.isConnected
+        #expect(isConnected)
     }
 }

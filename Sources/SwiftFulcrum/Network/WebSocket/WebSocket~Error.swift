@@ -18,12 +18,14 @@ extension WebSocket {
             case alreadyConnected
             case maximumAttemptsReached
             case reconnectFailed
+            case unknown
         }
         
         enum MessageIssue {
             case invalid
             case encoding
             case decoding
+            case unsupported
         }
     }
 }

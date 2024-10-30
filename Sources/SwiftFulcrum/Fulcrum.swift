@@ -1,6 +1,6 @@
 import Foundation
 
-public struct Fulcrum {
+public actor Fulcrum {
     let client: Client
     public var subscriptionHub: SubscriptionHub
     
@@ -17,7 +17,11 @@ public struct Fulcrum {
             }
         }()
         
-        self.client = Client(webSocket: webSocket)
-        self.subscriptionHub = SubscriptionHub()
+        self.client = .init(webSocket: webSocket)
+        self.subscriptionHub = .init()
+    }
+    
+    public func start() async throws {
+        try await self.client.start()
     }
 }
