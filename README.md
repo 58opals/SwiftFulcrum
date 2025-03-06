@@ -114,4 +114,3 @@ Refer to [Apple’s official documentation](https://developer.apple.com/document
 ## Acknowledgments
 
 - Thanks to the [Fulcrum Protocol](https://electrum-cash-protocol.readthedocs.io/) team for providing detailed protocol specifications.
-
