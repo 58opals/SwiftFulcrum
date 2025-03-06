@@ -11,15 +11,22 @@ extension Client {
 }
 
 extension Client {
-    func receiveLoop() async {
-        while true {
-            do {
-                let message = try await webSocket.receive()
+    func observeMessages() async {
+        do {
+            for try await message in await webSocket.messages() {
                 await handleMessage(message)
-            } catch {
-                print("Receive loop encountered an error: \(error.localizedDescription)")
-                try? await webSocket.reconnect()
+            }
+            
+            print("WebSocket stream ended.")
+        } catch {
+            print("Stream ended with error: \(error.localizedDescription)")
+            
+            do {
+                try await webSocket.reconnect()
                 try? await Task.sleep(for: .seconds(1))
+                await observeMessages()
+            } catch {
+                print("Reconnection failed: \(error.localizedDescription)")
             }
         }
     }

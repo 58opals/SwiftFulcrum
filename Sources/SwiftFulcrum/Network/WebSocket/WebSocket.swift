@@ -6,7 +6,9 @@ actor WebSocket {
     private var task: URLSessionWebSocketTask?
     private var state: ConnectionState
     
-    private var receiveTask: Task<Void, Never>?
+    private var messageContinuation: AsyncThrowingStream<URLSessionWebSocketTask.Message, Swift.Error>.Continuation?
+    private var isStreamActive: Bool = false
+    
     let reconnector: Reconnector
     
     var isConnected: Bool { state == .connected }
@@ -57,7 +59,6 @@ extension WebSocket {
         return false
     }
 
-    
     func connect() async throws {
         if !self.isConnected {
             state = .connecting
@@ -94,6 +95,11 @@ extension WebSocket {
         
         task = nil
         state = .disconnected
+        
+        messageContinuation?.finish()
+        messageContinuation = nil
+        isStreamActive = false
+        
         print("WebSocket (\(self.url.description)) is disconnected.")
     }
 
@@ -110,7 +116,7 @@ extension WebSocket {
     }
 }
 
-// MARK: - Send & Receive
+// MARK: - Send
 extension WebSocket {
     func send(data: Data) async throws {
         guard let task else { throw WebSocket.Error.connection(url: url, reason: .failed) }
@@ -118,15 +124,64 @@ extension WebSocket {
         let message = URLSessionWebSocketTask.Message.data(data)
         try await task.send(message)
     }
-
+    
     func send(string: String) async throws {
         guard let task else { throw WebSocket.Error.connection(url: url, reason: .failed) }
         
         let message = URLSessionWebSocketTask.Message.string(string)
         try await task.send(message)
     }
+}
 
+// MARK: - Receive
+extension WebSocket {
+    func messages() -> AsyncThrowingStream<URLSessionWebSocketTask.Message, Swift.Error> {
+        guard !isStreamActive else {
+            return AsyncThrowingStream { continuation in
+                continuation.finish(throwing: WebSocket.Error.connection(url: url, reason: .alreadyConnected))
+            }
+        }
+        
+        isStreamActive = true
+        
+        return AsyncThrowingStream { continuation in
+            self.messageContinuation = continuation
+            
+            Task {
+                await self.receiveContinuously()
+            }
+        }
+    }
     
+    private func receiveContinuously() async {
+        guard let task else {
+            messageContinuation?.finish(throwing: WebSocket.Error.connection(url: url, reason: .failed))
+            return
+        }
+        
+        while !Task.isCancelled {
+            do {
+                let message = try await task.receive()
+                messageContinuation?.yield(message)
+            } catch {
+                messageContinuation?.finish(throwing: error)
+                self.state = .disconnected
+                
+                print("WebSocket (\(self.url.description)) is disconnected due to error: \(error.localizedDescription)")
+                
+                do {
+                    try await self.reconnect()
+                } catch {
+                    print("Reconnection failed: \(error.localizedDescription)")
+                }
+                break
+            }
+        }
+    }
+}
+
+
+/*
     func receive() async throws -> URLSessionWebSocketTask.Message {
         guard let task else { throw WebSocket.Error.connection(url: url, reason: .failed) }
         return try await task.receive()
@@ -170,3 +225,4 @@ extension WebSocket {
         try? await reconnect()
     }
 }
+*/

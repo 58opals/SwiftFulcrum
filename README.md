@@ -1,13 +1,15 @@
 # SwiftFulcrum
 
-SwiftFulcrum is an innovative Swift framework designed to facilitate easy and efficient communication with Fulcrum servers, focusing on integrating Bitcoin Cash functionalities into Swift applications with a type-safe, high-level API.
+SwiftFulcrum is a modern Swift framework that enables efficient and thread-safe communication with Fulcrum servers, specifically designed for integrating Bitcoin Cash capabilities into Swift-based applications. It leverages the latest Swift concurrency features, providing a robust and type-safe API.
 
 ## Features
 
-- **Type-Safe API**: Leverages Swift's strong type system for safer Bitcoin Cash transactions and queries.
-- **Real-Time Updates**: Subscribe to blockchain changes and mempool events with WebSocket support.
-- **Swift Concurrency**: Uses Swift's modern concurrency features like `async/await` and `actor` for efficient and thread-safe operations.
-- **Extensible**: Designed with modularity in mind, allowing for easy customization.
+- **Type-Safe API**: Ensures reliable interactions through Swift's powerful type safety.
+- **Real-Time Notifications**: Provides seamless subscriptions to blockchain changes, mempool activities, transaction updates, and DS proofs using WebSockets.
+- **Swift Actors for Thread Safety**: Utilizes Swift actors (`Fulcrum`, `Client`, `WebSocket`) for safe concurrent operations without data races.
+- **Async/Await Integration**: Makes asynchronous operations intuitive, eliminating the complexity of callback-based APIs.
+- **Error Handling**: Provides comprehensive error types for robust handling of various response scenarios.
+- **Extensible Architecture**: Easily customizable and extendable for specific application requirements.
 
 ## Getting Started
 
@@ -27,92 +29,89 @@ dependencies: [
 
 #### Importing SwiftFulcrum
 
-To start using SwiftFulcrum, import it into your Swift file:
-
 ```swift
 import SwiftFulcrum
 ```
 
 #### Initializing the Client
 
-Initialize the client to interact with Fulcrum servers:
-
 ```swift
 let fulcrum = try Fulcrum(url: "wss://example-fulcrum-server.com:50004")
 ```
 
-### Making Requests
+#### Connecting to Fulcrum
 
-SwiftFulcrum supports both *regular requests* and *subscription requests*, leveraging Swift's native concurrency (`async/await`) for simplified management of asynchronous operations.
-
-#### Regular Requests
-
-Submit a regular request to retrieve blockchain information:
+Ensure the WebSocket connection is active before sending requests:
 
 ```swift
 Task {
     do {
-        let (id, result): (UUID, Response.JSONRPC.Result.Blockchain.EstimateFee) = try await fulcrum.submit(
+        try await fulcrum.start()
+        print("Connected to Fulcrum server.")
+    } catch {
+        print("Connection error: \(error.localizedDescription)")
+    }
+}
+```
+
+#### Regular Requests
+
+Make a standard request to estimate the Bitcoin Cash transaction fee:
+
+```swift
+Task {
+    do {
+        let (requestID, feeEstimate): (UUID, Response.JSONRPC.Result.Blockchain.EstimateFee) = try await fulcrum.submit(
             method: .blockchain(.estimateFee(numberOfBlocks: 6)),
             responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.EstimateFee>.self
         )
-        print("Request \(id) completed. Estimated fee: \(result)")
+        print("Fee estimate for request \(requestID): \(feeEstimate) BCH")
     } catch {
-        print("Failed to submit request: \(error.localizedDescription)")
+        print("Request failed: \(error.localizedDescription)")
     }
 }
 ```
 
 #### Subscription Requests
 
-Submit a subscription request to receive real-time updates:
+Receive real-time blockchain updates:
 
 ```swift
 Task {
+    let address = "qrsrz5mzve6kyr6ne6lgsvlgxvs3hqm6huxhd8gqwj"
     do {
-        let address = "qrsrz5mzve6kyr6ne6lgsvlgxvs3hqm6huxhd8gqwj"
-        let (id, initialResponse, notificationStream): (UUID, Response.JSONRPC.Result.Blockchain.Address.SubscribeNotification?, AsyncStream<Response.JSONRPC.Result.Blockchain.Address.SubscribeNotification?>) = try await fulcrum.submit(
+        let (requestID, initialResponse, notifications): (UUID, Response.JSONRPC.Result.Blockchain.Address.SubscribeNotification?, AsyncStream<Response.JSONRPC.Result.Blockchain.Address.SubscribeNotification?>) = try await fulcrum.submit(
             method: .blockchain(.address(.subscribe(address: address))),
             notificationType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Address.SubscribeNotification>.self
         )
-
+        
         if let initialResponse {
-            print("Initial Response for request \(id): \(initialResponse)")
+            print("Initial response for subscription \(requestID): \(String(describing: initialResponse))")
         }
 
-        for await notification in notificationStream {
+        for await notification in notifications {
             if let notification {
-                print("Notification received for request \(id): \(notification)")
+                print("Notification received for request \(requestID): \(notification)")
             }
         }
     } catch {
-        print("Failed to submit subscription: \(error.localizedDescription)")
+        print("Subscription error: \(error.localizedDescription)")
     }
 }
 ```
 
-## Concurrency with Swift Actors
+## Swift Actors and Concurrency
 
-SwiftFulcrum now uses Swift's native `actor` model for managing concurrency, ensuring that operations are handled in a thread-safe manner.
+SwiftFulcrum utilizes Swift’s `actor` model extensively to handle concurrency:
 
-- **Actors for Thread Safety**: Components like `Fulcrum`, `Client`, and `WebSocket` are implemented as `actors`, which naturally prevent race conditions.
-- **Async/Await for Simplicity**: Instead of using Combine, `async/await` is used for handling asynchronous operations, making the code easier to read and maintain.
-- **Continuation API**: SwiftFulcrum also leverages `withCheckedThrowingContinuation` to bridge callback-based APIs to the modern async-await pattern.
+- **Client Actor**: Manages WebSocket communication, message processing, and response handling securely.
+- **Automatic Reconnection**: The internal reconnection logic ensures reliable and resilient WebSocket communication.
 
-### Example: Regular Request Flow
+### Learn More
 
-1. **Submit the Request**: The `submit` method sends a request and returns a response asynchronously.
-2. **Handle the Response**: Use the `await` keyword to process the response directly, simplifying error handling and data flow.
+Refer to [Apple’s official documentation](https://developer.apple.com/documentation/swift/concurrency) for additional information on Swift concurrency.
 
-### Example: Subscription Request Flow
+## Acknowledgments
 
-1. **Submit the Subscription**: The `submit` method sends a subscription request and returns an initial response alongside an `AsyncStream` for notifications.
-2. **Receive Notifications**: Use a `for await` loop to process incoming notifications as they arrive, with the flexibility to handle the initial response as a regular result.
+- Thanks to the [Fulcrum Protocol](https://electrum-cash-protocol.readthedocs.io/) team for providing detailed protocol specifications.
 
-### Learn More about Swift Concurrency
-
-For more information on Swift concurrency, refer to the [official Apple developer documentation](https://developer.apple.com/documentation/swift/concurrency).
-
-### Acknowledgments
-
-- Thanks to the [Fulcrum Protocol](https://electrum-cash-protocol.readthedocs.io/) team for providing the specifications.

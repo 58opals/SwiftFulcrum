@@ -17,11 +17,8 @@ extension Client {
     }
     
     func sendRequest(_ request: Request) async throws {
-        if let data = request.data {
-            try await self.send(data: data)
-        } else {
-            throw Error.encodingFailed
-        }
+        guard let data = request.data else { throw Error.encodingFailed }
+        try await self.send(data: data)
     }
 }
 

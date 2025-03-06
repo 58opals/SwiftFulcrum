@@ -15,8 +15,9 @@ actor Client {
     
     func start() async throws {
         try await self.webSocket.connect()
+        
         Task {
-            await receiveLoop()
+            await self.observeMessages()
         }
     }
 }
