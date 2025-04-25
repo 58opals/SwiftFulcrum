@@ -4,6 +4,8 @@ public actor Fulcrum {
     let client: Client
     public var subscriptionHub: SubscriptionHub
     
+    private(set) var isRunning = false
+    
     public init(url: String? = nil) throws {
         let webSocket = try {
             if let urlString = url {
@@ -23,5 +25,14 @@ public actor Fulcrum {
     
     public func start() async throws {
         try await self.client.start()
+        self.isRunning = true
+    }
+    
+    public func stop() async {
+        guard self.isRunning else { return }
+        self.isRunning = false
+        
+        await self.client.stop()
+        subscriptionHub.cancelAll()
     }
 }

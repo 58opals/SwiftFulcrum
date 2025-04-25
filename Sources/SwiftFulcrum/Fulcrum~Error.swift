@@ -33,3 +33,9 @@ extension Fulcrum {
         }
     }
 }
+
+extension Fulcrum.Error: Equatable {
+    public static func == (lhs: Fulcrum.Error, rhs: Fulcrum.Error) -> Bool {
+        lhs.localizedDescription == rhs.localizedDescription
+    }
+}

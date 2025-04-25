@@ -6,6 +6,8 @@ actor Client {
     var regularResponseHandlers: [RegularResponseIdentifier: RegularResponseHandler]
     var subscriptionResponseHandlers: [SubscriptionResponseIdentifier: SubscriptionResponseHandler]
     
+    private var receivedTask: Task<Void, Never>?
+    
     init(webSocket: WebSocket) {
         self.webSocket = webSocket
         self.jsonRPC = .init()
@@ -16,8 +18,17 @@ actor Client {
     func start() async throws {
         try await self.webSocket.connect()
         
-        Task {
+        self.receivedTask = Task { [weak self] in
+            guard let self else { return }
             await self.observeMessages()
         }
+    }
+    
+    func stop() async {
+        receivedTask?.cancel()
+        receivedTask = nil
+        
+        self.failAllPendingRequests(with: .connectionClosed)
+        await webSocket.disconnect(with: "Client.stop() called")
     }
 }
