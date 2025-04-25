@@ -72,7 +72,7 @@ struct FulcrumSubmitTests {
         #expect(initialResult == 0.0002, "The initial result should be 0.0002.")
         
         var notificationValue: Double? = nil
-        for await value in stream {
+        for try await value in stream {
             notificationValue = value
             break
         }

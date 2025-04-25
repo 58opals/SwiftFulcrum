@@ -3,8 +3,8 @@ import Foundation
 actor Client {
     let webSocket: WebSocket
     var jsonRPC: JSONRPC
-    var regularResponseHandlers: [UUID: (Data) throws -> Void]
-    var subscriptionResponseHandlers: [String: (Data) throws -> Void]
+    var regularResponseHandlers: [RegularResponseIdentifier: RegularResponseHandler]
+    var subscriptionResponseHandlers: [SubscriptionResponseIdentifier: SubscriptionResponseHandler]
     
     init(webSocket: WebSocket) {
         self.webSocket = webSocket

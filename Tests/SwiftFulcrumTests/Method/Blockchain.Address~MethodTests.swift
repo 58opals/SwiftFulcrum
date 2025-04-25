@@ -174,8 +174,7 @@ extension BlockchainAddressMethodTests {
                 var notificationCount = 0
                 let minimumNotifications = 3
                 
-                for await notification in notifications {
-                    guard let notification else { continue }
+                for try await notification in notifications {
                     print("Subscription Notification: \(notification)")
                     
                     switch notification {
@@ -206,25 +205,6 @@ extension BlockchainAddressMethodTests {
                 } else {
                     print("Status: nil")
                 }
-                
-            case .none:
-                print("Status: nil")
-                try await Task.sleep(for: .seconds(3))
-                let (id, result) = try await fulcrum.submit(
-                    method:
-                        Method
-                        .blockchain(.address(.unsubscribe(address: "qqyy3mss5vmthgnu0m5sm39pcfq8z799ku2nxernca"))),
-                    responseType:
-                        Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Address.Unsubscribe>.self)
-                
-                try #require(UUID(uuidString: id.uuidString) != nil, "The ID \(id.uuidString) is not a valid UUID.")
-                
-                switch result {
-                case true:
-                    print("Successfully unsubscribed.")
-                case false:
-                    print("Unsubscription failed.")
-                }
             }
         }
         
@@ -245,19 +225,13 @@ extension BlockchainAddressMethodTests {
         
         try #require(UUID(uuidString: subscriptionID.uuidString) != nil, "The ID \(subscriptionID.uuidString) is not a valid UUID.")
         
-        if let initialResponse {
-            print("The initial response: \(initialResponse)")
-        } else {
-            print("No initial response was received.")
-        }
-        
+        print("The initial response: \(initialResponse)")
         print("And following subscription responses will be sent through: \(notifications)")
         
         var notificationCount = 0
         let minimumNotifications = 1
         
-        for await notification in notifications {
-            guard let notification else { continue }
+        for try await notification in notifications {
             print("Subscription Notification: \(notification)")
             
             switch notification {

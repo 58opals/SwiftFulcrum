@@ -49,19 +49,19 @@ extension Client {
         do {
             let identifier = try Response.JSONRPC.extractIdentifier(from: data)
             switch identifier {
-            case .uuid(let uuid):
-                if let handler = regularResponseHandlers[uuid] {
-                    try handler(data)
-                    regularResponseHandlers.removeValue(forKey: uuid)
+            case .uuid(let identifier):
+                if let handler = regularResponseHandlers[identifier] {
+                    handler(.success(data))
+                    removeRegularResponseHandler(for: identifier)
                 } else {
-                    print("No handler for regular response identifier: \(uuid)")
+                    print("No handler for regular response identifier: \(identifier)")
                 }
-            case .string(let string):
-                if let handler = subscriptionResponseHandlers[string] {
-                    try handler(data)
-                    //subscriptionResponseHandlers.removeValue(forKey: string)
+            case .string(let identifier):
+                if let handler = subscriptionResponseHandlers[identifier] {
+                    handler(.success(data))
+                    removeSubscriptionResponseHandler(for: identifier)
                 } else {
-                    print("No handler for subscription response identifier: \(string)")
+                    print("No handler for subscription response identifier: \(identifier)")
                 }
             }
         } catch {
