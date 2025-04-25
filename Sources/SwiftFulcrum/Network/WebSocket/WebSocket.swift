@@ -13,6 +13,8 @@ actor WebSocket {
     
     var isConnected: Bool { state == .connected }
     
+    private var receivedTask: Task<Void, Never>?
+    
     init(url: URL, reconnectConfiguration: Reconnector.Configuration = .defaultConfiguration) {
         self.url = url
         self.task = nil
@@ -85,6 +87,9 @@ extension WebSocket {
     }
     
     func disconnect(with reason: String? = nil) async {
+        receivedTask?.cancel()
+        receivedTask = nil
+        
         task?.cancel(with: .goingAway, reason: reason?.data(using: .utf8))
         
         try? await Task.sleep(for: .seconds(3))
@@ -147,7 +152,8 @@ extension WebSocket {
         return AsyncThrowingStream { continuation in
             self.messageContinuation = continuation
             
-            Task {
+            receivedTask = Task { [weak self] in
+                guard let self else { return }
                 await self.receiveContinuously()
             }
         }
@@ -167,64 +173,8 @@ extension WebSocket {
                 messageContinuation?.finish(throwing: error)
                 self.isStreamActive = false
                 self.state = .disconnected
-                /*
-                print("WebSocket (\(self.url.description)) is disconnected due to error: \(error.localizedDescription)")
-                
-                do {
-                    try await self.reconnect()
-                } catch {
-                    print("Reconnection failed: \(error.localizedDescription)")
-                }
-                */
                 break
             }
         }
     }
 }
-
-
-/*
-    func receive() async throws -> URLSessionWebSocketTask.Message {
-        guard let task else { throw WebSocket.Error.connection(url: url, reason: .failed) }
-        return try await task.receive()
-    }
-}
-
-// MARK: - Receive Loop
-extension WebSocket {
-    private func startReceiveLoop() {
-        receiveTask = Task {
-            await self.receiveLoop()
-        }
-    }
-    
-    private func receiveLoop() async {
-        guard let task else { return }
-        
-        while !Task.isCancelled {
-            do {
-                let message = try await task.receive()
-                
-                switch message {
-                case .data(let data):
-                    try await task.send(.data(data))
-                case .string(let string):
-                    try await task.send(.string(string))
-                @unknown default:
-                    throw Error.message(message: message, reason: .unsupported, description: "Unsupported message type: \(message)")
-                }
-            } catch {
-                print("Receive loop encountered an error: \(error.localizedDescription)")
-                await handleReceiveError(error)
-                break
-            }
-        }
-    }
-    
-    private func handleReceiveError(_ error: Swift.Error) async {
-        state = .disconnected
-        print("WebSocket (\(self.url.description)) is disconnected due to error.")
-        try? await reconnect()
-    }
-}
-*/
