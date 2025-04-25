@@ -67,15 +67,12 @@ extension BlockchainHeadersMethodTests {
             print("The Latest Block Header(Hex): \(theLatestBlock.hex)")
         case .newHeader(let notification):
             print("New Header: \(notification), but this request should only receive the latest block.")
-        case .none:
-            print("The Latest Block: nil")
         }
         
         var notificationCount = 0
         let minimumNotifications = 2
         
-        for await notification in notifications {
-            guard let notification else { continue }
+        for try await notification in notifications {
             print("Subscription Notification: \(notification)")
             
             switch notification {
@@ -106,11 +103,7 @@ extension BlockchainHeadersMethodTests {
         
         try #require(UUID(uuidString: subscriptionID.uuidString) != nil, "The ID \(subscriptionID.uuidString) is not a valid UUID.")
         
-        if let initialResponse {
-            print("The initial response: \(initialResponse)")
-        } else {
-            print("No initial response was received.")
-        }
+        print("The initial response: \(initialResponse)")
         print("And following subscription responses will be sent through: \(notifications)")
         
         let (id, result) = try await fulcrum.submit(

@@ -3,6 +3,9 @@ import Foundation
 extension Client {
     typealias RegularResponseIdentifier = UUID
     typealias SubscriptionResponseIdentifier = String
+    
+    typealias RegularResponseHandler = (Result<Data, Fulcrum.Error>) -> Void
+    typealias SubscriptionResponseHandler = (Result<Data, Fulcrum.Error>) -> Void
 }
 
 extension Client {
@@ -23,11 +26,11 @@ extension Client {
 }
 
 extension Client {
-    func addHandler(for identifier: RegularResponseIdentifier, handler: @escaping (Data) throws -> Void) {
+    func addHandler(for identifier: RegularResponseIdentifier, handler: @escaping RegularResponseHandler) {
         regularResponseHandlers[identifier] = handler
     }
     
-    func addHandler(for identifier: SubscriptionResponseIdentifier, handler: @escaping (Data) throws -> Void) {
+    func addHandler(for identifier: SubscriptionResponseIdentifier, handler: @escaping SubscriptionResponseHandler) {
         subscriptionResponseHandlers[identifier] = handler
     }
     
@@ -37,5 +40,12 @@ extension Client {
     
     func removeSubscriptionResponseHandler(for method: SubscriptionResponseIdentifier) {
         subscriptionResponseHandlers.removeValue(forKey: method)
+    }
+    
+    func failAllPendingRequests(with error: Fulcrum.Error) {
+        regularResponseHandlers.values.forEach { $0(.failure(error)) }
+        subscriptionResponseHandlers.values.forEach { $0(.failure(error)) }
+        regularResponseHandlers.removeAll()
+        subscriptionResponseHandlers.removeAll()
     }
 }

@@ -152,7 +152,7 @@ extension BlockchainTransactionMethodTests {
             print("Height: \(height)")
             
             if height == 0 {
-                for await notification in notificationStream {
+                for try await notification in notificationStream {
                     switch notification {
                     case .height(let height):
                         print("Height: \(height)")
@@ -172,8 +172,6 @@ extension BlockchainTransactionMethodTests {
                                 }
                             }
                         }
-                    case .none:
-                        print("Nil!")
                     }
                 }
             } else {
@@ -181,8 +179,6 @@ extension BlockchainTransactionMethodTests {
             }
         case .transactionHashAndHeight(let transactionHashAndHeight):
             print("\(transactionHashAndHeight), this ain't right.")
-        case .none:
-            print("Nil!")
         }
     }
     
@@ -201,7 +197,7 @@ extension BlockchainTransactionMethodTests {
         case .height(let height):
             print("Height: \(height)")
             if height == 0 {
-                for await notification in notificationStream {
+                for try await notification in notificationStream {
                     switch notification {
                     case .height(let height):
                         print("Height: \(height)")
@@ -234,8 +230,6 @@ extension BlockchainTransactionMethodTests {
                         case false:
                             print("Unsubscription failed.")
                         }
-                    case .none:
-                        print("Nil!")
                     }
                 }
             } else {
@@ -243,8 +237,6 @@ extension BlockchainTransactionMethodTests {
             }
         case .transactionHashAndHeight(let transactionHashAndHeight):
             print("\(transactionHashAndHeight), this ain't right.")
-        case .none:
-            print("Nil!")
         }
     }
 }

@@ -84,7 +84,7 @@ extension BlockchainTransactionDSProofMethodTests {
             if let dsProof {
                 print("DSProof: \(dsProof)")
                 
-                for await notification in notificationStream {
+                for try await notification in notificationStream {
                     switch notification {
                     case .dsProof(let dsProof):
                         if let dsProof {
@@ -92,15 +92,11 @@ extension BlockchainTransactionDSProofMethodTests {
                         }
                     case .transactionHashAndDSProof(let transactionHashAndDSProof):
                         print("\(transactionHashAndDSProof)")
-                    case .none:
-                        print("Nil!")
                     }
                 }
             }
         case .transactionHashAndDSProof(let transactionHashAndDSProof):
             print("\(transactionHashAndDSProof), this ain't right.")
-        case .none:
-            print("Nil!")
         }
     }
     
@@ -120,7 +116,7 @@ extension BlockchainTransactionDSProofMethodTests {
             if let dsProof {
                 print("DSProof: \(dsProof)")
                 
-                for await notification in notificationStream {
+                for try await notification in notificationStream {
                     switch notification {
                     case .dsProof(let dsProof):
                         if let dsProof {
@@ -128,33 +124,11 @@ extension BlockchainTransactionDSProofMethodTests {
                         }
                     case .transactionHashAndDSProof(let transactionHashAndDSProof):
                         print("\(transactionHashAndDSProof)")
-                    case .none:
-                        print("Nil!")
-                        
-                        let (id, result) = try await fulcrum.submit(
-                            method:
-                                Method
-                                .blockchain(.transaction(.unsubscribe(transactionHash: "6caa0900477cb17dfbf9d63d034dc6152ebaae97c81bdd1430df43b1f5c445d0"))),
-                            responseType:
-                                Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Transaction.DSProof.Unsubscribe>.self)
-                        
-                        try #require(UUID(uuidString: id.uuidString) != nil, "The ID \(id.uuidString) is not a valid UUID.")
-                        
-                        switch result {
-                        case true:
-                            print("Successfully unsubscribed.")
-                            try await Task.sleep(for: .seconds(1))
-                            return
-                        case false:
-                            print("Unsubscription failed.")
-                        }
                     }
                 }
             }
         case .transactionHashAndDSProof(let transactionHashAndDSProof):
             print("\(transactionHashAndDSProof), this ain't right.")
-        case .none:
-            print("Nil!")
         }
     }
 }

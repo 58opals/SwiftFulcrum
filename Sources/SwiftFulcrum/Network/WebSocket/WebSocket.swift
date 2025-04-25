@@ -165,8 +165,9 @@ extension WebSocket {
                 messageContinuation?.yield(message)
             } catch {
                 messageContinuation?.finish(throwing: error)
+                self.isStreamActive = false
                 self.state = .disconnected
-                
+                /*
                 print("WebSocket (\(self.url.description)) is disconnected due to error: \(error.localizedDescription)")
                 
                 do {
@@ -174,6 +175,7 @@ extension WebSocket {
                 } catch {
                     print("Reconnection failed: \(error.localizedDescription)")
                 }
+                */
                 break
             }
         }
