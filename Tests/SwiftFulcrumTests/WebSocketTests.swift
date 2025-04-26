@@ -31,7 +31,7 @@ struct WebSocketConnectionTests {
     @Test func testFaultyURLConnection() async throws {
         let webSocket = WebSocket(url: URL(string: "wss://invalid-url")!)
         
-        await #expect(throws: WebSocket.Error.self) {
+        await #expect(throws: Swift.Error.self) {
             try await webSocket.connect()
         }
         

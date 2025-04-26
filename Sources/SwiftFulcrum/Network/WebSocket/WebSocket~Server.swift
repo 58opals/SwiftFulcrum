@@ -25,4 +25,17 @@ extension WebSocket.Server {
         let serverList = try decoder.decode([WebSocket.Server].self, from: serverListData)
         return serverList.compactMap { $0.url }
     }
+    
+    static func loadServerList() async throws -> [URL] {
+        try await Task.detached(priority: .utility) {
+            guard let path = Bundle.module.path(forResource: "servers", ofType: "json") else {
+                throw WebSocket.Error.initializing(reason: .cannotGetServerList, description: "servers.json missing")
+            }
+            
+            let data = try Data(contentsOf: URL(fileURLWithPath: path))
+            let list = try JSONDecoder().decode([WebSocket.Server].self, from: data)
+            
+            return list.compactMap(\.url)
+        }.value
+    }
 }

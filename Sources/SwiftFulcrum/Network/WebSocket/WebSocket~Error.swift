@@ -5,6 +5,7 @@ extension WebSocket {
         case initializing(reason: InitializingIssue, description: String)
         case connection(url: URL, reason: ConnectionIssue)
         case message(message: URLSessionWebSocketTask.Message, reason: MessageIssue, description: String)
+        case closed(code: URLSessionWebSocketTask.CloseCode, reason: String?)
         
         enum InitializingIssue {
             case invalidURL

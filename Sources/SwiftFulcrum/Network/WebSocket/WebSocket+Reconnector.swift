@@ -33,9 +33,8 @@ extension WebSocket {
                 print("Attempting to reconnect (\(reconnectionAttempts))...")
                 
                 do {
-                    if let newURL = url {
-                        await webSocket.createNewTask(with: newURL)
-                    }
+                    await webSocket.cancelReceiverTask()
+                    if let newURL = url { await webSocket.createNewTask(with: newURL) }
                     try await webSocket.connect()
                     
                     if await webSocket.isConnected {
