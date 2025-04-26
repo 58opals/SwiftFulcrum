@@ -38,29 +38,32 @@ extension WebSocket {
 // MARK: - Connect & Disconnect & Reconnect
 extension WebSocket {
     private func waitForConnection(timeout: TimeInterval) async throws -> Bool {
-        let ping = URLSessionWebSocketTask.Message.string("ping")
-        
-        do {
-            try await task?.send(ping)
-        } catch {
-            print("Failed to send ping: \(error.localizedDescription)")
-            return false
+        guard let task else {
+            throw Error.connection(url: url, reason: .failed)
         }
         
-        do {
-            let response = try await task?.receive()
-            if case .string(let message) = response, !message.isEmpty {
-                return true
-            } else {
-                print("Received empty pong.")
+        return try await withThrowingTaskGroup(of: Bool.self) { group in
+            group.addTask {
+                try await withCheckedThrowingContinuation { continuation in
+                    task.sendPing { error in
+                        if let error { continuation.resume(throwing: error) }
+                        else         { continuation.resume(returning: true) }
+                    }
+                }
             }
-        } catch {
-            print("Failed to receive pong: \(error.localizedDescription)")
+            
+            group.addTask {
+                try await Task.sleep(for: .seconds(timeout))
+                return false
+            }
+            
+            let result = try await group.next() ?? false
+            group.cancelAll()
+            
+            return result
         }
-        
-        return false
     }
-
+    
     func connect() async throws {
         if !self.isConnected {
             state = .connecting
@@ -74,7 +77,7 @@ extension WebSocket {
         task.resume()
         print("WebSocket (\(self.url.description)) is connecting...")
         
-        let isConnected = try await waitForConnection(timeout: 1)
+        let isConnected = try await waitForConnection(timeout: 2)
         switch isConnected {
         case true:
             state = .connected
@@ -88,16 +91,10 @@ extension WebSocket {
     
     func disconnect(with reason: String? = nil) async {
         receivedTask?.cancel()
+        await receivedTask?.value
         receivedTask = nil
         
         task?.cancel(with: .goingAway, reason: reason?.data(using: .utf8))
-        
-        try? await Task.sleep(for: .seconds(3))
-        while task?.state == .canceling {
-            await Task.yield()
-            if Task.isCancelled { break }
-        }
-        
         task = nil
         state = .disconnected
         
@@ -107,7 +104,7 @@ extension WebSocket {
         
         print("WebSocket (\(self.url.description)) is disconnected.")
     }
-
+    
     
     func reconnect(with url: URL? = nil) async throws {
         let currentURL = self.url
@@ -165,16 +162,25 @@ extension WebSocket {
             return
         }
         
-        while !Task.isCancelled {
-            do {
-                let message = try await task.receive()
-                messageContinuation?.yield(message)
-            } catch {
-                messageContinuation?.finish(throwing: error)
-                self.isStreamActive = false
-                self.state = .disconnected
-                break
+        defer {
+            isStreamActive = false
+            state = .disconnected
+        }
+        
+        do {
+            try await withTaskCancellationHandler {
+                while !Task.isCancelled {
+                    let message = try await task.receive()
+                    messageContinuation?.yield(with: .success(message))
+                }
+            } onCancel: {
+                task.cancel(with: .goingAway, reason: nil)
             }
+            messageContinuation?.finish()
+        } catch is CancellationError {
+            messageContinuation?.finish()
+        } catch {
+            messageContinuation?.finish(throwing: error)
         }
     }
 }
