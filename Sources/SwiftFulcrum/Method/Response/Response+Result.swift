@@ -1,3 +1,5 @@
+// Response+Result.swift
+
 import Foundation
 
 extension Response { struct Result {} }

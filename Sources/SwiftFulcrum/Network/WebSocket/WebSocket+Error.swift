@@ -1,3 +1,5 @@
+// WebSocket+Error.swift
+
 import Foundation
 
 extension WebSocket {
@@ -19,6 +21,7 @@ extension WebSocket {
             case alreadyConnected
             case maximumAttemptsReached
             case reconnectFailed
+            case notConnected
             case unknown
         }
         

@@ -1,3 +1,5 @@
+// Method(assortment).swift
+
 struct MethodAssortment {
     let method: Method
     let methodPath: String

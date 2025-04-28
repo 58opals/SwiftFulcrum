@@ -1,14 +1,19 @@
+// Client.swift
+
 import Foundation
 
 actor Client {
+    let id: UUID
     let webSocket: WebSocket
     var jsonRPC: JSONRPC
-    var regularResponseHandlers: [RegularResponseIdentifier: RegularResponseHandler]
+    
+    var regularResponseHandlers:      [RegularResponseIdentifier: RegularResponseHandler]
     var subscriptionResponseHandlers: [SubscriptionResponseIdentifier: SubscriptionResponseHandler]
     
     private var receivedTask: Task<Void, Never>?
     
     init(webSocket: WebSocket) {
+        self.id = .init()
         self.webSocket = webSocket
         self.jsonRPC = .init()
         self.regularResponseHandlers = .init()

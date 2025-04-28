@@ -1,3 +1,5 @@
+// SubscriptionHub.swift
+
 import Foundation
 import Combine
 

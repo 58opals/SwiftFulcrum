@@ -1,3 +1,5 @@
+// Client~WebSocket.swift
+
 import Foundation
 
 extension Client {
@@ -56,12 +58,14 @@ extension Client {
                 } else {
                     print("No handler for regular response identifier: \(identifier)")
                 }
-            case .string(let identifier):
-                if let handler = subscriptionResponseHandlers[identifier] {
+            case .string(let methodPath):
+                let ident = identifierFromNotification(methodPath: methodPath, data: data)
+                let key   = SubscriptionKey(methodPath: methodPath, identifier: ident)
+                
+                if let handler = subscriptionResponseHandlers[key] {
                     handler(.success(data))
-                    removeSubscriptionResponseHandler(for: identifier)
                 } else {
-                    print("No handler for subscription response identifier: \(identifier)")
+                    print("No subscription handler for \(key)")
                 }
             }
         } catch {

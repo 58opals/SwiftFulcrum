@@ -1,3 +1,5 @@
+// Response+JSONRPC+Result.swift
+
 import Foundation
 
 extension Response.JSONRPC {

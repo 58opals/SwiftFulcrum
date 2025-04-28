@@ -1,3 +1,5 @@
+// Client+Error.swift
+
 import Foundation
 
 extension Client {
@@ -9,5 +11,6 @@ extension Client {
         
         case requestFailure(type: RequestType)
         case encodingFailed
+        case duplicateHandler
     }
 }

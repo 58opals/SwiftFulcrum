@@ -1,3 +1,5 @@
+// WebSocket+Reconnector.swift
+
 import Foundation
 
 extension WebSocket {
@@ -34,7 +36,7 @@ extension WebSocket {
                 
                 do {
                     await webSocket.cancelReceiverTask()
-                    if let newURL = url { await webSocket.createNewTask(with: newURL) }
+                    if let newURL = url { await webSocket.setURL(newURL) }
                     try await webSocket.connect()
                     
                     if await webSocket.isConnected {

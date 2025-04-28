@@ -1,3 +1,5 @@
+// WebSocket+Server.swift
+
 import Foundation
 
 extension WebSocket {

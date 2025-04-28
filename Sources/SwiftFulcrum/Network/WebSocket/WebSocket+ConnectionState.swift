@@ -1,3 +1,5 @@
+// WebSocket+ConnectionState.swift
+
 import Foundation
 
 extension WebSocket {
