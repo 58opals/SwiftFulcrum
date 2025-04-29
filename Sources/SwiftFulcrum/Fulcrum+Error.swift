@@ -41,3 +41,23 @@ extension Fulcrum.Error: Equatable {
         lhs.localizedDescription == rhs.localizedDescription
     }
 }
+
+extension Fulcrum.Error {
+    /// Collapse the richer `Client.Failure` space onto the existing `Fulcrum.Error` enum.
+    static func from(_ failure: Client.Failure) -> Self {
+        switch failure {
+        case .transport(let transport):
+            switch transport {
+            case .connectionClosed:
+                return .connectionClosed
+            case .network(let error):
+                return .network(underlyingError: error)
+            case .decoding(let error):
+                return .decoding(underlyingError: error)
+            }
+            
+        case .server(let rpc):
+            return .serverError(code: rpc.code, message: rpc.message)
+        }
+    }
+}

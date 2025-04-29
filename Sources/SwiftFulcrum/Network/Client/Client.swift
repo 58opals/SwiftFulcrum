@@ -10,8 +10,6 @@ actor Client {
     var regularResponseHandlers:      [RegularResponseIdentifier: RegularResponseHandler]
     var subscriptionResponseHandlers: [SubscriptionResponseIdentifier: SubscriptionResponseHandler]
     
-    private var receivedTask: Task<Void, Never>?
-    
     init(webSocket: WebSocket) {
         self.id = .init()
         self.webSocket = webSocket
@@ -22,17 +20,10 @@ actor Client {
     
     func start() async throws {
         try await self.webSocket.connect()
-        
-        self.receivedTask = Task { [weak self] in
-            guard let self else { return }
-            await self.observeMessages()
-        }
+        Task { await self.startReceiving() }
     }
     
     func stop() async {
-        receivedTask?.cancel()
-        receivedTask = nil
-        
         self.failAllPendingRequests(with: .connectionClosed)
         await webSocket.disconnect(with: "Client.stop() called")
     }

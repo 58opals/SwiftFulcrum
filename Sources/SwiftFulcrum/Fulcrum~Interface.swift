@@ -45,8 +45,8 @@ extension Fulcrum {
                                     throwing: Error.decoding(underlyingError: error)
                                 )
                             }
-                        case .failure(let error):
-                            continuation.resume(throwing: error)
+                        case .failure(let failure):
+                            continuation.resume(throwing: Fulcrum.Error.from(failure))
                         }
                     }
                     
@@ -93,8 +93,8 @@ extension Fulcrum {
                             } catch {
                                 continuation.resume(throwing: Error.decoding(underlyingError: error))
                             }
-                        case .failure(let error):
-                            continuation.resume(throwing: error)
+                        case .failure(let failure):
+                            continuation.resume(throwing: Fulcrum.Error.from(failure))
                         }
                     }
                     
@@ -134,8 +134,8 @@ extension Fulcrum {
                             } catch {
                                 continuation.finish(throwing: Error.decoding(underlyingError: error))
                             }
-                        case .failure(let error):
-                            continuation.finish(throwing: error)
+                        case .failure(let failure):
+                            continuation.finish(throwing: Fulcrum.Error.from(failure))
                         }
                     }
                 } catch {

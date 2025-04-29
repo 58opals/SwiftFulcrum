@@ -6,8 +6,8 @@ extension Client {
     typealias RegularResponseIdentifier = UUID
     typealias SubscriptionResponseIdentifier = SubscriptionKey
     
-    typealias RegularResponseHandler = (Result<Data, Fulcrum.Error>) -> Void
-    typealias SubscriptionResponseHandler = (Result<Data, Fulcrum.Error>) -> Void
+    typealias RegularResponseHandler      = (Result<Data, Client.Failure>) -> Void
+    typealias SubscriptionResponseHandler = (Result<Data, Client.Failure>) -> Void
 }
 
 extension Client: Hashable {
@@ -32,8 +32,6 @@ extension Client: Hashable {
             lhs.requestID == rhs.requestID &&
             lhs.key == rhs.key
         }
-        
-        
     }
     
     nonisolated func hash(into hasher: inout Hasher) {
@@ -137,8 +135,9 @@ extension Client {
     }
     
     func failAllPendingRequests(with error: Fulcrum.Error) {
-        regularResponseHandlers.values.forEach { $0(.failure(error)) }
-        subscriptionResponseHandlers.values.forEach { $0(.failure(error)) }
+        let failure = Failure.transport(.network(error))
+        regularResponseHandlers.values.forEach { $0(.failure(failure)) }
+        subscriptionResponseHandlers.values.forEach { $0(.failure(failure)) }
         regularResponseHandlers.removeAll()
         subscriptionResponseHandlers.removeAll()
     }
