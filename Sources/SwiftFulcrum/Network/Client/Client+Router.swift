@@ -13,13 +13,13 @@ extension Client {
         
         func addUnary(id: UUID, continuation: CheckedContinuation<Data, Swift.Error>) throws {
             let key: Response.Identifier = .uuid(id)
-            guard table[key] == nil else { throw Client.Error.duplicateHandler }
+            guard table[key] == nil else { throw Fulcrum.Error.client(.duplicateHandler) }
             table[key] = .unary(continuation)
         }
         
         func addStream(key: String, continuation: AsyncThrowingStream<Data, Swift.Error>.Continuation) throws {
             let identifier: Response.Identifier = .string(key)
-            guard table[identifier] == nil else { throw Client.Error.duplicateHandler }
+            guard table[identifier] == nil else { throw Fulcrum.Error.client(.duplicateHandler) }
             table[identifier] = .stream(continuation)
         }
         
@@ -32,7 +32,7 @@ extension Client {
             guard let entry = table.removeValue(forKey: identifier) else { return }
             switch entry {
             case .unary(let continuation):
-                continuation.resume(throwing: error ?? Client.Error.requestCancelled)
+                continuation.resume(throwing: error ?? Fulcrum.Error.client(.cancelled))
             case .stream(let continuation):
                 if let error {
                     continuation.finish(throwing: error)

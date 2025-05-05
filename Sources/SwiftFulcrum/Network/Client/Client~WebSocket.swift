@@ -14,24 +14,13 @@ extension Client {
 
 extension Client {
     func startReceiving() async {
-        while !Task.isCancelled {
-            do {
-                for try await message in await webSocket.messages() {
-                    await webSocket.reconnector.resetReconnectionAttemptCount()
-                    await handleMessage(message)
-                }
-                break
-            } catch {
-                print("WebSocket stream error: \(error). Delegating reconnect...")
-                
-                do {
-                    try await webSocket.reconnect()
-                } catch {
-                    print("Reconnect failed: \(error) - terminating receive loop.")
-                    failAllPendingRequests(with: .connectionClosed)
-                    break
-                }
+        do {
+            for try await message in await webSocket.messages() {
+                await handleMessage(message)
             }
+        } catch {
+            print("Receive task ended: \(error.localizedDescription)")
+            await failAllPendingRequests(with: Fulcrum.Error.transport(.connectionClosed(webSocket.closeInformation.code, webSocket.closeInformation.reason)))
         }
     }
 }

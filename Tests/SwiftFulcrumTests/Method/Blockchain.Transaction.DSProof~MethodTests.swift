@@ -27,8 +27,8 @@ extension BlockchainTransactionDSProofMethodTests {
             try #require(UUID(uuidString: id.uuidString) != nil, "The ID \(id.uuidString) is not a valid UUID.")
             
             print(result)
-        } catch Fulcrum.Error.resultNotFound(let description) {
-            print("Result not found error: \(description)")
+        } catch Fulcrum.Error.client(.emptyResponse(nil)) {
+            print("Result not found")
         } catch {
             print(error)
         }
@@ -61,8 +61,8 @@ extension BlockchainTransactionDSProofMethodTests {
             try #require(UUID(uuidString: id.uuidString) != nil, "The ID \(id.uuidString) is not a valid UUID.")
             
             print(result)
-        } catch Fulcrum.Error.resultNotFound(let description) {
-            print("Result not found error: \(description)")
+        } catch Fulcrum.Error.client(.emptyResponse(nil)) {
+            print("Result not found")
         } catch {
             print(error)
         }

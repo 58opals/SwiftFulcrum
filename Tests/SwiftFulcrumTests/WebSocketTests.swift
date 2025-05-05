@@ -6,9 +6,7 @@ private extension URL {
     /// Any random main-net Fulcrum endpoint from bundled `servers.json`.
     static func randomFulcrum() throws -> URL {
         guard let url = try WebSocket.Server.getServerList().randomElement() else {
-            throw WebSocket.Error.initializing(
-                reason: .noURLAvailable,
-                description: "No servers in servers.json")
+            throw Fulcrum.Error.transport(.setupFailed)
         }
         return url
     }
@@ -56,16 +54,19 @@ struct WebSocketReconnectorTests {
     init() throws {
         goodSocket = WebSocket(
             url: try .randomFulcrum(),
-            reconnectConfiguration: .init(maxReconnectionAttempts: 3,
-                                          reconnectionDelay: 0.25)  // snappy tests
+            reconnectConfiguration: .init(maximumReconnectionAttempts: 3,
+                                          reconnectionDelay: 0.25,
+                                          maximumDelay: 3,
+                                          jitterRange: 0.8 ... 1.2)
         )
         
-        // Invalid host guarantees failure without touching the network stack
         let bogus = URL(string: "wss://totally.invalid.host")!
         badSocket = WebSocket(
             url: bogus,
-            reconnectConfiguration: .init(maxReconnectionAttempts: 2,
-                                          reconnectionDelay: 0.1)
+            reconnectConfiguration: .init(maximumReconnectionAttempts: 3,
+                                          reconnectionDelay: 0.1,
+                                          maximumDelay: 3,
+                                          jitterRange: 0.8 ... 1.2)
         )
     }
     
@@ -87,7 +88,7 @@ struct WebSocketReconnectorTests {
     // MARK: - Failure path ---------------------------------------------------
     @Test("reconnector stops after max attempts and surfaces an error")
     func reconnectFailsAndGivesUp() async throws {
-        await #expect(throws: WebSocket.Error.self) {
+        await #expect(throws: Fulcrum.Error.self) {
             try await badSocket.reconnect()
         }
         #expect(!(await badSocket.isConnected))
@@ -97,7 +98,7 @@ struct WebSocketReconnectorTests {
     @Test("resetReconnectionAttemptCount gives a fresh set of tries")
     func attemptCounterResets() async throws {
         // First round: burn through the allowed attempts.
-        await #expect(throws: WebSocket.Error.self) {
+        await #expect(throws: Fulcrum.Error.self) {
             try await badSocket.reconnect()
         }
         
@@ -105,7 +106,7 @@ struct WebSocketReconnectorTests {
         await badSocket.reconnector.resetReconnectionAttemptCount()
         
         // … and verify we get another full cycle of attempts (should still fail).
-        await #expect(throws: WebSocket.Error.self) {
+        await #expect(throws: Fulcrum.Error.self) {
             try await badSocket.reconnect()
         }
     }

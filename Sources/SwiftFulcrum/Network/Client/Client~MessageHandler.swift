@@ -21,10 +21,9 @@ extension Client {
     
     private enum Inbound {
         private struct RPCErrorEnvelope: Decodable { let id: UUID?; let error: Response.Error.Result }
-        static func serverError(from data: Data) -> Client.Error? {
-            guard let envelope = try? JSONDecoder().decode(RPCErrorEnvelope.self, from: data) else { return nil }
-            let rpc = Error.RPC(id: envelope.id, code: envelope.error.code, message: envelope.error.message)
-            return .server(rpc)
+        static func serverError(from data: Data) -> Fulcrum.Error? {
+            guard let envelope = try? JSONRPC.Coder.decoder.decode(RPCErrorEnvelope.self, from: data) else { return nil }
+            return .rpc(.init(id: envelope.id, code: envelope.error.code, message: envelope.error.message))
         }
     }
     

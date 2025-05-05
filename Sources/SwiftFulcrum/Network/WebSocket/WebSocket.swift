@@ -44,17 +44,19 @@ extension WebSocket {
         receivedTask = nil
     }
     
-    func getCurrentCloseInformation() -> (code: URLSessionWebSocketTask.CloseCode, reason: String?) {
+    private func getCurrentCloseInformation() -> (code: URLSessionWebSocketTask.CloseCode, reason: String?) {
         let code   = task?.closeCode ?? .invalid
         let reason = task?.closeReason.flatMap { String(data: $0, encoding: .utf8) }
         return (code, reason)
     }
+    
+    var closeInformation: (code: URLSessionWebSocketTask.CloseCode, reason: String?) { self.getCurrentCloseInformation() }
 }
 
 // MARK: - Connect & Disconnect & Reconnect
 extension WebSocket {
     private func waitForConnection(timeout: TimeInterval) async throws -> Bool {
-        guard let task else { throw Error.connection(url: url, reason: .failed) }
+        guard let task else { throw Fulcrum.Error.transport(.connectionClosed(closeInformation.code, closeInformation.reason)) }
         
         return try await withThrowingTaskGroup(of: Bool.self) { group in
             group.addTask {
@@ -84,7 +86,7 @@ extension WebSocket {
             await createNewTask()
         }
         
-        guard let task else { throw Error.connection(url: url, reason: .failed) }
+        guard let task else { throw Fulcrum.Error.transport(.connectionClosed(closeInformation.code, closeInformation.reason)) }
         
         task.resume()
         print("WebSocket (\(url.description)) is connecting...")
@@ -98,7 +100,7 @@ extension WebSocket {
         case false:
             state = .disconnected
             print("WebSocket (\(url.description)) failed to connect.")
-            throw Error.connection(url: url, reason: .failed)
+            throw Fulcrum.Error.transport(.connectionClosed(closeInformation.code, closeInformation.reason))
         }
     }
     
@@ -106,11 +108,10 @@ extension WebSocket {
         await cancelReceiverTask()
         
         task?.cancel(with: .goingAway, reason: reason?.data(using: .utf8))
-        let closeInformation = getCurrentCloseInformation()
         task = nil
         state = .disconnected
         
-        messageContinuation?.finish(throwing: Error.closed(code: closeInformation.code, reason: closeInformation.reason))
+        messageContinuation?.finish(throwing: Fulcrum.Error.transport(.connectionClosed(closeInformation.code, closeInformation.reason)))
         
         await resetMessageStreamAndReader()
         print("WebSocket (\(self.url.description)) is disconnected.")
@@ -132,14 +133,14 @@ extension WebSocket {
 // MARK: - Send
 extension WebSocket {
     func send(data: Data) async throws {
-        guard let task else { throw WebSocket.Error.connection(url: url, reason: .failed) }
+        guard let task else { throw Fulcrum.Error.transport(.connectionClosed(closeInformation.code, closeInformation.reason)) }
         
         let message = URLSessionWebSocketTask.Message.data(data)
         try await task.send(message)
     }
     
     func send(string: String) async throws {
-        guard let task else { throw WebSocket.Error.connection(url: url, reason: .failed) }
+        guard let task else { throw Fulcrum.Error.transport(.connectionClosed(closeInformation.code, closeInformation.reason)) }
         
         let message = URLSessionWebSocketTask.Message.string(string)
         try await task.send(message)
@@ -182,30 +183,23 @@ extension WebSocket {
     }
     
     private func receiveContinuously() async {
-        guard let task else {
-            messageContinuation?.finish(throwing: WebSocket.Error.connection(url: url, reason: .failed))
-            return
-        }
-        
-        var underlyingError: Swift.Error?
-        defer {
-            state = .disconnected
-            let closeInformation = getCurrentCloseInformation()
-            messageContinuation?.finish(throwing: underlyingError ?? Error.closed(code: closeInformation.code, reason: closeInformation.reason))
-            Task { await resetMessageStreamAndReader() }
-        }
-        
-        do {
-            try await withTaskCancellationHandler {
-                while !Task.isCancelled {
-                    let message = try await task.receive()
-                    messageContinuation?.yield(with: .success(message))
+        while !Task.isCancelled {
+            guard let task else { break }
+            
+            do {
+                let message = try await task.receive()
+                messageContinuation?.yield(with: .success(message))
+                await reconnector.resetReconnectionAttemptCount()
+            } catch {
+                print("Receive failed: \(error.localizedDescription) - reconnecting...")
+                do {
+                    try await reconnector.attemptReconnection(for: self)
+                    continue
+                } catch {
+                    messageContinuation?.finish(throwing: error)
+                    break
                 }
-            } onCancel: {
-                task.cancel(with: .goingAway, reason: nil)
             }
-        } catch {
-            underlyingError = error
         }
     }
 }

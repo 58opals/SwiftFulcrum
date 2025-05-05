@@ -31,9 +31,8 @@ extension BlockchainTransactionMethodTests {
             #expect(!transactionHash.isEmpty)
             
             print("Raw Tx: \(rawTransaction)")
-        } catch Fulcrum.Error.serverError(let code, let message) {
-            let inlineMessage = message.replacingOccurrences(of: "\n\n", with: ": ").replacingOccurrences(of: "\n", with: "")
-            print("Error code: \(code), message: \(inlineMessage)")
+        } catch Fulcrum.Error.rpc(let rpc) {
+            print("Error code: \(rpc.code), message: \(rpc.message)")
         } catch {
             print(error)
         }

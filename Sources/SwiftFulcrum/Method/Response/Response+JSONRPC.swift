@@ -40,14 +40,14 @@ extension Response {
 
 extension Response.JSONRPC {
     static func extractIdentifier(from data: Data) throws -> Response.Identifier {
-        let response = try JSONDecoder().decode(Response.JSONRPC.IdentifierExtractable.self, from: data)
+        let response = try JSONRPC.Coder.decoder.decode(Response.JSONRPC.IdentifierExtractable.self, from: data)
         switch (response.id, response.method) {
         case let (id?, nil):
             return .uuid(id)
         case let (nil, string?):
             return .string(string)
         default:
-            throw Error.wrongResponseType
+            throw Response.JSONRPC.Error.wrongResponseType
         }
     }
 }

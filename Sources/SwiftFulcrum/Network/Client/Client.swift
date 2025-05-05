@@ -26,7 +26,7 @@ actor Client {
     }
     
     func stop() async {
-        self.failAllPendingRequests(with: .connectionClosed)
+        await self.failAllPendingRequests(with: Fulcrum.Error.transport(.connectionClosed(webSocket.closeInformation.code, webSocket.closeInformation.reason)))
         await webSocket.disconnect(with: "Client.stop() called")
     }
 }

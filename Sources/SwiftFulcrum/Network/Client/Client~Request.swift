@@ -118,7 +118,7 @@ extension Client {
     }
     
     func send(request: Request) async throws {
-        guard let data = request.data else { throw Error.encodingFailed }
+        guard let data = request.data else { throw Fulcrum.Error.coding(.encode(nil)) }
         try await self.send(data: data)
     }
 }

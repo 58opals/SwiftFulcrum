@@ -11,7 +11,7 @@ extension Fulcrum {
         let localClient   = self.client
         let requestID     = UUID()
         let request       = method.createRequest(with: requestID)
-        guard let payload = request.data else { throw Client.Error.encodingFailed }
+        guard let payload = request.data else { throw Error.coding(.encode(nil)) }
         
         return try await withCheckedThrowingContinuation { continuation in
             Task {
@@ -20,7 +20,7 @@ extension Fulcrum {
                         switch result {
                         case .success(let data):
                             do {
-                                let response = try JSONDecoder().decode(Response.JSONRPC.Generic<JSONRPCResult>.self, from: data)
+                                let response = try JSONRPC.Coder.decoder.decode(Response.JSONRPC.Generic<JSONRPCResult>.self, from: data)
                                 let responseType = try response.getResponseType()
                                 
                                 switch responseType {
@@ -28,25 +28,18 @@ extension Fulcrum {
                                     continuation.resume(returning: (regularResponse.id, regularResponse.result))
                                     
                                 case .empty(let uuid):
-                                    continuation.resume(
-                                        throwing: Error.resultNotFound(description: "The response was empty for request id: \(uuid)")
-                                    )
+                                    continuation.resume(throwing: Error.client(.emptyResponse(uuid)))
                                 case .subscription(let subscriptionResponse):
-                                    continuation.resume(
-                                        throwing: Error.resultTypeMismatch(description: "Expected a regular response but received a subscription response (\(subscriptionResponse.methodPath) for request id: \(requestID)")
-                                    )
+                                    continuation.resume(throwing: Error.client(.protocolMismatch("[\(requestID)]: \(subscriptionResponse.methodPath)")))
                                 case .error(let error):
-                                    continuation.resume(
-                                        throwing: Error.serverError(code: error.error.code, message: error.error.message)
-                                    )
+                                    continuation.resume(throwing: Error.rpc(.init(id: error.id, code: error.error.code, message: error.error.message)))
                                 }
                             } catch {
                                 continuation.resume(
-                                    throwing: Error.decoding(underlyingError: error)
-                                )
+                                    throwing: Error.coding(.decode(error)))
                             }
                         case .failure(let failure):
-                            continuation.resume(throwing: Fulcrum.Error.from(failure))
+                            continuation.resume(throwing: Error.client(.unknown(failure)))
                         }
                     }
                     
@@ -69,7 +62,7 @@ extension Fulcrum {
         let localClient     = self.client
         let requestID       = UUID()
         let request         = method.createRequest(with: requestID)
-        guard let payload   = request.data else { throw Client.Error.encodingFailed }
+        guard let payload   = request.data else { throw Error.coding(.encode(nil)) }
         let subscriptionKey = await Client.SubscriptionKey(methodPath: request.method,
                                                            identifier: localClient.getSubscriptionIdentifier(for: method))
         
@@ -80,20 +73,27 @@ extension Fulcrum {
                         switch result {
                         case .success(let data):
                             do {
-                                let response = try JSONDecoder().decode(Response.JSONRPC.Generic<JSONRPCNotification>.self, from: data)
+                                let response = try JSONRPC.Coder.decoder.decode(Response.JSONRPC.Generic<JSONRPCNotification>.self, from: data)
                                 let responseType = try response.getResponseType()
                                 
+                                
+                                
                                 switch responseType {
-                                case .regular(let regular):
-                                    continuation.resume(returning: regular.result)
-                                default:
-                                    continuation.resume(throwing: Error.resultTypeMismatch(description: "The initial response of this subscription request (\(subscriptionKey)) is not a regular response."))
+                                case .regular(let regularResponse):
+                                    continuation.resume(returning: regularResponse.result)
+                                    
+                                case .empty(let uuid):
+                                    continuation.resume(throwing: Error.client(.emptyResponse(uuid)))
+                                case .subscription(let subscriptionResponse):
+                                    continuation.resume(throwing: Error.client(.protocolMismatch("[\(requestID)]: \(subscriptionResponse.methodPath)")))
+                                case .error(let error):
+                                    continuation.resume(throwing: Error.rpc(.init(id: error.id, code: error.error.code, message: error.error.message)))
                                 }
                             } catch {
-                                continuation.resume(throwing: Error.decoding(underlyingError: error))
+                                continuation.resume(throwing: Error.coding(.decode(error)))
                             }
                         case .failure(let failure):
-                            continuation.resume(throwing: Fulcrum.Error.from(failure))
+                            continuation.resume(throwing: Error.client(.unknown(failure)))
                         }
                     }
                     
@@ -116,25 +116,25 @@ extension Fulcrum {
                         switch result {
                         case .success(let data):
                             do {
-                                let response = try JSONDecoder().decode(Response.JSONRPC.Generic<JSONRPCNotification>.self, from: data)
+                                let response = try JSONRPC.Coder.decoder.decode(Response.JSONRPC.Generic<JSONRPCNotification>.self, from: data)
                                 let responseType = try response.getResponseType()
                                 
                                 switch responseType {
-                                case .subscription(let subscription):
-                                    continuation.yield(subscription.result)
-                                    
+                                case .subscription(let subscriptionResponse):
+                                    continuation.yield(subscriptionResponse.result)
+                                
                                 case .empty(let uuid):
-                                    continuation.finish(throwing: Error.resultNotFound(description: "The response was empty for request id: \(uuid)"))
-                                case .regular(let regular):
-                                    continuation.yield(regular.result)
+                                    continuation.finish(throwing: Error.client(.emptyResponse(uuid)))
+                                case .regular(let regularResponse):
+                                    continuation.finish(throwing: Error.client(.protocolMismatch("[\(regularResponse.id)]")))
                                 case .error(let error):
-                                    continuation.finish(throwing: Error.serverError(code: error.error.code, message: error.error.message))
+                                    continuation.finish(throwing: Error.rpc(.init(id: error.id, code: error.error.code, message: error.error.message)))
                                 }
                             } catch {
-                                continuation.finish(throwing: Error.decoding(underlyingError: error))
+                                continuation.finish(throwing: Error.coding(.decode(error)))
                             }
                         case .failure(let failure):
-                            continuation.finish(throwing: Fulcrum.Error.from(failure))
+                            continuation.finish(throwing: Error.client(.unknown(failure)))
                         }
                     }
                 } catch {

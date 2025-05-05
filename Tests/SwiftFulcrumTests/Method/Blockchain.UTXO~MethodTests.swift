@@ -33,8 +33,8 @@ extension BlockchainUTXODSProofMethodTests {
                 print("This UTXO is not confirmed yet.")
             }
             print("Value: \(result.value)")
-        } catch Fulcrum.Error.resultNotFound(let description) {
-            print("Result not found error: \(description)")
+        } catch Fulcrum.Error.client(.emptyResponse(let uuid)) {
+            print("Request ID: \(uuid?.uuidString ?? "Unknown")")
         } catch {
             print(error)
         }

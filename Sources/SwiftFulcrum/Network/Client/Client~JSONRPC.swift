@@ -6,8 +6,8 @@ extension Client {
     typealias RegularResponseIdentifier = UUID
     typealias SubscriptionResponseIdentifier = SubscriptionKey
     
-    typealias RegularResponseHandler      = @Sendable (Result<Data, Client.Error>) -> Void
-    typealias SubscriptionResponseHandler = @Sendable (Result<Data, Client.Error>) -> Void
+    typealias RegularResponseHandler      = @Sendable (Result<Data, Fulcrum.Error>) -> Void
+    typealias SubscriptionResponseHandler = @Sendable (Result<Data, Fulcrum.Error>) -> Void
 }
 
 extension Client {

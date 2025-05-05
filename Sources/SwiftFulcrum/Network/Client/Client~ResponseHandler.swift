@@ -4,12 +4,12 @@ import Foundation
 
 extension Client {
     func insertRegularHandler(for id: RegularResponseIdentifier, handler: @escaping RegularResponseHandler) throws {
-        guard regularResponseHandlers[id] == nil else { throw Error.duplicateHandler }
+        guard regularResponseHandlers[id] == nil else { throw Fulcrum.Error.client(.duplicateHandler) }
         regularResponseHandlers[id] = handler
     }
     
     func insertSubscriptionHandler(for key: SubscriptionResponseIdentifier, handler: @escaping SubscriptionResponseHandler) throws {
-        guard subscriptionResponseHandlers[key] == nil else { throw Error.duplicateHandler }
+        guard subscriptionResponseHandlers[key] == nil else { throw Fulcrum.Error.client(.duplicateHandler) }
         subscriptionResponseHandlers[key] = handler
     }
     
@@ -22,9 +22,9 @@ extension Client {
     }
     
     func failAllPendingRequests(with error: Fulcrum.Error) {
-        let failure = Error.transport(.network(error))
-        regularResponseHandlers.values.forEach { $0(.failure(failure)) }
-        subscriptionResponseHandlers.values.forEach { $0(.failure(failure)) }
+        let error = Fulcrum.Error.transport(.network)
+        regularResponseHandlers.values.forEach { $0(.failure(error)) }
+        subscriptionResponseHandlers.values.forEach { $0(.failure(error)) }
         regularResponseHandlers.removeAll()
         subscriptionResponseHandlers.removeAll()
     }

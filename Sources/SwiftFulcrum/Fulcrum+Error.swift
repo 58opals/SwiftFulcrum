@@ -4,61 +4,72 @@ import Foundation
 
 extension Fulcrum {
     public enum Error: Swift.Error {
-        case network(underlyingError: Swift.Error)
-        case decoding(underlyingError: Swift.Error)
-        case invalidURL(description: String)
-        case connectionClosed
-        case resultNotFound(description: String)
-        case resultTypeMismatch(description: String)
-        case custom(description: String)
-        case serverError(code: Int, message: String)
-
-        var localizedDescription: String {
-            switch self {
-            case .network(let error):
-                return "Network error: \(error.localizedDescription)"
-            case .decoding(let error):
-                return "Failed to decode response: \(error.localizedDescription)"
-            case .invalidURL(let description):
-                return "Invalid URL: \(description)"
-            case .connectionClosed:
-                return "WebSocket connection was closed unexpectedly."
-            case .resultNotFound(let description):
-                return "Result not found: \(description)"
-            case .resultTypeMismatch(let description):
-                return "Result type mismatch: \(description)"
-            case .custom(let description):
-                return description
-            case .serverError(let code, let message):
-                return "Server error \(code): \(message)"
-            }
+        case transport(Transport)
+        case rpc(Server)
+        case coding(Coding)
+        case client(Client)
+        
+        public enum Transport {
+            case setupFailed
+            case connectionClosed(URLSessionWebSocketTask.CloseCode, String?)
+            case network
+            case reconnectFailed
+        }
+        
+        public struct Server {
+            public let id: UUID?
+            public let code: Int
+            public let message: String
+        }
+        
+        public enum Coding {
+            case encode(Swift.Error?)
+            case decode(Swift.Error?)
+        }
+        
+        public enum Client {
+            case duplicateHandler
+            case cancelled
+            case emptyResponse(UUID?)
+            case protocolMismatch(String?)
+            case unknown(Swift.Error?)
         }
     }
 }
 
-extension Fulcrum.Error {
-    /// Collapse the richer `Client.Failure` space onto the existing `Fulcrum.Error` enum.
-    static func from(_ failure: Client.Error) -> Self {
-        switch failure {
-        case .transport(let transport):
-            switch transport {
-            case .connectionClosed:
-                return .connectionClosed
-            case .network(let error):
-                return .network(underlyingError: error)
-            case .decoding(let error):
-                return .decoding(underlyingError: error)
-            }
-        case .server(let rpc):
-            return .serverError(code: rpc.code, message: rpc.message)
+extension Fulcrum.Error: Equatable, Sendable {}
+extension Fulcrum.Error.Transport: Equatable, Sendable {}
+extension Fulcrum.Error.Server: Equatable, Sendable {}
+extension Fulcrum.Error.Coding: Equatable, Sendable {
+    public static func == (lhs: Fulcrum.Error.Coding, rhs: Fulcrum.Error.Coding) -> Bool {
+        switch (lhs, rhs) {
+        case (.encode(let lErr), .encode(let rErr)):
+            return (lErr == nil && rErr == nil) || (lErr?.localizedDescription == rErr?.localizedDescription)
+        case (.decode(let lErr), .decode(let rErr)):
+            return (lErr == nil && rErr == nil) || (lErr?.localizedDescription == rErr?.localizedDescription)
         default:
-            return .custom(description: failure.localizedDescription)
+            return false
+        }
+    }
+}
+extension Fulcrum.Error.Client: Equatable, Sendable {
+    public static func == (lhs: Fulcrum.Error.Client, rhs: Fulcrum.Error.Client) -> Bool {
+        switch (lhs, rhs) {
+        case (.duplicateHandler, .duplicateHandler),
+            (.cancelled, .cancelled):
+            return true
+        case (.emptyResponse(let lUUID), .emptyResponse(let rUUID)):
+            return lUUID == rUUID
+        case (.protocolMismatch(let lMsg), .protocolMismatch(let rMsg)):
+            return lMsg == rMsg
+        case (.unknown(let lErr), .unknown(let rErr)):
+            return (lErr == nil && rErr == nil) || (lErr?.localizedDescription == rErr?.localizedDescription)
+        default:
+            return false
         }
     }
 }
 
-extension Fulcrum.Error: Equatable {
-    public static func == (lhs: Fulcrum.Error, rhs: Fulcrum.Error) -> Bool {
-        lhs.localizedDescription == rhs.localizedDescription
-    }
+protocol FulcrumErrorConvertible: Swift.Error {
+    var asFulcrumError: Fulcrum.Error { get }
 }

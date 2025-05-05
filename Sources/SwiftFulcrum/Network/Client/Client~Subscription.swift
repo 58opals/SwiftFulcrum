@@ -46,7 +46,7 @@ extension Client {
                 }
             }
             
-            if let first = try? JSONDecoder().decode(Envelope.self, from: data).params.first?.string {
+            if let first = try? JSONRPC.Coder.decoder.decode(Envelope.self, from: data).params.first?.string {
                 return first
             }
             return nil

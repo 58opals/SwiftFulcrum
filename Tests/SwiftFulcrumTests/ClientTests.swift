@@ -6,9 +6,7 @@ private extension URL {
     /// Any random main-net Fulcrum endpoint from bundled `servers.json`.
     static func randomFulcrum() throws -> URL {
         guard let url = try WebSocket.Server.getServerList().randomElement() else {
-            throw WebSocket.Error.initializing(
-                reason: .noURLAvailable,
-                description: "No servers in servers.json")
+            throw Fulcrum.Error.transport(.setupFailed)
         }
         return url
     }
