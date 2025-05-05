@@ -36,15 +36,9 @@ extension Fulcrum {
     }
 }
 
-extension Fulcrum.Error: Equatable {
-    public static func == (lhs: Fulcrum.Error, rhs: Fulcrum.Error) -> Bool {
-        lhs.localizedDescription == rhs.localizedDescription
-    }
-}
-
 extension Fulcrum.Error {
     /// Collapse the richer `Client.Failure` space onto the existing `Fulcrum.Error` enum.
-    static func from(_ failure: Client.Failure) -> Self {
+    static func from(_ failure: Client.Error) -> Self {
         switch failure {
         case .transport(let transport):
             switch transport {
@@ -55,9 +49,16 @@ extension Fulcrum.Error {
             case .decoding(let error):
                 return .decoding(underlyingError: error)
             }
-            
         case .server(let rpc):
             return .serverError(code: rpc.code, message: rpc.message)
+        default:
+            return .custom(description: failure.localizedDescription)
         }
+    }
+}
+
+extension Fulcrum.Error: Equatable {
+    public static func == (lhs: Fulcrum.Error, rhs: Fulcrum.Error) -> Bool {
+        lhs.localizedDescription == rhs.localizedDescription
     }
 }

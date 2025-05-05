@@ -4,7 +4,6 @@ import Foundation
 
 public actor Fulcrum {
     let client: Client
-    public var subscriptionHub: SubscriptionHub
     
     private(set) var isRunning = false
     
@@ -22,7 +21,6 @@ public actor Fulcrum {
         }()
         
         self.client = .init(webSocket: webSocket)
-        self.subscriptionHub = .init()
     }
     
     public func start() async throws {
@@ -35,6 +33,5 @@ public actor Fulcrum {
         self.isRunning = false
         
         await self.client.stop()
-        subscriptionHub.cancelAll()
     }
 }

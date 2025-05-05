@@ -37,3 +37,5 @@ extension Response {
         case string(String)
     }
 }
+
+extension Response.Identifier: Hashable, Sendable {}

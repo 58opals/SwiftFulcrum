@@ -3,9 +3,10 @@
 import Foundation
 
 actor Client {
-    let id: UUID
+    let id:        UUID
     let webSocket: WebSocket
-    var jsonRPC: JSONRPC
+    var jsonRPC:   JSONRPC
+    let router:    Router
     
     var regularResponseHandlers:      [RegularResponseIdentifier: RegularResponseHandler]
     var subscriptionResponseHandlers: [SubscriptionResponseIdentifier: SubscriptionResponseHandler]
@@ -14,6 +15,7 @@ actor Client {
         self.id = .init()
         self.webSocket = webSocket
         self.jsonRPC = .init()
+        self.router = .init()
         self.regularResponseHandlers = .init()
         self.subscriptionResponseHandlers = .init()
     }
