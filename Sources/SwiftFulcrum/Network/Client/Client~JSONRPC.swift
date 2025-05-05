@@ -18,12 +18,36 @@ extension Client {
         var string: String { identifier.map {"\(methodPath):\($0)"} ?? methodPath }
     }
     
-    struct SubscriptionToken {
-        let requestID: UUID
-        let key: Client.SubscriptionKey
-        let _cancel: @Sendable () async -> Void
+    actor SubscriptionToken {
+        nonisolated let requestID: UUID
+        nonisolated let key: Client.SubscriptionKey
+        private let cancelClosure: @Sendable () async -> Void
+        private var isCancelled: Bool
         
-        func cancel() async { await _cancel() }
+        init(requestID: UUID,
+             key: Client.SubscriptionKey,
+             cancelClosure: @escaping @Sendable () async -> Void) {
+            self.requestID = requestID
+            self.key = key
+            self.cancelClosure = cancelClosure
+            self.isCancelled = false
+        }
+        
+        func cancel() async {
+            guard !isCancelled else { return }
+            self.isCancelled = true
+            await cancelClosure()
+        }
+        
+        deinit {
+            let alreadyCancelled = isCancelled
+            guard !alreadyCancelled else { return }
+
+            let closure = cancelClosure
+            Task {
+                await closure()
+            }
+        }
     }
 }
 
@@ -40,7 +64,7 @@ extension Client: Hashable {
 extension Client.SubscriptionKey: Hashable {}
 
 extension Client.SubscriptionToken: Hashable, Sendable {
-    func hash(into hasher: inout Hasher) {
+    nonisolated func hash(into hasher: inout Hasher) {
         hasher.combine(requestID)
         hasher.combine(key)
     }

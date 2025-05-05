@@ -114,7 +114,7 @@ extension Client {
             }
         }
         
-        return .init(requestID: requestID, key: subscriptionKey, _cancel: cancelClosure)
+        return .init(requestID: requestID, key: subscriptionKey, cancelClosure: cancelClosure)
     }
     
     func send(request: Request) async throws {
