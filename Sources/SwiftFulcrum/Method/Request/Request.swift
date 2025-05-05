@@ -1,3 +1,5 @@
+// Request.swift
+
 import Foundation
 
 struct Request {
@@ -42,8 +44,7 @@ extension Request: Hashable {
 extension Request {
     var data: Data? {
         do {
-            let encoder = JSONEncoder()
-            let data = try encoder.encode(self)
+            let data = try JSONRPC.Coder.encoder.encode(self)
             return data
         } catch {
             print(error.localizedDescription)

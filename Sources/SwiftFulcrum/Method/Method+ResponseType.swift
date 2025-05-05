@@ -1,3 +1,5 @@
+// Method+ResponseType.swift
+
 import Foundation
 
 extension Method {

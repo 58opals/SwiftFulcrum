@@ -1,3 +1,5 @@
+// Response.swift
+
 import Foundation
 
 public struct Response {
@@ -35,3 +37,5 @@ extension Response {
         case string(String)
     }
 }
+
+extension Response.Identifier: Hashable, Sendable {}
