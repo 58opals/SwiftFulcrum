@@ -1,4 +1,4 @@
-//  Fulcrum+Result.swift
+// Fulcrum+RPCResponse.swift
 
 import Foundation
 

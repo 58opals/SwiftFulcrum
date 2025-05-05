@@ -8,10 +8,6 @@
     "port": 50004
     },
     {
-    "host": "cashnode.bch.ninja",
-    "port": 50004
-    },
-    {
     "host": "electroncash.de",
     "port": 60002
     },

@@ -115,6 +115,7 @@ extension WebSocket {
         
         await resetMessageStreamAndReader()
         print("WebSocket (\(self.url.description)) is disconnected.")
+        if let reason { print("Reason: \(reason)") }
     }
     
     
@@ -184,12 +185,27 @@ extension WebSocket {
     
     private func receiveContinuously() async {
         while !Task.isCancelled {
-            guard let task else { break }
+            guard let task = task else { break }
             
             do {
-                let message = try await task.receive()
-                messageContinuation?.yield(with: .success(message))
-                await reconnector.resetReconnectionAttemptCount()
+                let message = try await withTaskCancellationHandler {
+                    try await task.receive()
+                } onCancel: {
+                    task.cancel(with: .goingAway, reason: nil)
+                }
+                
+                switch messageContinuation?.yield(with: .success(message)) {
+                case .some(.enqueued):
+                    break
+                default:
+                    messageContinuation?.finish()
+                    messageContinuation = nil
+                    break
+                }
+            } catch let error as URLError {
+                if error.code == .cancelled {
+                    break
+                }
             } catch {
                 print("Receive failed: \(error.localizedDescription) - reconnecting...")
                 do {
@@ -197,9 +213,12 @@ extension WebSocket {
                     continue
                 } catch {
                     messageContinuation?.finish(throwing: error)
+                    messageContinuation = nil
                     break
                 }
             }
+            
+            await Task.yield()
         }
     }
 }
