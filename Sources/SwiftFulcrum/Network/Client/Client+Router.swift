@@ -48,8 +48,10 @@ extension Client {
             
             for pending in entries.values {
                 switch pending {
-                case .unary(let continuation): continuation.resume(throwing: error)
-                case .stream(let continuation): continuation.finish(throwing: error)
+                case .unary(let continuation):
+                    continuation.resume(throwing: error)
+                case .stream(let continuation):
+                    continuation.finish(throwing: error)
                 }
             }
         }

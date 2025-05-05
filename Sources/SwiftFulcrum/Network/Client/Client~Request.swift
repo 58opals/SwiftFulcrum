@@ -35,7 +35,14 @@ extension Client {
         try await router.addStream(key: subscriptionKey.string, continuation: rawContinuation)
         
         rawContinuation.onTermination = { @Sendable _ in
-            Task { await self.router.cancel(identifier: .string(subscriptionKey.string)) }
+            Task {
+                await self.router.cancel(identifier: .string(subscriptionKey.string))
+                await self.removeSubscriptionResponseHandler(for: subscriptionKey)
+                
+                if let method = await self.makeUnsubscribeMethod(for: subscriptionKey) {
+                    _ = try? await self.sendRegularRequest(method: method) { _ in }
+                }
+            }
         }
         
         let initialResponse: Result = try await withCheckedThrowingContinuation { continuation in
@@ -101,7 +108,10 @@ extension Client {
         let cancelClosure: @Sendable () async -> Void = { [weak self] in
             guard let self else { return }
             await self.removeSubscriptionResponseHandler(for: subscriptionKey)
-            // TODO: optionally send an actual "unsubscribe" RPC here.
+            
+            if let method = await self.makeUnsubscribeMethod(for: subscriptionKey) {
+                _ = try? await self.sendRegularRequest(method: method) { _ in }
+            }
         }
         
         return .init(requestID: requestID, key: subscriptionKey, _cancel: cancelClosure)
