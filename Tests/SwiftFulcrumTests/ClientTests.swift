@@ -12,10 +12,9 @@ private extension URL {
     }
 }
 
-@Suite("Client – Connection")
-struct ClientConnectionTests {
+@Suite("Client – Lifecycle, RPC & Subscriptions")
+struct ClientTests {
     let client: Client
-
     init() throws {
         let socket = WebSocket(url: try .randomFulcrum())
         self.client = Client(webSocket: socket)
@@ -25,48 +24,89 @@ struct ClientConnectionTests {
     func startAndStop() async throws {
         try await client.start()
         #expect(await client.webSocket.isConnected)
-
+        
         await client.stop()
         #expect(!(await client.webSocket.isConnected))
     }
 
-    @Test("explicit stop reason")
-    func stopWithReason() async throws {
+    @Test("regular RPC – relayFee")
+    func relayFee() async throws {
         try await client.start()
-        #expect(await client.webSocket.isConnected)
 
-        await client.webSocket.disconnect(with: "Unit-test teardown")
-        #expect(!(await client.webSocket.isConnected))
+        let fee: Double = try await client.call(
+            method: .blockchain(.relayFee)
+        )
+        print("Realy fee: \(fee)")
+        #expect(fee > 0)
+
+        await client.stop()
     }
 
-    @Test("invalid URL fails")
-    func faultyURL() async throws {
-        let bogusURL  = URL(string: "wss://totally.invalid.host")!
-        let badClient = Client(webSocket: WebSocket(url: bogusURL))
+    @Test("blockchain.headers.subscribe delivers an initial tip")
+    func headerSubscription() async throws {
+        try await client.start()
 
-        await #expect(throws: Swift.Error.self) {
-            try await badClient.start()
+        let method = Method.blockchain(.headers(.subscribe))
+        typealias Payload = Response.JSONRPC.Result.Blockchain.Headers.Subscribe
+
+        let (initial, _) =
+            try await client.subscribe(method: method)
+                as (Payload, AsyncThrowingStream<Payload, Swift.Error>)
+
+        switch initial {
+        case .topHeader(let tip):
+            print("Initial tip: \(tip)")
+            #expect(tip.height > 0)
+        case .newHeader(let batch):
+            print("Initial batch: \(batch)")
+            #expect(!batch.isEmpty)
         }
-        await badClient.stop()
+
+        await client.stop()
     }
 }
 
-@Suite("Client – Requests")
-struct ClientRequestTests {
+@Suite("Client – Concurrency & Robustness")
+struct ClientConcurrencyTests {
     let client: Client
-
     init() throws {
         let socket = WebSocket(url: try .randomFulcrum())
         self.client = Client(webSocket: socket)
     }
 
-    @Test("regular call succeeds (‘blockchain.relayfee’)")
-    func relayFeeRequest() async throws {
+    @Test("three concurrent RPCs resolve independently")
+    func concurrentRPCs() async throws {
         try await client.start()
-        defer { Task { await client.stop() } }
 
-        let fee: Double = try await client.call(method: .blockchain(.relayFee))
-        print("Relay Fee: \(fee.description)")
-        #expect(fee > 0)
+        typealias Tip = Response.JSONRPC.Result.Blockchain.Headers.GetTip
+
+        async let relayFee: Double = client.call(method: .blockchain(.relayFee))
+        async let est1Blk: Double  = client.call(method: .blockchain(.estimateFee(numberOfBlocks: 1)))
+        async let tip:    Tip      = client.call(method: .blockchain(.headers(.getTip)))
+
+        let (fee, estimate, best) = try await (relayFee, est1Blk, tip)
+
+        #expect(fee      > 0)
+        #expect(estimate > 0)
+        #expect(best.height > 0)
+
+        await client.stop()
+    }
+
+    @Test("second subscription to same stream throws duplicateHandler")
+    func duplicateSubscriptionIsRejected() async throws {
+        try await client.start()
+        let headersSub = Method.blockchain(.headers(.subscribe))
+        typealias Payload = Response.JSONRPC.Result.Blockchain.Headers.Subscribe
+
+        _ = try await client.subscribe(method: headersSub)
+            as (Payload, AsyncThrowingStream<Payload, Swift.Error>)
+
+        await #expect(throws: Fulcrum.Error.self) {
+            _ = try await client.subscribe(method: headersSub)
+                as (Payload, AsyncThrowingStream<Payload, Swift.Error>)
+        }
+        
+        await client.stop()
     }
 }

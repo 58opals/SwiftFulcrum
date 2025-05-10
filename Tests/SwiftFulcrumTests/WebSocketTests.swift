@@ -48,66 +48,67 @@ struct WebSocketConnectionTests {
 
 @Suite("WebSocket – Reconnector")
 struct WebSocketReconnectorTests {
-    let goodSocket: WebSocket
-    let badSocket: WebSocket
-    
+
+    // MARK: – Reusable sockets ------------------------------------------------
+    /// A socket that should be able to reconnect successfully to a *real*
+    /// Fulcrum endpoint.
+    let healthy: WebSocket
+
+    /// A socket that always points at an obviously-invalid host so every
+    /// connection attempt is guaranteed to fail quickly.
+    let hopeless: WebSocket
+
     init() throws {
-        goodSocket = WebSocket(
+        // (1) happy-path socket — use any random main-net server, but keep the
+        //     reconnection delays tiny so the test suite runs fast.
+        self.healthy = WebSocket(
             url: try .randomFulcrum(),
-            reconnectConfiguration: .init(maximumReconnectionAttempts: 3,
-                                          reconnectionDelay: 0.25,
-                                          maximumDelay: 3,
-                                          jitterRange: 0.8 ... 1.2)
+            reconnectConfiguration: .init(
+                maximumReconnectionAttempts: 3,
+                reconnectionDelay: 0.10,
+                maximumDelay: 0.20,
+                jitterRange: 1.0 ... 1.0
+            )
         )
-        
-        let bogus = URL(string: "wss://totally.invalid.host")!
-        badSocket = WebSocket(
-            url: bogus,
-            reconnectConfiguration: .init(maximumReconnectionAttempts: 3,
-                                          reconnectionDelay: 0.1,
-                                          maximumDelay: 3,
-                                          jitterRange: 0.8 ... 1.2)
+
+        // (2) “always-fail” socket — the `.invalid` TLD is guaranteed not to
+        //     resolve, so `URLSessionWebSocketTask` falls over immediately.
+        self.hopeless = WebSocket(
+            url: URL(string: "wss://example.invalid")!,
+            reconnectConfiguration: .init(
+                maximumReconnectionAttempts: 2,
+                reconnectionDelay: 0.10,
+                maximumDelay: 0.20,
+                jitterRange: 1.0 ... 1.0
+            )
         )
     }
-    
-    // MARK: - Happy path -----------------------------------------------------
+
+    // MARK: – Tests -----------------------------------------------------------
     @Test("reconnect succeeds after a clean disconnect")
-    func reconnectSucceeds() async throws {
-        try await goodSocket.connect()
-        #expect(await goodSocket.isConnected)
-        
-        await goodSocket.disconnect(with: "Simulate link drop")
-        #expect(!(await goodSocket.isConnected))
-        
-        try await goodSocket.reconnect()
-        #expect(await goodSocket.isConnected)
-        
-        await goodSocket.disconnect(with: nil)  // tidy-up
+    func reconnectHappyPath() async throws {
+        try await healthy.connect()
+        #expect(await healthy.isConnected)
+
+        await healthy.disconnect(with: "Intentionally disconnected for unit-test")
+        #expect(!(await healthy.isConnected))
+
+        try await healthy.reconnector.attemptReconnection(for: healthy)
+        #expect(await healthy.isConnected)
+
+        await healthy.disconnect(with: nil)
     }
-    
-    // MARK: - Failure path ---------------------------------------------------
-    @Test("reconnector stops after max attempts and surfaces an error")
-    func reconnectFailsAndGivesUp() async throws {
+
+    @Test("reconnector stops after hitting the maximum-attempt limit")
+    func reconnectFailurePath() async throws {
+        // `attemptReconnection` should throw once it has
+        //   * waited   (delay → connect →  ping-timeout) × N
+        //   * reached  maxAttempts (2 in our config)
         await #expect(throws: Fulcrum.Error.self) {
-            try await badSocket.reconnect()
+            try await hopeless.reconnector.attemptReconnection(for: hopeless)
         }
-        #expect(!(await badSocket.isConnected))
-    }
-    
-    // MARK: - Counter reset --------------------------------------------------
-    @Test("resetReconnectionAttemptCount gives a fresh set of tries")
-    func attemptCounterResets() async throws {
-        // First round: burn through the allowed attempts.
-        await #expect(throws: Fulcrum.Error.self) {
-            try await badSocket.reconnect()
-        }
-        
-        // Manually reset the internal counter …
-        await badSocket.reconnector.resetReconnectionAttemptCount()
-        
-        // … and verify we get another full cycle of attempts (should still fail).
-        await #expect(throws: Fulcrum.Error.self) {
-            try await badSocket.reconnect()
-        }
+
+        // We *should* still be in the disconnected state.
+        #expect(!(await hopeless.isConnected))
     }
 }

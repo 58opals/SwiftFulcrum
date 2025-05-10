@@ -54,9 +54,19 @@ extension Response.JSONRPC {
                     public init(from decoder: Decoder) throws {
                         let container = try decoder.singleValueContainer()
                         
-                        if let singleValue = try? container.decode(String.self) { self = .status(singleValue) }
-                        else if let multipleValues = try? container.decode([String?].self) { self = .addressAndStatus(multipleValues) }
-                        else { throw DecodingError.typeMismatch(SubscribeParameters.self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Invalid type for JSONRPCResult")) }
+                        if let singleValue = try? container.decode(String.self) {
+                            self = .status(singleValue)
+                            return
+                        }
+                        
+                        if let multipleValues = try? container.decode([String?].self) {
+                            self = .addressAndStatus(multipleValues)
+                            return
+                        }
+                        
+                        throw DecodingError.typeMismatch(SubscribeParameters.self,
+                                                         .init(codingPath: decoder.codingPath,
+                                                               debugDescription: "Expected String or [String?]"))
                     }
                 }
                 
@@ -64,10 +74,34 @@ extension Response.JSONRPC {
             }
             
             public struct Block {
-                public struct Header: Decodable, Sendable {
-                    public let branch: [String]
-                    public let header: String
-                    public let root: String
+                public typealias Header = HeaderParameters
+                public enum HeaderParameters: Decodable, Sendable {
+                    case raw(String)
+                    case proof(Proof)
+                    
+                    public struct Proof: Decodable, Sendable {
+                        public let branch: [String]
+                        public let header: String
+                        public let root: String
+                    }
+                    
+                    public init(from decoder: Decoder) throws {
+                        let container = try decoder.singleValueContainer()
+                        
+                        if let singleValue = try? container.decode(String.self) {
+                            self = .raw(singleValue)
+                            return
+                        }
+                        
+                        if let multipleValues = try? container.decode(Proof.self) {
+                            self = .proof(multipleValues)
+                            return
+                        }
+                        
+                        throw DecodingError.typeMismatch(HeaderParameters.self,
+                                                         .init(codingPath: decoder.codingPath,
+                                                               debugDescription: "Expected String or Proof dictionary"))
+                    }
                 }
                 
                 public struct Headers: Decodable, Sendable {
@@ -98,9 +132,19 @@ extension Response.JSONRPC {
                     public init(from decoder: Decoder) throws {
                         let container = try decoder.singleValueContainer()
                         
-                        if let singleValue = try? container.decode(GetTip.self) { self = .topHeader(singleValue) }
-                        else if let multipleValues = try? container.decode([GetTip].self) { self = .newHeader(multipleValues) }
-                        else { throw DecodingError.typeMismatch(SubscribeParameters.self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Invalid type for JSONRPCResult")) }
+                        if let singleValue = try? container.decode(GetTip.self) {
+                            self = .topHeader(singleValue)
+                            return
+                        }
+                        
+                        if let multipleValues = try? container.decode([GetTip].self) {
+                            self = .newHeader(multipleValues)
+                            return
+                        }
+                        
+                        throw DecodingError.typeMismatch(SubscribeParameters.self,
+                                                         .init(codingPath: decoder.codingPath,
+                                                               debugDescription: "Expected top header's height and hex or new header's heights and hexes"))
                     }
                 }
                 
@@ -110,44 +154,68 @@ extension Response.JSONRPC {
             public struct Transaction {
                 public typealias Broadcast = Data
                 
-                public struct Get: Decodable, Sendable {
-                    public let blockhash: String?
-                    public let blocktime: UInt?
-                    public let confirmations: UInt?
-                    public let hash: String
-                    public let hex: String
-                    public let locktime: UInt
-                    public let size: UInt
-                    public let time: UInt?
-                    public let txid: String
-                    public let version: UInt
-                    public let vin: [Input]
-                    public let vout: [Output]
+                public typealias Get = GetParameters
+                public enum GetParameters: Decodable, Sendable {
+                    case raw(String)
+                    case detailed(Detailed)
                     
-                    public struct Input: Decodable, Sendable {
-                        public let scriptSig: ScriptSig
-                        public let sequence: UInt
+                    public struct Detailed: Decodable, Sendable {
+                        public let blockhash: String?
+                        public let blocktime: UInt?
+                        public let confirmations: UInt?
+                        public let hash: String
+                        public let hex: String
+                        public let locktime: UInt
+                        public let size: UInt
+                        public let time: UInt?
                         public let txid: String
-                        public let vout: UInt
+                        public let version: UInt
+                        public let vin: [Input]
+                        public let vout: [Output]
                         
-                        public struct ScriptSig: Decodable, Sendable {
-                            public let asm: String
-                            public let hex: String
+                        public struct Input: Decodable, Sendable {
+                            public let scriptSig: ScriptSig
+                            public let sequence: UInt
+                            public let txid: String
+                            public let vout: UInt
+                            
+                            public struct ScriptSig: Decodable, Sendable {
+                                public let asm: String
+                                public let hex: String
+                            }
+                        }
+                        
+                        public struct Output: Decodable, Sendable {
+                            public let n: UInt
+                            public let scriptPubKey: ScriptPubKey
+                            public let value: Double
+                            
+                            public struct ScriptPubKey: Decodable, Sendable {
+                                public let addresses: [String]?
+                                public let asm: String
+                                public let hex: String
+                                public let reqSigs: UInt?
+                                public let type: String
+                            }
                         }
                     }
                     
-                    public struct Output: Decodable, Sendable {
-                        public let n: UInt
-                        public let scriptPubKey: ScriptPubKey
-                        public let value: Double
+                    public init(from decoder: Decoder) throws {
+                        let container = try decoder.singleValueContainer()
                         
-                        public struct ScriptPubKey: Decodable, Sendable {
-                            public let addresses: [String]?
-                            public let asm: String
-                            public let hex: String
-                            public let reqSigs: UInt?
-                            public let type: String
+                        if let singleValue = try? container.decode(String.self) {
+                            self = .raw(singleValue)
+                            return
                         }
+                        
+                        if let multipleValues = try? container.decode(Detailed.self) {
+                            self = .detailed(multipleValues)
+                            return
+                        }
+                        
+                        throw DecodingError.typeMismatch(GetParameters.self,
+                                                         .init(codingPath: decoder.codingPath,
+                                                               debugDescription: "Expected String or Detailed"))
                     }
                 }
                 
@@ -182,18 +250,38 @@ extension Response.JSONRPC {
                         public init(from decoder: Decoder) throws {
                             let container = try decoder.singleValueContainer()
                             
-                            if let stringResult = try? container.decode(String.self) { self = .transactionHash(stringResult) }
-                            else if let uintResult = try? container.decode(UInt.self) { self = .height(uintResult) }
-                            else { throw DecodingError.typeMismatch(TransactionHashAndHeight.self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Invalid type for MixedArrayElement")) }
+                            if let stringResult = try? container.decode(String.self) {
+                                self = .transactionHash(stringResult)
+                                return
+                            }
+                            
+                            if let uintResult = try? container.decode(UInt.self) {
+                                self = .height(uintResult)
+                                return
+                            }
+                            
+                            throw DecodingError.typeMismatch(TransactionHashAndHeight.self,
+                                                             .init(codingPath: decoder.codingPath,
+                                                                   debugDescription: "Expected UInt or String"))
                         }
                     }
                     
                     public init(from decoder: Decoder) throws {
                         let container = try decoder.singleValueContainer()
                         
-                        if let uintResult = try? container.decode(UInt.self) { self = .height(uintResult) }
-                        else if let stringAndUIntResult = try? container.decode([TransactionHashAndHeight].self) { self = .transactionHashAndHeight(stringAndUIntResult)
-                        } else { throw DecodingError.typeMismatch(SubscribeParameters.self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Invalid type for JSONRPCResult")) }
+                        if let uintResult = try? container.decode(UInt.self) {
+                            self = .height(uintResult)
+                            return
+                        }
+                        
+                        if let stringAndUIntResult = try? container.decode([TransactionHashAndHeight].self) {
+                            self = .transactionHashAndHeight(stringAndUIntResult)
+                            return
+                        }
+                        
+                        throw DecodingError.typeMismatch(SubscribeParameters.self,
+                                                         .init(codingPath: decoder.codingPath,
+                                                               debugDescription: "Expected UInt (height) or String and UInt (transaction hash and height)"))
                     }
                 }
                 
@@ -227,18 +315,43 @@ extension Response.JSONRPC {
                             public init(from decoder: Decoder) throws {
                                 let container = try decoder.singleValueContainer()
                                 
-                                if let stringResult = try? container.decode(String.self) { self = .transactionHash(stringResult) }
-                                else if let getResult = try? container.decode(Get.self) { self = .dsProof(getResult) }
-                                else { throw DecodingError.typeMismatch(TransactionHashAndDSProof.self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Invalid type for MixedArrayElement")) }
+                                if let stringResult = try? container.decode(String.self) {
+                                    self = .transactionHash(stringResult)
+                                    return
+                                }
+                                
+                                if let getResult = try? container.decode(Get.self) {
+                                    self = .dsProof(getResult)
+                                    return
+                                }
+                                
+                                throw DecodingError.typeMismatch(TransactionHashAndDSProof.self,
+                                                                 .init(codingPath: decoder.codingPath,
+                                                                       debugDescription: "Expected transaction hash or double-spending proof"))
                             }
                         }
                         
                         public init(from decoder: Decoder) throws {
                             let container = try decoder.singleValueContainer()
                             
-                            if let getResult = try? container.decode(Get?.self) { self = .dsProof(getResult) }
-                            else if let stringAndUGetResult = try? container.decode([TransactionHashAndDSProof].self) { self = .transactionHashAndDSProof(stringAndUGetResult)
-                            } else { self = .dsProof(nil) }
+                            if container.decodeNil() {
+                                self = .dsProof(nil)
+                                return
+                            }
+                            
+                            if let getResult = try? container.decode(Get?.self) {
+                                self = .dsProof(getResult)
+                                return
+                            }
+                            
+                            if let stringAndUGetResult = try? container.decode([TransactionHashAndDSProof].self) {
+                                self = .transactionHashAndDSProof(stringAndUGetResult)
+                                return
+                            }
+                            
+                            throw DecodingError.typeMismatch(SubscribeParameters.self,
+                                                             .init(codingPath: decoder.codingPath,
+                                                                   debugDescription: "Expected nil, a DSProof, or [txHash, dsProof]"))
                         }
                     }
                     

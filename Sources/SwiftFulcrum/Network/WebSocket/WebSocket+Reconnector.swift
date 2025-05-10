@@ -26,7 +26,6 @@ extension WebSocket {
         
         func resetReconnectionAttemptCount() {
             reconnectionAttempts = 0
-            print("Reconnector reset: reconnectionAttempts = \(reconnectionAttempts)")
         }
         
         func attemptReconnection(for webSocket: WebSocket, with url: URL? = nil) async throws {
