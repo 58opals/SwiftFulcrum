@@ -134,7 +134,8 @@ extension MethodAssortment {
             // Blockchain.Address
             .blockchain(
                 .address(
-                    .getBalance(address: "qrmydkpmlgvxrafjv7rpdm4unlcdfnljmqss98ytuq", tokenFilter: .include))),
+                    .getBalance(address: "qrmydkpmlgvxrafjv7rpdm4unlcdfnljmqss98ytuq",
+                                tokenFilter: .include))),
             .blockchain(
                 .address(
                     .getFirstUse(address: "qrmydkpmlgvxrafjv7rpdm4unlcdfnljmqss98ytuq"))),
@@ -152,7 +153,8 @@ extension MethodAssortment {
                     .getScriptHash(address: "qrmydkpmlgvxrafjv7rpdm4unlcdfnljmqss98ytuq"))),
             .blockchain(
                 .address(
-                    .listUnspent(address: "qrmydkpmlgvxrafjv7rpdm4unlcdfnljmqss98ytuq", tokenFilter: .include))),
+                    .listUnspent(address: "qrmydkpmlgvxrafjv7rpdm4unlcdfnljmqss98ytuq",
+                                 tokenFilter: .include))),
             .blockchain(
                 .address(
                     .subscribe(address: "qrmydkpmlgvxrafjv7rpdm4unlcdfnljmqss98ytuq"))),
@@ -163,10 +165,13 @@ extension MethodAssortment {
             // Blockchain.Block
             .blockchain(
                 .block(
-                    .header(height: 1, checkpointHeight: 0))),
+                    .header(height: 1,
+                            checkpointHeight: 0))),
             .blockchain(
                 .block(
-                    .headers(startHeight: 1, count: 10, checkpointHeight: 0))),
+                    .headers(startHeight: 1,
+                             count: 10,
+                             checkpointHeight: 0))),
             
             // Blockchain.Header
             .blockchain(
@@ -190,10 +195,12 @@ extension MethodAssortment {
                     .broadcast(rawTransaction: "rawTx"))),
             .blockchain(
                 .transaction(
-                    .get(transactionHash: "1452186edb3b7f8a0e64fefaf3c3879272e52bdccdbc329de8987e44f3f5bfd1", verbose: true))),
+                    .get(transactionHash: "1452186edb3b7f8a0e64fefaf3c3879272e52bdccdbc329de8987e44f3f5bfd1",
+                         verbose: true))),
             .blockchain(
                 .transaction(
-                    .getConfirmedBlockHash(transactionHash: "1452186edb3b7f8a0e64fefaf3c3879272e52bdccdbc329de8987e44f3f5bfd1", includeHeader: true))),
+                    .getConfirmedBlockHash(transactionHash: "1452186edb3b7f8a0e64fefaf3c3879272e52bdccdbc329de8987e44f3f5bfd1",
+                                           includeHeader: true))),
             .blockchain(
                 .transaction(
                     .getHeight(transactionHash: "1452186edb3b7f8a0e64fefaf3c3879272e52bdccdbc329de8987e44f3f5bfd1"))),
@@ -202,7 +209,9 @@ extension MethodAssortment {
                     .getMerkle(transactionHash: "1452186edb3b7f8a0e64fefaf3c3879272e52bdccdbc329de8987e44f3f5bfd1"))),
             .blockchain(
                 .transaction(
-                    .idFromPos(blockHeight: 1, transactionPosition: 0, includeMerkleProof: true))),
+                    .idFromPos(blockHeight: 1,
+                               transactionPosition: 0,
+                               includeMerkleProof: true))),
             .blockchain(
                 .transaction(
                     .subscribe(transactionHash: "1452186edb3b7f8a0e64fefaf3c3879272e52bdccdbc329de8987e44f3f5bfd1"))),
@@ -231,7 +240,8 @@ extension MethodAssortment {
             // Blockchain.UTXO
             .blockchain(
                 .utxo(
-                    .getInfo(transactionHash: "1452186edb3b7f8a0e64fefaf3c3879272e52bdccdbc329de8987e44f3f5bfd1", outputIndex: 0))),
+                    .getInfo(transactionHash: "1452186edb3b7f8a0e64fefaf3c3879272e52bdccdbc329de8987e44f3f5bfd1",
+                             outputIndex: 0))),
             
             // Mempool
             .mempool(.getFeeHistogram)

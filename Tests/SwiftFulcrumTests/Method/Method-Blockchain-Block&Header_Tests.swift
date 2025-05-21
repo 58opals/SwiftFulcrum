@@ -23,16 +23,15 @@ extension MethodBlockchainBlockTests {
             let (_, result) = try await fulcrum.submit(
                 method: .blockchain(.block(.header(height: height,
                                                    checkpointHeight: 1))),
-                responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Block.Header>.self)
+                responseType: Response.Result.Blockchain.Block.Header.self)
             return result
         }
         
         print(header)
-        switch header {
-        case .raw(let hex):
-            #expect(hex.count == 160)
-        case .proof(let proof):
-            #expect(proof.header.count == 160)
+        #expect(header.hex.count == 160)
+        
+        
+        if let proof = header.proof {
             #expect(proof.root.count == 64)
             for node in proof.branch {
                 #expect(node.count == 64)
@@ -49,7 +48,7 @@ extension MethodBlockchainBlockTests {
                 method: .blockchain(.block(.headers(startHeight: range.start,
                                                     count: range.count,
                                                     checkpointHeight: 0))),
-                responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Block.Headers>.self)
+                responseType: Response.Result.Blockchain.Block.Headers.self)
             return result
         }
         
@@ -65,7 +64,7 @@ extension MethodBlockchainBlockTests {
         let header = try await withRunningNode {
             let (_, result) = try await fulcrum.submit(
                 method: .blockchain(.header(.get(blockHash: knownBlockHash))),
-                responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Header.Get>.self)
+                responseType: Response.Result.Blockchain.Header.Get.self)
             return result
         }
         
@@ -80,7 +79,7 @@ extension MethodBlockchainBlockTests {
         let tip = try await withRunningNode {
             let (_, result) = try await fulcrum.submit(
                 method: .blockchain(.headers(.getTip)),
-                responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Headers.GetTip>.self)
+                responseType: Response.Result.Blockchain.Headers.GetTip.self)
             return result
         }
         

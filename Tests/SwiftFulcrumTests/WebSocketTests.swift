@@ -48,16 +48,16 @@ struct WebSocketConnectionTests {
 
 @Suite("WebSocket – Reconnector")
 struct WebSocketReconnectorTests {
-
+    
     // MARK: – Reusable sockets ------------------------------------------------
     /// A socket that should be able to reconnect successfully to a *real*
     /// Fulcrum endpoint.
     let healthy: WebSocket
-
+    
     /// A socket that always points at an obviously-invalid host so every
     /// connection attempt is guaranteed to fail quickly.
     let hopeless: WebSocket
-
+    
     init() throws {
         // (1) happy-path socket — use any random main-net server, but keep the
         //     reconnection delays tiny so the test suite runs fast.
@@ -70,7 +70,7 @@ struct WebSocketReconnectorTests {
                 jitterRange: 1.0 ... 1.0
             )
         )
-
+        
         // (2) “always-fail” socket — the `.invalid` TLD is guaranteed not to
         //     resolve, so `URLSessionWebSocketTask` falls over immediately.
         self.hopeless = WebSocket(
@@ -83,22 +83,22 @@ struct WebSocketReconnectorTests {
             )
         )
     }
-
+    
     // MARK: – Tests -----------------------------------------------------------
     @Test("reconnect succeeds after a clean disconnect")
     func reconnectHappyPath() async throws {
         try await healthy.connect()
         #expect(await healthy.isConnected)
-
+        
         await healthy.disconnect(with: "Intentionally disconnected for unit-test")
         #expect(!(await healthy.isConnected))
-
+        
         try await healthy.reconnector.attemptReconnection(for: healthy)
         #expect(await healthy.isConnected)
-
+        
         await healthy.disconnect(with: nil)
     }
-
+    
     @Test("reconnector stops after hitting the maximum-attempt limit")
     func reconnectFailurePath() async throws {
         // `attemptReconnection` should throw once it has
@@ -107,7 +107,7 @@ struct WebSocketReconnectorTests {
         await #expect(throws: Fulcrum.Error.self) {
             try await hopeless.reconnector.attemptReconnection(for: hopeless)
         }
-
+        
         // We *should* still be in the disconnected state.
         #expect(!(await hopeless.isConnected))
     }

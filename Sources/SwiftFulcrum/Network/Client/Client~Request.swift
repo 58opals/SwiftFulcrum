@@ -4,7 +4,7 @@ import Foundation
 
 extension Client {
     func call<Result: Decodable>(method: Method) async throws -> Result {
-        let id      = UUID()
+        let id = UUID()
         let request = method.createRequest(with: id)
         
         return try await withCheckedThrowingContinuation { continuation in
@@ -25,8 +25,8 @@ extension Client {
     }
     
     func subscribe<Result: Decodable>(method: Method) async throws -> (Result, AsyncThrowingStream<Result, Swift.Error>) {
-        let id              = UUID()
-        let request         = method.createRequest(with: id)
+        let id = UUID()
+        let request = method.createRequest(with: id)
         let subscriptionKey = SubscriptionKey(methodPath: method.path,
                                               identifier: getSubscriptionIdentifier(for: method))
         
@@ -71,7 +71,7 @@ extension Client {
 extension Client {
     func sendRegularRequest(method: Method,
                             handler: @escaping RegularResponseHandler) async throws -> RegularResponseIdentifier {
-        let requestID: UUID  = .init()
+        let requestID: UUID = .init()
         let request: Request = method.createRequest(with: requestID)
         
         try insertRegularHandler(for: requestID, handler: handler)
@@ -89,8 +89,8 @@ extension Client {
     func sendSubscriptionRequest(method: Method,
                                  initialResponseHandler: @escaping RegularResponseHandler,
                                  notificationHandler: @escaping SubscriptionResponseHandler) async throws -> SubscriptionToken {
-        let requestID: UUID    = .init()
-        let request: Request   = method.createRequest(with: requestID)
+        let requestID: UUID = .init()
+        let request: Request = method.createRequest(with: requestID)
         let subscriptionKey = SubscriptionResponseIdentifier(methodPath: request.method,
                                                              identifier: getSubscriptionIdentifier(for: method))
         

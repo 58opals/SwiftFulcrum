@@ -13,74 +13,73 @@ struct FulcrumWalletTests {
     init() throws {
         self.fulcrum = try Fulcrum()
     }
-
+    
     @Test("start → stop happy-path")
     func startAndStop() async throws {
         try await fulcrum.start()
         #expect(await fulcrum.isRunning)
-
+        
         await fulcrum.stop()
         #expect(!(await fulcrum.isRunning))
     }
-
+    
     @Test("estimateFee(6) returns a positive fee rate")
     func estimateFee() async throws {
         try await fulcrum.start()
-
-        let (_, fee): (UUID, Double) = try await fulcrum.submit(
+        
+        let (id, estimateFee) = try await fulcrum.submit(
             method: .blockchain(.estimateFee(numberOfBlocks: 6)),
-            responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.EstimateFee>.self
+            responseType: Response.Result.Blockchain.EstimateFee.self
         )
-        print("Estimated fee: \(fee)")
-        #expect(fee > 0.0)
+        
+        print("ID: \(id.description)")
+        print("Estimated fee: \(estimateFee.fee)")
+        
+        #expect(estimateFee.fee > 0.0)
     }
-
+    
     @Test("getBalance(address) delivers sane numbers")
     func addressBalance() async throws {
         try await fulcrum.start()
-
-        let (_, balance) = try await fulcrum.submit(
+        
+        let (id, balance) = try await fulcrum.submit(
             method: .blockchain(.address(.getBalance(address: .sampleAddress, tokenFilter: nil))),
-            responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Address.GetBalance>.self
+            responseType: Response.Result.Blockchain.Address.GetBalance.self
         )
+        
+        print("ID: \(id.description)")
         print("Balance: \(balance)")
         #expect(balance.confirmed >= 0)
-        #expect(balance.unconfirmed >= Int64.min)      // just prove we decoded
+        #expect(balance.unconfirmed >= Int64.min)
     }
-
+    
     @Test("headers.subscribe gives an initial tip and a live stream")
     func headerSubscription() async throws {
         try await fulcrum.start()
-
+        
         let (_, initial, stream) = try await fulcrum.submit(
             method: .blockchain(.headers(.subscribe)),
-            notificationType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Headers.Subscribe>.self
+            notificationType: Response.Result.Blockchain.Headers.Subscribe.self
         )
-
-        switch initial {
-        case .topHeader(let tip):
-            print("Initial tip: \(tip.height)")
-            #expect(tip.height > 0)
-        case .newHeader(let batch):
-            print("Initial batch: \(batch)")
-            #expect(!batch.isEmpty)
-        }
-
+        
+        print("Initial tip: \(initial.height), \(initial.hex)")
+        #expect(initial.height > 0)
+        
         var iterator = stream.makeAsyncIterator()
         if let next = try await iterator.next() {
             print(next)
             #expect(true)
         }
     }
-
+    
     @Test("broadcasting garbage tx yields an RPC error")
     func broadcastInvalidTransaction() async throws {
         try await fulcrum.start()
-
+        
         await #expect(throws: Fulcrum.Error.self) {
             _ = try await fulcrum.submit(
                 method: .blockchain(.transaction(.broadcast(rawTransaction: "deadbeef"))),
-                responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Transaction.Broadcast>.self
+                responseType: Response.Result.Blockchain.Transaction.Broadcast.self
             )
         }
     }

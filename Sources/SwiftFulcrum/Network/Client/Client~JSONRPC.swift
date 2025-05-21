@@ -6,7 +6,7 @@ extension Client {
     typealias RegularResponseIdentifier = UUID
     typealias SubscriptionResponseIdentifier = SubscriptionKey
     
-    typealias RegularResponseHandler      = @Sendable (Result<Data, Fulcrum.Error>) -> Void
+    typealias RegularResponseHandler = @Sendable (Result<Data, Fulcrum.Error>) -> Void
     typealias SubscriptionResponseHandler = @Sendable (Result<Data, Fulcrum.Error>) -> Void
 }
 
@@ -42,7 +42,7 @@ extension Client {
         deinit {
             let alreadyCancelled = isCancelled
             guard !alreadyCancelled else { return }
-
+            
             let closure = cancelClosure
             Task {
                 await closure()
@@ -55,7 +55,7 @@ extension Client: Hashable {
     nonisolated func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }
-
+    
     static func == (lhs: Client, rhs: Client) -> Bool {
         lhs.id == rhs.id
     }

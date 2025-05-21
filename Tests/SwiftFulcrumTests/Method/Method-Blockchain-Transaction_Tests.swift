@@ -24,7 +24,7 @@ extension MethodBlockchainTransactionTests {
                 _ = try await fulcrum.submit(
                     method: .blockchain(.transaction(.broadcast(
                         rawTransaction: "DEADBEEF"))),
-                    responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Transaction.Broadcast>.self)
+                    responseType: Response.Result.Blockchain.Transaction.Broadcast.self)
             }
         }
     }
@@ -37,21 +37,15 @@ extension MethodBlockchainTransactionTests {
                 method: .blockchain(.transaction(.get(
                     transactionHash: sampleTxID,
                     verbose: true))),
-                responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Transaction.Get>.self)
+                responseType: Response.Result.Blockchain.Transaction.Get.self)
             return tx
         }
         
-        switch tx {
-        case .raw(let raw):
-            print("raw transaction: \(raw)")
-            
-        case .detailed(let detailedTransaction):
-            print("txid: \(detailedTransaction.txid)  size: \(detailedTransaction.size) bytes")
-            #expect(detailedTransaction.txid == sampleTxID)
-            #expect(detailedTransaction.size > 0)
-            #expect(detailedTransaction.vin.count > 0)
-            #expect(detailedTransaction.vout.count > 0)
-        }
+        print("txid: \(tx.transactionID)  size: \(tx.size) bytes")
+        #expect(tx.transactionID == sampleTxID)
+        #expect(tx.size > 0)
+        #expect(tx.inputs.count > 0)
+        #expect(tx.outputs.count > 0)
     }
     
     /// Fulcrum Method: Blockchain.Transaction.GetConfirmedBlockHash
@@ -62,13 +56,13 @@ extension MethodBlockchainTransactionTests {
                 method: .blockchain(.transaction(.getConfirmedBlockHash(
                     transactionHash: sampleTxID,
                     includeHeader: false))),
-                responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Transaction.GetConfirmedBlockHash>.self)
+                responseType: Response.Result.Blockchain.Transaction.GetConfirmedBlockHash.self)
             return info
         }
         
-        print("block hash: \(infoWithoutHeader.block_hash)  height: \(infoWithoutHeader.block_height)")
-        #expect(infoWithoutHeader.block_hash.count == 64)
-        #expect(infoWithoutHeader.block_height > 0)
+        print("block hash: \(infoWithoutHeader.blockHash)  height: \(infoWithoutHeader.blockHeight)")
+        #expect(infoWithoutHeader.blockHash.count == 64)
+        #expect(infoWithoutHeader.blockHeight > 0)
     }
     
     /// Fulcrum Method: Blockchain.Transaction.GetHeight
@@ -78,8 +72,8 @@ extension MethodBlockchainTransactionTests {
             let (_, h) = try await fulcrum.submit(
                 method: .blockchain(.transaction(.getHeight(
                     transactionHash: sampleTxID))),
-                responseType: Response.JSONRPC.Generic<UInt>.self)
-            return h
+                responseType: Response.Result.Blockchain.Transaction.GetHeight.self)
+            return h.height
         }
         
         print("height: \(height)")
@@ -93,12 +87,12 @@ extension MethodBlockchainTransactionTests {
             let (_, m) = try await fulcrum.submit(
                 method: .blockchain(.transaction(.getMerkle(
                     transactionHash: sampleTxID))),
-                responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Transaction.GetMerkle>.self)
+                responseType: Response.Result.Blockchain.Transaction.GetMerkle.self)
             return m
         }
         
         print("merkle branch length: \(merkle.merkle.count)")
-        #expect(merkle.block_height > 0)
+        #expect(merkle.blockHeight > 0)
         #expect(merkle.merkle.count > 0)
     }
     
@@ -110,8 +104,8 @@ extension MethodBlockchainTransactionTests {
             let (_, m) = try await fulcrum.submit(
                 method: .blockchain(.transaction(.getMerkle(
                     transactionHash: sampleTxID))),
-                responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Transaction.GetMerkle>.self)
-            return (m.block_height, m.pos)
+                responseType: Response.Result.Blockchain.Transaction.GetMerkle.self)
+            return (m.blockHeight, m.position)
         }
         
         let roundTrip = try await withRunningNode {
@@ -120,11 +114,11 @@ extension MethodBlockchainTransactionTests {
                     blockHeight: height,
                     transactionPosition: pos,
                     includeMerkleProof: true))),
-                responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Transaction.IDFromPos>.self)
+                responseType: Response.Result.Blockchain.Transaction.IDFromPos.self)
             return r
         }
         
-        print("round-trip tx_hash: \(roundTrip.tx_hash)")
-        #expect(roundTrip.tx_hash == sampleTxID)
+        print("round-trip tx_hash: \(roundTrip.transactionHash)")
+        #expect(roundTrip.transactionHash == sampleTxID)
     }
 }

@@ -20,8 +20,8 @@ extension MethodBlockchainTests {
         let fee: Double = try await withRunningNode {
             let (_, fee) = try await fulcrum.submit(
                 method: .blockchain(.estimateFee(numberOfBlocks: 6)),
-                responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.EstimateFee>.self)
-            return fee
+                responseType: Response.Result.Blockchain.EstimateFee.self)
+            return fee.fee
         }
         
         print("Blockchain.EstimateFee: \(fee)")
@@ -35,8 +35,8 @@ extension MethodBlockchainTests {
         let fee: Double = try await withRunningNode {
             let (_, fee) = try await fulcrum.submit(
                 method: .blockchain(.relayFee),
-                responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.RelayFee>.self)
-            return fee
+                responseType: Response.Result.Blockchain.RelayFee.self)
+            return fee.fee
         }
         
         print("Blockchain.RelayFee: \(fee)")
@@ -52,22 +52,20 @@ extension MethodBlockchainTests {
             let (_, utxos) = try await fulcrum.submit(
                 method: .blockchain(.address(.listUnspent(address: address,
                                                           tokenFilter: .include))),
-                responseType: Response.JSONRPC.Generic<
-                Response.JSONRPC.Result.Blockchain.Address.ListUnspent>.self)
+                responseType: Response.Result.Blockchain.Address.ListUnspent.self)
             
-            guard let first = utxos.first else {
+            guard let first = utxos.items.first else {
                 print("No UTXOs on the sample addr → nothing to test")
                 return
             }
             
             let (_, info) = try await fulcrum.submit(
-                method: .blockchain(.utxo(.getInfo(transactionHash: first.tx_hash,
-                                                   outputIndex: UInt16(first.tx_pos)))),
-                responseType: Response.JSONRPC.Generic<
-                Response.JSONRPC.Result.Blockchain.UTXO.GetInfo>.self)
+                method: .blockchain(.utxo(.getInfo(transactionHash: first.transactionHash,
+                                                   outputIndex: UInt16(first.transactionPosition)))),
+                responseType: Response.Result.Blockchain.UTXO.GetInfo.self)
             
             print("utxo info: \(info)")
-            if let height = info.confirmed_height {
+            if let height = info.confirmedHeight {
                 #expect(height >= 0)
             }
             #expect(info.value == first.value)
@@ -80,13 +78,13 @@ extension MethodBlockchainTests {
         let histogram = try await withRunningNode {
             let (_, rows) = try await fulcrum.submit(
                 method: .mempool(.getFeeHistogram),
-                responseType: Response.JSONRPC.Generic<[[Double]]>.self)
+                responseType: Response.Result.Mempool.GetFeeHistogram.self)
             return rows
         }
         
-        print("fee histogram rows \(histogram.count)")
-        print("fee histogram: \(histogram)")
-        #expect(histogram.count > 0)
-        for row in histogram { #expect(row.count == 2) }
+        print("fee histogram rows \(histogram.histogram.count)")
+        print("fee histogram: \(histogram.histogram)")
+        #expect(histogram.histogram.count > 0)
+        for row in histogram.histogram { print(row) }
     }
 }

@@ -44,7 +44,7 @@ extension Client {
                 }
             case .string(let methodPath):
                 let identifier = getIdentifierFromNotification(methodPath: methodPath, data: data)
-                let key        = SubscriptionKey(methodPath: methodPath, identifier: identifier)
+                let key = SubscriptionKey(methodPath: methodPath, identifier: identifier)
                 
                 if let handler = subscriptionResponseHandlers[key] {
                     if let fail = Inbound.serverError(from: data) {
