@@ -59,11 +59,11 @@ Task {
 Task {
     // Estimate the fee for confirmation within 6 blocks
     do {
-        let (requestID, feeEstimate): (UUID, Response.JSONRPC.Result.Blockchain.EstimateFee) = try await fulcrum.submit(
+        let (requestID, feeEstimate): (UUID, Response.Result.Blockchain.EstimateFee) = try await fulcrum.submit(
             method: .blockchain(.estimateFee(numberOfBlocks: 6)),
-            responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.EstimateFee>.self
+            responseType: Response.Result.Blockchain.EstimateFee.self
         )
-        print("Fee estimate for request \(requestID): \(feeEstimate) BCH")
+        print("Fee estimate for request \(requestID): \(feeEstimate.fee) BCH")
     } catch {
         print("Request failed: \(error.localizedDescription)")
     }
@@ -79,13 +79,13 @@ Task {
     do {
         let (requestID, initialResponse, notifications) = try await fulcrum.submit(
             method: .blockchain(.address(.subscribe(address: address))),
-            notificationType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Address.SubscribeNotification>.self
+            notificationType: Response.Result.Blockchain.Address.SubscribeNotification.self
         )
 
-        print("Initial response for subscription \(requestID): \(initialResponse)")
+        print("Initial status for subscription \(requestID): \(initialResponse.status)")
 
         for try await notification in notifications {
-            print("Notification received for request \(requestID): \(notification)")
+            print("Update for \(notification.subscriptionIdentifier): \(notification.status ?? "<nil>")")
         }
     } catch {
         print("Subscription error: \(error.localizedDescription)")
