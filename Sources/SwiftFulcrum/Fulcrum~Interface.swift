@@ -68,31 +68,25 @@ extension Fulcrum {
             }
         }
         
-        let notificationStream = AsyncThrowingStream<SubscriptionNotification, Swift.Error> { continuation in
-            Task {
+        let (notificationStream, continuation) = AsyncThrowingStream<SubscriptionNotification, Swift.Error>.makeStream()
+
+        try await self.client.insertSubscriptionHandler(for: subscriptionKey) { @Sendable result in
+            switch result {
+            case .success(let payload):
                 do {
-                    try await self.client.insertSubscriptionHandler(for: subscriptionKey) { @Sendable result in
-                        switch result {
-                        case .success(let payload):
-                            do {
-                                continuation.yield(try payload.decode(SubscriptionNotification.self))
-                            } catch {
-                                continuation.finish(throwing: error)
-                            }
-                        case .failure(let error):
-                            continuation.finish(throwing: Error.client(.unknown(error)))
-                        }
-                    }
+                    continuation.yield(try payload.decode(SubscriptionNotification.self))
                 } catch {
                     continuation.finish(throwing: error)
                 }
+            case .failure(let error):
+                continuation.finish(throwing: Error.client(.unknown(error)))
             }
-            
-            continuation.onTermination = { @Sendable _ in
-                Task {
-                    await self.client.removeSubscriptionResponseHandler(for: subscriptionKey)
-                    // TODO: actually send "unsubscribe"
-                }
+        }
+
+        continuation.onTermination = { @Sendable _ in
+            Task {
+                await self.client.removeSubscriptionResponseHandler(for: subscriptionKey)
+                // TODO: actually send "unsubscribe"
             }
         }
         
