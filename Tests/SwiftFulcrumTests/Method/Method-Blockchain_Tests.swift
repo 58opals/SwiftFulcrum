@@ -18,7 +18,7 @@ extension MethodBlockchainTests {
     @Test("blockchain.estimatefee → non-zero fee")
     func estimateFee() async throws {
         let fee: Double = try await withRunningNode {
-            let (_, fee) = try await fulcrum.submit(
+            let fee = try await fulcrum.submit(
                 method: .blockchain(.estimateFee(numberOfBlocks: 6)),
                 responseType: Response.Result.Blockchain.EstimateFee.self)
             return fee.fee
@@ -33,7 +33,7 @@ extension MethodBlockchainTests {
     @Test("blockchain.relayfee → plausible default relay fee")
     func relayFee() async throws {
         let fee: Double = try await withRunningNode {
-            let (_, fee) = try await fulcrum.submit(
+            let fee = try await fulcrum.submit(
                 method: .blockchain(.relayFee),
                 responseType: Response.Result.Blockchain.RelayFee.self)
             return fee.fee
@@ -49,7 +49,7 @@ extension MethodBlockchainTests {
     func utxoGetInfo() async throws {
         let address = "qrmfkegyf83zh5kauzwgygf82sdahd5a55x9wse7ve"
         try await withRunningNode {
-            let (_, utxos) = try await fulcrum.submit(
+            let utxos = try await fulcrum.submit(
                 method: .blockchain(.address(.listUnspent(address: address,
                                                           tokenFilter: .include))),
                 responseType: Response.Result.Blockchain.Address.ListUnspent.self)
@@ -59,7 +59,7 @@ extension MethodBlockchainTests {
                 return
             }
             
-            let (_, info) = try await fulcrum.submit(
+            let info = try await fulcrum.submit(
                 method: .blockchain(.utxo(.getInfo(transactionHash: first.transactionHash,
                                                    outputIndex: UInt16(first.transactionPosition)))),
                 responseType: Response.Result.Blockchain.UTXO.GetInfo.self)
@@ -76,7 +76,7 @@ extension MethodBlockchainTests {
     @Test("mempool.get_fee_histogram → returns ≥ 1 bucket")
     func feeHistogram() async throws {
         let histogram = try await withRunningNode {
-            let (_, rows) = try await fulcrum.submit(
+            let rows = try await fulcrum.submit(
                 method: .mempool(.getFeeHistogram),
                 responseType: Response.Result.Mempool.GetFeeHistogram.self)
             return rows

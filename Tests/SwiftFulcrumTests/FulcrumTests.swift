@@ -27,12 +27,11 @@ struct FulcrumWalletTests {
     func estimateFee() async throws {
         try await fulcrum.start()
         
-        let (id, estimateFee) = try await fulcrum.submit(
+        let estimateFee = try await fulcrum.submit(
             method: .blockchain(.estimateFee(numberOfBlocks: 6)),
             responseType: Response.Result.Blockchain.EstimateFee.self
         )
-        
-        print("ID: \(id.description)")
+
         print("Estimated fee: \(estimateFee.fee)")
         
         #expect(estimateFee.fee > 0.0)
@@ -42,12 +41,11 @@ struct FulcrumWalletTests {
     func addressBalance() async throws {
         try await fulcrum.start()
         
-        let (id, balance) = try await fulcrum.submit(
+        let balance = try await fulcrum.submit(
             method: .blockchain(.address(.getBalance(address: .sampleAddress, tokenFilter: nil))),
             responseType: Response.Result.Blockchain.Address.GetBalance.self
         )
-        
-        print("ID: \(id.description)")
+
         print("Balance: \(balance)")
         #expect(balance.confirmed >= 0)
         #expect(balance.unconfirmed >= Int64.min)
@@ -57,7 +55,7 @@ struct FulcrumWalletTests {
     func headerSubscription() async throws {
         try await fulcrum.start()
         
-        let (_, initial, stream) = try await fulcrum.submit(
+        let (initial, stream) = try await fulcrum.submit(
             method: .blockchain(.headers(.subscribe)),
             notificationType: Response.Result.Blockchain.Headers.Subscribe.self
         )

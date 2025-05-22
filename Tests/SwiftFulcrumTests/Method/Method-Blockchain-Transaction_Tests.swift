@@ -33,7 +33,7 @@ extension MethodBlockchainTransactionTests {
     @Test("transaction.get → decodes basic fields")
     func getTransaction() async throws {
         let tx = try await withRunningNode {
-            let (_, tx) = try await fulcrum.submit(
+            let tx = try await fulcrum.submit(
                 method: .blockchain(.transaction(.get(
                     transactionHash: sampleTxID,
                     verbose: true))),
@@ -52,7 +52,7 @@ extension MethodBlockchainTransactionTests {
     @Test("transaction.get_confirmed_blockhash → has height + hash")
     func confirmedBlockHash() async throws {
         let infoWithoutHeader = try await withRunningNode {
-            let (_, info) = try await fulcrum.submit(
+            let info = try await fulcrum.submit(
                 method: .blockchain(.transaction(.getConfirmedBlockHash(
                     transactionHash: sampleTxID,
                     includeHeader: false))),
@@ -69,7 +69,7 @@ extension MethodBlockchainTransactionTests {
     @Test("transaction.get_height → positive height")
     func getHeight() async throws {
         let height: UInt = try await withRunningNode {
-            let (_, h) = try await fulcrum.submit(
+            let h = try await fulcrum.submit(
                 method: .blockchain(.transaction(.getHeight(
                     transactionHash: sampleTxID))),
                 responseType: Response.Result.Blockchain.Transaction.GetHeight.self)
@@ -84,7 +84,7 @@ extension MethodBlockchainTransactionTests {
     @Test("transaction.get_merkle → returns proof branch + position")
     func getMerkle() async throws {
         let merkle = try await withRunningNode {
-            let (_, m) = try await fulcrum.submit(
+            let m = try await fulcrum.submit(
                 method: .blockchain(.transaction(.getMerkle(
                     transactionHash: sampleTxID))),
                 responseType: Response.Result.Blockchain.Transaction.GetMerkle.self)
@@ -101,7 +101,7 @@ extension MethodBlockchainTransactionTests {
     func idFromPos() async throws {
         // First, discover (height, pos) from get_merkle so the test is data-driven.
         let (height, pos) = try await withRunningNode { () async throws -> (UInt, UInt) in
-            let (_, m) = try await fulcrum.submit(
+            let m = try await fulcrum.submit(
                 method: .blockchain(.transaction(.getMerkle(
                     transactionHash: sampleTxID))),
                 responseType: Response.Result.Blockchain.Transaction.GetMerkle.self)
@@ -109,7 +109,7 @@ extension MethodBlockchainTransactionTests {
         }
         
         let roundTrip = try await withRunningNode {
-            let (_, r) = try await fulcrum.submit(
+            let r = try await fulcrum.submit(
                 method: .blockchain(.transaction(.idFromPos(
                     blockHeight: height,
                     transactionPosition: pos,

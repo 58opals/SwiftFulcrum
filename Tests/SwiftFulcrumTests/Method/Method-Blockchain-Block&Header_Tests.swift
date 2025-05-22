@@ -20,7 +20,7 @@ extension MethodBlockchainBlockTests {
     @Test("block.header → returns 80-byte header & branch info")
     func blockHeader() async throws {
         let header = try await withRunningNode {
-            let (_, result) = try await fulcrum.submit(
+            let result = try await fulcrum.submit(
                 method: .blockchain(.block(.header(height: height,
                                                    checkpointHeight: 1))),
                 responseType: Response.Result.Blockchain.Block.Header.self)
@@ -44,7 +44,7 @@ extension MethodBlockchainBlockTests {
     func blockHeaders() async throws {
         let range = (start: height, count: UInt(10))
         let headers = try await withRunningNode {
-            let (_, result) = try await fulcrum.submit(
+            let result = try await fulcrum.submit(
                 method: .blockchain(.block(.headers(startHeight: range.start,
                                                     count: range.count,
                                                     checkpointHeight: 0))),
@@ -62,7 +62,7 @@ extension MethodBlockchainBlockTests {
     @Test("header.get → specific block by hash")
     func headerGet() async throws {
         let header = try await withRunningNode {
-            let (_, result) = try await fulcrum.submit(
+            let result = try await fulcrum.submit(
                 method: .blockchain(.header(.get(blockHash: knownBlockHash))),
                 responseType: Response.Result.Blockchain.Header.Get.self)
             return result
@@ -77,7 +77,7 @@ extension MethodBlockchainBlockTests {
     @Test("headers.get_tip → returns current tip information")
     func headersGetTip() async throws {
         let tip = try await withRunningNode {
-            let (_, result) = try await fulcrum.submit(
+            let result = try await fulcrum.submit(
                 method: .blockchain(.headers(.getTip)),
                 responseType: Response.Result.Blockchain.Headers.GetTip.self)
             return result

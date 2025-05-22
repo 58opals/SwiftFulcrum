@@ -19,7 +19,7 @@ extension MethodBlockchainAddressTests {
     @Test("address.get_balance → sane numbers")
     func getBalance() async throws {
         let balance = try await withRunningNode {
-            let (_, result) = try await fulcrum.submit(
+            let result = try await fulcrum.submit(
                 method: .blockchain(.address(.getBalance(address: address, tokenFilter: nil))),
                 responseType: Response.Result.Blockchain.Address.GetBalance.self)
             return result
@@ -34,7 +34,7 @@ extension MethodBlockchainAddressTests {
     @Test("address.get_first_use → returns a block-height")
     func getFirstUse() async throws {
         let first = try await withRunningNode {
-            let (_, result) = try await fulcrum.submit(
+            let result = try await fulcrum.submit(
                 method: .blockchain(.address(.getFirstUse(address: address))),
                 responseType: Response.Result.Blockchain.Address.GetFirstUse.self)
             return result
@@ -50,7 +50,7 @@ extension MethodBlockchainAddressTests {
     @Test("address.get_history → decodes all rows")
     func getHistory() async throws {
         let history = try await withRunningNode {
-            let (_, items) = try await fulcrum.submit(
+            let items = try await fulcrum.submit(
                 method: .blockchain(.address(.getHistory(address: address,
                                                          fromHeight: nil,
                                                          toHeight: nil,
@@ -68,7 +68,7 @@ extension MethodBlockchainAddressTests {
     @Test("address.get_mempool → decodes (may be empty)")
     func getMempool() async throws {
         let mempool = try await withRunningNode {
-            let (_, items) = try await fulcrum.submit(
+            let items = try await fulcrum.submit(
                 method: .blockchain(.address(.getMempool(address: address))),
                 responseType: Response.Result.Blockchain.Address.GetMempool.self)
             return items
@@ -82,7 +82,7 @@ extension MethodBlockchainAddressTests {
     @Test("address.get_scripthash → 64-char hex")
     func getScriptHash() async throws {
         let hash = try await withRunningNode {
-            let (_, result) = try await fulcrum.submit(
+            let result = try await fulcrum.submit(
                 method: .blockchain(.address(.getScriptHash(address: address))),
                 responseType: Response.Result.Blockchain.Address.GetScriptHash.self)
             return result
@@ -96,7 +96,7 @@ extension MethodBlockchainAddressTests {
     @Test("address.listunspent → plausible UTXOs")
     func listUnspent() async throws {
         let utxos = try await withRunningNode {
-            let (_, items) = try await fulcrum.submit(
+            let items = try await fulcrum.submit(
                 method: .blockchain(.address(.listUnspent(address: address, tokenFilter: .include))),
                 responseType: Response.Result.Blockchain.Address.ListUnspent.self)
             return items
