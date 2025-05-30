@@ -24,7 +24,7 @@ extension Client {
         }.decode(Result.self)
     }
     
-    func subscribe<Result: Decodable>(method: Method) async throws -> (Result, AsyncThrowingStream<Result, Swift.Error>) {
+    func subscribe<Result: Decodable>(method: Method) async throws -> (UUID, Result, AsyncThrowingStream<Result, Swift.Error>) {
         let id = UUID()
         let request = method.createRequest(with: id)
         let subscriptionKey = SubscriptionKey(methodPath: method.path,
@@ -64,7 +64,7 @@ extension Client {
         
         let typedStream = rawStream.decode(Result.self)
         
-        return (initialResponse, typedStream)
+        return (id, initialResponse, typedStream)
     }
 }
 

@@ -22,7 +22,6 @@ extension Client {
     }
     
     func failAllPendingRequests(with error: Fulcrum.Error) {
-        let error = Fulcrum.Error.transport(.network)
         regularResponseHandlers.values.forEach { $0(.failure(error)) }
         subscriptionResponseHandlers.values.forEach { $0(.failure(error)) }
         regularResponseHandlers.removeAll()

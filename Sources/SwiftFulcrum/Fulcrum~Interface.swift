@@ -7,8 +7,7 @@ extension Fulcrum {
     public func submit<RegularResponseResult: JSONRPCConvertible>(
         method: Method,
         responseType: RegularResponseResult.Type// = RegularResponseResult.self
-    ) async throws -> (UUID,
-                       RegularResponseResult) {
+    ) async throws -> (UUID, RegularResponseResult) {
         let requestID = UUID()
         let request = method.createRequest(with: requestID)
         guard let payload = request.data else { throw Error.coding(.encode(nil)) }
@@ -39,9 +38,7 @@ extension Fulcrum {
     public func submit<SubscriptionNotification: JSONRPCConvertible>(
         method: Method,
         notificationType: SubscriptionNotification.Type// = SubscriptionNotification.self
-    ) async throws -> (UUID,
-                       SubscriptionNotification,
-                       AsyncThrowingStream<SubscriptionNotification, Swift.Error>) {
+    ) async throws -> (UUID, SubscriptionNotification, AsyncThrowingStream<SubscriptionNotification, Swift.Error>) {
         let requestID = UUID()
         let request = method.createRequest(with: requestID)
         guard let payload = request.data else { throw Error.coding(.encode(nil)) }

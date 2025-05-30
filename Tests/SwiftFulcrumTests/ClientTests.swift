@@ -49,9 +49,7 @@ struct ClientTests {
         let method = Method.blockchain(.headers(.subscribe))
         typealias Payload = Response.JSONRPC.Result.Blockchain.Headers.Subscribe
         
-        let (initial, _) =
-        try await client.subscribe(method: method)
-        as (Payload, AsyncThrowingStream<Payload, Swift.Error>)
+        let (_, initial, _) = try await client.subscribe(method: method) as (UUID, Payload, AsyncThrowingStream<Payload, Swift.Error>)
         
         switch initial {
         case .topHeader(let tip):
@@ -99,12 +97,10 @@ struct ClientConcurrencyTests {
         let headersSub = Method.blockchain(.headers(.subscribe))
         typealias Payload = Response.JSONRPC.Result.Blockchain.Headers.Subscribe
         
-        _ = try await client.subscribe(method: headersSub)
-        as (Payload, AsyncThrowingStream<Payload, Swift.Error>)
+        _ = try await client.subscribe(method: headersSub) as (UUID, Payload, AsyncThrowingStream<Payload, Swift.Error>)
         
         await #expect(throws: Fulcrum.Error.self) {
-            _ = try await client.subscribe(method: headersSub)
-            as (Payload, AsyncThrowingStream<Payload, Swift.Error>)
+            _ = try await client.subscribe(method: headersSub) as (UUID, Payload, AsyncThrowingStream<Payload, Swift.Error>)
         }
         
         await client.stop()

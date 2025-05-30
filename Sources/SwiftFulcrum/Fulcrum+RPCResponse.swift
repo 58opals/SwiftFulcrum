@@ -3,6 +3,10 @@
 import Foundation
 
 extension Fulcrum {
+    
+}
+
+extension Fulcrum {
     public enum RPCResponse<Single, Stream> {
         case single(id: UUID,
                     result: Single)
