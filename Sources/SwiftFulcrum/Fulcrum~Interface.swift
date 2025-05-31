@@ -6,8 +6,8 @@ extension Fulcrum {
     /// Regular Request
     public func submit<RegularResponseResult: JSONRPCConvertible>(
         method: Method,
-        responseType: RegularResponseResult.Type// = RegularResponseResult.self
-    ) async throws -> (UUID, RegularResponseResult) {
+        responseType: RegularResponseResult.Type = RegularResponseResult.self
+    ) async throws -> RPCResponse<RegularResponseResult, Never> {
         let requestID = UUID()
         let request = method.createRequest(with: requestID)
         guard let payload = request.data else { throw Error.coding(.encode(nil)) }
@@ -20,7 +20,9 @@ extension Fulcrum {
                         
                         switch result {
                         case .success(let payload):
-                            continuation.resume(with: Result(catching: { (requestID, try payload.decode(RegularResponseResult.self)) }))
+                            continuation.resume(with: Result(catching: {
+                                .single(id: requestID, result: try payload.decode(RegularResponseResult.self))
+                            }))
                         case .failure(let error):
                             continuation.resume(throwing: Error.client(.unknown(error)))
                         }
@@ -37,8 +39,8 @@ extension Fulcrum {
     /// Subscription Request
     public func submit<SubscriptionNotification: JSONRPCConvertible>(
         method: Method,
-        notificationType: SubscriptionNotification.Type// = SubscriptionNotification.self
-    ) async throws -> (UUID, SubscriptionNotification, AsyncThrowingStream<SubscriptionNotification, Swift.Error>) {
+        notificationType: SubscriptionNotification.Type = SubscriptionNotification.self
+    ) async throws -> RPCResponse<SubscriptionNotification, SubscriptionNotification> {
         let requestID = UUID()
         let request = method.createRequest(with: requestID)
         guard let payload = request.data else { throw Error.coding(.encode(nil)) }
@@ -65,6 +67,11 @@ extension Fulcrum {
             }
         }
         
+        let terminationHandler: @Sendable () async -> Void = {
+            await self.client.removeSubscriptionResponseHandler(for: subscriptionKey)
+            // TODO: actually send "unsubscribe"
+        }
+        
         let notificationStream = AsyncThrowingStream<SubscriptionNotification, Swift.Error> { continuation in
             Task {
                 do {
@@ -86,13 +93,18 @@ extension Fulcrum {
             }
             
             continuation.onTermination = { @Sendable _ in
-                Task {
-                    await self.client.removeSubscriptionResponseHandler(for: subscriptionKey)
-                    // TODO: actually send "unsubscribe"
-                }
+                Task { await terminationHandler() }
             }
         }
         
-        return (requestID, initialResponse, notificationStream)
+        
+        let cancel: @Sendable () async -> Void = {
+            await terminationHandler()
+        }
+        
+        return .stream(id: requestID,
+                       initialResponse: initialResponse,
+                       updates: notificationStream,
+                       cancel: cancel)
     }
 }

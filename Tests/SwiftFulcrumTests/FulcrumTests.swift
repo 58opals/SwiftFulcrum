@@ -27,49 +27,53 @@ struct FulcrumWalletTests {
     func estimateFee() async throws {
         try await fulcrum.start()
         
-        let (id, estimateFee) = try await fulcrum.submit(
-            method: .blockchain(.estimateFee(numberOfBlocks: 6)),
-            responseType: Response.Result.Blockchain.EstimateFee.self
-        )
+        let response = try await fulcrum.submit(method: .blockchain(.estimateFee(numberOfBlocks: 6)),
+                                                responseType: Response.Result.Blockchain.EstimateFee.self)
+        
+        guard case .single(let id, let result) = response else { #expect(Bool(false)); return }
         
         print("ID: \(id.description)")
-        print("Estimated fee: \(estimateFee.fee)")
+        print("Estimated fee: \(result.fee)")
         
-        #expect(estimateFee.fee > 0.0)
+        #expect(result.fee > 0.0)
     }
     
     @Test("getBalance(address) delivers sane numbers")
     func addressBalance() async throws {
         try await fulcrum.start()
         
-        let (id, balance) = try await fulcrum.submit(
-            method: .blockchain(.address(.getBalance(address: .sampleAddress, tokenFilter: nil))),
-            responseType: Response.Result.Blockchain.Address.GetBalance.self
-        )
+        let response = try await fulcrum.submit(method: .blockchain(.address(.getBalance(address: .sampleAddress, tokenFilter: nil))),
+                                                responseType: Response.Result.Blockchain.Address.GetBalance.self)
+        
+        guard case .single(let id, let result) = response else { #expect(Bool(false)); return }
         
         print("ID: \(id.description)")
-        print("Balance: \(balance)")
-        #expect(balance.confirmed >= 0)
-        #expect(balance.unconfirmed >= Int64.min)
+        print("Balance: \(result)")
+        #expect(result.confirmed >= 0)
+        #expect(result.unconfirmed >= Int64.min)
     }
     
     @Test("headers.subscribe gives an initial tip and a live stream")
     func headerSubscription() async throws {
         try await fulcrum.start()
         
-        let (_, initial, stream) = try await fulcrum.submit(
-            method: .blockchain(.headers(.subscribe)),
-            notificationType: Response.Result.Blockchain.Headers.Subscribe.self
-        )
+        let response = try await fulcrum.submit(method: .blockchain(.headers(.subscribe)),
+                                                notificationType: Response.Result.Blockchain.Headers.Subscribe.self)
         
+        guard case .stream(let id, let initial, let stream, let cancel) = response else { #expect(Bool(false)); return }
+        
+        print("ID: \(id.description)")
         print("Initial tip: \(initial.height), \(initial.hex)")
         #expect(initial.height > 0)
         
         var iterator = stream.makeAsyncIterator()
+        print("waiting for the next block...")
         if let next = try await iterator.next() {
-            print(next)
+            print("Finally!: \(next)")
             #expect(true)
         }
+        
+        await cancel()
     }
     
     @Test("broadcasting garbage tx yields an RPC error")

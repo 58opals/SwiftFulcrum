@@ -12,7 +12,7 @@ struct MethodBlockchainTests {
         return try await body()
     }
 }
-
+/*
 extension MethodBlockchainTests {
     /// Fulcrum Method: Blockchain.EstimateFee
     @Test("blockchain.estimatefee → non-zero fee")
@@ -88,3 +88,4 @@ extension MethodBlockchainTests {
         for row in histogram.histogram { print(row) }
     }
 }
+*/

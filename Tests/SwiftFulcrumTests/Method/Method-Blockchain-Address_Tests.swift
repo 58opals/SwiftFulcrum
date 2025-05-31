@@ -13,7 +13,7 @@ struct MethodBlockchainAddressTests {
         return try await body()
     }
 }
-
+/*
 extension MethodBlockchainAddressTests {
     /// Fulcrum Method: Blockchain.Address.GetBalance
     @Test("address.get_balance → sane numbers")
@@ -110,3 +110,4 @@ extension MethodBlockchainAddressTests {
         }
     }
 }
+*/

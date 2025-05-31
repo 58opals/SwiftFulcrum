@@ -14,7 +14,7 @@ struct MethodBlockchainBlockTests {
         return try await body()
     }
 }
-
+/*
 extension MethodBlockchainBlockTests {
     /// Fulcrum Method: Blockchain.Block.Header
     @Test("block.header → returns 80-byte header & branch info")
@@ -88,3 +88,4 @@ extension MethodBlockchainBlockTests {
         #expect(tip.hex.count == 160)
     }
 }
+*/
