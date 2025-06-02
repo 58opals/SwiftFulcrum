@@ -9,12 +9,12 @@ extension Data {
         switch try rpcContainer.getResponseType() {
         case .regular(let regular):
             return try Result(fromRPC: regular.result)
+        case .subscription(let subscriptionResponse):
+            return try Result(fromRPC: subscriptionResponse.result)
         case .error(let error):
             throw Fulcrum.Error.rpc(.init(id: error.id, code: error.error.code, message: error.error.message))
         case .empty(let uuid):
             throw Fulcrum.Error.client(.emptyResponse(uuid))
-        case .subscription(let subscriptionResponse):
-            throw Fulcrum.Error.client(.protocolMismatch("Method Path: \(subscriptionResponse.methodPath)"))
         }
     }
     
@@ -25,12 +25,12 @@ extension Data {
         switch resultType {
         case .regular(let regular):
             return regular.result
+        case .subscription(let subscriptionResponse):
+            return subscriptionResponse.result
         case .error(let error):
             throw Fulcrum.Error.rpc(.init(id: error.id, code: error.error.code, message: error.error.message))
         case .empty(let uuid):
             throw Fulcrum.Error.client(.emptyResponse(uuid))
-        case .subscription(let subscriptionResponse):
-            throw Fulcrum.Error.client(.protocolMismatch("Method Path: \(subscriptionResponse.methodPath)"))
         }
     }
 }
