@@ -20,7 +20,13 @@ extension Client {
             }
         } catch {
             print("Receive task ended: \(error.localizedDescription)")
-            await failAllPendingRequests(with: Fulcrum.Error.transport(.connectionClosed(webSocket.closeInformation.code, webSocket.closeInformation.reason)))
+            
+            let closedError = await Fulcrum.Error.transport(
+                .connectionClosed(webSocket.closeInformation.code, webSocket.closeInformation.reason)
+            )
+            
+            self.failAllPendingRequests(with: closedError)
+            await self.router.failAll(with: closedError)
         }
     }
 }

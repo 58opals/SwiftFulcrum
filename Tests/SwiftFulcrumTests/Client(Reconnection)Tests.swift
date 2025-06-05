@@ -85,7 +85,7 @@ struct ClientReconnectionTests {
         await client.webSocket.disconnect(with: "forced")
         #expect(!(await client.webSocket.isConnected))
         
-        try await client.webSocket.reconnector.attemptReconnection(for: client.webSocket)
+        try await client.reconnect()
         #expect(await client.webSocket.isConnected)
         
         let fee: Double = try await client.call(method: .blockchain(.relayFee))

@@ -11,6 +11,8 @@ actor Client {
     var regularResponseHandlers: [RegularResponseIdentifier: RegularResponseHandler]
     var subscriptionResponseHandlers: [SubscriptionResponseIdentifier: SubscriptionResponseHandler]
     
+    private var receiveTask: Task<Void, Never>?
+    
     init(webSocket: WebSocket) {
         self.id = .init()
         self.webSocket = webSocket
@@ -22,11 +24,30 @@ actor Client {
     
     func start() async throws {
         try await self.webSocket.connect()
-        Task { await self.startReceiving() }
+        self.receiveTask = Task { await self.startReceiving() }
     }
     
     func stop() async {
-        await self.failAllPendingRequests(with: Fulcrum.Error.transport(.connectionClosed(webSocket.closeInformation.code, webSocket.closeInformation.reason)))
+        let closedError = await Fulcrum.Error.transport(
+            .connectionClosed(webSocket.closeInformation.code, webSocket.closeInformation.reason)
+        )
+        
+        self.failAllPendingRequests(with: closedError)
+        await self.router.failAll(with: closedError)
+        
+        receiveTask?.cancel()
+        await receiveTask?.value
+        receiveTask = nil
+        
         await webSocket.disconnect(with: "Client.stop() called")
+    }
+    
+    func reconnect(with url: URL? = nil) async throws {
+        try await webSocket.reconnect(with: url)
+        
+        receiveTask?.cancel()
+        await receiveTask?.value
+        
+        receiveTask = Task { await self.startReceiving() }
     }
 }

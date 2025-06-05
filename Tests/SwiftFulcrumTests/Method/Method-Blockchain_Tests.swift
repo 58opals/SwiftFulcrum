@@ -12,16 +12,17 @@ struct MethodBlockchainTests {
         return try await body()
     }
 }
-/*
+
 extension MethodBlockchainTests {
     /// Fulcrum Method: Blockchain.EstimateFee
     @Test("blockchain.estimatefee → non-zero fee")
     func estimateFee() async throws {
         let fee: Double = try await withRunningNode {
-            let (_, fee) = try await fulcrum.submit(
-                method: .blockchain(.estimateFee(numberOfBlocks: 6)),
-                responseType: Response.Result.Blockchain.EstimateFee.self)
-            return fee.fee
+            let response = try await fulcrum.submit(method: .blockchain(.estimateFee(numberOfBlocks: 6)),
+                                                    responseType: Response.Result.Blockchain.EstimateFee.self)
+            guard case .single(let id, let result) = response else { #expect(Bool(false)) }
+            
+            return result.fee
         }
         
         print("Blockchain.EstimateFee: \(fee)")
@@ -88,4 +89,3 @@ extension MethodBlockchainTests {
         for row in histogram.histogram { print(row) }
     }
 }
-*/

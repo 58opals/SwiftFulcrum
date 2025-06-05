@@ -11,14 +11,15 @@ extension Client {
             Task {
                 do {
                     try await router.addUnary(id: id, continuation: continuation)
-                    do {
-                        try await send(request: request)
-                    } catch {
-                        await router.cancel(identifier: .uuid(id), error: error)
-                        throw error
-                    }
                 } catch {
                     continuation.resume(throwing: error)
+                    return
+                }
+                
+                do {
+                    try await send(request: request)
+                } catch {
+                    await router.cancel(identifier: .uuid(id), error: error)
                 }
             }
         }.decode(Result.self)
@@ -49,15 +50,16 @@ extension Client {
             Task {
                 do {
                     try await router.addUnary(id: id, continuation: continuation)
-                    do {
-                        try await send(request: request)
-                    } catch {
-                        await router.cancel(identifier: .uuid(id), error: error)
-                        await router.cancel(identifier: .string(subscriptionKey.string), error: error)
-                        throw error
-                    }
                 } catch {
                     continuation.resume(throwing: error)
+                    return
+                }
+                
+                do {
+                    try await send(request: request)
+                } catch {
+                    await router.cancel(identifier: .uuid(id), error: error)
+                    await router.cancel(identifier: .string(subscriptionKey.string), error: error)
                 }
             }
         }.decode(Result.self)
