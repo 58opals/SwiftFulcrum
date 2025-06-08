@@ -13,15 +13,17 @@ struct MethodBlockchainAddressTests {
         return try await body()
     }
 }
-/*
+
 extension MethodBlockchainAddressTests {
     /// Fulcrum Method: Blockchain.Address.GetBalance
     @Test("address.get_balance → sane numbers")
     func getBalance() async throws {
         let balance = try await withRunningNode {
-            let (_, result) = try await fulcrum.submit(
-                method: .blockchain(.address(.getBalance(address: address, tokenFilter: nil))),
-                responseType: Response.Result.Blockchain.Address.GetBalance.self)
+            let response = try await fulcrum.submit(method: .blockchain(.address(.getBalance(address: address, tokenFilter: nil))),
+                                                    responseType: Response.Result.Blockchain.Address.GetBalance.self)
+            guard case .single(let id, let result) = response else { #expect(Bool(false)); throw Fulcrum.Error.coding(.decode(nil)) }
+            print("Request ID: \(id.uuidString)")
+            
             return result
         }
         
@@ -33,30 +35,34 @@ extension MethodBlockchainAddressTests {
     /// Fulcrum Method: Blockchain.Address.GetFirstUse
     @Test("address.get_first_use → returns a block-height")
     func getFirstUse() async throws {
-        let first = try await withRunningNode {
-            let (_, result) = try await fulcrum.submit(
-                method: .blockchain(.address(.getFirstUse(address: address))),
-                responseType: Response.Result.Blockchain.Address.GetFirstUse.self)
+        let firstUse = try await withRunningNode {
+            let response = try await fulcrum.submit(method: .blockchain(.address(.getFirstUse(address: address))),
+                                                    responseType: Response.Result.Blockchain.Address.GetFirstUse.self)
+            guard case .single(let id, let result) = response else { #expect(Bool(false)); throw Fulcrum.Error.coding(.decode(nil)) }
+            print("Request ID: \(id.uuidString)")
+            
             return result
         }
         
-        print("first-use height=\(first.height)  tx=\(first.transactionHash)")
-        #expect(first.height > 0)
-        #expect(first.transactionHash.count == 64)
-        #expect(first.blockHash.count == 64)
+        print("first-use height=\(firstUse.height)  tx=\(firstUse.transactionHash)")
+        #expect(firstUse.height > 0)
+        #expect(firstUse.transactionHash.count == 64)
+        #expect(firstUse.blockHash.count == 64)
     }
     
     /// Fulcrum Method: Blockchain.Address.GetHistory
     @Test("address.get_history → decodes all rows")
     func getHistory() async throws {
         let history = try await withRunningNode {
-            let (_, items) = try await fulcrum.submit(
-                method: .blockchain(.address(.getHistory(address: address,
-                                                         fromHeight: nil,
-                                                         toHeight: nil,
-                                                         includeUnconfirmed: true))),
-                responseType: Response.Result.Blockchain.Address.GetHistory.self)
-            return items
+            let response = try await fulcrum.submit(method: .blockchain(.address(.getHistory(address: address,
+                                                                                             fromHeight: nil,
+                                                                                             toHeight: nil,
+                                                                                             includeUnconfirmed: true))),
+                                                    responseType: Response.Result.Blockchain.Address.GetHistory.self)
+            guard case .single(let id, let result) = response else { #expect(Bool(false)); throw Fulcrum.Error.coding(.decode(nil)) }
+            print("Request ID: \(id.uuidString)")
+            
+            return result
         }
         
         print("history count \(history.transactions.count)")
@@ -68,10 +74,12 @@ extension MethodBlockchainAddressTests {
     @Test("address.get_mempool → decodes (may be empty)")
     func getMempool() async throws {
         let mempool = try await withRunningNode {
-            let (_, items) = try await fulcrum.submit(
-                method: .blockchain(.address(.getMempool(address: address))),
-                responseType: Response.Result.Blockchain.Address.GetMempool.self)
-            return items
+            let response = try await fulcrum.submit(method: .blockchain(.address(.getMempool(address: address))),
+                                                    responseType: Response.Result.Blockchain.Address.GetMempool.self)
+            guard case .single(let id, let result) = response else { #expect(Bool(false)); throw Fulcrum.Error.coding(.decode(nil)) }
+            print("Request ID: \(id.uuidString)")
+            
+            return result
         }
         
         print("mempool txs \(mempool.transactions.count)")
@@ -82,9 +90,11 @@ extension MethodBlockchainAddressTests {
     @Test("address.get_scripthash → 64-char hex")
     func getScriptHash() async throws {
         let hash = try await withRunningNode {
-            let (_, result) = try await fulcrum.submit(
-                method: .blockchain(.address(.getScriptHash(address: address))),
-                responseType: Response.Result.Blockchain.Address.GetScriptHash.self)
+            let response = try await fulcrum.submit(method: .blockchain(.address(.getScriptHash(address: address))),
+                                                    responseType: Response.Result.Blockchain.Address.GetScriptHash.self)
+            guard case .single(let id, let result) = response else { #expect(Bool(false)); throw Fulcrum.Error.coding(.decode(nil)) }
+            print("Request ID: \(id.uuidString)")
+            
             return result
         }
         
@@ -96,10 +106,12 @@ extension MethodBlockchainAddressTests {
     @Test("address.listunspent → plausible UTXOs")
     func listUnspent() async throws {
         let utxos = try await withRunningNode {
-            let (_, items) = try await fulcrum.submit(
-                method: .blockchain(.address(.listUnspent(address: address, tokenFilter: .include))),
-                responseType: Response.Result.Blockchain.Address.ListUnspent.self)
-            return items
+            let response = try await fulcrum.submit(method: .blockchain(.address(.listUnspent(address: address, tokenFilter: .include))),
+                                                    responseType: Response.Result.Blockchain.Address.ListUnspent.self)
+            guard case .single(let id, let result) = response else { #expect(Bool(false)); throw Fulcrum.Error.coding(.decode(nil)) }
+            print("Request ID: \(id.uuidString)")
+            
+            return result
         }
         
         print("UTXO count \(utxos.items.count)")
@@ -110,4 +122,3 @@ extension MethodBlockchainAddressTests {
         }
     }
 }
-*/

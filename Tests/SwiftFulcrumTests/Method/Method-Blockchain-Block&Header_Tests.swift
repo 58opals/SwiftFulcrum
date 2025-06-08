@@ -14,22 +14,22 @@ struct MethodBlockchainBlockTests {
         return try await body()
     }
 }
-/*
+
 extension MethodBlockchainBlockTests {
     /// Fulcrum Method: Blockchain.Block.Header
     @Test("block.header → returns 80-byte header & branch info")
     func blockHeader() async throws {
         let header = try await withRunningNode {
-            let (_, result) = try await fulcrum.submit(
-                method: .blockchain(.block(.header(height: height,
-                                                   checkpointHeight: 1))),
-                responseType: Response.Result.Blockchain.Block.Header.self)
+            let response = try await fulcrum.submit(method: .blockchain(.block(.header(height: height, checkpointHeight: 1))),
+                                                    responseType: Response.Result.Blockchain.Block.Header.self)
+            guard case .single(let id, let result) = response else { #expect(Bool(false)); throw Fulcrum.Error.coding(.decode(nil)) }
+            print("Request ID: \(id.uuidString)")
+            
             return result
         }
         
         print(header)
         #expect(header.hex.count == 160)
-        
         
         if let proof = header.proof {
             #expect(proof.root.count == 64)
@@ -44,11 +44,13 @@ extension MethodBlockchainBlockTests {
     func blockHeaders() async throws {
         let range = (start: height, count: UInt(10))
         let headers = try await withRunningNode {
-            let (_, result) = try await fulcrum.submit(
-                method: .blockchain(.block(.headers(startHeight: range.start,
-                                                    count: range.count,
-                                                    checkpointHeight: 0))),
-                responseType: Response.Result.Blockchain.Block.Headers.self)
+            let response = try await fulcrum.submit(method: .blockchain(.block(.headers(startHeight: range.start,
+                                                                                        count: range.count,
+                                                                                        checkpointHeight: 0))),
+                                                    responseType: Response.Result.Blockchain.Block.Headers.self)
+            guard case .single(let id, let result) = response else { #expect(Bool(false)); throw Fulcrum.Error.coding(.decode(nil)) }
+            print("Request ID: \(id.uuidString)")
+            
             return result
         }
         
@@ -62,9 +64,11 @@ extension MethodBlockchainBlockTests {
     @Test("header.get → specific block by hash")
     func headerGet() async throws {
         let header = try await withRunningNode {
-            let (_, result) = try await fulcrum.submit(
-                method: .blockchain(.header(.get(blockHash: knownBlockHash))),
-                responseType: Response.Result.Blockchain.Header.Get.self)
+            let response = try await fulcrum.submit(method: .blockchain(.header(.get(blockHash: knownBlockHash))),
+                                                    responseType: Response.Result.Blockchain.Header.Get.self)
+            guard case .single(let id, let result) = response else { #expect(Bool(false)); throw Fulcrum.Error.coding(.decode(nil)) }
+            print("Request ID: \(id.uuidString)")
+            
             return result
         }
         
@@ -77,9 +81,11 @@ extension MethodBlockchainBlockTests {
     @Test("headers.get_tip → returns current tip information")
     func headersGetTip() async throws {
         let tip = try await withRunningNode {
-            let (_, result) = try await fulcrum.submit(
-                method: .blockchain(.headers(.getTip)),
-                responseType: Response.Result.Blockchain.Headers.GetTip.self)
+            let response = try await fulcrum.submit(method: .blockchain(.headers(.getTip)),
+                                                    responseType: Response.Result.Blockchain.Headers.GetTip.self)
+            guard case .single(let id, let result) = response else { #expect(Bool(false)); throw Fulcrum.Error.coding(.decode(nil)) }
+            print("Request ID: \(id.uuidString)")
+            
             return result
         }
         
@@ -88,4 +94,3 @@ extension MethodBlockchainBlockTests {
         #expect(tip.hex.count == 160)
     }
 }
-*/
