@@ -8,16 +8,6 @@ SwiftFulcrum is a **pure‑Swift**, type‑safe framework for interacting with F
 
 ## Features
 
-| Area | What you get |
-|------|--------------|
-| **Unified response enum** | `RPCResponse<Single, Stream>` cleanly models one‑shot *and* subscription calls without separate APIs. |
-| **Type‑safe RPC layer** | Exhaustive `Method` enum generates JSON‑RPC at compile‑time. |
-| **Structured concurrency** | All shared state lives in actors (`Fulcrum`, `Client`, `WebSocket`) for race‑free access. |
-| **Real‑time notifications** | Subscribe to address/tx/header/DS‑Proof updates via `AsyncThrowingStream`. |
-| **Robust error model** | Every issue surfaces as `Fulcrum.Error`; pending requests are finished with `.connectionClosed` when the socket closes. |
-| **Manual + automatic reconnect** | Automatic exponential back‑off *and* a new `Client.reconnect()` helper for instant server switching. |
-| **Swift PM package** | Runs on iOS, macOS, watchOS, tvOS and visionOS. |
-
 | Area                        | What you get                                                                                                            |
 | --------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | **Type‑safe RPC layer**     | Exhaustive `Method` enum generates JSON‑RPC at compile‑time.                                                            |
