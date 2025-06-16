@@ -2,46 +2,107 @@ import Testing
 import Foundation
 @testable import SwiftFulcrum
 
-@Suite("Client Tests")
+private extension URL {
+    /// Any random main-net Fulcrum endpoint from bundled `servers.json`.
+    static func randomFulcrum() throws -> URL {
+        guard let url = try WebSocket.Server.getServerList().randomElement() else {
+            throw Fulcrum.Error.transport(.setupFailed)
+        }
+        return url
+    }
+}
+
+@Suite("Client – Lifecycle, RPC & Subscriptions")
 struct ClientTests {
     let client: Client
-
-    // Initializes the client with a valid WebSocket connection.
-    init() async throws {
-        let url = try WebSocket.Server.getServerList().randomElement()!
-        let webSocket = WebSocket(url: url)
-        self.client = Client(webSocket: webSocket)
-        try await self.client.start()
+    init() throws {
+        let socket = WebSocket(url: try .randomFulcrum())
+        self.client = Client(webSocket: socket)
     }
-
-    @Test func testClientConnection() async throws {
-        // Verify that the client establishes an active connection.
-        let isConnected = await client.webSocket.isConnected
-        #expect(isConnected, "Client should establish a WebSocket connection.")
+    
+    @Test("start → stop happy-path")
+    func startAndStop() async throws {
+        try await client.start()
+        #expect(await client.webSocket.isConnected)
+        
+        await client.stop()
+        #expect(!(await client.webSocket.isConnected))
     }
-
-    @Test func testReconnection() async throws {
-        // Set up a faulty WebSocket using an invalid URL.
-        let faultyURL = URL(string: "wss://invalid-url")!
-        // Use a valid URL for a successful reconnection later.
-        let validURL = URL(string:"wss://electroncash.de:60002")!
+    
+    @Test("regular RPC – relayFee")
+    func relayFee() async throws {
+        try await client.start()
         
-        let faultyWebSocket = WebSocket(url: faultyURL)
-        let faultyClient = Client(webSocket: faultyWebSocket)
+        let fee: Double = try await client.call(
+            method: .blockchain(.relayFee)
+        )
+        print("Relay fee: \(fee)")
+        #expect(fee > 0)
         
-        // Expect a failure when attempting to connect using an invalid URL.
-        await #expect(throws: WebSocket.Error.self, "Connecting to an invalid URL should throw an error.") {
-            try await faultyClient.webSocket.connect()
+        await client.stop()
+    }
+    
+    @Test("blockchain.headers.subscribe delivers an initial tip")
+    func headerSubscription() async throws {
+        try await client.start()
+        
+        let method = Method.blockchain(.headers(.subscribe))
+        typealias Payload = Response.JSONRPC.Result.Blockchain.Headers.Subscribe
+        
+        let (_, initial, _) = try await client.subscribe(method: method) as (UUID, Payload, AsyncThrowingStream<Payload, Swift.Error>)
+        
+        switch initial {
+        case .topHeader(let tip):
+            print("Initial tip: \(tip)")
+            #expect(tip.height > 0)
+        case .newHeader(let batch):
+            print("Initial batch: \(batch)")
+            #expect(!batch.isEmpty)
         }
         
-        // Expect a failure when attempting to reconnect from a failed connection.
-        await #expect(throws: WebSocket.Error.self, "Reconnecting on a failed connection should throw an error.") {
-            try await faultyClient.webSocket.reconnect()
+        await client.stop()
+    }
+}
+
+@Suite("Client – Concurrency & Robustness")
+struct ClientConcurrencyTests {
+    let client: Client
+    init() throws {
+        let socket = WebSocket(url: try .randomFulcrum())
+        self.client = Client(webSocket: socket)
+    }
+    
+    @Test("three concurrent RPCs resolve independently")
+    func concurrentRPCs() async throws {
+        try await client.start()
+        
+        typealias Tip = Response.JSONRPC.Result.Blockchain.Headers.GetTip
+        
+        async let relayFee: Double = client.call(method: .blockchain(.relayFee))
+        async let est1Blk: Double  = client.call(method: .blockchain(.estimateFee(numberOfBlocks: 1)))
+        async let tip:    Tip      = client.call(method: .blockchain(.headers(.getTip)))
+        
+        let (fee, estimate, best) = try await (relayFee, est1Blk, tip)
+        
+        #expect(fee      > 0)
+        #expect(estimate > 0)
+        #expect(best.height > 0)
+        
+        await client.stop()
+    }
+    
+    @Test("second subscription to same stream throws duplicateHandler")
+    func duplicateSubscriptionIsRejected() async throws {
+        try await client.start()
+        let headersSub = Method.blockchain(.headers(.subscribe))
+        typealias Payload = Response.JSONRPC.Result.Blockchain.Headers.Subscribe
+        
+        _ = try await client.subscribe(method: headersSub) as (UUID, Payload, AsyncThrowingStream<Payload, Swift.Error>)
+        
+        await #expect(throws: Fulcrum.Error.self) {
+            _ = try await client.subscribe(method: headersSub) as (UUID, Payload, AsyncThrowingStream<Payload, Swift.Error>)
         }
         
-        // Reconnect with a valid URL, which should succeed and reset the reconnection logic.
-        try await faultyClient.webSocket.reconnect(with: validURL)
-        let isConnected = await faultyClient.webSocket.isConnected
-        #expect(isConnected, "After reconnecting with a valid URL, the WebSocket should be connected.")
+        await client.stop()
     }
 }

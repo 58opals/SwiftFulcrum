@@ -1,117 +1,142 @@
+![Swift 6.0](https://img.shields.io/badge/swift-6.0-orange)
+![SPM](https://img.shields.io/badge/Package%20Manager-SPM-informational)
+![Platforms](https://img.shields.io/badge/platforms-iOS%20|%20macOS%20|%20watchOS%20|%20tvOS%20|%20visionOS-blue)
+
 # SwiftFulcrum
 
-SwiftFulcrum is a modern Swift framework that enables efficient and thread-safe communication with Fulcrum servers, specifically designed for integrating Bitcoin Cash capabilities into Swift-based applications. It leverages the latest Swift concurrency features, providing a robust and type-safe API.
+SwiftFulcrum is a **pure‑Swift**, type‑safe framework for interacting with Fulcrum servers on the Bitcoin Cash network. Built on modern Swift Concurrency—actors, `async/await`, `AsyncThrowingStream`—it streams live blockchain data with almost zero boiler‑plate.
 
 ## Features
 
-- **Type-Safe API**: Ensures reliable interactions through Swift's powerful type safety.
-- **Real-Time Notifications**: Provides seamless subscriptions to blockchain changes, mempool activities, transaction updates, and DS proofs using WebSockets.
-- **Swift Actors for Thread Safety**: Utilizes Swift actors (`Fulcrum`, `Client`, `WebSocket`) for safe concurrent operations without data races.
-- **Async/Await Integration**: Makes asynchronous operations intuitive, eliminating the complexity of callback-based APIs.
-- **Error Handling**: Provides comprehensive error types for robust handling of various response scenarios.
-- **Extensible Architecture**: Easily customizable and extendable for specific application requirements.
+| Area | What you get |
+|------|--------------|
+| **Unified response enum** | `RPCResponse<Single, Stream>` cleanly models one‑shot *and* subscription calls without separate APIs. |
+| **Type‑safe RPC layer** | Exhaustive `Method` enum generates JSON‑RPC at compile‑time. |
+| **Structured concurrency** | All shared state lives in actors (`Fulcrum`, `Client`, `WebSocket`) for race‑free access. |
+| **Real‑time notifications** | Subscribe to address/tx/header/DS‑Proof updates via `AsyncThrowingStream`. |
+| **Robust error model** | Every issue surfaces as `Fulcrum.Error`; pending requests are finished with `.connectionClosed` when the socket closes. |
+| **Manual + automatic reconnect** | Automatic exponential back‑off *and* a new `Client.reconnect()` helper for instant server switching. |
+| **Swift PM package** | Runs on iOS, macOS, watchOS, tvOS and visionOS. |
 
-## Getting Started
+| Area                        | What you get                                                                                                            |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| **Type‑safe RPC layer**     | Exhaustive `Method` enum generates JSON‑RPC at compile‑time.                                                            |
+| **Structured concurrency**  | All shared state lives in actors (`Fulcrum`, `Client`, `WebSocket`) for race‑free access.                               |
+| **Real‑time notifications** | Subscribe to address, transaction, header, and DS‑Proof events via `AsyncThrowingStream`.                               |
+| **Robust error model**      | Every issue surfaces as `Fulcrum.Error`; pending requests are finished with `.connectionClosed` when the socket closes. |
+| **Automatic reconnection**  | Automatic exponential back‑off *and* a new `Client.reconnect()` helper for instant server switching.                    |
+| **Swift PM package**        | Runs on iOS, macOS, watchOS, tvOS and visionOS.                                                                         |
 
-### Installation
+---
 
-#### Swift Package Manager
+## 🚀 Getting Started
 
-Add SwiftFulcrum as a dependency in your `Package.swift`:
+### Installation (Swift Package Manager)
 
 ```swift
+// Package.swift
 dependencies: [
-    .package(url: "https://github.com/58opals/SwiftFulcrum.git", .upToNextMajor(from: "0.1.0"))
+    .package(
+        url: "https://github.com/58opals/SwiftFulcrum.git",
+        .upToNextMajor(from: "0.2.0")
+    )
 ]
 ```
 
-### Usage
+### Basic Usage
 
-#### Importing SwiftFulcrum
+#### Connect
 
 ```swift
 import SwiftFulcrum
-```
 
-#### Initializing the Client
+let fulcrum = try Fulcrum(url: "wss://fulcrum.example.com:50004")
 
-```swift
-let fulcrum = try Fulcrum(url: "wss://example-fulcrum-server.com:50004")
-```
-
-#### Connecting to Fulcrum
-
-Ensure the WebSocket connection is active before sending requests:
-
-```swift
 Task {
     do {
         try await fulcrum.start()
         print("Connected to Fulcrum server.")
+        defer { await fulcrum.stop() }
     } catch {
         print("Connection error: \(error.localizedDescription)")
     }
 }
 ```
 
-#### Regular Requests
-
-Make a standard request to estimate the Bitcoin Cash transaction fee:
+#### One‑shot Request
 
 ```swift
+let response = try await fulcrum.submit(
+    method: .blockchain(.estimateFee(numberOfBlocks: 6)),
+    responseType: Response.Result.Blockchain.EstimateFee.self
+)
+
+if let estimate = response.extractRegularResponse() {
+    print("Current fee ≈ \(estimate.fee) BCH")
+}
+```
+
+#### Streaming Subscription
+
+```swift
+let address = "qrsrz5mzve6kyr6ne6lgsvlgxvs3hqm6huxhd8gqwj"
+
+let stream = try await fulcrum.submit(
+    method: .blockchain(.address(.subscribe(address: address))),
+    notificationType: Response.Result.Blockchain.Address.Subscribe.self
+)
+
+guard case .stream(_, let initial, let updates, let cancel) = stream else { return }
+
+print("Initial status: \(initial)")
+
 Task {
-    do {
-        let (requestID, feeEstimate): (UUID, Response.JSONRPC.Result.Blockchain.EstimateFee) = try await fulcrum.submit(
-            method: .blockchain(.estimateFee(numberOfBlocks: 6)),
-            responseType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.EstimateFee>.self
-        )
-        print("Fee estimate for request \(requestID): \(feeEstimate) BCH")
-    } catch {
-        print("Request failed: \(error.localizedDescription)")
+    for try await note in updates {
+        print("Update: \(note)")
+    }
+}
+
+// …later
+await cancel()   // stop the server‑side subscription
+```
+
+---
+
+## 🧵 Concurrency Design
+
+```text
+┌── Your App
+│
+│ await fulcrum.submit(…)
+│ ← RPCResponse
+├─ Fulcrum   (actor) – public API, validation
+├─ Client    (actor) – routing, reconnect helper
+└─ WebSocket (actor) – URLSessionWebSocketTask + back‑off loop
+```
+
+All mutable state is actor‑isolated: **no locks, no data races.**
+
+---
+
+## ⚠️ Error Handling
+
+```swift
+do {
+    let result = try await fulcrum.submit(…)
+} catch let error as Fulcrum.Error {
+    switch error {
+    case .transport(.connectionClosed(let code, let reason)):
+        print("Socket closed: \(code) – \(reason ?? "none")")
+    case .rpc(let server):
+        print("Server error \(server.code): \(server.message)")
+    case .coding(let detail), .client(let detail):
+        print("Library error: \(detail)")
     }
 }
 ```
 
-#### Subscription Requests
+Every RPC either returns a value, throws an encode/ server error, or returns `.connectionClosed`—**no silent time‑outs.**
 
-Receive real-time blockchain updates:
+---
 
-```swift
-Task {
-    let address = "qrsrz5mzve6kyr6ne6lgsvlgxvs3hqm6huxhd8gqwj"
-    do {
-        let (requestID, initialResponse, notifications): (UUID, Response.JSONRPC.Result.Blockchain.Address.SubscribeNotification?, AsyncStream<Response.JSONRPC.Result.Blockchain.Address.SubscribeNotification?>) = try await fulcrum.submit(
-            method: .blockchain(.address(.subscribe(address: address))),
-            notificationType: Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Address.SubscribeNotification>.self
-        )
-        
-        if let initialResponse {
-            print("Initial response for subscription \(requestID): \(String(describing: initialResponse))")
-        }
-
-        for await notification in notifications {
-            if let notification {
-                print("Notification received for request \(requestID): \(notification)")
-            }
-        }
-    } catch {
-        print("Subscription error: \(error.localizedDescription)")
-    }
-}
-```
-
-## Swift Actors and Concurrency
-
-SwiftFulcrum utilizes Swift’s `actor` model extensively to handle concurrency:
-
-- **Client Actor**: Manages WebSocket communication, message processing, and response handling securely.
-- **Automatic Reconnection**: The internal reconnection logic ensures reliable and resilient WebSocket communication.
-
-### Learn More
-
-Refer to [Apple’s official documentation](https://developer.apple.com/documentation/swift/concurrency) for additional information on Swift concurrency.
-
-## Acknowledgments
-
-- Thanks to the [Fulcrum Protocol](https://electrum-cash-protocol.readthedocs.io/) team for providing detailed protocol specifications.
-
+© 2025 Opal Wallet • 58 Opals

@@ -1,122 +1,110 @@
+// Fulcrum~Interface.swift
+
 import Foundation
 
 extension Fulcrum {
-    public func submit<JSONRPCResult: Sendable>(
+    /// Regular Request
+    public func submit<RegularResponseResult: JSONRPCConvertible>(
         method: Method,
-        responseType: Response.JSONRPC.Generic<JSONRPCResult>.Type
-    ) async throws -> (UUID, JSONRPCResult) {
-        let localClient = self.client
-        let identifier = try await localClient.sendRequest(from: method)
-        let requestID = identifier.uuid
+        responseType: RegularResponseResult.Type = RegularResponseResult.self
+    ) async throws -> RPCResponse<RegularResponseResult, Never> {
+        let requestID = UUID()
+        let request = method.createRequest(with: requestID)
+        guard let payload = request.data else { throw Error.coding(.encode(nil)) }
         
-        let result: JSONRPCResult = try await withCheckedThrowingContinuation { continuation in
+        return try await withCheckedThrowingContinuation { continuation in
             Task {
-                await localClient.removeRegularResponseHandler(for: requestID)
-                await localClient.addHandler(for: requestID) { receivedData in
-                    //print(String(data: receivedData, encoding: .utf8)!)
-                    
-                    do {
-                        let response = try JSONDecoder().decode(Response.JSONRPC.Generic<JSONRPCResult>.self, from: receivedData)
-                        let responseType = try response.getResponseType()
+                do {
+                    try await self.client.insertRegularHandler(for: requestID) { @Sendable result in
+                        defer { Task { await self.client.removeRegularResponseHandler(for: requestID) } }
                         
-                        switch responseType {
-                        case .empty(let uuid):
-                            guard requestID == uuid else {
-                                continuation.resume(throwing: Error.resultNotFound(description: "Response id \(uuid) is not matched with request id \(requestID)."))
-                                return
-                            }
-                            continuation.resume(throwing: Error.resultNotFound(description: "The response was empty for request id: \(uuid)"))
-                            
-                        case .regular(let regular):
-                            continuation.resume(returning: regular.result)
-                            
-                        case .subscription(_):
-                            continuation.resume(throwing: Error.resultTypeMismatch(description: "Expected a regular response but received a subscription response for request id: \(requestID)"))
-                            
-                        case .error(let jsonrpcError):
-                            continuation.resume(throwing: Error.serverError(code: jsonrpcError.error.code, message: jsonrpcError.error.message))
+                        switch result {
+                        case .success(let payload):
+                            continuation.resume(with: Result(catching: {
+                                .single(id: requestID, result: try payload.decode(RegularResponseResult.self))
+                            }))
+                        case .failure(let error):
+                            continuation.resume(throwing: Error.client(.unknown(error)))
                         }
-                    } catch {
-                        continuation.resume(throwing: Error.decoding(underlyingError: error))
                     }
+                    try await self.client.send(data: payload)
+                } catch {
+                    await self.client.removeRegularResponseHandler(for: requestID)
+                    continuation.resume(throwing: error)
                 }
             }
         }
-        
-        return (requestID, result)
     }
     
-    public func submit<JSONRPCNotification: Decodable>(
+    /// Subscription Request
+    public func submit<SubscriptionNotification: JSONRPCConvertible>(
         method: Method,
-        notificationType: Response.JSONRPC.Generic<JSONRPCNotification>.Type
-    ) async throws -> (UUID, JSONRPCNotification?, AsyncStream<JSONRPCNotification?>) {
-        let localClient = self.client
-        let identifier = try await localClient.sendRequest(from: method)
-        let requestID = identifier.uuid
-        let requestMethod = identifier.string
+        notificationType: SubscriptionNotification.Type = SubscriptionNotification.self
+    ) async throws -> RPCResponse<SubscriptionNotification, SubscriptionNotification> {
+        let requestID = UUID()
+        let request = method.createRequest(with: requestID)
+        guard let payload = request.data else { throw Error.coding(.encode(nil)) }
+        let subscriptionKey = await Client.SubscriptionKey(methodPath: request.method,
+                                                           identifier: self.client.getSubscriptionIdentifier(for: method))
         
-        let result: JSONRPCNotification? = try await withCheckedThrowingContinuation { continuation in
+        let initialResponse: SubscriptionNotification = try await withCheckedThrowingContinuation { continuation in
             Task {
-                await localClient.removeRegularResponseHandler(for: requestID)
-                await localClient.addHandler(for: requestID) { receivedData in
-                    //print(String(data: receivedData, encoding: .utf8)!)
-                    
-                    do {
-                        let response = try JSONDecoder().decode(Response.JSONRPC.Generic<JSONRPCNotification>.self, from: receivedData)
-                        let responseType = try response.getResponseType()
+                do {
+                    try await self.client.insertRegularHandler(for: requestID) { @Sendable result in
+                        defer { Task { await self.client.removeRegularResponseHandler(for: requestID) } }
                         
-                        switch responseType {
-                        case .empty(let uuid):
-                            guard requestID == uuid else {
-                                continuation.resume(throwing: Error.resultNotFound(description: "Response id \(uuid) is not matched with request id \(requestID)."))
-                                return
+                        switch result {
+                        case .success(let payload):
+                            continuation.resume(with: Result(catching: { try payload.decode(SubscriptionNotification.self) }))
+                        case .failure(let error):
+                            continuation.resume(throwing: Error.client(.unknown(error)))
+                        }
+                    }
+                    try await self.client.send(data: payload)
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+        
+        let terminationHandler: @Sendable () async -> Void = {
+            await self.client.removeSubscriptionResponseHandler(for: subscriptionKey)
+            // TODO: actually send "unsubscribe"
+        }
+        
+        let notificationStream = AsyncThrowingStream<SubscriptionNotification, Swift.Error> { continuation in
+            Task {
+                do {
+                    try await self.client.insertSubscriptionHandler(for: subscriptionKey) { @Sendable result in
+                        switch result {
+                        case .success(let payload):
+                            do {
+                                continuation.yield(try payload.decode(SubscriptionNotification.self))
+                            } catch {
+                                continuation.finish(throwing: error)
                             }
-                            continuation.resume(returning: nil)
-                        case .regular(let regular):
-                            continuation.resume(returning: regular.result)
-                        case .subscription(_):
-                            continuation.resume(throwing: Error.resultTypeMismatch(description: "Expected a regular response but received a subscription response for request id: \(requestID)"))
-                        case .error(let jsonrpcError):
-                            continuation.resume(throwing: Error.serverError(code: jsonrpcError.error.code, message: jsonrpcError.error.message))
+                        case .failure(let error):
+                            continuation.finish(throwing: Error.client(.unknown(error)))
                         }
-                    } catch {
-                        continuation.resume(throwing: Error.decoding(underlyingError: error))
                     }
+                } catch {
+                    continuation.finish(throwing: error)
                 }
+            }
+            
+            continuation.onTermination = { @Sendable _ in
+                Task { await terminationHandler() }
             }
         }
         
-        let notificationStream = AsyncStream<JSONRPCNotification?> { continuation in
-            Task {
-                await localClient.addHandler(for: requestMethod) { receivedData in
-                    //print(String(data: receivedData, encoding: .utf8)!)
-                    
-                    do {
-                        let response = try JSONDecoder().decode(Response.JSONRPC.Generic<JSONRPCNotification>.self, from: receivedData)
-                        let responseType = try response.getResponseType()
-                        
-                        switch responseType {
-                        case .empty(_):
-                            continuation.yield(nil)
-                            
-                        case .regular(let regular):
-                            continuation.yield(regular.result)
-                            
-                        case .subscription(let subscription):
-                            continuation.yield(subscription.result)
-                            
-                        case .error(let jsonrpcError):
-                            print("Error(\(jsonrpcError.id.uuidString): \(jsonrpcError.error.code) - \(jsonrpcError.error.message)")
-                            continuation.finish()
-                        }
-                    } catch {
-                        print("Decoding error: \(error.localizedDescription)")
-                        continuation.finish()
-                    }
-                }
-            }
+        
+        let cancel: @Sendable () async -> Void = {
+            await terminationHandler()
         }
         
-        return (requestID, result, notificationStream)
+        return .stream(id: requestID,
+                       initialResponse: initialResponse,
+                       updates: notificationStream,
+                       cancel: cancel)
     }
 }
