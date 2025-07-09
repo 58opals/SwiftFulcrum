@@ -23,6 +23,17 @@ struct FulcrumWalletTests {
         #expect(!(await fulcrum.isRunning))
     }
     
+    @Test("calling start twice is ignored")
+    func startTwiceIsNoOp() async throws {
+        try await fulcrum.start()
+        #expect(await fulcrum.isRunning)
+        
+        try await fulcrum.start()
+        #expect(await fulcrum.isRunning)
+        
+        await fulcrum.stop()
+    }
+    
     @Test("estimateFee(6) returns a positive fee rate")
     func estimateFee() async throws {
         try await fulcrum.start()
