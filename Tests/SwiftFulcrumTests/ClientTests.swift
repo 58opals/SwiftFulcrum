@@ -29,6 +29,16 @@ struct ClientTests {
         #expect(!(await client.webSocket.isConnected))
     }
     
+    @Test("calling start twice has no effect")
+    func startIsIdempotent() async throws {
+        try await client.start()
+        try await client.start()
+        
+        #expect(await client.webSocket.isConnected)
+        
+        await client.stop()
+    }
+    
     @Test("regular RPC – relayFee")
     func relayFee() async throws {
         try await client.start()
@@ -79,12 +89,12 @@ struct ClientConcurrencyTests {
         typealias Tip = Response.JSONRPC.Result.Blockchain.Headers.GetTip
         
         async let relayFee: Double = client.call(method: .blockchain(.relayFee))
-        async let est1Blk: Double  = client.call(method: .blockchain(.estimateFee(numberOfBlocks: 1)))
-        async let tip:    Tip      = client.call(method: .blockchain(.headers(.getTip)))
+        async let est1Blk: Double = client.call(method: .blockchain(.estimateFee(numberOfBlocks: 1)))
+        async let tip: Tip = client.call(method: .blockchain(.headers(.getTip)))
         
         let (fee, estimate, best) = try await (relayFee, est1Blk, tip)
         
-        #expect(fee      > 0)
+        #expect(fee > 0)
         #expect(estimate > 0)
         #expect(best.height > 0)
         
