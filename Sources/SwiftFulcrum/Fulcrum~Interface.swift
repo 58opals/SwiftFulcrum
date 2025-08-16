@@ -69,7 +69,10 @@ extension Fulcrum {
         
         let terminationHandler: @Sendable () async -> Void = {
             await self.client.removeSubscriptionResponseHandler(for: subscriptionKey)
-            // TODO: actually send "unsubscribe"
+            if let method = await self.client.makeUnsubscribeMethod(for: subscriptionKey) {
+                do { _ = try await self.client.sendRegularRequest(method: method) { _ in } }
+                catch { }
+            }
         }
         
         let notificationStream = AsyncThrowingStream<SubscriptionNotification, Swift.Error> { continuation in
