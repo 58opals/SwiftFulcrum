@@ -8,14 +8,15 @@ SwiftFulcrum is a **pure‑Swift**, type‑safe framework for interacting with F
 
 ## Features
 
-| Area                        | What you get                                                                                                            |
-| --------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| **Type‑safe RPC layer**     | Exhaustive `Method` enum generates JSON‑RPC at compile‑time.                                                            |
-| **Structured concurrency**  | All shared state lives in actors (`Fulcrum`, `Client`, `WebSocket`) for race‑free access.                               |
-| **Real‑time notifications** | Subscribe to address, transaction, header, and DS‑Proof events via `AsyncThrowingStream`.                               |
-| **Robust error model**      | Every issue surfaces as `Fulcrum.Error`; pending requests are finished with `.connectionClosed` when the socket closes. |
-| **Automatic reconnection**  | Automatic exponential back‑off *and* a new `Client.reconnect()` helper for instant server switching.                    |
-| **Swift PM package**        | Runs on iOS, macOS, watchOS, tvOS and visionOS.                                                                         |
+| Area | What you get |
+| ---- | ------------ |
+| **Type‑safe RPC layer** | Exhaustive `Method` enum generates JSON‑RPC at compile‑time. |
+| **Structured concurrency** | All shared state lives in actors (`Fulcrum`, `Client`, `WebSocket`) for race‑free access. |
+| **Real‑time notifications** | Subscribe to address, transaction, header, and DS‑Proof events via `AsyncThrowingStream`. |
+| **Robust error model** | Every issue surfaces as `Fulcrum.Error`; pending requests are finished with `.connectionClosed` when the socket closes. |
+| **Safe lifecycle** | Idempotent `start()`/`stop()` and a configurable WebSocket handshake timeout. |
+| **Automatic reconnection** | Automatic exponential back‑off and a `Client.reconnect()` helper for instant server switching. |
+| **Swift PM package** | Runs on iOS, macOS, watchOS, tvOS and visionOS. |
 
 ---
 
@@ -28,7 +29,7 @@ SwiftFulcrum is a **pure‑Swift**, type‑safe framework for interacting with F
 dependencies: [
     .package(
         url: "https://github.com/58opals/SwiftFulcrum.git",
-        .upToNextMajor(from: "0.2.0")
+        .upToNextMajor(from: "0.3.0")
     )
 ]
 ```
