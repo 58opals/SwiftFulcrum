@@ -18,11 +18,22 @@ actor WebSocket {
     private var receivedTask: Task<Void, Never>?
     private var wantsAutoReceive = false
     
-    init(url: URL, reconnectConfiguration: Reconnector.Configuration = .defaultConfiguration) {
+    private let session: URLSession
+    private let connectionTimeout: TimeInterval
+    
+    init(url: URL,
+         reconnectConfiguration: Reconnector.Configuration = .defaultConfiguration,
+         connectionTimeout: TimeInterval = 10) {
         self.url = url
         self.task = nil
         self.state = .disconnected
         self.reconnector = Reconnector(reconnectConfiguration)
+        self.connectionTimeout = connectionTimeout
+        
+        let configuration = URLSessionConfiguration.default
+        configuration.timeoutIntervalForRequest = connectionTimeout
+        configuration.timeoutIntervalForResource = connectionTimeout
+        self.session = URLSession(configuration: configuration)
     }
 }
 
@@ -35,7 +46,7 @@ extension WebSocket {
         
         await cancelReceiverTask()
         task?.cancel(with: .goingAway, reason: "Recreating task.".data(using: .utf8))
-        task = URLSession.shared.webSocketTask(with: self.url)
+        task = session.webSocketTask(with: self.url)
     }
     
     func cancelReceiverTask() async {
@@ -91,7 +102,7 @@ extension WebSocket {
         task.resume()
         print("WebSocket (\(url.description)) is connecting...")
         
-        let isConnected = try await waitForConnection(timeout: 2)
+        let isConnected = try await waitForConnection(timeout: connectionTimeout)
         switch isConnected {
         case true:
             state = .connected
@@ -99,6 +110,7 @@ extension WebSocket {
             ensureAutoReceive()
         case false:
             state = .disconnected
+            task.cancel(with: .goingAway, reason: "Connection timed out.".data(using: .utf8))
             print("WebSocket (\(url.description)) failed to connect.")
             throw Fulcrum.Error.transport(.connectionClosed(closeInformation.code, closeInformation.reason))
         }

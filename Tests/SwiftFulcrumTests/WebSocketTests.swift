@@ -38,7 +38,7 @@ struct WebSocketConnectionTests {
     
     @Test("invalid URL fails")
     func faultyURL() async throws {
-        let bad = WebSocket(url: URL(string: "wss://invalid-url")!)
+        let bad = WebSocket(url: URL(string: "wss://invalid-url")!, connectionTimeout: 1)
         await #expect(throws: Swift.Error.self) {
             try await bad.connect()
         }
@@ -68,7 +68,8 @@ struct WebSocketReconnectorTests {
                 reconnectionDelay: 0.10,
                 maximumDelay: 0.20,
                 jitterRange: 1.0 ... 1.0
-            )
+            ),
+            connectionTimeout: 1
         )
         
         // (2) “always-fail” socket — the `.invalid` TLD is guaranteed not to
@@ -80,7 +81,8 @@ struct WebSocketReconnectorTests {
                 reconnectionDelay: 0.10,
                 maximumDelay: 0.20,
                 jitterRange: 1.0 ... 1.0
-            )
+            ),
+            connectionTimeout: 1
         )
     }
     
