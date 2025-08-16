@@ -40,6 +40,7 @@ extension MethodBlockchainTransactionTests {
         }
         
         print("txid: \(transaction.transactionID)  size: \(transaction.size) bytes")
+        print("rawHex: \(transaction.hex)")
         #expect(transaction.transactionID == sampleTxID)
         #expect(transaction.size > 0)
         #expect(transaction.inputs.count > 0)

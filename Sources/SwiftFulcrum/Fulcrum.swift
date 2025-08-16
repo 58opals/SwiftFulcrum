@@ -24,6 +24,8 @@ public actor Fulcrum {
     }
     
     public func start() async throws {
+        guard !self.isRunning else { return }
+        
         try await self.client.start()
         self.isRunning = true
     }

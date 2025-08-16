@@ -23,6 +23,8 @@ actor Client {
     }
     
     func start() async throws {
+        guard receiveTask == nil else { return }
+        
         try await self.webSocket.connect()
         self.receiveTask = Task { await self.startReceiving() }
     }

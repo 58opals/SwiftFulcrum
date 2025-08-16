@@ -11,39 +11,39 @@ extension Response.JSONRPC {
             
             public struct Address {
                 public struct GetBalance: Decodable, Sendable {
-                    let confirmed: UInt64
-                    let unconfirmed: Int64
+                    public let confirmed: UInt64
+                    public let unconfirmed: Int64
                 }
                 
                 public struct GetFirstUse: Decodable, Sendable {
-                    let block_hash: String
-                    let height: UInt
-                    let tx_hash: String
+                    public let block_hash: String
+                    public let height: UInt
+                    public let tx_hash: String
                 }
                 
                 public typealias GetHistory = [GetHistoryItem]
                 public struct GetHistoryItem: Decodable, Sendable {
-                    let height: Int
-                    let tx_hash: String
-                    let fee: UInt?
+                    public let height: Int
+                    public let tx_hash: String
+                    public let fee: UInt?
                 }
                 
                 public typealias GetMempool = [GetMempoolItem]
                 public struct GetMempoolItem: Decodable, Sendable {
-                    let height: Int
-                    let tx_hash: String
-                    let fee: UInt?
+                    public let height: Int
+                    public let tx_hash: String
+                    public let fee: UInt?
                 }
                 
                 public typealias GetScriptHash = String
                 
                 public typealias ListUnspent = [ListUnspentItem]
                 public struct ListUnspentItem: Decodable, Sendable {
-                    let height: UInt
-                    let token_data: Method.Blockchain.CashTokens.JSON?
-                    let tx_hash: String
-                    let tx_pos: UInt
-                    let value: UInt64
+                    public let height: UInt
+                    public let token_data: Method.Blockchain.CashTokens.JSON?
+                    public let tx_hash: String
+                    public let tx_pos: UInt
+                    public let value: UInt64
                 }
                 
                 public typealias Subscribe = SubscribeParameters
@@ -80,9 +80,9 @@ extension Response.JSONRPC {
                     case proof(Proof)
                     
                     public struct Proof: Decodable, Sendable {
-                        let branch: [String]
-                        let header: String
-                        let root: String
+                        public let branch: [String]
+                        public let header: String
+                        public let root: String
                     }
                     
                     public init(from decoder: Decoder) throws {
@@ -105,23 +105,23 @@ extension Response.JSONRPC {
                 }
                 
                 public struct Headers: Decodable, Sendable {
-                    let count: UInt
-                    let hex: String
-                    let max: UInt
+                    public let count: UInt
+                    public let hex: String
+                    public let max: UInt
                 }
             }
             
             public struct Header {
                 public struct Get: Decodable, Sendable {
-                    let height: UInt
-                    let hex: String
+                    public let height: UInt
+                    public let hex: String
                 }
             }
             
             public struct Headers {
                 public struct GetTip: Decodable, Sendable {
-                    let height: UInt
-                    let hex: String
+                    public let height: UInt
+                    public let hex: String
                 }
                 
                 public typealias Subscribe = SubscribeParameters
@@ -160,42 +160,42 @@ extension Response.JSONRPC {
                     case detailed(Detailed)
                     
                     public struct Detailed: Decodable, Sendable {
-                        let blockhash: String?
-                        let blocktime: UInt?
-                        let confirmations: UInt?
-                        let hash: String
-                        let hex: String
-                        let locktime: UInt
-                        let size: UInt
-                        let time: UInt?
-                        let txid: String
-                        let version: UInt
-                        let vin: [Input]
-                        let vout: [Output]
+                        public let blockhash: String?
+                        public let blocktime: UInt?
+                        public let confirmations: UInt?
+                        public let hash: String
+                        public let hex: String
+                        public let locktime: UInt
+                        public let size: UInt
+                        public let time: UInt?
+                        public let txid: String
+                        public let version: UInt
+                        public let vin: [Input]
+                        public let vout: [Output]
                         
                         public struct Input: Decodable, Sendable {
-                            let scriptSig: ScriptSig
-                            let sequence: UInt
-                            let txid: String
-                            let vout: UInt
+                            public let scriptSig: ScriptSig
+                            public let sequence: UInt
+                            public let txid: String
+                            public let vout: UInt
                             
                             public struct ScriptSig: Decodable, Sendable {
-                                let asm: String
-                                let hex: String
+                                public let asm: String
+                                public let hex: String
                             }
                         }
                         
                         public struct Output: Decodable, Sendable {
-                            let n: UInt
-                            let scriptPubKey: ScriptPubKey
-                            let value: Double
+                            public let n: UInt
+                            public let scriptPubKey: ScriptPubKey
+                            public let value: Double
                             
                             public struct ScriptPubKey: Decodable, Sendable {
-                                let addresses: [String]?
-                                let asm: String
-                                let hex: String
-                                let reqSigs: UInt?
-                                let type: String
+                                public let addresses: [String]?
+                                public let asm: String
+                                public let hex: String
+                                public let reqSigs: UInt?
+                                public let type: String
                             }
                         }
                     }
@@ -220,22 +220,22 @@ extension Response.JSONRPC {
                 }
                 
                 public struct GetConfirmedBlockHash: Decodable, Sendable {
-                    let block_hash: String
-                    let block_header: String?
-                    let block_height: UInt
+                    public let block_hash: String
+                    public let block_header: String?
+                    public let block_height: UInt
                 }
                 
                 public typealias GetHeight = UInt
                 
                 public struct GetMerkle: Decodable, Sendable {
-                    let merkle: [String]
-                    let block_height: UInt
-                    let pos: UInt
+                    public let merkle: [String]
+                    public let block_height: UInt
+                    public let pos: UInt
                 }
                 
                 public struct IDFromPos: Decodable, Sendable {
-                    let merkle: [String]
-                    let tx_hash: String
+                    public let merkle: [String]
+                    public let tx_hash: String
                 }
                 
                 public typealias Subscribe = SubscribeParameters
@@ -289,15 +289,15 @@ extension Response.JSONRPC {
                 
                 public struct DSProof {
                     public struct Get: Decodable, Sendable {
-                        let dspid: String
-                        let txid: String
-                        let hex: String
-                        let outpoint: Outpoint
-                        let descendants: [String]
+                        public let dspid: String
+                        public let txid: String
+                        public let hex: String
+                        public let outpoint: Outpoint
+                        public let descendants: [String]
                         
                         public struct Outpoint: Decodable, Sendable {
-                            let txid: String
-                            let vout: UInt
+                            public let txid: String
+                            public let vout: UInt
                         }
                     }
                     
@@ -361,10 +361,10 @@ extension Response.JSONRPC {
             
             public struct UTXO {
                 public struct GetInfo: Decodable, Sendable {
-                    let confirmed_height: UInt?
-                    let scripthash: String
-                    let value: UInt
-                    let token_data: Method.Blockchain.CashTokens.JSON?
+                    public let confirmed_height: UInt?
+                    public let scripthash: String
+                    public let value: UInt
+                    public let token_data: Method.Blockchain.CashTokens.JSON?
                 }
             }
         }
