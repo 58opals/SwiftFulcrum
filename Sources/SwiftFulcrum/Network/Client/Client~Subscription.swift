@@ -8,7 +8,7 @@ extension Client {
         guard let identifier = key.identifier else { return nil }
         
         switch methodPath {
-            case "blockchain.address.subscribe":
+        case "blockchain.address.subscribe":
             return .blockchain(.address(.unsubscribe(address: identifier)))
         case "blockchain.headers.subscribe":
             return .blockchain(.headers(.unsubscribe))
@@ -53,43 +53,23 @@ extension Client {
             }
             return nil
         case "blockchain.transaction.dsproof.subscribe":
-            struct Envelope: Decodable { let params: [Param] }
-            enum Param: Decodable {
-                case string(String)
-                case proof(Response.JSONRPC.Result.Blockchain.Transaction.DSProof.Get)
-
-                init(from decoder: Decoder) throws {
-                    let container = try decoder.singleValueContainer()
-
-                    if let string = try? container.decode(String.self) {
-                        self = .string(string)
-                        return
-                    }
-
-                    if let proof = try? container.decode(Response.JSONRPC.Result.Blockchain.Transaction.DSProof.Get.self) {
-                        self = .proof(proof)
-                        return
-                    }
-
-                    throw DecodingError.typeMismatch(
-                        Param.self,
-                        .init(codingPath: decoder.codingPath,
-                              debugDescription: "Expected txid string or DSProof object")
-                    )
-                }
-
-                var txid: String? {
-                    switch self {
-                    case .string(let string):
-                        return string
-                    case .proof(let proof):
-                        return proof.txid
-                    }
+            struct Envelope: Decodable { let params: [DecodableValue] }
+            struct DecodableValue: Decodable {
+                let string: String?
+                let dsProof: DSProof?
+                
+                struct DSProof: Decodable { let txid: String }
+                
+                init(from dec: Decoder) throws {
+                    let container = try dec.singleValueContainer()
+                    self.string = try? container.decode(String.self)
+                    self.dsProof = try? container.decode(DSProof.self)
                 }
             }
-
-            if let first = try? JSONRPC.Coder.decoder.decode(Envelope.self, from: data).params.compactMap({ $0.txid }).first {
-                return first
+            
+            if let first = try? JSONRPC.Coder.decoder.decode(Envelope.self, from: data).params.first {
+                if let string = first.string { return string }
+                if let proof = first.dsProof { return proof.txid }
             }
             return nil
         default:
