@@ -4,8 +4,8 @@ import Foundation
 
 private extension URL {
     /// Any random main-net Fulcrum endpoint from bundled `servers.json`.
-    static func randomFulcrum() throws -> URL {
-        guard let url = try WebSocket.Server.getServerList().randomElement() else {
+    static func randomFulcrum() async throws -> URL {
+        guard let url = try await WebSocket.Server.getServerList().randomElement() else {
             throw Fulcrum.Error.transport(.setupFailed)
         }
         return url
@@ -15,8 +15,8 @@ private extension URL {
 @Suite("Client – Lifecycle, RPC & Subscriptions")
 struct ClientTests {
     let client: Client
-    init() throws {
-        let socket = WebSocket(url: try .randomFulcrum())
+    init() async throws {
+        let socket = WebSocket(url: try await .randomFulcrum())
         self.client = Client(webSocket: socket)
     }
     
@@ -77,8 +77,8 @@ struct ClientTests {
 @Suite("Client – Concurrency & Robustness")
 struct ClientConcurrencyTests {
     let client: Client
-    init() throws {
-        let socket = WebSocket(url: try .randomFulcrum())
+    init() async throws {
+        let socket = WebSocket(url: try await .randomFulcrum())
         self.client = Client(webSocket: socket)
     }
     

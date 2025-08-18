@@ -4,8 +4,8 @@ import Foundation
 
 private extension URL {
     /// Any random main-net Fulcrum endpoint from bundled `servers.json`.
-    static func randomFulcrum() throws -> URL {
-        guard let url = try WebSocket.Server.getServerList().randomElement() else {
+    static func randomFulcrum() async throws -> URL {
+        guard let url = try await WebSocket.Server.getServerList().randomElement() else {
             throw Fulcrum.Error.transport(.setupFailed)
         }
         return url
@@ -15,9 +15,9 @@ private extension URL {
 @Suite("Client – Reconnection Behaviour")
 struct ClientReconnectionTests {
     let client: Client
-    init() throws {
+    init() async throws {
         let socket = WebSocket(
-            url: try .randomFulcrum(),
+            url: try await .randomFulcrum(),
             reconnectConfiguration: .init(
                 maximumReconnectionAttempts: 2,
                 reconnectionDelay: 0.05,
@@ -119,7 +119,7 @@ struct ClientReconnectionTests {
 struct FulcrumReconnectionTests {
     @Test("manual reconnection enables further RPCs")
     func rpcWorksAfterManualReconnect() async throws {
-        let fulcrum = try Fulcrum()
+        let fulcrum = try await Fulcrum()
         try await fulcrum.start()
         
         await fulcrum.client.webSocket.disconnect(with: "forced")

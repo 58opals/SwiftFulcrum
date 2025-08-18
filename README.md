@@ -15,7 +15,7 @@ SwiftFulcrum is a **pure‑Swift**, type‑safe framework for interacting with F
 | **Real‑time notifications** | Subscribe to address, transaction, header, and DS‑Proof events via `AsyncThrowingStream`. |
 | **Robust error model** | Every issue surfaces as `Fulcrum.Error`; pending requests are finished with `.connectionClosed` when the socket closes. |
 | **Safe lifecycle** | Idempotent `start()`/`stop()` and a configurable WebSocket handshake timeout. |
-| **Automatic reconnection** | Automatic exponential back‑off and a `Client.reconnect()` helper for instant server switching. |
+| **Automatic reconnection** | Automatic exponential back‑off and a `Fulcrum.reconnect(url:)` helper for instant server switching. |
 | **Swift PM package** | Runs on iOS, macOS, watchOS, tvOS and visionOS. |
 
 ---
@@ -53,6 +53,16 @@ Task {
     }
 }
 ```
+
+#### Reconnect
+
+```swift
+try await fulcrum.reconnect(url: "wss://backup.fulcrum.example.com:50004")
+```
+
+Use ``Fulcrum/reconnect(url:)`` to switch servers or recover after a disconnect.
+Supplying a URL validates its scheme and throws ``Fulcrum/Error/Transport/setupFailed``
+when invalid. Reconnection failures bubble up as ``Fulcrum/Error/Transport``.
 
 #### One‑shot Request
 

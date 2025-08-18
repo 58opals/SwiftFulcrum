@@ -5,7 +5,7 @@ import Foundation
 @Suite("Method.Blockchain / UTXO / Mempool – Regular RPCs")
 struct MethodBlockchainTests {
     let fulcrum: Fulcrum
-    init() throws { self.fulcrum = try Fulcrum() }
+    init() async throws { self.fulcrum = try await Fulcrum() }
     
     private func withRunningNode<T>(_ body: @Sendable () async throws -> T) async throws -> T {
         try await fulcrum.start()

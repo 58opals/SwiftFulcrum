@@ -6,7 +6,7 @@ import Foundation
 struct MethodBlockchainAddressTests {
     let fulcrum: Fulcrum
     private let address = "qrmfkegyf83zh5kauzwgygf82sdahd5a55x9wse7ve"
-    init() throws { self.fulcrum = try Fulcrum() }
+    init() async throws { self.fulcrum = try await Fulcrum() }
     
     private func withRunningNode<T>(_ body: @Sendable () async throws -> T) async throws -> T {
         if !(await fulcrum.isRunning) { try await fulcrum.start() }
