@@ -114,3 +114,30 @@ struct ClientReconnectionTests {
         await client.stop()
     }
 }
+
+@Suite("Fulcrum – Reconnection Behaviour")
+struct FulcrumReconnectionTests {
+    @Test("manual reconnection enables further RPCs")
+    func rpcWorksAfterManualReconnect() async throws {
+        let fulcrum = try Fulcrum()
+        try await fulcrum.start()
+        
+        await fulcrum.client.webSocket.disconnect(with: "forced")
+        #expect(!(await fulcrum.client.webSocket.isConnected))
+        
+        try await fulcrum.reconnect()
+        #expect(await fulcrum.client.webSocket.isConnected)
+        
+        let response: Fulcrum.RPCResponse<Response.Result.Blockchain.RelayFee, Never> = try await fulcrum.submit(method: .blockchain(.relayFee))
+        
+        guard let fee = response.extractRegularResponse() else {
+            #expect(Bool(false), "missing RPC result")
+            await fulcrum.stop()
+            return
+        }
+        
+        #expect(fee.fee > 0)
+        
+        await fulcrum.stop()
+    }
+}

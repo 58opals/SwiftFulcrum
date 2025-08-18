@@ -36,4 +36,9 @@ public actor Fulcrum {
         
         await self.client.stop()
     }
+    
+    public func reconnect(url: String? = nil) async throws {
+        guard self.isRunning else { return }
+        try await self.client.reconnect()
+    }
 }
