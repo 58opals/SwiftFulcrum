@@ -56,6 +56,19 @@ extension Client {
             }
         }
         
+        func failUnaries(with error: Swift.Error) {
+            let current = table
+            for (identifier, pending) in current {
+                switch pending {
+                case .unary(let checkedContinuation):
+                    table.removeValue(forKey: identifier)
+                    checkedContinuation.resume(throwing: error)
+                case .stream:
+                    continue
+                }
+            }
+        }
+        
         private func resolve(identifier: Response.Identifier, with raw: Data) {
             guard let entry = table[identifier] else { return }
             switch entry {

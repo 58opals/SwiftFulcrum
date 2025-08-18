@@ -23,6 +23,20 @@ extension Client {
 }
 
 extension Client {
+    func resubscribeStoredMethods() async {
+        for method in subscriptionMethods.values {
+            _ = try? await sendRegularRequest(method: method) { _ in }
+        }
+    }
+}
+
+extension Client {
+    func removeStoredSubscriptionMethod(for key: SubscriptionKey) {
+        subscriptionMethods.removeValue(forKey: key)
+    }
+}
+
+extension Client {
     func getSubscriptionIdentifier(for method: Method) -> String? {
         switch method {
         case .blockchain(.address(.subscribe(let address))):

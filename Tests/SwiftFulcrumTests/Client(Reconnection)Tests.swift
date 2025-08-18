@@ -78,6 +78,26 @@ struct ClientReconnectionTests {
         await client.stop()
     }
     
+    @Test("subscription resumes after reconnect")
+    func subscriptionContinuesAfterReconnect() async throws {
+        try await client.start()
+        
+        let method = Method.blockchain(.headers(.subscribe))
+        typealias Payload = Response.JSONRPC.Result.Blockchain.Headers.Subscribe
+        let (_, _, stream) = try await client.subscribe(method: method) as (UUID, Payload, AsyncThrowingStream<Payload, Swift.Error>)
+        
+        var iterator = stream.makeAsyncIterator()
+        _ = try await iterator.next()
+        
+        await client.webSocket.disconnect(with: "forced")
+        try await client.reconnect()
+        
+        let next = try await iterator.next()
+        #expect(next != nil)
+        
+        await client.stop()
+    }
+    
     @Test("manual reconnection enables further RPCs")
     func rpcWorksAfterManualReconnect() async throws {
         try await client.start()
