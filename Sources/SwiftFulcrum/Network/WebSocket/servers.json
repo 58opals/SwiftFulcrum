@@ -1,22 +1,42 @@
 [
     {
-    "host": "electrum.imaginary.cash",
-    "port": 50004
+        "host": "fulcrum.jettscythe.xyz",
+        "port": 50002
     },
     {
-    "host": "bch.imaginary.cash",
-    "port": 50004
+        "host": "bch.cyberbits.eu",
+        "port": 50002
     },
     {
-    "host": "electroncash.de",
-    "port": 60002
+        "host": "bch.reichster.de",
+        "port": 50002
     },
     {
-    "host": "bch.soul-dev.com",
-    "port": 50004
+        "host": "electroncash.dk",
+        "port": 50002
     },
     {
-    "host": "electroncash.dk",
-    "port": 50004
+        "host": "bch0.kister.net",
+        "port": 50002
+    },
+    {
+        "host": "electrum.imaginary.cash",
+        "port": 50002
+    },
+    {
+        "host": "bch.imaginary.cash",
+        "port": 50002
+    },
+    {
+        "host": "bch.soul-dev.com",
+        "port": 50002
+    },
+    {
+        "host": "bch.loping.net",
+        "port": 50002
+    },
+    {
+        "host": "electron.jochen-hoenicke.de",
+        "port": 51002
     }
 ]
