@@ -69,9 +69,16 @@ extension Fulcrum {
         
         let terminationHandler: @Sendable () async -> Void = {
             await self.client.removeSubscriptionResponseHandler(for: subscriptionKey)
-            if let method = await self.client.makeUnsubscribeMethod(for: subscriptionKey) {
-                do { _ = try await self.client.sendRegularRequest(method: method) { _ in } }
-                catch { }
+            
+            guard let method = await self.client.makeUnsubscribeMethod(for: subscriptionKey) else { return }
+            do {
+                _ = try await self.client.sendRegularRequest(method: method) { result in
+                    if case .failure(let error) = result {
+                        Task { await self.client.failAllPendingRequests(with: Error.client(.unknown(error))) }
+                    }
+                }
+            } catch {
+                await self.client.failAllPendingRequests(with: Error.client(.unknown(error)))
             }
         }
         

@@ -121,4 +121,13 @@ extension MethodBlockchainAddressTests {
             #expect(utxo.value > 0)
         }
     }
+    
+    /// Response decoding: Blockchain.Address.SubscribeNotification
+    @Test("address.subscribe notification → missing subscriptionIdentifier throws")
+    func subscribeNotificationMissingIdentifier() async throws {
+        let jsonrpc: Response.JSONRPC.Result.Blockchain.Address.Subscribe = .addressAndStatus([nil])
+        #expect(throws: Response.Result.Error.missingField("subscriptionIdentifier")) {
+            _ = try Response.Result.Blockchain.Address.SubscribeNotification(fromRPC: jsonrpc)
+        }
+    }
 }

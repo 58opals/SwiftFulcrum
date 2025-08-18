@@ -8,3 +8,5 @@ extension Response.Result {
         case unexpectedFormat(String)
     }
 }
+
+extension Response.Result.Error: Equatable {}
