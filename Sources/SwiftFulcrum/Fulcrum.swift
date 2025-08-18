@@ -14,7 +14,6 @@ public actor Fulcrum {
                 guard ["ws", "wss"].contains(url.scheme?.lowercased()) else { throw Error.transport(.setupFailed) }
                 return WebSocket(url: url)
             } else {
-                //let serverList = try WebSocket.Server.getServerList()
                 let serverList = try await Task.detached(priority: .utility) {
                     try await WebSocket.Server.getServerList()
                 }.value
@@ -27,7 +26,7 @@ public actor Fulcrum {
     }
     
     init(servers: [URL]) throws {
-        guard let server = servers.randomElement() else { throw Error.transport(.setupFailed) }
+        guard let server = servers.randomElement(), ["ws", "wss"].contains(server.scheme?.lowercased()) else { throw Error.transport(.setupFailed) }
         self.client = .init(webSocket: WebSocket(url: server))
     }
     
