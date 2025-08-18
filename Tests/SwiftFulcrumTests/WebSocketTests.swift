@@ -4,8 +4,8 @@ import Foundation
 
 private extension URL {
     /// Any random main-net Fulcrum endpoint from bundled `servers.json`.
-    static func randomFulcrum() throws -> URL {
-        guard let url = try WebSocket.Server.getServerList().randomElement() else {
+    static func randomFulcrum() async throws -> URL {
+        guard let url = try await WebSocket.Server.getServerList().randomElement() else {
             throw Fulcrum.Error.transport(.setupFailed)
         }
         return url
@@ -16,8 +16,8 @@ private extension URL {
 struct WebSocketConnectionTests {
     let socket: WebSocket
     
-    init() throws {
-        self.socket = WebSocket(url: try .randomFulcrum())
+    init() async throws {
+        self.socket = WebSocket(url: try await .randomFulcrum())
     }
     
     @Test("connect → disconnect happy-path")
@@ -58,11 +58,11 @@ struct WebSocketReconnectorTests {
     /// connection attempt is guaranteed to fail quickly.
     let hopeless: WebSocket
     
-    init() throws {
+    init() async throws {
         // (1) happy-path socket — use any random main-net server, but keep the
         //     reconnection delays tiny so the test suite runs fast.
         self.healthy = WebSocket(
-            url: try .randomFulcrum(),
+            url: try await .randomFulcrum(),
             reconnectConfiguration: .init(
                 maximumReconnectionAttempts: 3,
                 reconnectionDelay: 0.10,

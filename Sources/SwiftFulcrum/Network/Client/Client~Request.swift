@@ -34,11 +34,15 @@ extension Client {
         let (rawStream, rawContinuation) = AsyncThrowingStream<Data, Swift.Error>.makeStream()
         
         try await router.addStream(key: subscriptionKey.string, continuation: rawContinuation)
+        subscriptionMethods[subscriptionKey] = method
         
-        rawContinuation.onTermination = { @Sendable _ in
+        rawContinuation.onTermination = { @Sendable [weak self] _ in
+            guard let self else { return }
+            
             Task {
                 await self.router.cancel(identifier: .string(subscriptionKey.string))
                 await self.removeSubscriptionResponseHandler(for: subscriptionKey)
+                await self.removeStoredSubscriptionMethod(for: subscriptionKey)
                 
                 if let method = await self.makeUnsubscribeMethod(for: subscriptionKey) {
                     _ = try? await self.sendRegularRequest(method: method) { _ in }
@@ -98,6 +102,7 @@ extension Client {
         
         try insertRegularHandler(for: requestID, handler: initialResponseHandler)
         try insertSubscriptionHandler(for: subscriptionKey, handler: notificationHandler)
+        subscriptionMethods[subscriptionKey] = method
         
         do {
             try await send(request: request)
@@ -109,7 +114,9 @@ extension Client {
         
         let cancelClosure: @Sendable () async -> Void = { [weak self] in
             guard let self else { return }
+            
             await self.removeSubscriptionResponseHandler(for: subscriptionKey)
+            await self.removeStoredSubscriptionMethod(for: subscriptionKey)
             
             if let method = await self.makeUnsubscribeMethod(for: subscriptionKey) {
                 _ = try? await self.sendRegularRequest(method: method) { _ in }

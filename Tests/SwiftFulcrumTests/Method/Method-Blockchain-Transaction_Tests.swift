@@ -6,7 +6,7 @@ import Foundation
 struct MethodBlockchainTransactionTests {
     let fulcrum: Fulcrum
     private let sampleTxID = "1452186edb3b7f8a0e64fefaf3c3879272e52bdccdbc329de8987e44f3f5bfd1"
-    init() throws { fulcrum = try Fulcrum() }
+    init() async throws { fulcrum = try await Fulcrum() }
     
     private func withRunningNode<T>(_ body: @Sendable () async throws -> T) async throws -> T {
         if !(await fulcrum.isRunning) { try await fulcrum.start() }

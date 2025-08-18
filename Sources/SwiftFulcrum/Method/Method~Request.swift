@@ -73,10 +73,12 @@ extension Method {
                         let includeUnconfirmed: Bool
                         func encode(to encoder: Encoder) throws {
                             var container = encoder.unkeyedContainer()
+                            
                             try container.encode(address)
-                            //if let fromHeight = fromHeight { try container.encode(fromHeight) }
-                            if let fromHeight = fromHeight { try container.encode(fromHeight) } else { try container.encode(Int(0)) }
-                            if includeUnconfirmed { try container.encode(Int(-1)) } else if let toHeight = toHeight { try container.encode(toHeight) }
+                            try container.encode(fromHeight ?? 0)
+                            if includeUnconfirmed { try container.encode(Int(-1)) }
+                            else if let toHeight { try container.encode(toHeight) }
+                            else { try container.encode(UInt.max) }
                         }
                     }
                     return Request(id: uuid,

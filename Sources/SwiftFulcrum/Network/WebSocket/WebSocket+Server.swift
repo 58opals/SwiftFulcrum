@@ -19,13 +19,20 @@ extension WebSocket {
 }
 
 extension WebSocket.Server {
-    static func getServerList() throws -> [URL] {
-        guard let serverListPath = Bundle.module.path(forResource: "servers", ofType: "json") else {
-            throw Fulcrum.Error.transport(.setupFailed) }
-        let serverListString = try String(contentsOfFile: serverListPath, encoding: .utf8)
-        guard let serverListData = serverListString.data(using: .utf8) else { throw Fulcrum.Error.transport(.setupFailed) }
-        let serverList = try JSONRPC.Coder.decoder.decode([WebSocket.Server].self, from: serverListData)
-        return serverList.compactMap { $0.url }
+    private static func decodeBundledServers() throws -> [URL] {
+        guard let path = Bundle.module.path(forResource: "servers", ofType: "json") else {
+            throw Fulcrum.Error.transport(.setupFailed)
+        }
+        
+        let data = try Data(contentsOf: URL(fileURLWithPath: path))
+        let list = try JSONRPC.Coder.decoder.decode([WebSocket.Server].self, from: data)
+        
+        return list.compactMap(\.url)
+    }
+    
+    static func getServerList() async throws -> [URL] {
+        await Task.yield()
+        return try decodeBundledServers()
     }
     
     static func loadServerList() async throws -> [URL] {
