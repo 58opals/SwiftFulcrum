@@ -7,7 +7,7 @@ struct MethodBlockchainBlockTests {
     let fulcrum: Fulcrum
     private let height: UInt = 1
     private let knownBlockHash = "0000000000000000029c2784e7453617ea6d8e73cbc91b293d06cf41cf3a5286"
-    init() throws { self.fulcrum = try Fulcrum() }
+    init() async throws { self.fulcrum = try await Fulcrum() }
     
     private func withRunningNode<T>(_ body: @Sendable () async throws -> T) async throws -> T {
         if !(await fulcrum.isRunning) { try await fulcrum.start() }

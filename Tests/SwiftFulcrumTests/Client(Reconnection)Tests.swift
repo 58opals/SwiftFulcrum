@@ -4,8 +4,8 @@ import Foundation
 
 private extension URL {
     /// Any random main-net Fulcrum endpoint from bundled `servers.json`.
-    static func randomFulcrum() throws -> URL {
-        guard let url = try WebSocket.Server.getServerList().randomElement() else {
+    static func randomFulcrum() async throws -> URL {
+        guard let url = try await WebSocket.Server.getServerList().randomElement() else {
             throw Fulcrum.Error.transport(.setupFailed)
         }
         return url
@@ -15,9 +15,9 @@ private extension URL {
 @Suite("Client – Reconnection Behaviour")
 struct ClientReconnectionTests {
     let client: Client
-    init() throws {
+    init() async throws {
         let socket = WebSocket(
-            url: try .randomFulcrum(),
+            url: try await .randomFulcrum(),
             reconnectConfiguration: .init(
                 maximumReconnectionAttempts: 2,
                 reconnectionDelay: 0.05,
@@ -78,6 +78,26 @@ struct ClientReconnectionTests {
         await client.stop()
     }
     
+    @Test("subscription resumes after reconnect")
+    func subscriptionContinuesAfterReconnect() async throws {
+        try await client.start()
+        
+        let method = Method.blockchain(.headers(.subscribe))
+        typealias Payload = Response.JSONRPC.Result.Blockchain.Headers.Subscribe
+        let (_, _, stream) = try await client.subscribe(method: method) as (UUID, Payload, AsyncThrowingStream<Payload, Swift.Error>)
+        
+        var iterator = stream.makeAsyncIterator()
+        _ = try await iterator.next()
+        
+        await client.webSocket.disconnect(with: "forced")
+        try await client.reconnect()
+        
+        let next = try await iterator.next()
+        #expect(next != nil)
+        
+        await client.stop()
+    }
+    
     @Test("manual reconnection enables further RPCs")
     func rpcWorksAfterManualReconnect() async throws {
         try await client.start()
@@ -92,5 +112,32 @@ struct ClientReconnectionTests {
         #expect(fee > 0)
         
         await client.stop()
+    }
+}
+
+@Suite("Fulcrum – Reconnection Behaviour")
+struct FulcrumReconnectionTests {
+    @Test("manual reconnection enables further RPCs")
+    func rpcWorksAfterManualReconnect() async throws {
+        let fulcrum = try await Fulcrum()
+        try await fulcrum.start()
+        
+        await fulcrum.client.webSocket.disconnect(with: "forced")
+        #expect(!(await fulcrum.client.webSocket.isConnected))
+        
+        try await fulcrum.reconnect()
+        #expect(await fulcrum.client.webSocket.isConnected)
+        
+        let response: Fulcrum.RPCResponse<Response.Result.Blockchain.RelayFee, Never> = try await fulcrum.submit(method: .blockchain(.relayFee))
+        
+        guard let fee = response.extractRegularResponse() else {
+            #expect(Bool(false), "missing RPC result")
+            await fulcrum.stop()
+            return
+        }
+        
+        #expect(fee.fee > 0)
+        
+        await fulcrum.stop()
     }
 }

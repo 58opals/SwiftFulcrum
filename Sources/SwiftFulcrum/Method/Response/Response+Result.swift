@@ -150,8 +150,8 @@ extension Response.Result {
                 public init(fromRPC jsonrpc: JSONRPC) throws {
                     switch jsonrpc {
                     case .addressAndStatus(let pair):
-                        guard let address = pair.first, address != nil else { throw Error.missingField("subscriptionIdentifier") }
-                        self.subscriptionIdentifier = address!
+                        guard let first = pair.first, let address = first else { throw Error.missingField("subscriptionIdentifier") }
+                        self.subscriptionIdentifier = address
                         self.status = (pair.count > 1) ? pair[1] : nil
                     case .status(let statusString):
                         throw Error.unexpectedFormat("Expected address and status pair, but got a single status: \(statusString)")

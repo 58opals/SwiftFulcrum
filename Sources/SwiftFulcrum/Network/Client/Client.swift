@@ -10,6 +10,7 @@ actor Client {
     
     var regularResponseHandlers: [RegularResponseIdentifier: RegularResponseHandler]
     var subscriptionResponseHandlers: [SubscriptionResponseIdentifier: SubscriptionResponseHandler]
+    var subscriptionMethods: [SubscriptionKey: Method]
     
     private var receiveTask: Task<Void, Never>?
     
@@ -20,6 +21,7 @@ actor Client {
         self.router = .init()
         self.regularResponseHandlers = .init()
         self.subscriptionResponseHandlers = .init()
+        self.subscriptionMethods = .init()
     }
     
     func start() async throws {
@@ -51,5 +53,6 @@ actor Client {
         await receiveTask?.value
         
         receiveTask = Task { await self.startReceiving() }
+        await self.resubscribeStoredMethods()
     }
 }

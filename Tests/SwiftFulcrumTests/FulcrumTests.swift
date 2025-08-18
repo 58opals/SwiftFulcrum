@@ -10,8 +10,8 @@ private extension String {
 @Suite("Fulcrum – Wallet-level integration")
 struct FulcrumWalletTests {
     let fulcrum: Fulcrum
-    init() throws {
-        self.fulcrum = try Fulcrum()
+    init() async throws {
+        self.fulcrum = try await Fulcrum()
     }
     
     @Test("start → stop happy-path")

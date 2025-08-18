@@ -21,10 +21,12 @@ extension Client {
         subscriptionResponseHandlers.removeValue(forKey: key)
     }
     
-    func failAllPendingRequests(with error: Fulcrum.Error) {
+    func failAllPendingRequests(with error: Fulcrum.Error, includeSubscriptions: Bool = true) {
         regularResponseHandlers.values.forEach { $0(.failure(error)) }
-        subscriptionResponseHandlers.values.forEach { $0(.failure(error)) }
         regularResponseHandlers.removeAll()
+        
+        guard includeSubscriptions else { return }
+        subscriptionResponseHandlers.values.forEach { $0(.failure(error)) }
         subscriptionResponseHandlers.removeAll()
     }
 }

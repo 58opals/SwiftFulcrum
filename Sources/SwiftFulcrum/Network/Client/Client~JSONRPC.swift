@@ -61,7 +61,7 @@ extension Client: Hashable {
     }
 }
 
-extension Client.SubscriptionKey: Hashable {}
+extension Client.SubscriptionKey: Hashable, Sendable {}
 
 extension Client.SubscriptionToken: Hashable, Sendable {
     nonisolated func hash(into hasher: inout Hasher) {
