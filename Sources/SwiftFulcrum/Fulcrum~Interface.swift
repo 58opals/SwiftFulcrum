@@ -107,7 +107,6 @@ extension Fulcrum {
             }
         }
         
-        
         let cancel: @Sendable () async -> Void = {
             await terminationHandler()
         }
