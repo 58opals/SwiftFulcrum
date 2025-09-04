@@ -14,6 +14,7 @@ extension Fulcrum {
             case connectionClosed(URLSessionWebSocketTask.CloseCode, String?)
             case network
             case reconnectFailed
+            case heartbeatTimeout
         }
         
         public struct Server {

@@ -5,11 +5,11 @@ import Network
 
 actor WebSocket {
     var url: URL
-    private var task: URLSessionWebSocketTask?
+    var task: URLSessionWebSocketTask?
     private var state: ConnectionState
     
     private var sharedMessagesStream: AsyncThrowingStream<URLSessionWebSocketTask.Message, Swift.Error>?
-    private var messageContinuation: AsyncThrowingStream<URLSessionWebSocketTask.Message, Swift.Error>.Continuation?
+    var messageContinuation: AsyncThrowingStream<URLSessionWebSocketTask.Message, Swift.Error>.Continuation?
     
     let reconnector: Reconnector
     
@@ -18,17 +18,22 @@ actor WebSocket {
     private var receivedTask: Task<Void, Never>?
     private var wantsAutoReceive = false
     
+    var heartbeatTask: Task<Void, Never>?
+    
     private let session: URLSession
     private let connectionTimeout: TimeInterval
+    let heartbeatConfiguration: Heartbeat.Configuration?
     
     init(url: URL,
          reconnectConfiguration: Reconnector.Configuration = .defaultConfiguration,
-         connectionTimeout: TimeInterval = 10) {
+         connectionTimeout: TimeInterval = 10,
+         heartbeatConfiguration: Heartbeat.Configuration? = nil) {
         self.url = url
         self.task = nil
         self.state = .disconnected
         self.reconnector = Reconnector(reconnectConfiguration)
         self.connectionTimeout = connectionTimeout
+        self.heartbeatConfiguration = heartbeatConfiguration
         
         let configuration = URLSessionConfiguration.default
         configuration.timeoutIntervalForRequest = connectionTimeout
@@ -108,6 +113,7 @@ extension WebSocket {
             state = .connected
             print("WebSocket (\(url.description)) is connected.")
             ensureAutoReceive()
+            startHeartbeatIfNeeded()
         case false:
             state = .disconnected
             task.cancel(with: .goingAway, reason: "Connection timed out.".data(using: .utf8))
@@ -118,6 +124,7 @@ extension WebSocket {
     
     func disconnect(with reason: String? = nil) async {
         await cancelReceiverTask()
+        await stopHeartbeat()
         
         task?.cancel(with: .goingAway, reason: reason?.data(using: .utf8))
         task = nil
