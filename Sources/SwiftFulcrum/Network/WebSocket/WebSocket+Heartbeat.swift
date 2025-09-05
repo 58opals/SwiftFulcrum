@@ -61,9 +61,12 @@ extension WebSocket {
         }
         
         try await withThrowingTaskGroup(of: Void.self) { group in
+            let currentURL = self.url
+            let metrics = self.metrics
             group.addTask {
-                try await withCheckedThrowingContinuation { continuation in
+                try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
                     task.sendPing { error in
+                        if let metrics { Task { await metrics.didPing(url: currentURL, error: error) } }
                         if let error {
                             continuation.resume(throwing: error)
                         } else {

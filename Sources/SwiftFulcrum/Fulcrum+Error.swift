@@ -9,10 +9,14 @@ extension Fulcrum {
         case coding(Coding)
         case client(Client)
         
+        public enum Network {
+            case tlsNegotiationFailed(Swift.Error?)
+        }
+        
         public enum Transport {
             case setupFailed
             case connectionClosed(URLSessionWebSocketTask.CloseCode, String?)
-            case network
+            case network(Error.Network)
             case reconnectFailed
             case heartbeatTimeout
         }
@@ -39,9 +43,17 @@ extension Fulcrum {
 }
 
 extension Fulcrum.Error: Equatable, Sendable {}
-extension Fulcrum.Error.Transport: Equatable, Sendable {}
-extension Fulcrum.Error.Server: Equatable, Sendable {}
-extension Fulcrum.Error.Coding: Equatable, Sendable {
+extension Fulcrum.Error.Network: Swift.Error, Equatable, Sendable {
+    public static func == (lhs: Fulcrum.Error.Network, rhs: Fulcrum.Error.Network) -> Bool {
+        switch (lhs, rhs) {
+        case (.tlsNegotiationFailed(let lErr), .tlsNegotiationFailed(let rErr)):
+            return (lErr == nil && rErr == nil) || (lErr?.localizedDescription == rErr?.localizedDescription)
+        }
+    }
+}
+extension Fulcrum.Error.Transport: Swift.Error, Equatable, Sendable {}
+extension Fulcrum.Error.Server: Swift.Error, Equatable, Sendable {}
+extension Fulcrum.Error.Coding: Swift.Error, Equatable, Sendable {
     public static func == (lhs: Fulcrum.Error.Coding, rhs: Fulcrum.Error.Coding) -> Bool {
         switch (lhs, rhs) {
         case (.encode(let lErr), .encode(let rErr)):
@@ -53,7 +65,7 @@ extension Fulcrum.Error.Coding: Equatable, Sendable {
         }
     }
 }
-extension Fulcrum.Error.Client: Equatable, Sendable {
+extension Fulcrum.Error.Client: Swift.Error, Equatable, Sendable {
     public static func == (lhs: Fulcrum.Error.Client, rhs: Fulcrum.Error.Client) -> Bool {
         switch (lhs, rhs) {
         case (.duplicateHandler, .duplicateHandler),

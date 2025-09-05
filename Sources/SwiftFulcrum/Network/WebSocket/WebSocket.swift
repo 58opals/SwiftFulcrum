@@ -20,11 +20,15 @@ actor WebSocket {
     
     var heartbeatTask: Task<Void, Never>?
     
-    private let session: URLSession
+    let session: URLSession
     private let connectionTimeout: TimeInterval
     let heartbeatConfiguration: Heartbeat.Configuration?
     
+    private let tlsDescriptor: TLSDescriptor?
+    var metrics: MetricsCollectable?
+    
     init(url: URL,
+         configuration: Configuration = .init(),
          reconnectConfiguration: Reconnector.Configuration = .defaultConfiguration,
          connectionTimeout: TimeInterval = 10,
          heartbeatConfiguration: Heartbeat.Configuration? = nil) {
@@ -35,10 +39,52 @@ actor WebSocket {
         self.connectionTimeout = connectionTimeout
         self.heartbeatConfiguration = heartbeatConfiguration
         
-        let configuration = URLSessionConfiguration.default
-        configuration.timeoutIntervalForRequest = connectionTimeout
-        configuration.timeoutIntervalForResource = connectionTimeout
-        self.session = URLSession(configuration: configuration)
+        self.metrics = configuration.metrics
+        self.tlsDescriptor = configuration.tls
+        
+        if let session = configuration.session {
+            self.session = session
+        } else {
+            let sessionConfiguration = URLSessionConfiguration.default
+            sessionConfiguration.timeoutIntervalForRequest = connectionTimeout
+            sessionConfiguration.timeoutIntervalForResource = connectionTimeout
+            if let tls = configuration.tls {
+                self.session = URLSession(configuration: sessionConfiguration, delegate: tls.delegate, delegateQueue: nil)
+            } else {
+                self.session = URLSession(configuration: sessionConfiguration)
+            }
+        }
+    }
+}
+
+// MARK: - Configuration
+extension WebSocket {
+    public struct TLSDescriptor: Sendable {
+        public let options: NWProtocolTLS.Options
+        public let delegate: URLSessionDelegate?
+        
+        public init(options: NWProtocolTLS.Options = .init(), delegate: URLSessionDelegate? = nil) {
+            self.options = options
+            self.delegate = delegate
+        }
+    }
+    
+    public struct Configuration: Sendable {
+        public let session: URLSession?
+        public let tls: TLSDescriptor?
+        public let metrics: MetricsCollectable?
+        
+        public init(session: URLSession? = nil,
+                    tls: TLSDescriptor? = nil,
+                    metrics: MetricsCollectable? = nil) {
+            self.session = session
+            self.tls = tls
+            self.metrics = metrics
+        }
+    }
+    
+    func updateMetrics(_ collector: MetricsCollectable?) {
+        self.metrics = collector
     }
 }
 
@@ -75,11 +121,18 @@ extension WebSocket {
         guard let task else { throw Fulcrum.Error.transport(.connectionClosed(closeInformation.code, closeInformation.reason)) }
         
         return try await withThrowingTaskGroup(of: Bool.self) { group in
+            let currentURL = self.url
+            let metrics = self.metrics
+            
             group.addTask {
                 try await withCheckedThrowingContinuation { continuation in
                     task.sendPing { error in
-                        if let error { continuation.resume(throwing: error) }
-                        else         { continuation.resume(returning: true) }
+                        if let metrics { Task { await metrics.didPing(url: currentURL, error: error) } }
+                        if let error {
+                            continuation.resume(throwing: Fulcrum.Error.Network.tlsNegotiationFailed(error))
+                        } else {
+                            continuation.resume(returning: true)
+                        }
                     }
                 }
             }
@@ -107,18 +160,23 @@ extension WebSocket {
         task.resume()
         print("WebSocket (\(url.description)) is connecting...")
         
-        let isConnected = try await waitForConnection(timeout: connectionTimeout)
-        switch isConnected {
-        case true:
-            state = .connected
-            print("WebSocket (\(url.description)) is connected.")
-            ensureAutoReceive()
-            startHeartbeatIfNeeded()
-        case false:
-            state = .disconnected
-            task.cancel(with: .goingAway, reason: "Connection timed out.".data(using: .utf8))
-            print("WebSocket (\(url.description)) failed to connect.")
-            throw Fulcrum.Error.transport(.connectionClosed(closeInformation.code, closeInformation.reason))
+        do {
+            let isConnected = try await waitForConnection(timeout: connectionTimeout)
+            switch isConnected {
+            case true:
+                state = .connected
+                print("WebSocket (\(url.description)) is connected.")
+                await metrics?.didConnect(url: url)
+                ensureAutoReceive()
+                startHeartbeatIfNeeded()
+            case false:
+                state = .disconnected
+                task.cancel(with: .goingAway, reason: "Connection timed out.".data(using: .utf8))
+                print("WebSocket (\(url.description)) failed to connect.")
+                throw Fulcrum.Error.transport(.connectionClosed(closeInformation.code, closeInformation.reason))
+            }
+        } catch let networkError as Fulcrum.Error.Network {
+            throw Fulcrum.Error.transport(.network(networkError))
         }
     }
     
@@ -131,6 +189,8 @@ extension WebSocket {
         state = .disconnected
         
         messageContinuation?.finish(throwing: Fulcrum.Error.transport(.connectionClosed(closeInformation.code, closeInformation.reason)))
+        
+        await metrics?.didDisconnect(url: url, closeCode: closeInformation.code, reason: reason)
         
         await resetMessageStreamAndReader()
         print("WebSocket (\(self.url.description)) is disconnected.")
@@ -157,6 +217,7 @@ extension WebSocket {
         
         let message = URLSessionWebSocketTask.Message.data(data)
         try await task.send(message)
+        await metrics?.didSend(url: url, message: message)
     }
     
     func send(string: String) async throws {
@@ -164,6 +225,7 @@ extension WebSocket {
         
         let message = URLSessionWebSocketTask.Message.string(string)
         try await task.send(message)
+        await metrics?.didSend(url: url, message: message)
     }
 }
 
@@ -221,6 +283,7 @@ extension WebSocket {
                     messageContinuation = nil
                     break
                 }
+                await metrics?.didReceive(url: url, message: message)
             } catch let error as URLError {
                 if error.code == .cancelled {
                     break

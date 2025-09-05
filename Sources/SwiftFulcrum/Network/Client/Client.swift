@@ -14,7 +14,7 @@ actor Client {
     
     private var receiveTask: Task<Void, Never>?
     
-    init(webSocket: WebSocket) {
+    init(webSocket: WebSocket, metrics: MetricsCollectable? = nil) {
         self.id = .init()
         self.webSocket = webSocket
         self.jsonRPC = .init()
@@ -22,6 +22,7 @@ actor Client {
         self.regularResponseHandlers = .init()
         self.subscriptionResponseHandlers = .init()
         self.subscriptionMethods = .init()
+        if let metrics { Task { await self.webSocket.updateMetrics(metrics) } }
     }
     
     func start() async throws {
