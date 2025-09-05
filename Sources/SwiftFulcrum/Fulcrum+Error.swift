@@ -35,6 +35,7 @@ extension Fulcrum {
         public enum Client {
             case duplicateHandler
             case cancelled
+            case timeout(Duration)
             case emptyResponse(UUID?)
             case protocolMismatch(String?)
             case unknown(Swift.Error?)
@@ -71,6 +72,8 @@ extension Fulcrum.Error.Client: Swift.Error, Equatable, Sendable {
         case (.duplicateHandler, .duplicateHandler),
             (.cancelled, .cancelled):
             return true
+        case (.timeout(let lDur), .timeout(let rDur)):
+            return lDur == rDur
         case (.emptyResponse(let lUUID), .emptyResponse(let rUUID)):
             return lUUID == rUUID
         case (.protocolMismatch(let lMsg), .protocolMismatch(let rMsg)):

@@ -2,7 +2,7 @@
 
 import Foundation
 
-actor Client {
+public actor Client {
     let id: UUID
     let webSocket: WebSocket
     var jsonRPC: JSONRPC
