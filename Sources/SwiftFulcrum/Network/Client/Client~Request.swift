@@ -3,7 +3,10 @@
 import Foundation
 
 extension Client {
-    func call<Result: Decodable>(method: Method, options: Call.Options = .init()) async throws -> Result {
+    func call<Result: Decodable>(
+        method: Method,
+        options: Call.Options = .init()
+    ) async throws -> Result {
         let id = UUID()
         let request = method.createRequest(with: id)
         
@@ -60,14 +63,19 @@ extension Client {
     ) async throws -> (UUID, Result, AsyncThrowingStream<Result, Swift.Error>) {
         let id = UUID()
         let request = method.createRequest(with: id)
-        let subscriptionKey = SubscriptionKey(methodPath: method.path,
-                                              identifier: getSubscriptionIdentifier(for: method))
+        let subscriptionKey = SubscriptionKey(
+            methodPath: method.path,
+            identifier: getSubscriptionIdentifier(for: method)
+        )
         
         let subscriptionTask = Task<(UUID, Result, AsyncThrowingStream<Result, Swift.Error>), Swift.Error> {
             try await withTaskCancellationHandler {
                 let (rawStream, rawContinuation) = AsyncThrowingStream<Data, Swift.Error>.makeStream()
                 
-                try await router.addStream(key: subscriptionKey.string, continuation: rawContinuation)
+                try await router.addStream(
+                    key: subscriptionKey.string,
+                    continuation: rawContinuation
+                )
                 subscriptionMethods[subscriptionKey] = method
                 
                 rawContinuation.onTermination = { @Sendable [weak self] _ in
@@ -113,7 +121,6 @@ extension Client {
             }
         }
         
-        
         if let token = options.token {
             let idCopy = id
             let keyCopy = subscriptionKey.string
@@ -138,7 +145,6 @@ extension Client {
                 group.cancelAll()
                 return value
             }
-            
         } else {
             return try await subscriptionTask.value
         }
