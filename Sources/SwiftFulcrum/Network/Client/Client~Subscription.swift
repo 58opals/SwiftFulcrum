@@ -25,7 +25,9 @@ extension Client {
 extension Client {
     func resubscribeStoredMethods() async {
         for method in subscriptionMethods.values {
-            _ = try? await sendRegularRequest(method: method) { _ in }
+            let requestID = UUID()
+            let request = method.createRequest(with: requestID)
+            try? await send(request: request)
         }
     }
 }
@@ -45,47 +47,6 @@ extension Client {
             return txid
         case .blockchain(.transaction(.dsProof(.subscribe(let txid)))):
             return txid
-        default:
-            return nil
-        }
-    }
-    
-    func getIdentifierFromNotification(methodPath: String, data: Data) -> String? {
-        switch methodPath {
-        case "blockchain.address.subscribe",
-            "blockchain.transaction.subscribe":
-            struct Envelope: Decodable { let params: [DecodableValue] }
-            struct DecodableValue: Decodable { let string: String?
-                init(from dec: Decoder) throws {
-                    let c = try dec.singleValueContainer()
-                    self.string = try? c.decode(String.self)
-                }
-            }
-            
-            if let first = try? JSONRPC.Coder.decoder.decode(Envelope.self, from: data).params.first?.string {
-                return first
-            }
-            return nil
-        case "blockchain.transaction.dsproof.subscribe":
-            struct Envelope: Decodable { let params: [DecodableValue] }
-            struct DecodableValue: Decodable {
-                let string: String?
-                let dsProof: DSProof?
-                
-                struct DSProof: Decodable { let txid: String }
-                
-                init(from dec: Decoder) throws {
-                    let container = try dec.singleValueContainer()
-                    self.string = try? container.decode(String.self)
-                    self.dsProof = try? container.decode(DSProof.self)
-                }
-            }
-            
-            if let first = try? JSONRPC.Coder.decoder.decode(Envelope.self, from: data).params.first {
-                if let string = first.string { return string }
-                if let proof = first.dsProof { return proof.txid }
-            }
-            return nil
         default:
             return nil
         }

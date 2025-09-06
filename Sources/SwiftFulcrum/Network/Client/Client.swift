@@ -8,8 +8,6 @@ public actor Client {
     var jsonRPC: JSONRPC
     let router: Router
     
-    var regularResponseHandlers: [RegularResponseIdentifier: RegularResponseHandler]
-    var subscriptionResponseHandlers: [SubscriptionResponseIdentifier: SubscriptionResponseHandler]
     var subscriptionMethods: [SubscriptionKey: Method]
     
     private var receiveTask: Task<Void, Never>?
@@ -19,8 +17,6 @@ public actor Client {
         self.webSocket = webSocket
         self.jsonRPC = .init()
         self.router = .init()
-        self.regularResponseHandlers = .init()
-        self.subscriptionResponseHandlers = .init()
         self.subscriptionMethods = .init()
         if let metrics { Task { await self.webSocket.updateMetrics(metrics) } }
     }
@@ -37,7 +33,6 @@ public actor Client {
             .connectionClosed(webSocket.closeInformation.code, webSocket.closeInformation.reason)
         )
         
-        self.failAllPendingRequests(with: closedError)
         await self.router.failAll(with: closedError)
         
         receiveTask?.cancel()

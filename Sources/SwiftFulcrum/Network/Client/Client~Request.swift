@@ -3,10 +3,10 @@
 import Foundation
 
 extension Client {
-    func call<Result: Decodable>(
+    func call<Result: JSONRPCConvertible>(
         method: Method,
         options: Call.Options = .init()
-    ) async throws -> Result {
+    ) async throws -> (UUID, Result) {
         let id = UUID()
         let request = method.createRequest(with: id)
         
@@ -54,10 +54,10 @@ extension Client {
             raw = try await callTask.value
         }
         
-        return try raw.decode(Result.self)
+        return try (id, raw.decode(Result.self))
     }
     
-    func subscribe<Result: Decodable & Sendable>(
+    func subscribe<Result: JSONRPCConvertible>(
         method: Method,
         options: Call.Options = .init()
     ) async throws -> (UUID, Result, AsyncThrowingStream<Result, Swift.Error>) {
@@ -82,12 +82,13 @@ extension Client {
                     guard let self else { return }
                     
                     Task {
+                        await self.router.cancel(identifier: .uuid(id))
                         await self.router.cancel(identifier: .string(subscriptionKey.string))
-                        await self.removeSubscriptionResponseHandler(for: subscriptionKey)
                         await self.removeStoredSubscriptionMethod(for: subscriptionKey)
                         
                         if let method = await self.makeUnsubscribeMethod(for: subscriptionKey) {
-                            _ = try? await self.sendRegularRequest(method: method) { _ in }
+                            let request = method.createRequest(with: UUID())
+                            try? await self.send(request: request)
                         }
                     }
                 }
@@ -152,57 +153,6 @@ extension Client {
 }
 
 extension Client {
-    func sendRegularRequest(method: Method,
-                            handler: @escaping RegularResponseHandler) async throws -> RegularResponseIdentifier {
-        let requestID: UUID = .init()
-        let request: Request = method.createRequest(with: requestID)
-        
-        try insertRegularHandler(for: requestID, handler: handler)
-        
-        do {
-            try await send(request: request)
-        } catch {
-            regularResponseHandlers.removeValue(forKey: requestID)
-            throw error
-        }
-        
-        return requestID
-    }
-    
-    func sendSubscriptionRequest(method: Method,
-                                 initialResponseHandler: @escaping RegularResponseHandler,
-                                 notificationHandler: @escaping SubscriptionResponseHandler) async throws -> SubscriptionToken {
-        let requestID: UUID = .init()
-        let request: Request = method.createRequest(with: requestID)
-        let subscriptionKey = SubscriptionResponseIdentifier(methodPath: request.method,
-                                                             identifier: getSubscriptionIdentifier(for: method))
-        
-        try insertRegularHandler(for: requestID, handler: initialResponseHandler)
-        try insertSubscriptionHandler(for: subscriptionKey, handler: notificationHandler)
-        subscriptionMethods[subscriptionKey] = method
-        
-        do {
-            try await send(request: request)
-        } catch {
-            regularResponseHandlers.removeValue(forKey: requestID)
-            subscriptionResponseHandlers.removeValue(forKey: subscriptionKey)
-            throw error
-        }
-        
-        let cancelClosure: @Sendable () async -> Void = { [weak self] in
-            guard let self else { return }
-            
-            await self.removeSubscriptionResponseHandler(for: subscriptionKey)
-            await self.removeStoredSubscriptionMethod(for: subscriptionKey)
-            
-            if let method = await self.makeUnsubscribeMethod(for: subscriptionKey) {
-                _ = try? await self.sendRegularRequest(method: method) { _ in }
-            }
-        }
-        
-        return .init(requestID: requestID, key: subscriptionKey, cancelClosure: cancelClosure)
-    }
-    
     func send(request: Request) async throws {
         guard let data = request.data else { throw Fulcrum.Error.coding(.encode(nil)) }
         try await self.send(data: data)

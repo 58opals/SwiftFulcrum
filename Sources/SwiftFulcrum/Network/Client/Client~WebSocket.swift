@@ -25,7 +25,6 @@ extension Client {
                 .connectionClosed(webSocket.closeInformation.code, webSocket.closeInformation.reason)
             )
             
-            self.failAllPendingRequests(with: closedError, includeSubscriptions: false)
             await self.router.failUnaries(with: closedError)
         }
     }
