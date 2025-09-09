@@ -3,21 +3,6 @@
 import Foundation
 
 extension Data {
-    func decode<Result: JSONRPCConvertible>(_ type: Result.Type) throws -> Result {
-        let rpcContainer = try JSONRPC.Coder.decoder.decode(Response.JSONRPC.Generic<Result.JSONRPC>.self, from: self)
-        
-        switch try rpcContainer.getResponseType() {
-        case .regular(let regular):
-            return try Result(fromRPC: regular.result)
-        case .subscription(let subscriptionResponse):
-            return try Result(fromRPC: subscriptionResponse.result)
-        case .error(let error):
-            throw Fulcrum.Error.rpc(.init(id: error.id, code: error.error.code, message: error.error.message))
-        case .empty(let uuid):
-            throw Fulcrum.Error.client(.emptyResponse(uuid))
-        }
-    }
-    
     func decode<Result: Decodable>(_ type: Result.Type) throws -> Result {
         let rpcResult = try JSONRPC.Coder.decoder.decode(Response.JSONRPC.Generic<Result>.self, from: self)
         let resultType = try rpcResult.getResponseType()
@@ -31,6 +16,44 @@ extension Data {
             throw Fulcrum.Error.rpc(.init(id: error.id, code: error.error.code, message: error.error.message))
         case .empty(let uuid):
             throw Fulcrum.Error.client(.emptyResponse(uuid))
+        }
+    }
+    
+    func decode<Result: JSONRPCConvertible>(
+        _ type: Result.Type,
+        context: JSONRPC.DecodeContext? = nil
+    ) throws -> Result {
+        let rpcContainer = try JSONRPC.Coder.decoder.decode(
+            Response.JSONRPC.Generic<Result.JSONRPC>.self,
+            from: self
+        )
+        let responseKind = try rpcContainer.getResponseType()
+        do {
+            switch responseKind {
+            case .regular(let regular):
+                return try Result(fromRPC: regular.result)
+            case .subscription(let subscriptionResponse):
+                return try Result(fromRPC: subscriptionResponse.result)
+            case .error(let error):
+                throw Fulcrum.Error.rpc(.init(id: error.id, code: error.error.code, message: error.error.message))
+            case .empty(let uuid):
+                throw Fulcrum.Error.client(.emptyResponse(uuid))
+            }
+        } catch let formatError as Response.Result.Error {
+            // Enrich unexpectedFormat with method and payload size.
+            if case .unexpectedFormat(let msg) = formatError {
+                let methodHint: String? = {
+                    if let m = context?.methodPath { return m }
+                    // For subscription notifications, the method is carried in the payload.
+                    return rpcContainer.method
+                }()
+                let prefix = [
+                    methodHint.map { "[method: \($0)]" },
+                    "[payload: \(self.count) B]"
+                ].compactMap { $0 }.joined(separator: " ")
+                throw Response.Result.Error.unexpectedFormat("\(prefix) \(msg)")
+            }
+            throw formatError
         }
     }
 }
@@ -57,6 +80,24 @@ extension AsyncThrowingStream where Element == Data {
                 do {
                     for try await chunk in self {
                         continuation.yield(try chunk.decode(Result.self))
+                    }
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+        }
+    }
+    
+    func decode<Result: JSONRPCConvertible>(
+        _ type: Result.Type,
+        context: JSONRPC.DecodeContext?
+    ) -> AsyncThrowingStream<Result, Swift.Error> {
+        AsyncThrowingStream<Result, Swift.Error> { continuation in
+            Task {
+                do {
+                    for try await chunk in self {
+                        continuation.yield(try chunk.decode(Result.self, context: context))
                     }
                     continuation.finish()
                 } catch {

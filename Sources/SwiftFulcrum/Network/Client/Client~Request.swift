@@ -54,7 +54,7 @@ extension Client {
             raw = try await callTask.value
         }
         
-        return try (id, raw.decode(Result.self))
+        return try (id, raw.decode(Result.self, context: .init(methodPath: method.path)))
     }
     
     func subscribe<Initial: JSONRPCConvertible, Notification: JSONRPCConvertible>(
@@ -109,9 +109,13 @@ extension Client {
                             await router.cancel(identifier: .string(subscriptionKey.string), error: error)
                         }
                     }
-                }.decode(Initial.self)
+                }.decode(
+                    Initial.self,
+                    context: .init(methodPath: method.path)
+                )
                 
-                let typedStream: AsyncThrowingStream<Notification, Swift.Error> = rawStream.decode(Notification.self)
+                let typedStream: AsyncThrowingStream<Notification, Swift.Error> = rawStream.decode(Notification.self, context: .init(methodPath: method.path))
+                
                 
                 return (id, initial, typedStream)
             } onCancel: {

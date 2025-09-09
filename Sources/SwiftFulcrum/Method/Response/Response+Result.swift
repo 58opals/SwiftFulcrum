@@ -137,7 +137,7 @@ extension Response.Result {
                     case .status(let statusString):
                         self.status = statusString
                     case .addressAndStatus(let pair):
-                        throw Error.unexpectedFormat("Expected a status string, but got address and status array for Address.Subscribe: \(pair.description)")
+                        throw Error.unexpectedFormat("Expected a status string; got address and status array for Address.Subscribe: \(pair.description)")
                     }
                 }
             }
@@ -154,7 +154,7 @@ extension Response.Result {
                         self.subscriptionIdentifier = address
                         self.status = (pair.count > 1) ? pair[1] : nil
                     case .status(let statusString):
-                        throw Error.unexpectedFormat("Expected address and status pair, but got a single status: \(statusString)")
+                        throw Error.unexpectedFormat("Expected address and status pair; got single status: \(statusString)")
                     }
                 }
             }
@@ -246,7 +246,7 @@ extension Response.Result {
                         self.height = batch[0].height
                         self.hex = batch[0].hex
                     case .newHeader(let batch):
-                        throw Response.Result.Error.unexpectedFormat("Expected single top header, received batch of new headers: \(batch.description)")
+                        throw Response.Result.Error.unexpectedFormat("Expected single top header; received batch of new headers: \(batch.description)")
                     }
                 }
             }
@@ -364,7 +364,7 @@ extension Response.Result {
                 public init(fromRPC jsonrpc: JSONRPC) throws {
                     switch jsonrpc {
                     case .raw(let raw):
-                        throw Error.unexpectedFormat("Expected detailed transaction information, received raw hex string: \(raw)")
+                        throw Error.unexpectedFormat("Expected detailed transaction information; received raw hex string: \(raw)")
                     case .detailed(let detailed):
                         guard let blockHash = detailed.blockhash else { throw Error.missingField("blockhash") }
                         guard let blocktime = detailed.blocktime else { throw Error.missingField("blocktime") }
@@ -442,7 +442,7 @@ extension Response.Result {
                     case .height(let height):
                         self.height = height
                     case .transactionHashAndHeight(let pairs):
-                        throw Error.unexpectedFormat("Expected a height uint, but got transaction hash and height array for Transaction.Subscribe: \(pairs.description)")
+                        throw Error.unexpectedFormat("Expected a height uint; got transaction hash and height array for Transaction.Subscribe: \(pairs.description)")
                     }
                 }
             }
@@ -477,7 +477,7 @@ extension Response.Result {
                         self.transactionHash = transactionHash
                         self.height = height
                     case .height(let height):
-                        throw Error.unexpectedFormat("Expected a transaction hash and height array for Transaction.Subscribe, but got a height uint: \(height.description)")
+                        throw Error.unexpectedFormat("Expected [txid, height] for Transaction.Subscribe; got height only: \(height.description)")
                     }
                 }
             }
@@ -537,7 +537,7 @@ extension Response.Result {
                         case .dsProof(let proof):
                             self.proof = proof.map { Get(fromRPC: $0) }
                         case .transactionHashAndDSProof(let pairs):
-                            throw Error.unexpectedFormat("Expected DSProof or nil for DSProof.Subscribe initial response, got txHash/DSProof pair: \(pairs)")
+                            throw Error.unexpectedFormat("Expected DSProof or nil for DSProof.Subscribe initial response; got [txHash, DSProof]: \(pairs)")
                         }
                     }
                 }

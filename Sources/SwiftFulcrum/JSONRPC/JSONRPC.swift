@@ -21,3 +21,10 @@ extension JSONRPC {
         }()
     }
 }
+
+extension JSONRPC {
+    struct DecodeContext {
+        let methodPath: String?
+        init(methodPath: String?) { self.methodPath = methodPath }
+    }
+}
