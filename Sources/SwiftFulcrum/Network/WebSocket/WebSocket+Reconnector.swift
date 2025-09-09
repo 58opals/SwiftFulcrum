@@ -3,17 +3,27 @@
 import Foundation
 
 extension WebSocket {
-    actor Reconnector {
-        struct Configuration {
+    public actor Reconnector {
+        public struct Configuration: Sendable {
             var maximumReconnectionAttempts: Int
             var reconnectionDelay: TimeInterval
             var maximumDelay: TimeInterval
             var jitterRange: ClosedRange<TimeInterval>
             
-            static let defaultConfiguration = Self(maximumReconnectionAttempts: 3,
-                                                   reconnectionDelay: 1.0,
-                                                   maximumDelay: 30,
-                                                   jitterRange: 0.8 ... 1.3)
+            public static let defaultConfiguration = Self(maximumReconnectionAttempts: 3,
+                                                          reconnectionDelay: 1.0,
+                                                          maximumDelay: 30,
+                                                          jitterRange: 0.8 ... 1.3)
+            
+            public init(maximumReconnectionAttempts: Int,
+                        reconnectionDelay: TimeInterval,
+                        maximumDelay: TimeInterval,
+                        jitterRange: ClosedRange<TimeInterval>) {
+                self.maximumReconnectionAttempts = maximumReconnectionAttempts
+                self.reconnectionDelay = reconnectionDelay
+                self.maximumDelay = maximumDelay
+                self.jitterRange = jitterRange
+            }
         }
         
         private let configuration: Configuration

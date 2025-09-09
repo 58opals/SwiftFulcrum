@@ -3,7 +3,7 @@
 import Foundation
 import Network
 
-actor WebSocket {
+public actor WebSocket {
     var url: URL
     var task: URLSessionWebSocketTask?
     private var state: ConnectionState
