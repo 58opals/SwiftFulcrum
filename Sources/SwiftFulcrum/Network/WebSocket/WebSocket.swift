@@ -27,11 +27,11 @@ public actor WebSocket {
     private let tlsDescriptor: TLSDescriptor?
     var metrics: MetricsCollectable?
     
-    init(url: URL,
-         configuration: Configuration = .init(),
-         reconnectConfiguration: Reconnector.Configuration = .defaultConfiguration,
-         connectionTimeout: TimeInterval = 10,
-         heartbeatConfiguration: Heartbeat.Configuration? = nil) {
+    public init(url: URL,
+                configuration: Configuration = .init(),
+                reconnectConfiguration: Reconnector.Configuration = .defaultConfiguration,
+                connectionTimeout: TimeInterval = 10,
+                heartbeatConfiguration: Heartbeat.Configuration? = nil) {
         self.url = url
         self.task = nil
         self.state = .disconnected

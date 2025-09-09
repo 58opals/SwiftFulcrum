@@ -5,10 +5,10 @@ import Foundation
 extension WebSocket {
     public actor Reconnector {
         public struct Configuration: Sendable {
-            var maximumReconnectionAttempts: Int
-            var reconnectionDelay: TimeInterval
-            var maximumDelay: TimeInterval
-            var jitterRange: ClosedRange<TimeInterval>
+            public var maximumReconnectionAttempts: Int
+            public var reconnectionDelay: TimeInterval
+            public var maximumDelay: TimeInterval
+            public var jitterRange: ClosedRange<TimeInterval>
             
             public static let defaultConfiguration = Self(maximumReconnectionAttempts: 3,
                                                           reconnectionDelay: 1.0,
