@@ -10,7 +10,9 @@ extension WebSocket {
             public var maximumDelay: TimeInterval
             public var jitterRange: ClosedRange<TimeInterval>
             
-            public static let defaultConfiguration = Self(maximumReconnectionAttempts: 3,
+            public var isUnlimited: Bool { maximumReconnectionAttempts <= 0 }
+            
+            public static let defaultConfiguration = Self(maximumReconnectionAttempts: 0,
                                                           reconnectionDelay: 1.0,
                                                           maximumDelay: 30,
                                                           jitterRange: 0.8 ... 1.3)
@@ -39,16 +41,19 @@ extension WebSocket {
         }
         
         func attemptReconnection(for webSocket: WebSocket, with url: URL? = nil) async throws {
-            while reconnectionAttempts < self.configuration.maximumReconnectionAttempts {
-                let base = pow(2.0, Double(reconnectionAttempts)) * self.configuration.reconnectionDelay
-                let delay = min(base, self.configuration.maximumDelay) * .random(in: self.configuration.jitterRange)
+            while configuration.isUnlimited || reconnectionAttempts < configuration.maximumReconnectionAttempts {
+                let base = pow(2.0, Double(reconnectionAttempts)) * configuration.reconnectionDelay
+                let delay = min(base, configuration.maximumDelay) * .random(in: configuration.jitterRange)
                 try await Task.sleep(for: .seconds(delay))
                 
                 reconnectionAttempts += 1
-                await webSocket.emitLog(.info,
-                                                        "reconnect.attempt",
-                                                        metadata: ["attempt": String(reconnectionAttempts)])
-                                 
+                await webSocket.emitLog(
+                    .info,
+                    "reconnect.attempt",
+                    metadata: ["attempt": String(reconnectionAttempts),
+                               "unlimited": String(configuration.isUnlimited)]
+                )
+                
                 
                 do {
                     await webSocket.cancelReceiverTask()
@@ -59,10 +64,10 @@ extension WebSocket {
                     return
                 } catch {
                     await webSocket.emitLog(.warning,
-                                                                "reconnect.failed",
-                                                                metadata: ["attempt": String(reconnectionAttempts),
-                                                                           "error": (error as NSError).localizedDescription])
-                                     
+                                            "reconnect.failed",
+                                            metadata: ["attempt": String(reconnectionAttempts),
+                                                       "error": (error as NSError).localizedDescription])
+                    
                 }
             }
             
