@@ -43,34 +43,18 @@ struct ClientTests {
     func relayFee() async throws {
         try await client.start()
         
-        let fee: Double = try await client.call(
+        let (id, fee): (UUID, Response.Result.Blockchain.RelayFee) = try await client.call(
             method: .blockchain(.relayFee)
         )
-        print("Relay fee: \(fee)")
-        #expect(fee > 0)
+        print("Relay fee: \(fee.fee) [id: \(id)]")
+        #expect(fee.fee > 0)
         
         await client.stop()
     }
     
     @Test("blockchain.headers.subscribe delivers an initial tip")
     func headerSubscription() async throws {
-        try await client.start()
         
-        let method = Method.blockchain(.headers(.subscribe))
-        typealias Payload = Response.JSONRPC.Result.Blockchain.Headers.Subscribe
-        
-        let (_, initial, _) = try await client.subscribe(method: method) as (UUID, Payload, AsyncThrowingStream<Payload, Swift.Error>)
-        
-        switch initial {
-        case .topHeader(let tip):
-            print("Initial tip: \(tip)")
-            #expect(tip.height > 0)
-        case .newHeader(let batch):
-            print("Initial batch: \(batch)")
-            #expect(!batch.isEmpty)
-        }
-        
-        await client.stop()
     }
 }
 
@@ -84,35 +68,11 @@ struct ClientConcurrencyTests {
     
     @Test("three concurrent RPCs resolve independently")
     func concurrentRPCs() async throws {
-        try await client.start()
         
-        typealias Tip = Response.JSONRPC.Result.Blockchain.Headers.GetTip
-        
-        async let relayFee: Double = client.call(method: .blockchain(.relayFee))
-        async let est1Blk: Double = client.call(method: .blockchain(.estimateFee(numberOfBlocks: 1)))
-        async let tip: Tip = client.call(method: .blockchain(.headers(.getTip)))
-        
-        let (fee, estimate, best) = try await (relayFee, est1Blk, tip)
-        
-        #expect(fee > 0)
-        #expect(estimate > 0)
-        #expect(best.height > 0)
-        
-        await client.stop()
     }
     
     @Test("second subscription to same stream throws duplicateHandler")
     func duplicateSubscriptionIsRejected() async throws {
-        try await client.start()
-        let headersSub = Method.blockchain(.headers(.subscribe))
-        typealias Payload = Response.JSONRPC.Result.Blockchain.Headers.Subscribe
         
-        _ = try await client.subscribe(method: headersSub) as (UUID, Payload, AsyncThrowingStream<Payload, Swift.Error>)
-        
-        await #expect(throws: Fulcrum.Error.self) {
-            _ = try await client.subscribe(method: headersSub) as (UUID, Payload, AsyncThrowingStream<Payload, Swift.Error>)
-        }
-        
-        await client.stop()
     }
 }

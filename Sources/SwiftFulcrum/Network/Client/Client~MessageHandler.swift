@@ -11,9 +11,9 @@ extension Client {
             if let data = string.data(using: .utf8) {
                 await router.handle(raw: data)
             }
-            else { print("Failed to convert string message to Data.") }
+            else { emitLog(.warning, "ws.message.string.decode_failed") }
         @unknown default:
-            print("Unknown message type")
+            emitLog(.warning, "ws.message.unknown_type")
         }
     }
 }

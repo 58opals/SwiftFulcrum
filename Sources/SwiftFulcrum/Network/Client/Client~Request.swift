@@ -57,10 +57,10 @@ extension Client {
         return try (id, raw.decode(Result.self))
     }
     
-    func subscribe<Result: JSONRPCConvertible>(
+    func subscribe<Initial: JSONRPCConvertible, Notification: JSONRPCConvertible>(
         method: Method,
         options: Call.Options = .init()
-    ) async throws -> (UUID, Result, AsyncThrowingStream<Result, Swift.Error>) {
+    ) async throws -> (UUID, Initial, AsyncThrowingStream<Notification, Swift.Error>) {
         let id = UUID()
         let request = method.createRequest(with: id)
         let subscriptionKey = SubscriptionKey(
@@ -68,7 +68,7 @@ extension Client {
             identifier: getSubscriptionIdentifier(for: method)
         )
         
-        let subscriptionTask = Task<(UUID, Result, AsyncThrowingStream<Result, Swift.Error>), Swift.Error> {
+        let subscriptionTask = Task<(UUID, Initial, AsyncThrowingStream<Notification, Swift.Error>), Swift.Error> {
             try await withTaskCancellationHandler {
                 let (rawStream, rawContinuation) = AsyncThrowingStream<Data, Swift.Error>.makeStream()
                 
@@ -93,7 +93,7 @@ extension Client {
                     }
                 }
                 
-                let initial: Result = try await withCheckedThrowingContinuation { continuation in
+                let initial: Initial = try await withCheckedThrowingContinuation { continuation in
                     Task {
                         do {
                             try await router.addUnary(id: id, continuation: continuation)
@@ -109,9 +109,9 @@ extension Client {
                             await router.cancel(identifier: .string(subscriptionKey.string), error: error)
                         }
                     }
-                }.decode(Result.self)
+                }.decode(Initial.self)
                 
-                let typedStream = rawStream.decode(Result.self)
+                let typedStream: AsyncThrowingStream<Notification, Swift.Error> = rawStream.decode(Notification.self)
                 
                 return (id, initial, typedStream)
             } onCancel: {
@@ -135,7 +135,7 @@ extension Client {
         }
         
         if let limit = options.timeout {
-            return try await withThrowingTaskGroup(of: (UUID, Result, AsyncThrowingStream<Result, Swift.Error>).self) { group in
+            return try await withThrowingTaskGroup(of: (UUID, Initial, AsyncThrowingStream<Notification, Swift.Error>).self) { group in
                 group.addTask { try await subscriptionTask.value }
                 group.addTask {
                     try await Task.sleep(for: limit)

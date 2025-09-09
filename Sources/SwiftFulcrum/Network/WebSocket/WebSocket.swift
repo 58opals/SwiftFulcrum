@@ -12,6 +12,7 @@ public actor WebSocket {
     var messageContinuation: AsyncThrowingStream<URLSessionWebSocketTask.Message, Swift.Error>.Continuation?
     
     let reconnector: Reconnector
+    var logger: Log.Handler
     
     var isConnected: Bool { state == .connected }
     
@@ -40,6 +41,7 @@ public actor WebSocket {
         self.heartbeatConfiguration = heartbeatConfiguration
         
         self.metrics = configuration.metrics
+        self.logger = configuration.logger ?? Log.NoOpHandler()
         self.tlsDescriptor = configuration.tls
         
         if let session = configuration.session {
@@ -73,18 +75,25 @@ extension WebSocket {
         public let session: URLSession?
         public let tls: TLSDescriptor?
         public let metrics: MetricsCollectable?
+        public let logger: Log.Handler?
         
         public init(session: URLSession? = nil,
                     tls: TLSDescriptor? = nil,
-                    metrics: MetricsCollectable? = nil) {
+                    metrics: MetricsCollectable? = nil,
+                    logger: Log.Handler? = nil) {
             self.session = session
             self.tls = tls
             self.metrics = metrics
+            self.logger = logger
         }
     }
     
     func updateMetrics(_ collector: MetricsCollectable?) {
         self.metrics = collector
+    }
+    
+    func updateLogger(_ handler: Log.Handler?) {
+        self.logger = handler ?? Log.NoOpHandler()
     }
 }
 
@@ -107,7 +116,7 @@ extension WebSocket {
     }
     
     private func getCurrentCloseInformation() -> (code: URLSessionWebSocketTask.CloseCode, reason: String?) {
-        let code   = task?.closeCode ?? .invalid
+        let code = task?.closeCode ?? .invalid
         let reason = task?.closeReason.flatMap { String(data: $0, encoding: .utf8) }
         return (code, reason)
     }
@@ -158,21 +167,21 @@ extension WebSocket {
         guard let task else { throw Fulcrum.Error.transport(.connectionClosed(closeInformation.code, closeInformation.reason)) }
         
         task.resume()
-        print("WebSocket (\(url.description)) is connecting...")
+        emitLog(.info, "connect.begin")
         
         do {
             let isConnected = try await waitForConnection(timeout: connectionTimeout)
             switch isConnected {
             case true:
                 state = .connected
-                print("WebSocket (\(url.description)) is connected.")
+                emitLog(.info, "connect.succeeded")
                 await metrics?.didConnect(url: url)
                 ensureAutoReceive()
                 startHeartbeatIfNeeded()
             case false:
                 state = .disconnected
                 task.cancel(with: .goingAway, reason: "Connection timed out.".data(using: .utf8))
-                print("WebSocket (\(url.description)) failed to connect.")
+                emitLog(.error, "connect.timeout")
                 throw Fulcrum.Error.transport(.connectionClosed(closeInformation.code, closeInformation.reason))
             }
         } catch let networkError as Fulcrum.Error.Network {
@@ -193,8 +202,9 @@ extension WebSocket {
         await metrics?.didDisconnect(url: url, closeCode: closeInformation.code, reason: reason)
         
         await resetMessageStreamAndReader()
-        print("WebSocket (\(self.url.description)) is disconnected.")
-        if let reason { print("Reason: \(reason)") }
+        emitLog(.info, "disconnect", metadata: ["reason": reason ?? "nil",
+                                                "code": String(closeInformation.code.rawValue)])
+        
     }
     
     
@@ -289,7 +299,10 @@ extension WebSocket {
                     break
                 }
             } catch {
-                print("Receive failed: \(error.localizedDescription) - reconnecting...")
+                emitLog(.warning,
+                        "receive.failed_reconnecting",
+                        metadata: ["error": (error as NSError).localizedDescription])
+                
                 do {
                     try await reconnector.attemptReconnection(for: self)
                     continue
@@ -302,5 +315,16 @@ extension WebSocket {
             
             await Task.yield()
         }
+    }
+}
+
+extension WebSocket {
+    func emitLog(_ level: Log.Level,
+                 _ message: @autoclosure () -> String,
+                 metadata: [String: String]? = nil,
+                 file: String = #fileID, function: String = #function, line: UInt = #line) {
+        var md = ["component": "WebSocket", "url": url.absoluteString]
+        if let metadata { for (k, v) in metadata { md[k] = v } }
+        logger.log(level, message(), metadata: md, file: file, function: function, line: line)
     }
 }

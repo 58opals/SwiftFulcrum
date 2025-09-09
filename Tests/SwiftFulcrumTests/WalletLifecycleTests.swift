@@ -30,7 +30,8 @@ struct WalletInitialSetupTests {
                 group.addTask {
                     let subscription = try await fulcrum.submit(
                         method: .blockchain(.address(.subscribe(address: address))),
-                        notificationType: Response.Result.Blockchain.Address.Subscribe.self
+                        initialType: Response.Result.Blockchain.Address.Subscribe.self,
+                        notificationType: Response.Result.Blockchain.Address.SubscribeNotification.self
                     )
                     
                     guard case .stream(_, let initial, _, let cancel) = subscription else { throw WalletInitialSetupTestsError.malformedResponse }
@@ -88,7 +89,8 @@ struct WalletManagementModeTests {
                 group.addTask {
                     let subscription = try await fulcrum.submit(
                         method: .blockchain(.address(.subscribe(address: address))),
-                        notificationType: Response.Result.Blockchain.Address.Subscribe.self
+                        initialType: Response.Result.Blockchain.Address.Subscribe.self,
+                        notificationType: Response.Result.Blockchain.Address.SubscribeNotification.self
                     )
                     
                     guard case .stream(_, let initial, _, let cancel) = subscription else { throw WalletInitialSetupTestsError.malformedResponse }

@@ -7,18 +7,21 @@ public actor Client {
     let webSocket: WebSocket
     var jsonRPC: JSONRPC
     let router: Router
+    let logger: Log.Handler
     
     var subscriptionMethods: [SubscriptionKey: Method]
     
     private var receiveTask: Task<Void, Never>?
     
-    init(webSocket: WebSocket, metrics: MetricsCollectable? = nil) {
+    init(webSocket: WebSocket, metrics: MetricsCollectable? = nil, logger: Log.Handler? = nil) {
         self.id = .init()
         self.webSocket = webSocket
         self.jsonRPC = .init()
         self.router = .init()
         self.subscriptionMethods = .init()
+        self.logger = logger ?? Log.NoOpHandler()
         if let metrics { Task { await self.webSocket.updateMetrics(metrics) } }
+        Task { await self.webSocket.updateLogger(self.logger) }
     }
     
     func start() async throws {
@@ -50,5 +53,16 @@ public actor Client {
         
         receiveTask = Task { await self.startReceiving() }
         await self.resubscribeStoredMethods()
+    }
+}
+
+extension Client {
+    func emitLog(_ level: Log.Level,
+                 _ message: @autoclosure () -> String,
+                 metadata: [String: String] = [:],
+                 file: String = #fileID, function: String = #function, line: UInt = #line) {
+        var md = ["component": "Client", "client_id": id.uuidString]
+        for (k, v) in metadata { md[k] = v }
+        logger.log(level, message(), metadata: md, file: file, function: function, line: line)
     }
 }

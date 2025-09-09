@@ -8,6 +8,7 @@ extension Fulcrum {
         public var heartbeat: WebSocket.Heartbeat.Configuration?
         public var reconnect: WebSocket.Reconnector.Configuration
         public var metrics: MetricsCollectable?
+        public var logger: Log.Handler?
         public var urlSession: URLSession?
         public var connectionTimeout: TimeInterval
         
@@ -18,6 +19,7 @@ extension Fulcrum {
             heartbeat: WebSocket.Heartbeat.Configuration? = nil,
             reconnect: WebSocket.Reconnector.Configuration = .defaultConfiguration,
             metrics: MetricsCollectable? = nil,
+            logger: Log.Handler? = nil,
             urlSession: URLSession? = nil,
             connectionTimeout: TimeInterval = 10
         ) {
@@ -25,6 +27,7 @@ extension Fulcrum {
             self.heartbeat = heartbeat
             self.reconnect = reconnect
             self.metrics = metrics
+            self.logger = logger
             self.urlSession = urlSession
             self.connectionTimeout = connectionTimeout
         }
@@ -36,7 +39,8 @@ extension Fulcrum.Configuration {
         WebSocket.Configuration(
             session: urlSession,
             tls: tls,
-            metrics: metrics
+            metrics: metrics,
+            logger: logger
         )
     }
 }

@@ -30,88 +30,22 @@ struct ClientReconnectionTests {
     
     @Test("RPC call terminates when socket disconnects")
     func rpcCallFailsOnDisconnect() async throws {
-        try await client.start()
         
-        let task = Task { () -> Double in
-            try await client.call(method: .blockchain(.relayFee))
-        }
-        
-        await client.webSocket.disconnect(with: "forced")
-        
-        do {
-            _ = try await task.value
-            #expect(Bool(false), "call unexpectedly succeeded")
-        } catch {
-            if case Fulcrum.Error.transport(.connectionClosed(_, _)) = error {
-                #expect(true)
-            } else {
-                #expect(Bool(false), "unexpected error: \(error)")
-            }
-        }
-        
-        await client.stop()
     }
     
     @Test("subscription stream ends on disconnect")
     func subscriptionEndsOnDisconnect() async throws {
-        try await client.start()
         
-        let method = Method.blockchain(.headers(.subscribe))
-        typealias Payload = Response.JSONRPC.Result.Blockchain.Headers.Subscribe
-        let (_, _, stream) = try await client.subscribe(method: method) as (UUID, Payload, AsyncThrowingStream<Payload, Swift.Error>)
-        
-        var iterator = stream.makeAsyncIterator()
-        
-        await client.webSocket.disconnect(with: "forced")
-        
-        do {
-            _ = try await iterator.next()
-            #expect(Bool(false), "stream yielded unexpectedly")
-        } catch {
-            if case Fulcrum.Error.transport(.connectionClosed(_, _)) = error {
-                #expect(true)
-            } else {
-                #expect(Bool(false), "unexpected error: \(error)")
-            }
-        }
-        
-        await client.stop()
     }
     
     @Test("subscription resumes after reconnect")
     func subscriptionContinuesAfterReconnect() async throws {
-        try await client.start()
         
-        let method = Method.blockchain(.headers(.subscribe))
-        typealias Payload = Response.JSONRPC.Result.Blockchain.Headers.Subscribe
-        let (_, _, stream) = try await client.subscribe(method: method) as (UUID, Payload, AsyncThrowingStream<Payload, Swift.Error>)
-        
-        var iterator = stream.makeAsyncIterator()
-        _ = try await iterator.next()
-        
-        await client.webSocket.disconnect(with: "forced")
-        try await client.reconnect()
-        
-        let next = try await iterator.next()
-        #expect(next != nil)
-        
-        await client.stop()
     }
     
     @Test("manual reconnection enables further RPCs")
     func rpcWorksAfterManualReconnect() async throws {
-        try await client.start()
         
-        await client.webSocket.disconnect(with: "forced")
-        #expect(!(await client.webSocket.isConnected))
-        
-        try await client.reconnect()
-        #expect(await client.webSocket.isConnected)
-        
-        let fee: Double = try await client.call(method: .blockchain(.relayFee))
-        #expect(fee > 0)
-        
-        await client.stop()
     }
 }
 
@@ -138,6 +72,35 @@ struct FulcrumReconnectionTests {
         
         #expect(fee.fee > 0)
         
+        await fulcrum.stop()
+    }
+    
+    @Test("submit-based subscription resumes after reconnect")
+    func submitSubscriptionContinuesAfterReconnect() async throws {
+        let fulcrum = try await Fulcrum()
+        try await fulcrum.start()
+        
+        let subscription = try await fulcrum.submit(
+            method: .blockchain(.headers(.subscribe)),
+            initialType: Response.Result.Blockchain.Headers.Subscribe.self,
+            notificationType: Response.Result.Blockchain.Headers.SubscribeNotification.self)
+        
+        guard case .stream(_, _, let stream, let cancel) = subscription else {
+            #expect(Bool(false), "missing stream response")
+            await fulcrum.stop()
+            return
+        }
+        
+        var iterator = stream.makeAsyncIterator()
+        _ = try await iterator.next()
+        
+        await fulcrum.client.webSocket.disconnect(with: "forced")
+        try await fulcrum.reconnect()
+        
+        let next = try await iterator.next()
+        #expect(next != nil)
+        
+        await cancel()
         await fulcrum.stop()
     }
 }

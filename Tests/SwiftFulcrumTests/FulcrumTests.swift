@@ -68,8 +68,11 @@ struct FulcrumWalletTests {
     func headerSubscription() async throws {
         try await fulcrum.start()
         
-        let response = try await fulcrum.submit(method: .blockchain(.headers(.subscribe)),
-                                                notificationType: Response.Result.Blockchain.Headers.Subscribe.self)
+        let response = try await fulcrum.submit(
+            method: .blockchain(.headers(.subscribe)),
+            initialType: Response.Result.Blockchain.Headers.Subscribe.self,
+            notificationType: Response.Result.Blockchain.Headers.SubscribeNotification.self
+        )
         
         guard case .stream(let id, let initial, let stream, let cancel) = response else { #expect(Bool(false)); return }
         

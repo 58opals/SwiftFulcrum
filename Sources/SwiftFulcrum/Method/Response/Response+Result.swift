@@ -529,16 +529,15 @@ extension Response.Result {
                 }
                 
                 public struct Subscribe: JSONRPCConvertible {
-                    public let proof: Get
+                    public let proof: Get?
                     
                     public typealias JSONRPC = Response.JSONRPC.Result.Blockchain.Transaction.DSProof.Subscribe
                     public init(fromRPC jsonrpc: JSONRPC) throws {
                         switch jsonrpc {
                         case .dsProof(let proof):
-                            guard let rawProof = proof else { throw Error.missingField("(raw) proof") }
-                            self.proof = Get(fromRPC: rawProof)
+                            self.proof = proof.map { Get(fromRPC: $0) }
                         case .transactionHashAndDSProof(let pairs):
-                            throw Error.unexpectedFormat("Expected a single DSProof (or nil) for DSProof.Subscribe initial response, but got transaction-hash/DSProof pair: \(pairs)")
+                            throw Error.unexpectedFormat("Expected DSProof or nil for DSProof.Subscribe initial response, got txHash/DSProof pair: \(pairs)")
                         }
                     }
                 }

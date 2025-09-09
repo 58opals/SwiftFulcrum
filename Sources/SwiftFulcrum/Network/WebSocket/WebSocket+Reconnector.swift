@@ -45,21 +45,28 @@ extension WebSocket {
                 try await Task.sleep(for: .seconds(delay))
                 
                 reconnectionAttempts += 1
-                print("Attempting to reconnect (\(reconnectionAttempts))...")
+                await webSocket.emitLog(.info,
+                                                        "reconnect.attempt",
+                                                        metadata: ["attempt": String(reconnectionAttempts)])
+                                 
                 
                 do {
                     await webSocket.cancelReceiverTask()
                     await webSocket.createNewTask(with: url)
                     try await webSocket.connect()
                     resetReconnectionAttemptCount()
-                    print("Reconnected successfully.")
+                    await webSocket.emitLog(.info, "reconnect.succeeded")
                     return
                 } catch {
-                    print("Reconnection attempt \(reconnectionAttempts) failed: \(error.localizedDescription)")
+                    await webSocket.emitLog(.warning,
+                                                                "reconnect.failed",
+                                                                metadata: ["attempt": String(reconnectionAttempts),
+                                                                           "error": (error as NSError).localizedDescription])
+                                     
                 }
             }
             
-            print("Maximum reconnection attempts reached.")
+            await webSocket.emitLog(.error, "reconnect.max_attempts_reached")
             throw await Fulcrum.Error.transport(.connectionClosed(webSocket.closeInformation.code, webSocket.closeInformation.reason))
         }
     }

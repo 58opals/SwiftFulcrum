@@ -34,7 +34,7 @@ public actor Fulcrum {
             }
         }()
         
-        self.client = .init(webSocket: webSocket, metrics: configuration.metrics)
+        self.client = .init(webSocket: webSocket, metrics: configuration.metrics, logger: configuration.logger)
     }
     
     init(servers: [URL], configuration: Configuration = .init()) throws {
@@ -47,7 +47,8 @@ public actor Fulcrum {
                 connectionTimeout: configuration.connectionTimeout,
                 heartbeatConfiguration: configuration.heartbeat
             ),
-            metrics: configuration.metrics
+            metrics: configuration.metrics,
+            logger: configuration.logger
         )
     }
     

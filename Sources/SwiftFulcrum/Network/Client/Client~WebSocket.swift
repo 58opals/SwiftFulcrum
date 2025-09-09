@@ -19,7 +19,9 @@ extension Client {
                 await handleMessage(message)
             }
         } catch {
-            print("Receive task ended: \(error.localizedDescription)")
+            emitLog(.warning,
+                    "client.receive.task_ended",
+                    metadata: ["error": (error as NSError).localizedDescription])
             
             let closedError = await Fulcrum.Error.transport(
                 .connectionClosed(webSocket.closeInformation.code, webSocket.closeInformation.reason)

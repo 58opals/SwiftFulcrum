@@ -4,18 +4,18 @@ import Foundation
 
 extension Client {
     func makeUnsubscribeMethod(for key: SubscriptionKey) -> Method? {
-        let methodPath = key.methodPath
-        guard let identifier = key.identifier else { return nil }
-        
-        switch methodPath {
+        switch key.methodPath {
         case "blockchain.address.subscribe":
-            return .blockchain(.address(.unsubscribe(address: identifier)))
+            guard let id = key.identifier else { return nil }
+            return .blockchain(.address(.unsubscribe(address: id)))
         case "blockchain.headers.subscribe":
             return .blockchain(.headers(.unsubscribe))
         case "blockchain.transaction.subscribe":
-            return .blockchain(.transaction(.unsubscribe(transactionHash: identifier)))
+            guard let id = key.identifier else { return nil }
+            return .blockchain(.transaction(.unsubscribe(transactionHash: id)))
         case "blockchain.transaction.dsproof.subscribe":
-            return .blockchain(.transaction(.dsProof(.unsubscribe(transactionHash: identifier))))
+            guard let id = key.identifier else { return nil }
+            return .blockchain(.transaction(.dsProof(.unsubscribe(transactionHash: id))))
         default:
             return nil
         }

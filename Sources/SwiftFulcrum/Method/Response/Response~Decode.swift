@@ -50,4 +50,19 @@ extension AsyncThrowingStream where Element == Data {
             }
         }
     }
+    
+    func decode<Result: JSONRPCConvertible>(_ type: Result.Type) -> AsyncThrowingStream<Result, Swift.Error> {
+        AsyncThrowingStream<Result, Swift.Error> { continuation in
+            Task {
+                do {
+                    for try await chunk in self {
+                        continuation.yield(try chunk.decode(Result.self))
+                    }
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+        }
+    }
 }
