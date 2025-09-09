@@ -29,7 +29,7 @@ extension WebSocket {
         private let configuration: Configuration
         private var reconnectionAttempts: Int
         
-        init(_ configuration: Configuration, reconnectionAttempts: Int = 0) {
+        public init(_ configuration: Configuration, reconnectionAttempts: Int = 0) {
             self.configuration = configuration
             self.reconnectionAttempts = reconnectionAttempts
         }
