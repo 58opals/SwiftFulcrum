@@ -12,7 +12,7 @@ struct ClientResubscriptionTests {
         let probe = LoggerProbe()
         let logger = RecordingLoggerProbe(probe: probe)
 
-        let ws = WebSocket(
+        let webSocket = WebSocket(
             url: url,
             configuration: .init(metrics: metrics, logger: logger),
             reconnectConfiguration: .init(maximumReconnectionAttempts: 5,
@@ -21,7 +21,7 @@ struct ClientResubscriptionTests {
                                           jitterRange: 0.9...1.1),
             connectionTimeout: 8.0
         )
-        let client = Client(webSocket: ws, metrics: metrics, logger: logger)
+        let client = Client(webSocket: webSocket, metrics: metrics, logger: logger)
 
         do {
             try await client.start()
@@ -31,17 +31,17 @@ struct ClientResubscriptionTests {
                 let newURL = try await randomFulcrumURL()
                 do {
                     try await client.reconnect(with: newURL)
-                    ok = await ws.isConnected
+                    ok = await webSocket.isConnected
                     if ok { break }
                 } catch { /* try next */ }
             }
             #expect(ok, "could not find a server with a valid TLS chain")
         }
-        #expect(await ws.isConnected)
+        #expect(await webSocket.isConnected)
 
         typealias Initial = Response.Result.Blockchain.Headers.Subscribe
-        typealias Note = Response.Result.Blockchain.Headers.SubscribeNotification
-        let (_, _, updates): (UUID, Initial, AsyncThrowingStream<Note, Swift.Error>) =
+        typealias Notification = Response.Result.Blockchain.Headers.SubscribeNotification
+        let (_, _, updates): (UUID, Initial, AsyncThrowingStream<Notification, Swift.Error>) =
             try await client.subscribe(method: .blockchain(.headers(.subscribe)))
 
         let sink = Task {
@@ -59,7 +59,7 @@ struct ClientResubscriptionTests {
             url = try await randomFulcrumURL()
             try await client.reconnect(with: url)
         }
-        #expect(await ws.isConnected)
+        #expect(await webSocket.isConnected)
 
         let expectedDelta = storedBefore
         let ok = await waitUntil(timeout: .seconds(8)) {

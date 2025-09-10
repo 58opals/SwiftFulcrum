@@ -11,9 +11,9 @@ extension Client {
             if let data = string.data(using: .utf8) {
                 await router.handle(raw: data)
             }
-            else { emitLog(.warning, "ws.message.string.decode_failed") }
+            else { emitLog(.warning, "webSocket.message.string.decode_failed") }
         @unknown default:
-            emitLog(.warning, "ws.message.unknown_type")
+            emitLog(.warning, "webSocket.message.unknown_type")
         }
     }
 }

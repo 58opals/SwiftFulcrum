@@ -19,12 +19,12 @@ struct JSONRPCIdentifierExtractionTests {
             "result": [:] as [String: Any]
         ])
 
-        let ident = try Response.JSONRPC.extractIdentifier(from: data)
-        switch ident {
+        let identifier = try Response.JSONRPC.extractIdentifier(from: data)
+        switch identifier {
         case .uuid(let got):
             #expect(got == id)
         default:
-            Issue.record("expected .uuid, got \(ident)")
+            Issue.record("expected .uuid, got \(identifier)")
         }
     }
 
@@ -37,12 +37,12 @@ struct JSONRPCIdentifierExtractionTests {
             "params": [] as [Any]
         ])
 
-        let ident = try Response.JSONRPC.extractIdentifier(from: data)
-        switch ident {
+        let identifier = try Response.JSONRPC.extractIdentifier(from: data)
+        switch identifier {
         case .string(let got):
             #expect(got == method)
         default:
-            Issue.record("expected .string, got \(ident)")
+            Issue.record("expected .string, got \(identifier)")
         }
     }
 
@@ -62,7 +62,6 @@ struct JSONRPCIdentifierExtractionTests {
         } catch let error as Response.JSONRPC.Error {
             switch error {
             case .wrongResponseType:
-                // ok
                 break
             default:
                 Issue.record("unexpected error: \(error)")
@@ -85,7 +84,6 @@ struct JSONRPCIdentifierExtractionTests {
         } catch let error as Response.JSONRPC.Error {
             switch error {
             case .wrongResponseType:
-                // ok
                 break
             default:
                 Issue.record("unexpected error: \(error)")

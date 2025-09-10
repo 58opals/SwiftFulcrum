@@ -16,21 +16,21 @@ struct CancellationAndTimeoutTests {
         
         let unaryCancelled = Task<Bool, Never> {
             do {
-                _ = try await withCheckedThrowingContinuation { (c: CheckedContinuation<Data, Swift.Error>) in
-                    Task { try await router.addUnary(id: id, continuation: c) }
+                _ = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Data, Swift.Error>) in
+                    Task { try await router.addUnary(id: id, continuation: continuation) }
                 }
                 return false
-            } catch let e as Fulcrum.Error {
-                if case .client(.cancelled) = e { return true }
+            } catch let error as Fulcrum.Error {
+                if case .client(.cancelled) = error { return true }
                 return false
             } catch { return false }
         }
         
-        let (stream, streamCont) = AsyncThrowingStream<Data, Swift.Error>.makeStream()
-        try? await router.addStream(key: streamKey, continuation: streamCont)
+        let (stream, streamContinuation) = AsyncThrowingStream<Data, Swift.Error>.makeStream()
+        try? await router.addStream(key: streamKey, continuation: streamContinuation)
         let streamFinished = Task<Bool, Never> {
-            var it = stream.makeAsyncIterator()
-            let next = try? await it.next()
+            var iterator = stream.makeAsyncIterator()
+            let next = try? await iterator.next()
             return next == nil
         }
         
@@ -76,13 +76,13 @@ struct CancellationAndTimeoutTests {
             }
         }
         
-        let h = TimeoutHarness()
+        let harness = TimeoutHarness()
         do {
-            _ = try await h.callWithTimeout(.milliseconds(25))
+            _ = try await harness.callWithTimeout(.milliseconds(25))
             Issue.record("expected timeout")
-        } catch let e as Fulcrum.Error {
+        } catch let error as Fulcrum.Error {
             #expect({
-                if case .client(.timeout(let d)) = e { return d == .milliseconds(25) }
+                if case .client(.timeout(let duration)) = error { return duration == .milliseconds(25) }
                 return false
             }())
         } catch {

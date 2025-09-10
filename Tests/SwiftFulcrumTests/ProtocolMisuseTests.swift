@@ -8,20 +8,19 @@ import Testing
 struct ProtocolMisuseTests {
     @Test
     func submit_with_subscription_method_throws_protocolMismatch() async throws {
-        let wsURL = URL(string: "wss://example.com")!
-        let fulcrum = try Fulcrum(servers: [wsURL])
+        let webSocketURL = URL(string: "wss://example.com")!
+        let fulcrum = try Fulcrum(servers: [webSocketURL])
         
         do {
-            // Submitting a subscription method via submit(...) must fail fast.
             _ = try await fulcrum.submit(
                 method: .blockchain(.headers(.subscribe)),
                 responseType: Response.Result.Blockchain.Headers.Subscribe.self
             )
             Issue.record("expected protocolMismatch")
-        } catch let e as Fulcrum.Error {
+        } catch let error as Fulcrum.Error {
             #expect({
-                if case .client(.protocolMismatch(let msg)) = e {
-                    return msg == "submit() cannot be used with subscription methods. Use subscribe(...)."
+                if case .client(.protocolMismatch(let message)) = error {
+                    return message == "submit() cannot be used with subscription methods. Use subscribe(...)."
                 }
                 return false
             }())

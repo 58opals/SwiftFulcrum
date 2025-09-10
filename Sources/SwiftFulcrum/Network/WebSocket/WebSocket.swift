@@ -91,10 +91,10 @@ extension WebSocket {
         let waiters = connectWaiters
         connectWaiters.removeAll(keepingCapacity: false)
         connectInFlight = false
-        for c in waiters {
+        for continuation in waiters {
             switch result {
-            case .success(let ok): c.resume(returning: ok)
-            case .failure(let e): c.resume(throwing: e)
+            case .success(let isSuccessful): continuation.resume(returning: isSuccessful)
+            case .failure(let error): continuation.resume(throwing: error)
             }
         }
     }
@@ -103,16 +103,16 @@ extension WebSocket {
         if isConnected { return true }
         
         if connectInFlight {
-            return try await withCheckedThrowingContinuation { cont in
-                connectWaiters.append(cont)
+            return try await withCheckedThrowingContinuation { continuation in
+                connectWaiters.append(continuation)
             }
         }
         
         connectInFlight = true
         do {
-            let ok = try await waitForConnectionOnce(timeout: timeout)
-            finishConnectWaiters(.success(ok))
-            return ok
+            let isSuccessful = try await waitForConnectionOnce(timeout: timeout)
+            finishConnectWaiters(.success(isSuccessful))
+            return isSuccessful
         } catch {
             finishConnectWaiters(.failure(error))
             throw error
@@ -139,11 +139,11 @@ extension WebSocket {
         
         return try await withThrowingTaskGroup(of: Bool.self) { group in
             group.addTask {
-                var it = stream.makeAsyncIterator()
-                guard let ok = try await it.next() else {
+                var iterator = stream.makeAsyncIterator()
+                guard let isSuccessful = try await iterator.next() else {
                     return false
                 }
-                return ok
+                return isSuccessful
             }
             
             group.addTask {
@@ -160,19 +160,19 @@ extension WebSocket {
     func connect() async throws {
         guard !self.isConnected else { return }
         state = .connecting
-
+        
         await createNewTask(with: nil, cancelReceiver: true)
-
+        
         guard let task else {
             throw Fulcrum.Error.transport(.connectionClosed(closeInformation.code, closeInformation.reason))
         }
-
+        
         task.resume()
         emitLog(.info, "connect.begin")
-
+        
         do {
-            let ok = try await waitForConnection(timeout: connectionTimeout)
-            if ok {
+            let isConnected = try await waitForConnection(timeout: connectionTimeout)
+            if isConnected {
                 state = .connected
                 emitLog(.info, "connect.succeeded")
                 await metrics?.didConnect(url: url)
@@ -183,8 +183,8 @@ extension WebSocket {
                 emitLog(.error, "connect.timeout")
                 throw Fulcrum.Error.transport(.connectionClosed(closeInformation.code, closeInformation.reason))
             }
-        } catch let net as Fulcrum.Error.Network {
-            throw Fulcrum.Error.transport(.network(net))
+        } catch let networkError as Fulcrum.Error.Network {
+            throw Fulcrum.Error.transport(.network(networkError))
         }
     }
     
@@ -199,22 +199,22 @@ extension WebSocket {
     func disconnect(with reason: String? = nil) async {
         await cancelReceiverTask()
         
-        let info = getCurrentCloseInformation()
+        let information = getCurrentCloseInformation()
         
         task?.cancel(with: .goingAway, reason: reason?.data(using: .utf8))
         task = nil
         state = .disconnected
         
-        finishConnectWaiters(.failure(Fulcrum.Error.transport(.connectionClosed(info.code, info.reason))))
+        finishConnectWaiters(.failure(Fulcrum.Error.transport(.connectionClosed(information.code, information.reason))))
         
         messageContinuation?.finish(
-            throwing: Fulcrum.Error.transport(.connectionClosed(info.code, info.reason))
+            throwing: Fulcrum.Error.transport(.connectionClosed(information.code, information.reason))
         )
         
-        await metrics?.didDisconnect(url: url, closeCode: info.code, reason: reason)
+        await metrics?.didDisconnect(url: url, closeCode: information.code, reason: reason)
         await resetMessageStreamAndReader()
         emitLog(.info, "disconnect", metadata: ["reason": reason ?? "nil",
-                                                "code": String(info.code.rawValue)])
+                                                "code": String(information.code.rawValue)])
     }
 }
 
@@ -306,13 +306,12 @@ extension WebSocket {
                     break
                 }
                 await metrics?.didReceive(url: url, message: message)
-            } catch let e as URLError where e.code == .cancelled {
+            } catch let urlError as URLError where urlError.code == .cancelled {
                 break
             } catch {
                 emitLog(.warning, "receive.failed_reconnecting",
                         metadata: ["error": (error as NSError).localizedDescription])
                 do {
-                    // preserve stream on auto-reconnect too
                     try await reconnector.attemptReconnection(for: self, cancelReceiver: false)
                     continue
                 } catch {
@@ -332,8 +331,8 @@ extension WebSocket {
                  _ message: @autoclosure () -> String,
                  metadata: [String: String]? = nil,
                  file: String = #fileID, function: String = #function, line: UInt = #line) {
-        var md = ["component": "WebSocket", "url": url.absoluteString]
-        if let metadata { for (k, v) in metadata { md[k] = v } }
-        logger.log(level, message(), metadata: md, file: file, function: function, line: line)
+        var data = ["component": "WebSocket", "url": url.absoluteString]
+        if let metadata { for (k, v) in metadata { data[k] = v } }
+        logger.log(level, message(), metadata: data, file: file, function: function, line: line)
     }
 }

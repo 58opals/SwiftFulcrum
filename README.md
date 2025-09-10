@@ -87,13 +87,13 @@ let stream = try await fulcrum.submit(
     notificationType: Response.Result.Blockchain.Address.Subscribe.self
 )
 
-guard case .stream(_, let initial, let updates, let cancel) = stream else { return }
+guard case .stream(_, let initial, let notifications, let cancel) = stream else { return }
 
 print("Initial status: \(initial)")
 
 Task {
-    for try await note in updates {
-        print("Update: \(note)")
+    for try await notification in notifications {
+        print("Update: \(notification)")
     }
 }
 

@@ -34,22 +34,21 @@ struct ClientTests {
         return (client, webSocket, metrics, probe)
     }
     
-    private func makeJSON(_ obj: Any) throws -> Data {
-        try JSONSerialization.data(withJSONObject: obj, options: [])
+    private func makeJSON(_ object: Any) throws -> Data {
+        try JSONSerialization.data(withJSONObject: object, options: [])
     }
     
     // MARK: 1) Start and stop against a real server
-    
     @Test
     func start_and_stop_live() async throws {
         let url = try await randomFulcrumURL()
-        let (client, ws, metrics, probe) = makeClient(url: url)
+        let (client, webSocket, metrics, probe) = makeClient(url: url)
         
         try await client.start()
-        #expect(await ws.isConnected)
+        #expect(await webSocket.isConnected)
         
         await client.stop()
-        let down = await waitUntil { !(await ws.isConnected) }
+        let down = await waitUntil { !(await webSocket.isConnected) }
         #expect(down)
         
         #expect(await metrics.didConnects == 1)
@@ -61,21 +60,20 @@ struct ClientTests {
         #expect(messages.contains("connect.succeeded"))
         #expect(messages.contains("disconnect"))
         
-        let iBegin = messages.firstIndex(of: "connect.begin")!
-        let iOK = messages.lastIndex(of: "connect.succeeded")!
-        let iBye = messages.lastIndex(of: "disconnect")!
-        #expect(iBegin < iOK && iOK < iBye)
+        let indexBegin = messages.firstIndex(of: "connect.begin")!
+        let indexOK = messages.lastIndex(of: "connect.succeeded")!
+        let indexBye = messages.lastIndex(of: "disconnect")!
+        #expect((indexBegin < indexOK) && (indexOK < indexBye))
     }
     
     // MARK: 2) Unary request/response via Client.call: blockchain.headers.get_tip
-    
     @Test
     func call_get_tip() async throws {
         let url = try await randomFulcrumURL()
-        let (client, ws, _, _) = makeClient(url: url)
+        let (client, webSocket, _, _) = makeClient(url: url)
         
         try await client.start()
-        #expect(await ws.isConnected)
+        #expect(await webSocket.isConnected)
         
         let (_, tip): (UUID, Response.Result.Blockchain.Headers.GetTip) =
         try await client.call(method: .blockchain(.headers(.getTip)))
@@ -87,14 +85,13 @@ struct ClientTests {
     }
     
     // MARK: 3) Subscribe to headers, then cancel -> sends unsubscribe
-    
     @Test
     func subscribe_headers_then_cancel_sends_unsubscribe() async throws {
         let url = try await randomFulcrumURL()
-        let (client, ws, metrics, _) = makeClient(url: url)
+        let (client, webSocket, metrics, _) = makeClient(url: url)
         
         try await client.start()
-        #expect(await ws.isConnected)
+        #expect(await webSocket.isConnected)
         
         let token = Client.Call.Token()
         let (_, initial, stream): (UUID,
@@ -110,34 +107,33 @@ struct ClientTests {
         
         await token.cancel()
         
-        let unsubSent = await waitUntil(timeout: .seconds(4)) {
+        let unsubscriptionSent = await waitUntil(timeout: .seconds(4)) {
             (await metrics.didSends) >= sendsBefore + 1
         }
-        #expect(unsubSent)
+        #expect(unsubscriptionSent)
         
-        var it = stream.makeAsyncIterator()
-        let next = try? await it.next()
+        var iterator = stream.makeAsyncIterator()
+        let next = try? await iterator.next()
         #expect(next == nil)
         
         await client.stop()
     }
     
     // MARK: 4) Headers subscription receives routed notification (simulated)
-    
     @Test
     func headers_subscription_receives_notification() async throws {
         let url = try await randomFulcrumURL()
-        let (client, ws, _, _) = makeClient(url: url)
+        let (client, webSocket, _, _) = makeClient(url: url)
         
         try await client.start()
-        #expect(await ws.isConnected)
+        #expect(await webSocket.isConnected)
         
         let (_, initial, stream): (UUID,
                                    Response.Result.Blockchain.Headers.Subscribe,
                                    AsyncThrowingStream<Response.Result.Blockchain.Headers.SubscribeNotification, any Error>) =
         try await client.subscribe(method: .blockchain(.headers(.subscribe)))
         
-        var it = stream.makeAsyncIterator()
+        var iterator = stream.makeAsyncIterator()
         
         let nextHeight = initial.height + 1
         let fakeHex = "feedface"
@@ -149,29 +145,28 @@ struct ClientTests {
         ]
         try await client.handleMessage(.data(makeJSON(payload)))
         
-        let note = try await it.next()
-        #expect(note != nil)
-        #expect(note!.subscriptionIdentifier == "blockchain.headers.subscribe")
-        #expect(note!.blocks.count == 1)
-        #expect(note!.blocks[0].height == nextHeight)
-        #expect(note!.blocks[0].hex == fakeHex)
+        let notification = try await iterator.next()
+        #expect(notification != nil)
+        #expect(notification!.subscriptionIdentifier == "blockchain.headers.subscribe")
+        #expect(notification!.blocks.count == 1)
+        #expect(notification!.blocks[0].height == nextHeight)
+        #expect(notification!.blocks[0].hex == fakeHex)
         
         await client.stop()
     }
     
     // MARK: 5) Address subscription uses suffix key and survives reconnect
-    
     @Test
     func address_subscription_routes_and_resubscribes_on_reconnect() async throws {
         let url = try await randomFulcrumURL()
-        let (client, ws, metrics, _) = makeClient(url: url,
+        let (client, webSocket, metrics, _) = makeClient(url: url,
                                                   reconnect: .init(maximumReconnectionAttempts: 5,
                                                                    reconnectionDelay: 0.25,
                                                                    maximumDelay: 1.0,
                                                                    jitterRange: 0.9...1.1))
         
         try await client.start()
-        #expect(await ws.isConnected)
+        #expect(await webSocket.isConnected)
         
         let address = "qrmydkpmlgvxrafjv7rpdm4unlcdfnljmqss98ytuq"
         let (_, _, stream): (UUID,
@@ -179,13 +174,13 @@ struct ClientTests {
                              AsyncThrowingStream<Response.Result.Blockchain.Address.SubscribeNotification, any Error>) =
         try await client.subscribe(method: .blockchain(.address(.subscribe(address: address))))
         
-        var it = stream.makeAsyncIterator()
+        var iterator = stream.makeAsyncIterator()
         
         let before = await metrics.didSends
         try await client.reconnect()
-        #expect(await ws.isConnected)
-        let resubSent = await waitUntil(timeout: .seconds(8)) { (await metrics.didSends) > before }
-        #expect(resubSent)
+        #expect(await webSocket.isConnected)
+        let resubscriptionSent = await waitUntil(timeout: .seconds(8)) { (await metrics.didSends) > before }
+        #expect(resubscriptionSent)
         
         let newStatus = "deadbeefstatus"
         let payload: [String: Any] = [
@@ -195,23 +190,22 @@ struct ClientTests {
         ]
         try await client.handleMessage(.data(makeJSON(payload)))
         
-        let note = try await it.next()
-        #expect(note != nil)
-        #expect(note!.subscriptionIdentifier == address)
-        #expect(note!.status == newStatus)
+        let notification = try await iterator.next()
+        #expect(notification != nil)
+        #expect(notification!.subscriptionIdentifier == address)
+        #expect(notification!.status == newStatus)
         
         await client.stop()
     }
     
     // MARK: 6) Unary timeout surfaces Fulcrum.Error.client(.timeout)
-    
     @Test
     func call_times_out() async throws {
         let url = try await randomFulcrumURL()
-        let (client, ws, _, _) = makeClient(url: url)
+        let (client, webSocket, _, _) = makeClient(url: url)
         
         try await client.start()
-        #expect(await ws.isConnected)
+        #expect(await webSocket.isConnected)
         
         do {
             _ = try await client.call(
@@ -219,9 +213,9 @@ struct ClientTests {
                 options: .init(timeout: .milliseconds(1))
             ) as (UUID, Response.Result.Blockchain.Headers.GetTip)
             Issue.record("expected timeout did not occur")
-        } catch let err as Fulcrum.Error {
-            if case .client(.timeout) = err { /* ok */ } else {
-                Issue.record("unexpected error: \(err)")
+        } catch let error as Fulcrum.Error {
+            if case .client(.timeout) = error { /* ok */ } else {
+                Issue.record("unexpected error: \(error)")
             }
         }
         

@@ -41,9 +41,9 @@ extension Data {
             }
         } catch let formatError as Response.Result.Error {
             // Enrich unexpectedFormat with method and payload size.
-            if case .unexpectedFormat(let msg) = formatError {
+            if case .unexpectedFormat(let message) = formatError {
                 let methodHint: String? = {
-                    if let m = context?.methodPath { return m }
+                    if let methodPath = context?.methodPath { return methodPath }
                     // For subscription notifications, the method is carried in the payload.
                     return rpcContainer.method
                 }()
@@ -51,7 +51,7 @@ extension Data {
                     methodHint.map { "[method: \($0)]" },
                     "[payload: \(self.count) B]"
                 ].compactMap { $0 }.joined(separator: " ")
-                throw Response.Result.Error.unexpectedFormat("\(prefix) \(msg)")
+                throw Response.Result.Error.unexpectedFormat("\(prefix) \(message)")
             }
             throw formatError
         }

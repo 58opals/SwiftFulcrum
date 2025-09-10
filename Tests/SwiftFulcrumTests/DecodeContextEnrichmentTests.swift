@@ -22,13 +22,13 @@ struct DecodeContextEnrichmentTests {
                 context: .init(methodPath: method.path)
             )
             Issue.record("expected unexpectedFormat")
-        } catch let e as Response.Result.Error {
-            switch e {
+        } catch let error as Response.Result.Error {
+            switch error {
             case .unexpectedFormat(let message):
                 #expect(message.contains("[method: \(method.path)]"))
                 #expect(message.contains("[payload: \(data.count) B]"))
             default:
-                Issue.record("unexpected error case: \(e)")
+                Issue.record("unexpected error case: \(error)")
             }
         } catch {
             Issue.record("unexpected error: \(error)")
@@ -49,13 +49,13 @@ struct DecodeContextEnrichmentTests {
             _ = try data.decode(Response.Result.Blockchain.Address.Subscribe.self,
                                 context: .init(methodPath: methodPath))
             Issue.record("expected unexpectedFormat to be thrown")
-        } catch let err as Response.Result.Error {
-            switch err {
-            case .unexpectedFormat(let msg):
-                #expect(msg.contains("[method: \(methodPath)]"))
-                #expect(msg.contains("[payload: \(data.count) B]"))
+        } catch let error as Response.Result.Error {
+            switch error {
+            case .unexpectedFormat(let message):
+                #expect(message.contains("[method: \(methodPath)]"))
+                #expect(message.contains("[payload: \(data.count) B]"))
             default:
-                Issue.record("unexpected error: \(err)")
+                Issue.record("unexpected error: \(error)")
             }
         } catch {
             Issue.record("unexpected error type: \(error)")
@@ -78,13 +78,13 @@ struct DecodeContextEnrichmentTests {
                 context: .init(methodPath: methodPath)
             )
             Issue.record("expected unexpectedFormat to be thrown")
-        } catch let err as Response.Result.Error {
-            switch err {
-            case .unexpectedFormat(let msg):
-                #expect(msg.contains("[method: \(methodPath)]"))
-                #expect(msg.contains("[payload: \(data.count) B]"))
+        } catch let error as Response.Result.Error {
+            switch error {
+            case .unexpectedFormat(let message):
+                #expect(message.contains("[method: \(methodPath)]"))
+                #expect(message.contains("[payload: \(data.count) B]"))
             default:
-                Issue.record("unexpected error: \(err)")
+                Issue.record("unexpected error: \(error)")
             }
         } catch {
             Issue.record("unexpected error type: \(error)")

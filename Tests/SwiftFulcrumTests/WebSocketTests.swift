@@ -20,7 +20,7 @@ final actor MetricsRecorder: MetricsCollectable {
 final actor LoggerProbe {
     struct Entry: Sendable { let level: Log.Level, message: String, metadata: [String:String]? }
     private(set) var entries: [Entry] = []
-    func record(_ e: Entry) { entries.append(e) }
+    func record(_ entry: Entry) { entries.append(entry) }
 }
 
 struct RecordingLogger: Log.Handler, Sendable {
@@ -29,8 +29,8 @@ struct RecordingLogger: Log.Handler, Sendable {
              _ message: @autoclosure () -> String,
              metadata: [String : String]?,
              file: String, function: String, line: UInt) {
-        let msg = message()                          // evaluate non‑escaping autoclosure
-        let entry = LoggerProbe.Entry(level: level, message: msg, metadata: metadata)
+        let message = message()
+        let entry = LoggerProbe.Entry(level: level, message: message, metadata: metadata)
         Task { @Sendable in await probe.record(entry) }
     }
 }
@@ -62,8 +62,8 @@ func nextData(from message: URLSessionWebSocketTask.Message) -> Data? {
 }
 
 func nextData(from stream: AsyncThrowingStream<URLSessionWebSocketTask.Message, Swift.Error>) async throws -> Data {
-    var it = stream.makeAsyncIterator()
-    while let m = try await it.next() {
+    var iterator = stream.makeAsyncIterator()
+    while let m = try await iterator.next() {
         if let d = nextData(from: m) { return d }
     }
     throw Fulcrum.Error.client(.emptyResponse(nil))
