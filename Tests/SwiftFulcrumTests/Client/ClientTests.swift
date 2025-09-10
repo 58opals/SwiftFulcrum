@@ -2,13 +2,6 @@ import Foundation
 import Testing
 @testable import SwiftFulcrum
 
-/// This suite reuses helpers from your WebSocket tests:
-/// - MetricsRecorder
-/// - LoggerProbe
-/// - RecordingLogger
-/// - waitUntil(...)
-/// - randomFulcrumURL()
-
 @Suite("Client integration tests")
 struct ClientTests {
     private func makeClient(

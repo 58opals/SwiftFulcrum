@@ -2,57 +2,6 @@ import Foundation
 import Testing
 @testable import SwiftFulcrum
 
-// MARK: - Helpers
-
-final actor MetricsRecorder: MetricsCollectable {
-    private(set) var didConnects = 0
-    private(set) var didDisconnects = 0
-    private(set) var didSends = 0
-    private(set) var didReceives = 0
-    private(set) var didPings = 0
-    func didConnect(url: URL) async { didConnects += 1 }
-    func didDisconnect(url: URL, closeCode: URLSessionWebSocketTask.CloseCode?, reason: String?) async { didDisconnects += 1 }
-    func didSend(url: URL, message: URLSessionWebSocketTask.Message) async { didSends += 1 }
-    func didReceive(url: URL, message: URLSessionWebSocketTask.Message) async { didReceives += 1 }
-    func didPing(url: URL, error: Swift.Error?) async { didPings += 1 }
-}
-
-final actor LoggerProbe {
-    struct Entry: Sendable { let level: Log.Level, message: String, metadata: [String:String]? }
-    private(set) var entries: [Entry] = []
-    func record(_ entry: Entry) { entries.append(entry) }
-}
-
-struct RecordingLogger: Log.Handler, Sendable {
-    let probe: LoggerProbe
-    func log(_ level: Log.Level,
-             _ message: @autoclosure () -> String,
-             metadata: [String : String]?,
-             file: String, function: String, line: UInt) {
-        let message = message()
-        let entry = LoggerProbe.Entry(level: level, message: message, metadata: metadata)
-        Task { @Sendable in await probe.record(entry) }
-    }
-}
-
-@discardableResult
-func waitUntil(timeout: Duration = .seconds(5),
-               interval: Duration = .milliseconds(25),
-               _ condition: @Sendable () async -> Bool) async -> Bool {
-    let start = ContinuousClock.now
-    while await !condition() {
-        if ContinuousClock.now - start > timeout { return false }
-        try? await Task.sleep(for: interval)
-    }
-    return true
-}
-
-func randomFulcrumURL() async throws -> URL {
-    let list = try await WebSocket.Server.getServerList()
-    guard let url = list.randomElement() else { throw Fulcrum.Error.transport(.setupFailed) }
-    return url
-}
-
 func nextData(from message: URLSessionWebSocketTask.Message) -> Data? {
     switch message {
     case .data(let d): return d
@@ -68,8 +17,6 @@ func nextData(from stream: AsyncThrowingStream<URLSessionWebSocketTask.Message, 
     }
     throw Fulcrum.Error.client(.emptyResponse(nil))
 }
-
-// MARK: - WebSocket live tests
 
 @Suite("WebSocket integration tests")
 struct WebSocketTests {
