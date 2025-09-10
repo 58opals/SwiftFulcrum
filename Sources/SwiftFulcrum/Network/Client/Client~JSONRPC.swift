@@ -26,13 +26,13 @@ extension Client.SubscriptionKey: Hashable, Sendable {}
 extension Client {
     static func subscriptionIdentifier(methodPath: String, data: Data) -> String? {
         switch methodPath {
-        case "blockchain.address.subscribe", "blockchain.transaction.subscribe":
+        case "blockchain.scripthash.subscribe", "blockchain.address.subscribe", "blockchain.transaction.subscribe":
             struct Envelope: Decodable { let params: [DecodableValue] }
             struct DecodableValue: Decodable {
                 let string: String?
-                init(from dec: Decoder) throws {
-                    let c = try dec.singleValueContainer()
-                    self.string = try? c.decode(String.self)
+                init(from decoder: Decoder) throws {
+                    let container = try decoder.singleValueContainer()
+                    self.string = try? container.decode(String.self)
                 }
             }
             return try? JSONRPC.Coder.decoder
@@ -44,15 +44,15 @@ extension Client {
                 let string: String?
                 let dsProof: DSProof?
                 struct DSProof: Decodable { let txid: String }
-                init(from dec: Decoder) throws {
-                    let c = try dec.singleValueContainer()
-                    self.string = try? c.decode(String.self)
-                    self.dsProof = try? c.decode(DSProof.self)
+                init(from decoder: Decoder) throws {
+                    let container = try decoder.singleValueContainer()
+                    self.string = try? container.decode(String.self)
+                    self.dsProof = try? container.decode(DSProof.self)
                 }
             }
             if let first = try? JSONRPC.Coder.decoder.decode(Envelope.self, from: data).params.first {
-                if let s = first.string { return s }
-                if let p = first.dsProof { return p.txid }
+                if let string = first.string { return string }
+                if let proof = first.dsProof { return proof.txid }
             }
             return nil
 

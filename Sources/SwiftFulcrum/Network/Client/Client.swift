@@ -12,6 +12,7 @@ public actor Client {
     var subscriptionMethods: [SubscriptionKey: Method]
     
     private var receiveTask: Task<Void, Never>?
+    private var lifecycleTask: Task<Void, Never>?
     
     init(webSocket: WebSocket, metrics: MetricsCollectable? = nil, logger: Log.Handler? = nil) {
         self.id = .init()
@@ -29,6 +30,18 @@ public actor Client {
         
         try await self.webSocket.connect()
         self.receiveTask = Task { await self.startReceiving() }
+        self.lifecycleTask = Task { [weak self] in
+            guard let self else { return }
+            for await event in await self.webSocket.lifecycleEvents() {
+                switch event {
+                case .connected(let isReconnect) where isReconnect:
+                    await self.emitLog(.info, "client.autoresubscribe.begin")
+                    await self.resubscribeStoredMethods()
+                    await self.emitLog(.info, "client.autoresubscribe.end", metadata: ["count": String(await self.subscriptionMethods.count)])
+                default: break
+                }
+            }
+        }
     }
     
     func stop() async {
@@ -41,6 +54,9 @@ public actor Client {
         receiveTask?.cancel()
         await receiveTask?.value
         receiveTask = nil
+        lifecycleTask?.cancel()
+        await lifecycleTask?.value
+        lifecycleTask = nil
         
         await webSocket.disconnect(with: "Client.stop() called")
     }
@@ -52,7 +68,6 @@ public actor Client {
         await receiveTask?.value
         
         receiveTask = Task { await self.startReceiving() }
-        await self.resubscribeStoredMethods()
     }
 }
 

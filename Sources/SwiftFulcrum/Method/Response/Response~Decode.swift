@@ -19,10 +19,7 @@ extension Data {
         }
     }
     
-    func decode<Result: JSONRPCConvertible>(
-        _ type: Result.Type,
-        context: JSONRPC.DecodeContext? = nil
-    ) throws -> Result {
+    func decode<Result: JSONRPCConvertible>(_ type: Result.Type, context: JSONRPC.DecodeContext? = nil) throws -> Result {
         let rpcContainer = try JSONRPC.Coder.decoder.decode(
             Response.JSONRPC.Generic<Result.JSONRPC>.self,
             from: self
@@ -40,11 +37,9 @@ extension Data {
                 throw Fulcrum.Error.client(.emptyResponse(uuid))
             }
         } catch let formatError as Response.Result.Error {
-            // Enrich unexpectedFormat with method and payload size.
             if case .unexpectedFormat(let message) = formatError {
                 let methodHint: String? = {
                     if let methodPath = context?.methodPath { return methodPath }
-                    // For subscription notifications, the method is carried in the payload.
                     return rpcContainer.method
                 }()
                 let prefix = [
@@ -89,10 +84,7 @@ extension AsyncThrowingStream where Element == Data {
         }
     }
     
-    func decode<Result: JSONRPCConvertible>(
-        _ type: Result.Type,
-        context: JSONRPC.DecodeContext?
-    ) -> AsyncThrowingStream<Result, Swift.Error> {
+    func decode<Result: JSONRPCConvertible>(_ type: Result.Type, context: JSONRPC.DecodeContext?) -> AsyncThrowingStream<Result, Swift.Error> {
         AsyncThrowingStream<Result, Swift.Error> { continuation in
             Task {
                 do {

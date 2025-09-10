@@ -5,6 +5,9 @@ import Foundation
 extension Client {
     func makeUnsubscribeMethod(for key: SubscriptionKey) -> Method? {
         switch key.methodPath {
+        case "blockchain.scripthash.subscribe":
+            guard let id = key.identifier else { return nil }
+            return .blockchain(.scripthash(.unsubscribe(scripthash: id)))
         case "blockchain.address.subscribe":
             guard let id = key.identifier else { return nil }
             return .blockchain(.address(.unsubscribe(address: id)))
@@ -41,6 +44,8 @@ extension Client {
 extension Client {
     func getSubscriptionIdentifier(for method: Method) -> String? {
         switch method {
+        case .blockchain(.scripthash(.subscribe(scripthash: let scripthash))):
+            return scripthash
         case .blockchain(.address(.subscribe(let address))):
             return address
         case .blockchain(.transaction(.subscribe(let txid))):

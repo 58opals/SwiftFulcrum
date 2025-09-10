@@ -58,9 +58,10 @@ extension WebSocket {
                 do {
                     if cancelReceiver { await webSocket.cancelReceiverTask() }
                     if let url { await webSocket.setURL(url) }
-                    try await webSocket.connect()
+                    try await webSocket.connect(withEmitLifecycle: false)
                     resetReconnectionAttemptCount()
                     await webSocket.ensureAutoReceive()
+                    try await webSocket.connect(withEmitLifecycle: true)
                     await webSocket.emitLog(.info, "reconnect.succeeded")
                     return
                 } catch {

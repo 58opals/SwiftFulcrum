@@ -20,6 +20,9 @@ public actor WebSocket {
     private var receivedTask: Task<Void, Never>?
     private var wantsAutoReceive = false
     
+    var sharedLifecycleStream: AsyncStream<Lifecycle.Event>?
+    var lifecycleContinuation: AsyncStream<Lifecycle.Event>.Continuation?
+    
     let session: URLSession
     private let connectionTimeout: TimeInterval
     
@@ -157,7 +160,7 @@ extension WebSocket {
         }
     }
     
-    func connect() async throws {
+    func connect(withEmitLifecycle: Bool = true) async throws {
         guard !self.isConnected else { return }
         state = .connecting
         
@@ -176,6 +179,7 @@ extension WebSocket {
                 state = .connected
                 emitLog(.info, "connect.succeeded")
                 await metrics?.didConnect(url: url)
+                if withEmitLifecycle { emitLifecycle(.connected(isReconnect: false)) }
                 ensureAutoReceive()
             } else {
                 state = .disconnected
@@ -215,6 +219,7 @@ extension WebSocket {
         await resetMessageStreamAndReader()
         emitLog(.info, "disconnect", metadata: ["reason": reason ?? "nil",
                                                 "code": String(information.code.rawValue)])
+        emitLifecycle(.disconnected(code: information.code, reason: reason))
     }
 }
 

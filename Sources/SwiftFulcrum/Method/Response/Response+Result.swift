@@ -9,6 +9,10 @@ public protocol JSONRPCConvertible: Decodable, Sendable {
     init(fromRPC jsonrpc: JSONRPC) throws
 }
 
+public protocol JSONRPCNilAcceptingConvertible: JSONRPCConvertible {
+    init(nilValue: ())
+}
+
 extension Response.Result {
     public struct Blockchain {
         public struct EstimateFee: JSONRPCConvertible {
@@ -29,6 +33,149 @@ extension Response.Result {
             }
         }
         
+        public struct ScriptHash {
+            public struct GetBalance: JSONRPCConvertible {
+                public let confirmed: UInt64
+                public let unconfirmed: Int64
+                
+                public typealias JSONRPC = Response.JSONRPC.Result.Blockchain.ScriptHash.GetBalance
+                public init(fromRPC jsonrpc: JSONRPC) {
+                    self.confirmed = jsonrpc.confirmed
+                    self.unconfirmed = jsonrpc.unconfirmed
+                }
+            }
+            
+            public struct GetFirstUse: JSONRPCConvertible {
+                public let blockHash: String?
+                public let height: UInt?
+                public let transactionHash: String?
+                public var found: Bool { blockHash != nil }
+                
+                public typealias JSONRPC = Response.JSONRPC.Result.Blockchain.ScriptHash.GetFirstUse?
+                public init(fromRPC jsonrpc: JSONRPC) {
+                    guard let json = jsonrpc else {
+                        self.blockHash = nil
+                        self.height = nil
+                        self.transactionHash = nil
+                        return
+                    }
+                    self.blockHash = json.block_hash
+                    self.height = json.height
+                    self.transactionHash = json.tx_hash
+                }
+            }
+            
+            public struct GetHistory: JSONRPCConvertible {
+                public let transactions: [Transaction]
+                public struct Transaction: Decodable, Sendable {
+                    public let height: Int
+                    public let transactionHash: String
+                    public let fee: UInt?
+                    
+                    init(from json: Response.JSONRPC.Result.Blockchain.ScriptHash.GetHistoryItem) {
+                        self.height = json.height
+                        self.transactionHash = json.tx_hash
+                        self.fee = json.fee
+                    }
+                }
+                
+                public typealias JSONRPC = Response.JSONRPC.Result.Blockchain.ScriptHash.GetHistory
+                public init(fromRPC jsonrpc: JSONRPC) {
+                    self.transactions = jsonrpc.map { Transaction(from: $0) }
+                }
+            }
+            
+            public struct GetMempool: JSONRPCConvertible {
+                public let transactions: [Transaction]
+                public struct Transaction: Decodable, Sendable {
+                    public let height: Int
+                    public let transactionHash: String
+                    public let fee: UInt?
+                    
+                    init(from json: Response.JSONRPC.Result.Blockchain.ScriptHash.GetMempoolItem) {
+                        self.height = json.height
+                        self.transactionHash = json.tx_hash
+                        self.fee = json.fee
+                    }
+                }
+                
+                public typealias JSONRPC = Response.JSONRPC.Result.Blockchain.ScriptHash.GetMempool
+                public init(fromRPC jsonrpc: JSONRPC) {
+                    self.transactions = jsonrpc.map { Transaction(from: $0) }
+                }
+            }
+            
+            public struct ListUnspent: JSONRPCConvertible {
+                public let items: [Item]
+                
+                public struct Item: Decodable, Sendable {
+                    public let height: UInt
+                    public let tokenData: Method.Blockchain.CashTokens.JSON?
+                    public let transactionHash: String
+                    public let transactionPosition: UInt
+                    public let value: UInt64
+                    
+                    init(from json: Response.JSONRPC.Result.Blockchain.ScriptHash.ListUnspentItem) {
+                        self.height = json.height
+                        self.tokenData = json.token_data
+                        self.transactionHash = json.tx_hash
+                        self.transactionPosition = json.tx_pos
+                        self.value = json.value
+                    }
+                }
+                
+                public typealias JSONRPC = Response.JSONRPC.Result.Blockchain.ScriptHash.ListUnspent
+                public init(fromRPC jsonrpc: JSONRPC) {
+                    self.items = jsonrpc.map { Item(from: $0) }
+                }
+            }
+            
+            public struct Subscribe: JSONRPCConvertible {
+                public let status: String?
+                
+                public typealias JSONRPC = Response.JSONRPC.Result.Blockchain.ScriptHash.Subscribe?
+                public init(fromRPC jsonrpc: JSONRPC) throws {
+                    guard let jsonrpc else {
+                        self.status = nil
+                        return
+                    }
+                    
+                    switch jsonrpc {
+                    case .status(let statusString):
+                        self.status = statusString
+                    case .scripthashAndStatus(let pair):
+                        throw Error.unexpectedFormat("Expected a status string; got scripthash and status array for ScriptHash.Subscribe: \(pair.description)")
+                    }
+                }
+            }
+            
+            public struct SubscribeNotification: JSONRPCConvertible {
+                public let subscriptionIdentifier: String
+                public let status: String?
+                
+                public typealias JSONRPC = Response.JSONRPC.Result.Blockchain.ScriptHash.Subscribe
+                public init(fromRPC jsonrpc: JSONRPC) throws {
+                    switch jsonrpc {
+                    case .scripthashAndStatus(let pair):
+                        guard let first = pair.first, let scripthash = first else { throw Error.missingField("subscriptionIdentifier") }
+                        self.subscriptionIdentifier = scripthash
+                        self.status = (pair.count > 1) ? pair[1] : nil
+                    case .status(let statusString):
+                        throw Error.unexpectedFormat("Expected scripthash and status pair; got single status: \(statusString)")
+                    }
+                }
+            }
+            
+            public struct Unsubscribe: JSONRPCConvertible {
+                public let success: Bool
+                
+                public typealias JSONRPC = Response.JSONRPC.Result.Blockchain.ScriptHash.Unsubscribe
+                public init(fromRPC jsonrpc: JSONRPC) {
+                    self.success = jsonrpc
+                }
+            }
+        }
+        
         public struct Address {
             public struct GetBalance: JSONRPCConvertible {
                 public let confirmed: UInt64
@@ -42,15 +189,22 @@ extension Response.Result {
             }
             
             public struct GetFirstUse: JSONRPCConvertible {
-                public let blockHash: String
-                public let height: UInt
-                public let transactionHash: String
+                public let blockHash: String?
+                public let height: UInt?
+                public let transactionHash: String?
+                public var found: Bool { blockHash != nil }
                 
-                public typealias JSONRPC = Response.JSONRPC.Result.Blockchain.Address.GetFirstUse
+                public typealias JSONRPC = Response.JSONRPC.Result.Blockchain.Address.GetFirstUse?
                 public init(fromRPC jsonrpc: JSONRPC) {
-                    self.blockHash = jsonrpc.block_hash
-                    self.height = jsonrpc.height
-                    self.transactionHash = jsonrpc.tx_hash
+                    guard let json = jsonrpc else {
+                        self.blockHash = nil
+                        self.height = nil
+                        self.transactionHash = nil
+                        return
+                    }
+                    self.blockHash = json.block_hash
+                    self.height = json.height
+                    self.transactionHash = json.tx_hash
                 }
             }
             
@@ -129,10 +283,14 @@ extension Response.Result {
             }
             
             public struct Subscribe: JSONRPCConvertible {
-                public let status: String
+                public let status: String?
                 
-                public typealias JSONRPC = Response.JSONRPC.Result.Blockchain.Address.Subscribe
+                public typealias JSONRPC = Response.JSONRPC.Result.Blockchain.Address.Subscribe?
                 public init(fromRPC jsonrpc: JSONRPC) throws {
+                    guard let jsonrpc else {
+                        self.status = nil
+                        return
+                    }
                     switch jsonrpc {
                     case .status(let statusString):
                         self.status = statusString
