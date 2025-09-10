@@ -16,8 +16,7 @@ public actor Fulcrum {
                     url: url,
                     configuration: configuration.convertToWebSocketConfiguration(),
                     reconnectConfiguration: configuration.reconnect,
-                    connectionTimeout: configuration.connectionTimeout,
-                    heartbeatConfiguration: configuration.heartbeat
+                    connectionTimeout: configuration.connectionTimeout
                 )
             } else {
                 let serverList = try await Task.detached(priority: .utility) {
@@ -28,8 +27,7 @@ public actor Fulcrum {
                     url: server,
                     configuration: configuration.convertToWebSocketConfiguration(),
                     reconnectConfiguration: configuration.reconnect,
-                    connectionTimeout: configuration.connectionTimeout,
-                    heartbeatConfiguration: configuration.heartbeat
+                    connectionTimeout: configuration.connectionTimeout
                 )
             }
         }()
@@ -44,8 +42,7 @@ public actor Fulcrum {
                 url: server,
                 configuration: configuration.convertToWebSocketConfiguration(),
                 reconnectConfiguration: configuration.reconnect,
-                connectionTimeout: configuration.connectionTimeout,
-                heartbeatConfiguration: configuration.heartbeat
+                connectionTimeout: configuration.connectionTimeout
             ),
             metrics: configuration.metrics,
             logger: configuration.logger

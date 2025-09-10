@@ -59,7 +59,7 @@ extension Data {
 }
 
 extension AsyncThrowingStream where Element == Data {
-    func decode<Result: Decodable>(_ type: Result.Type) -> AsyncThrowingStream<Result, Swift.Error> {
+    func decode<Result: Decodable & Sendable>(_ type: Result.Type) -> AsyncThrowingStream<Result, Swift.Error> {
         AsyncThrowingStream<Result, Swift.Error> { continuation in
             Task {
                 do {

@@ -40,39 +40,39 @@ extension WebSocket {
             reconnectionAttempts = 0
         }
         
-        func attemptReconnection(for webSocket: WebSocket, with url: URL? = nil) async throws {
+        func attemptReconnection(
+            for webSocket: WebSocket,
+            with url: URL? = nil,
+            cancelReceiver: Bool = true
+        ) async throws {
             while configuration.isUnlimited || reconnectionAttempts < configuration.maximumReconnectionAttempts {
                 let base = pow(2.0, Double(reconnectionAttempts)) * configuration.reconnectionDelay
                 let delay = min(base, configuration.maximumDelay) * .random(in: configuration.jitterRange)
                 try await Task.sleep(for: .seconds(delay))
-                
+
                 reconnectionAttempts += 1
-                await webSocket.emitLog(
-                    .info,
-                    "reconnect.attempt",
-                    metadata: ["attempt": String(reconnectionAttempts),
-                               "unlimited": String(configuration.isUnlimited)]
-                )
-                
-                
+                await webSocket.emitLog(.info, "reconnect.attempt",
+                                        metadata: ["attempt": String(reconnectionAttempts),
+                                                   "unlimited": String(configuration.isUnlimited)])
+
                 do {
-                    await webSocket.cancelReceiverTask()
-                    await webSocket.createNewTask(with: url)
+                    if cancelReceiver { await webSocket.cancelReceiverTask() }
+                    if let url { await webSocket.setURL(url) }
                     try await webSocket.connect()
                     resetReconnectionAttemptCount()
+                    await webSocket.ensureAutoReceive()
                     await webSocket.emitLog(.info, "reconnect.succeeded")
                     return
                 } catch {
-                    await webSocket.emitLog(.warning,
-                                            "reconnect.failed",
+                    await webSocket.emitLog(.warning, "reconnect.failed",
                                             metadata: ["attempt": String(reconnectionAttempts),
                                                        "error": (error as NSError).localizedDescription])
-                    
                 }
             }
-            
+
             await webSocket.emitLog(.error, "reconnect.max_attempts_reached")
-            throw await Fulcrum.Error.transport(.connectionClosed(webSocket.closeInformation.code, webSocket.closeInformation.reason))
+            throw await Fulcrum.Error.transport(.connectionClosed(webSocket.closeInformation.code,
+                                                                  webSocket.closeInformation.reason))
         }
     }
 }
