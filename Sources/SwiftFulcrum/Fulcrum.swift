@@ -20,7 +20,7 @@ public actor Fulcrum {
                 )
             } else {
                 let serverList = try await Task.detached(priority: .utility) {
-                    try await WebSocket.Server.getServerList()
+                    try await WebSocket.Server.getServerList(fallback: configuration.bootstrapServers ?? [])
                 }.value
                 guard let server = serverList.randomElement() else { throw Error.transport(.setupFailed) }
                 return WebSocket(

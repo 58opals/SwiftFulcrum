@@ -11,7 +11,9 @@ extension Fulcrum {
         public var urlSession: URLSession?
         public var connectionTimeout: TimeInterval
         
-        public static let `default` = Configuration()
+        public var bootstrapServers: [URL]?
+        
+        public static let basic = Configuration()
         
         public init(
             tls: WebSocket.TLSDescriptor? = nil,
@@ -19,7 +21,8 @@ extension Fulcrum {
             metrics: MetricsCollectable? = nil,
             logger: Log.Handler? = nil,
             urlSession: URLSession? = nil,
-            connectionTimeout: TimeInterval = 10
+            connectionTimeout: TimeInterval = 10,
+            bootstrapServers: [URL]? = nil
         ) {
             self.tls = tls
             self.reconnect = reconnect
@@ -27,6 +30,7 @@ extension Fulcrum {
             self.logger = logger
             self.urlSession = urlSession
             self.connectionTimeout = connectionTimeout
+            self.bootstrapServers = bootstrapServers
         }
     }
 }

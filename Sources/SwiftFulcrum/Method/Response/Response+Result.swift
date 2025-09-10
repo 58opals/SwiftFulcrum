@@ -447,8 +447,30 @@ extension Response.Result {
                 public let transactionHash: Data
                 
                 public typealias JSONRPC = Response.JSONRPC.Result.Blockchain.Transaction.Broadcast
-                public init(fromRPC jsonrpc: JSONRPC) {
-                    self.transactionHash = jsonrpc
+                public init(fromRPC jsonrpc: JSONRPC) throws {
+                    self.transactionHash = try Self.decodeHex(jsonrpc)
+                }
+                
+                private static func decodeHex(_ hex: String) throws -> Data {
+                    let string = hex.trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard string.count % 2 == 0 else {
+                        throw Response.Result.Error.unexpectedFormat("txid has odd hex length: \(string.count)")
+                    }
+                    var data = Data(); data.reserveCapacity(string.count / 2)
+                    var index = string.startIndex
+                    while index < string.endIndex {
+                        let currentIndex = string.index(index, offsetBy: 2)
+                        let byteString = String(string[index..<currentIndex])
+                        guard let byte = UInt8(byteString, radix: 16) else {
+                            throw Response.Result.Error.unexpectedFormat("tx contains non-hex: \(byteString)")
+                        }
+                        data.append(byte)
+                        index = currentIndex
+                    }
+                    guard data.count == 32 else {
+                        throw Response.Result.Error.unexpectedFormat("txid decoded \(data.count) bytes; expected 32")
+                    }
+                    return data
                 }
             }
             
@@ -772,13 +794,18 @@ extension Response.Result {
             public let histogram: [Result]
             
             public struct Result: Decodable, Sendable {
-                public let fee: UInt
+                public let fee: Double
                 public let virtualSize: UInt
                 
                 init(from pair: Response.JSONRPC.Result.Mempool.FeeHistogram) throws {
                     guard pair.count == 2 else { throw Error.unexpectedFormat("Histogram entry must be [fee, vsize]; got \(pair)") }
-                    self.fee = pair[0]
-                    self.virtualSize = pair[1]
+                    let feeValue = pair[0].value
+                    let virtualSizeValue = pair[1].value
+                    guard feeValue.isFinite, feeValue >= 0 else { throw Error.unexpectedFormat("Invalid fee: \(feeValue)") }
+                    guard virtualSizeValue.isFinite, virtualSizeValue >= 0, virtualSizeValue <= Double(UInt.max) else { throw Error.unexpectedFormat("Invalid vsize: \(virtualSizeValue)") }
+                    
+                    self.fee = feeValue
+                    self.virtualSize = UInt(virtualSizeValue.rounded(.towardZero))
                 }
             }
             
