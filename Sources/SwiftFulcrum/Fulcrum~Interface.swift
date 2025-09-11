@@ -3,117 +3,46 @@
 import Foundation
 
 extension Fulcrum {
-    /// Regular Request
     public func submit<RegularResponseResult: JSONRPCConvertible>(
         method: Method,
-        responseType: RegularResponseResult.Type = RegularResponseResult.self
+        responseType: RegularResponseResult.Type = RegularResponseResult.self,
+        options: Client.Call.Options = .init()
     ) async throws -> RPCResponse<RegularResponseResult, Never> {
-        let requestID = UUID()
-        let request = method.createRequest(with: requestID)
-        guard let payload = request.data else { throw Error.coding(.encode(nil)) }
+        if method.isSubscription {
+            throw Fulcrum.Error.client(.protocolMismatch("submit() cannot be used with subscription methods. Use subscribe(...)."))
+        }
         
-        return try await withCheckedThrowingContinuation { continuation in
-            Task {
-                do {
-                    try await self.client.insertRegularHandler(for: requestID) { @Sendable result in
-                        defer { Task { await self.client.removeRegularResponseHandler(for: requestID) } }
-                        
-                        switch result {
-                        case .success(let payload):
-                            continuation.resume(with: Result(catching: {
-                                .single(id: requestID, result: try payload.decode(RegularResponseResult.self))
-                            }))
-                        case .failure(let error):
-                            continuation.resume(throwing: Error.client(.unknown(error)))
-                        }
-                    }
-                    try await self.client.send(data: payload)
-                } catch {
-                    await self.client.removeRegularResponseHandler(for: requestID)
-                    continuation.resume(throwing: error)
-                }
-            }
+        do {
+            let (id, result): (UUID, RegularResponseResult) = try await client.call(method: method, options: options)
+            return .single(id: id, result: result)
+        } catch let fulcrumError as Fulcrum.Error {
+            throw fulcrumError
+        } catch {
+            throw Fulcrum.Error.client(.unknown(error))
         }
     }
     
-    /// Subscription Request
-    public func submit<SubscriptionNotification: JSONRPCConvertible>(
+    public func submit<Initial: JSONRPCConvertible, Notification: JSONRPCConvertible>(
         method: Method,
-        notificationType: SubscriptionNotification.Type = SubscriptionNotification.self
-    ) async throws -> RPCResponse<SubscriptionNotification, SubscriptionNotification> {
-        let requestID = UUID()
-        let request = method.createRequest(with: requestID)
-        guard let payload = request.data else { throw Error.coding(.encode(nil)) }
-        let subscriptionKey = await Client.SubscriptionKey(methodPath: request.method,
-                                                           identifier: self.client.getSubscriptionIdentifier(for: method))
-        
-        let initialResponse: SubscriptionNotification = try await withCheckedThrowingContinuation { continuation in
-            Task {
-                do {
-                    try await self.client.insertRegularHandler(for: requestID) { @Sendable result in
-                        defer { Task { await self.client.removeRegularResponseHandler(for: requestID) } }
-                        
-                        switch result {
-                        case .success(let payload):
-                            continuation.resume(with: Result(catching: { try payload.decode(SubscriptionNotification.self) }))
-                        case .failure(let error):
-                            continuation.resume(throwing: Error.client(.unknown(error)))
-                        }
-                    }
-                    try await self.client.send(data: payload)
-                } catch {
-                    continuation.resume(throwing: error)
-                }
-            }
+        initialType: Initial.Type = Initial.self,
+        notificationType: Notification.Type = Notification.self,
+        options: Client.Call.Options = .init()
+    ) async throws -> RPCResponse<Initial, Notification> {
+        let token = options.token ?? Client.Call.Token()
+        let effectiveOptions = Client.Call.Options(timeout: options.timeout, token: token)
+        do {
+            let (id, initial, updates): (UUID, Initial, AsyncThrowingStream<Notification, Swift.Error>) =
+            try await client.subscribe(method: method, options: effectiveOptions)
+            return .stream(
+                id: id,
+                initialResponse: initial,
+                updates: updates,
+                cancel: { await token.cancel() }
+            )
+        } catch let fulcrumError as Fulcrum.Error {
+            throw fulcrumError
+        } catch {
+            throw Fulcrum.Error.client(.unknown(error))
         }
-        
-        let terminationHandler: @Sendable () async -> Void = {
-            await self.client.removeSubscriptionResponseHandler(for: subscriptionKey)
-            
-            guard let method = await self.client.makeUnsubscribeMethod(for: subscriptionKey) else { return }
-            do {
-                _ = try await self.client.sendRegularRequest(method: method) { result in
-                    if case .failure(let error) = result {
-                        Task { await self.client.failAllPendingRequests(with: Error.client(.unknown(error))) }
-                    }
-                }
-            } catch {
-                await self.client.failAllPendingRequests(with: Error.client(.unknown(error)))
-            }
-        }
-        
-        let notificationStream = AsyncThrowingStream<SubscriptionNotification, Swift.Error> { continuation in
-            Task {
-                do {
-                    try await self.client.insertSubscriptionHandler(for: subscriptionKey) { @Sendable result in
-                        switch result {
-                        case .success(let payload):
-                            do {
-                                continuation.yield(try payload.decode(SubscriptionNotification.self))
-                            } catch {
-                                continuation.finish(throwing: error)
-                            }
-                        case .failure(let error):
-                            continuation.finish(throwing: Error.client(.unknown(error)))
-                        }
-                    }
-                } catch {
-                    continuation.finish(throwing: error)
-                }
-            }
-            
-            continuation.onTermination = { @Sendable _ in
-                Task { await terminationHandler() }
-            }
-        }
-        
-        let cancel: @Sendable () async -> Void = {
-            await terminationHandler()
-        }
-        
-        return .stream(id: requestID,
-                       initialResponse: initialResponse,
-                       updates: notificationStream,
-                       cancel: cancel)
     }
 }

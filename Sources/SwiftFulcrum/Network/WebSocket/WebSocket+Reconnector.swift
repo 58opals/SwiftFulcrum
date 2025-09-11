@@ -3,23 +3,35 @@
 import Foundation
 
 extension WebSocket {
-    actor Reconnector {
-        struct Configuration {
-            var maximumReconnectionAttempts: Int
-            var reconnectionDelay: TimeInterval
-            var maximumDelay: TimeInterval
-            var jitterRange: ClosedRange<TimeInterval>
+    public actor Reconnector {
+        public struct Configuration: Sendable {
+            public var maximumReconnectionAttempts: Int
+            public var reconnectionDelay: TimeInterval
+            public var maximumDelay: TimeInterval
+            public var jitterRange: ClosedRange<TimeInterval>
             
-            static let defaultConfiguration = Self(maximumReconnectionAttempts: 3,
-                                                   reconnectionDelay: 1.0,
-                                                   maximumDelay: 30,
-                                                   jitterRange: 0.8 ... 1.3)
+            public var isUnlimited: Bool { maximumReconnectionAttempts <= 0 }
+            
+            public static let defaultConfiguration = Self(maximumReconnectionAttempts: 0,
+                                                          reconnectionDelay: 1.0,
+                                                          maximumDelay: 30,
+                                                          jitterRange: 0.8 ... 1.3)
+            
+            public init(maximumReconnectionAttempts: Int,
+                        reconnectionDelay: TimeInterval,
+                        maximumDelay: TimeInterval,
+                        jitterRange: ClosedRange<TimeInterval>) {
+                self.maximumReconnectionAttempts = maximumReconnectionAttempts
+                self.reconnectionDelay = reconnectionDelay
+                self.maximumDelay = maximumDelay
+                self.jitterRange = jitterRange
+            }
         }
         
         private let configuration: Configuration
         private var reconnectionAttempts: Int
         
-        init(_ configuration: Configuration, reconnectionAttempts: Int = 0) {
+        public init(_ configuration: Configuration, reconnectionAttempts: Int = 0) {
             self.configuration = configuration
             self.reconnectionAttempts = reconnectionAttempts
         }
@@ -28,29 +40,41 @@ extension WebSocket {
             reconnectionAttempts = 0
         }
         
-        func attemptReconnection(for webSocket: WebSocket, with url: URL? = nil) async throws {
-            while reconnectionAttempts < self.configuration.maximumReconnectionAttempts {
-                let base = pow(2.0, Double(reconnectionAttempts)) * self.configuration.reconnectionDelay
-                let delay = min(base, self.configuration.maximumDelay) * .random(in: self.configuration.jitterRange)
+        func attemptReconnection(
+            for webSocket: WebSocket,
+            with url: URL? = nil,
+            cancelReceiver: Bool = true
+        ) async throws {
+            while configuration.isUnlimited || reconnectionAttempts < configuration.maximumReconnectionAttempts {
+                let base = pow(2.0, Double(reconnectionAttempts)) * configuration.reconnectionDelay
+                let delay = min(base, configuration.maximumDelay) * .random(in: configuration.jitterRange)
                 try await Task.sleep(for: .seconds(delay))
-                
+
                 reconnectionAttempts += 1
-                print("Attempting to reconnect (\(reconnectionAttempts))...")
-                
+                await webSocket.emitLog(.info, "reconnect.attempt",
+                                        metadata: ["attempt": String(reconnectionAttempts),
+                                                   "unlimited": String(configuration.isUnlimited)])
+
                 do {
-                    await webSocket.cancelReceiverTask()
-                    await webSocket.createNewTask(with: url)
-                    try await webSocket.connect()
+                    if cancelReceiver { await webSocket.cancelReceiverTask() }
+                    if let url { await webSocket.setURL(url) }
+                    try await webSocket.connect(withEmitLifecycle: false)
                     resetReconnectionAttemptCount()
-                    print("Reconnected successfully.")
+                    await webSocket.ensureAutoReceive()
+                    try await webSocket.connect(withEmitLifecycle: true)
+                    await webSocket.emitLog(.info, "reconnect.succeeded")
+                    await webSocket.emitLifecycle(.connected(isReconnect: true))
                     return
                 } catch {
-                    print("Reconnection attempt \(reconnectionAttempts) failed: \(error.localizedDescription)")
+                    await webSocket.emitLog(.warning, "reconnect.failed",
+                                            metadata: ["attempt": String(reconnectionAttempts),
+                                                       "error": (error as NSError).localizedDescription])
                 }
             }
-            
-            print("Maximum reconnection attempts reached.")
-            throw await Fulcrum.Error.transport(.connectionClosed(webSocket.closeInformation.code, webSocket.closeInformation.reason))
+
+            await webSocket.emitLog(.error, "reconnect.max_attempts_reached")
+            throw await Fulcrum.Error.transport(.connectionClosed(webSocket.closeInformation.code,
+                                                                  webSocket.closeInformation.reason))
         }
     }
 }

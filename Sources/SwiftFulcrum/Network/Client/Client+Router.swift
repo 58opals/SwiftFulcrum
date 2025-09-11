@@ -24,8 +24,15 @@ extension Client {
         }
         
         func handle(raw: Data) {
-            guard let identifier = try? Response.JSONRPC.extractIdentifier(from: raw) else { return }
-            resolve(identifier: identifier, with: raw)
+            guard let id = try? Response.JSONRPC.extractIdentifier(from: raw) else { return }
+            switch id {
+            case .uuid:
+                resolve(identifier: id, with: raw)
+            case .string(let methodPath):
+                let suffix = Client.subscriptionIdentifier(methodPath: methodPath, data: raw)
+                let key = suffix.map { "\(methodPath):\($0)" } ?? methodPath
+                resolve(identifier: .string(key), with: raw)
+            }
         }
         
         func cancel(identifier: Response.Identifier, error: Swift.Error? = nil) {

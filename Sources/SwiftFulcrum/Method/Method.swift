@@ -10,12 +10,23 @@ public enum Method {
         case estimateFee(numberOfBlocks: Int)
         case relayFee
         
+        case scripthash(ScriptHash)
         case address(Address)
         case block(Block)
         case header(Header)
         case headers(Headers)
         case transaction(Transaction)
         case utxo(UTXO)
+        
+        public enum ScriptHash {
+          case getBalance(scripthash: String, tokenFilter: CashTokens.TokenFilter?)
+          case getFirstUse(scripthash: String)
+          case getHistory(scripthash: String, fromHeight: UInt?, toHeight: UInt?, includeUnconfirmed: Bool)
+          case getMempool(scripthash: String)
+          case listUnspent(scripthash: String, tokenFilter: CashTokens.TokenFilter?)
+          case subscribe(scripthash: String)
+          case unsubscribe(scripthash: String)
+        }
         
         public enum Address {
             public typealias fromHeight = UInt
@@ -107,6 +118,7 @@ extension Method.Blockchain {
 
 extension Method: Sendable {}
 extension Method.Blockchain: Sendable {}
+extension Method.Blockchain.ScriptHash: Sendable {}
 extension Method.Blockchain.Address: Sendable {}
 extension Method.Blockchain.Block: Sendable {}
 extension Method.Blockchain.Header: Sendable {}

@@ -9,6 +9,68 @@ extension Response.JSONRPC {
             
             public typealias RelayFee = Double
             
+            public struct ScriptHash {
+                public struct GetBalance: Decodable, Sendable {
+                    public let confirmed: UInt64
+                    public let unconfirmed: Int64
+                }
+                
+                public struct GetFirstUse: Decodable, Sendable {
+                    public let block_hash: String
+                    public let height: UInt
+                    public let tx_hash: String
+                }
+                
+                public typealias GetHistory = [GetHistoryItem]
+                public struct GetHistoryItem: Decodable, Sendable {
+                    public let height: Int
+                    public let tx_hash: String
+                    public let fee: UInt?
+                }
+                
+                public typealias GetMempool = [GetMempoolItem]
+                public struct GetMempoolItem: Decodable, Sendable {
+                    public let height: Int
+                    public let tx_hash: String
+                    public let fee: UInt?
+                }
+                
+                public typealias ListUnspent = [ListUnspentItem]
+                public struct ListUnspentItem: Decodable, Sendable {
+                    public let height: UInt
+                    public let token_data: Method.Blockchain.CashTokens.JSON?
+                    public let tx_hash: String
+                    public let tx_pos: UInt
+                    public let value: UInt64
+                }
+                
+                public typealias Subscribe = SubscribeParameters
+                public enum SubscribeParameters: Decodable, Sendable {
+                    case status(String)
+                    case scripthashAndStatus([String?])
+                    
+                    public init(from decoder: Decoder) throws {
+                        let container = try decoder.singleValueContainer()
+                        
+                        if let singleValue = try? container.decode(String.self) {
+                            self = .status(singleValue)
+                            return
+                        }
+                        
+                        if let multipleValues = try? container.decode([String?].self) {
+                            self = .scripthashAndStatus(multipleValues)
+                            return
+                        }
+                        
+                        throw DecodingError.typeMismatch(SubscribeParameters.self,
+                                                         .init(codingPath: decoder.codingPath,
+                                                               debugDescription: "Expected String or [String?]"))
+                    }
+                }
+                
+                public typealias Unsubscribe = Bool
+            }
+            
             public struct Address {
                 public struct GetBalance: Decodable, Sendable {
                     public let confirmed: UInt64
@@ -152,7 +214,7 @@ extension Response.JSONRPC {
             }
             
             public struct Transaction {
-                public typealias Broadcast = Data
+                public typealias Broadcast = String
                 
                 public typealias Get = GetParameters
                 public enum GetParameters: Decodable, Sendable {
@@ -370,7 +432,20 @@ extension Response.JSONRPC {
         }
         
         public struct Mempool {
-            public typealias FeeHistogram = [UInt]
+            public struct FlexibleNumber: Decodable,Sendable {
+                public let value: Double
+                public init(from decoder: Decoder) throws {
+                    let container = try decoder.singleValueContainer()
+                    if let double = try? container.decode(Double.self) { self.value = double; return }
+                    if let int = try? container.decode(Int.self) { self.value = Double(int); return }
+                    if let uint = try? container.decode(UInt.self) { self.value = Double(uint); return }
+                    if let string = try? container.decode(String.self), let double = Double(string) { self.value = double; return }
+                    
+                    throw DecodingError.typeMismatch(Double.self, .init(codingPath: decoder.codingPath, debugDescription: "Expected number or numeric string"))
+                }
+            }
+            
+            public typealias FeeHistogram = [FlexibleNumber]
             public typealias GetFeeHistogram = [FeeHistogram]
         }
     }

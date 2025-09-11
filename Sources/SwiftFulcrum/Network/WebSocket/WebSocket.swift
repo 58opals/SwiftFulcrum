@@ -1,50 +1,73 @@
 // WebSocket.swift
 
 import Foundation
-import Network
 
-actor WebSocket {
+public actor WebSocket {
     var url: URL
-    private var task: URLSessionWebSocketTask?
+    var task: URLSessionWebSocketTask?
     private var state: ConnectionState
     
     private var sharedMessagesStream: AsyncThrowingStream<URLSessionWebSocketTask.Message, Swift.Error>?
-    private var messageContinuation: AsyncThrowingStream<URLSessionWebSocketTask.Message, Swift.Error>.Continuation?
+    var messageContinuation: AsyncThrowingStream<URLSessionWebSocketTask.Message, Swift.Error>.Continuation?
     
     let reconnector: Reconnector
+    var logger: Log.Handler
     
+    private var connectInFlight = false
+    private var connectWaiters = [CheckedContinuation<Bool, Error>]()
     var isConnected: Bool { state == .connected }
     
     private var receivedTask: Task<Void, Never>?
     private var wantsAutoReceive = false
     
-    private let session: URLSession
+    var sharedLifecycleStream: AsyncStream<Lifecycle.Event>?
+    var lifecycleContinuation: AsyncStream<Lifecycle.Event>.Continuation?
+    
+    let session: URLSession
     private let connectionTimeout: TimeInterval
     
-    init(url: URL,
-         reconnectConfiguration: Reconnector.Configuration = .defaultConfiguration,
-         connectionTimeout: TimeInterval = 10) {
+    private let tlsDescriptor: TLSDescriptor?
+    var metrics: MetricsCollectable?
+    
+    public init(url: URL,
+                configuration: Configuration = .init(),
+                reconnectConfiguration: Reconnector.Configuration = .defaultConfiguration,
+                connectionTimeout: TimeInterval = 10) {
         self.url = url
         self.task = nil
         self.state = .disconnected
         self.reconnector = Reconnector(reconnectConfiguration)
         self.connectionTimeout = connectionTimeout
         
-        let configuration = URLSessionConfiguration.default
-        configuration.timeoutIntervalForRequest = connectionTimeout
-        configuration.timeoutIntervalForResource = connectionTimeout
-        self.session = URLSession(configuration: configuration)
+        self.metrics = configuration.metrics
+        self.logger = configuration.logger ?? Log.NoOpHandler()
+        self.tlsDescriptor = configuration.tls
+        
+        if let session = configuration.session {
+            self.session = session
+        } else {
+            let sessionConfiguration = URLSessionConfiguration.default
+            sessionConfiguration.timeoutIntervalForRequest = connectionTimeout
+            sessionConfiguration.timeoutIntervalForResource = connectionTimeout
+            
+            if let tls = configuration.tls {
+                self.session = URLSession(configuration: sessionConfiguration, delegate: tls.delegate, delegateQueue: nil)
+            } else {
+                self.session = URLSession(configuration: sessionConfiguration)
+            }
+        }
     }
 }
 
 // MARK: - Create & Cancel
+
 extension WebSocket {
     func setURL(_ newURL: URL) { self.url = newURL }
     
-    func createNewTask(with url: URL? = nil) async {
+    func createNewTask(with url: URL? = nil, cancelReceiver: Bool = true) async {
         if let url { self.url = url }
         
-        await cancelReceiverTask()
+        if cancelReceiver { await cancelReceiverTask() }
         task?.cancel(with: .goingAway, reason: "Recreating task.".data(using: .utf8))
         task = session.webSocketTask(with: self.url)
     }
@@ -56,7 +79,7 @@ extension WebSocket {
     }
     
     private func getCurrentCloseInformation() -> (code: URLSessionWebSocketTask.CloseCode, reason: String?) {
-        let code   = task?.closeCode ?? .invalid
+        let code = task?.closeCode ?? .invalid
         let reason = task?.closeReason.flatMap { String(data: $0, encoding: .utf8) }
         return (code, reason)
     }
@@ -65,18 +88,126 @@ extension WebSocket {
 }
 
 // MARK: - Connect & Disconnect & Reconnect
+
 extension WebSocket {
+    func connect(withEmitLifecycle: Bool = true) async throws {
+        guard !self.isConnected else { return }
+        state = .connecting
+        
+        await createNewTask(with: nil, cancelReceiver: true)
+        guard let task else {
+            throw Fulcrum.Error.transport(.connectionClosed(closeInformation.code, closeInformation.reason))
+        }
+        
+        task.resume()
+        emitLog(.info, "connect.begin")
+        
+        do {
+            let isConnected = try await waitForConnection(timeout: connectionTimeout)
+            if isConnected {
+                state = .connected
+                emitLog(.info, "connect.succeeded")
+                await metrics?.didConnect(url: url)
+                if withEmitLifecycle { emitLifecycle(.connected(isReconnect: false)) }
+                ensureAutoReceive()
+            } else {
+                state = .disconnected
+                task.cancel(with: .goingAway, reason: "Connection timed out.".data(using: .utf8))
+                emitLog(.error, "connect.timeout")
+                throw Fulcrum.Error.transport(.connectionClosed(closeInformation.code, closeInformation.reason))
+            }
+        } catch let networkError as Fulcrum.Error.Network {
+            throw Fulcrum.Error.transport(.network(networkError))
+        }
+    }
+    
+    func reconnect(with url: URL? = nil) async throws {
+        await disconnect(with: "WebSocket.reconnect()")
+        let newURL = url ?? self.url
+        try await reconnector.attemptReconnection(for: self, with: newURL, cancelReceiver: false)
+    }
+    
+    func disconnect(with reason: String? = nil) async {
+        await cancelReceiverTask()
+        
+        let information = getCurrentCloseInformation()
+        
+        task?.cancel(with: .goingAway, reason: reason?.data(using: .utf8))
+        task = nil
+        state = .disconnected
+        
+        finishConnectWaiters(.failure(Fulcrum.Error.transport(.connectionClosed(information.code, information.reason))))
+        
+        messageContinuation?.finish(
+            throwing: Fulcrum.Error.transport(.connectionClosed(information.code, information.reason))
+        )
+        
+        await metrics?.didDisconnect(url: url, closeCode: information.code, reason: reason)
+        await resetMessageStreamAndReader()
+        emitLog(.info, "disconnect", metadata: ["reason": reason ?? "nil",
+                                                "code": String(information.code.rawValue)])
+        emitLifecycle(.disconnected(code: information.code, reason: reason))
+    }
+}
+
+extension WebSocket {
+    private func finishConnectWaiters(_ result: Result<Bool, Error>) {
+        let waiters = connectWaiters
+        connectWaiters.removeAll(keepingCapacity: false)
+        connectInFlight = false
+        for continuation in waiters {
+            switch result {
+            case .success(let isSuccessful): continuation.resume(returning: isSuccessful)
+            case .failure(let error): continuation.resume(throwing: error)
+            }
+        }
+    }
+    
     private func waitForConnection(timeout: TimeInterval) async throws -> Bool {
-        guard let task else { throw Fulcrum.Error.transport(.connectionClosed(closeInformation.code, closeInformation.reason)) }
+        if isConnected { return true }
+        
+        if connectInFlight {
+            return try await withCheckedThrowingContinuation { continuation in
+                connectWaiters.append(continuation)
+            }
+        }
+        
+        connectInFlight = true
+        do {
+            let isSuccessful = try await waitForConnectionOnce(timeout: timeout)
+            finishConnectWaiters(.success(isSuccessful))
+            return isSuccessful
+        } catch {
+            finishConnectWaiters(.failure(error))
+            throw error
+        }
+    }
+    
+    private func waitForConnectionOnce(timeout: TimeInterval) async throws -> Bool {
+        guard let task else {
+            throw Fulcrum.Error.transport(.connectionClosed(closeInformation.code, closeInformation.reason))
+        }
+        
+        let (stream, continuation) = AsyncThrowingStream<Bool, Error>.makeStream()
+        let currentURL = self.url
+        let metrics = self.metrics
+        
+        task.sendPing { error in
+            if let metrics { Task { await metrics.didPing(url: currentURL, error: error) } }
+            if let error {
+                continuation.finish(throwing: Fulcrum.Error.Network.tlsNegotiationFailed(error))
+            } else {
+                _ = continuation.yield(true); continuation.finish()
+            }
+        }
         
         return try await withThrowingTaskGroup(of: Bool.self) { group in
             group.addTask {
-                try await withCheckedThrowingContinuation { continuation in
-                    task.sendPing { error in
-                        if let error { continuation.resume(throwing: error) }
-                        else         { continuation.resume(returning: true) }
-                    }
+                var iterator = stream.makeAsyncIterator()
+                guard let isSuccessful = try await iterator.next() else {
+                    return false
                 }
+                return isSuccessful
             }
             
             group.addTask {
@@ -84,72 +215,22 @@ extension WebSocket {
                 return false
             }
             
-            let result = try await group.next() ?? false
+            let winner = try await group.next() ?? false
             group.cancelAll()
-            
-            return result
+            return winner
         }
-    }
-    
-    func connect() async throws {
-        if !self.isConnected {
-            state = .connecting
-            await createNewTask()
-        }
-        
-        guard let task else { throw Fulcrum.Error.transport(.connectionClosed(closeInformation.code, closeInformation.reason)) }
-        
-        task.resume()
-        print("WebSocket (\(url.description)) is connecting...")
-        
-        let isConnected = try await waitForConnection(timeout: connectionTimeout)
-        switch isConnected {
-        case true:
-            state = .connected
-            print("WebSocket (\(url.description)) is connected.")
-            ensureAutoReceive()
-        case false:
-            state = .disconnected
-            task.cancel(with: .goingAway, reason: "Connection timed out.".data(using: .utf8))
-            print("WebSocket (\(url.description)) failed to connect.")
-            throw Fulcrum.Error.transport(.connectionClosed(closeInformation.code, closeInformation.reason))
-        }
-    }
-    
-    func disconnect(with reason: String? = nil) async {
-        await cancelReceiverTask()
-        
-        task?.cancel(with: .goingAway, reason: reason?.data(using: .utf8))
-        task = nil
-        state = .disconnected
-        
-        messageContinuation?.finish(throwing: Fulcrum.Error.transport(.connectionClosed(closeInformation.code, closeInformation.reason)))
-        
-        await resetMessageStreamAndReader()
-        print("WebSocket (\(self.url.description)) is disconnected.")
-        if let reason { print("Reason: \(reason)") }
-    }
-    
-    
-    func reconnect(with url: URL? = nil) async throws {
-        let currentURL = self.url
-        let newURL = url ?? currentURL
-        
-        if currentURL != newURL {
-            await reconnector.resetReconnectionAttemptCount()
-        }
-        
-        try await reconnector.attemptReconnection(for: self, with: url)
     }
 }
 
 // MARK: - Send
+
 extension WebSocket {
     func send(data: Data) async throws {
         guard let task else { throw Fulcrum.Error.transport(.connectionClosed(closeInformation.code, closeInformation.reason)) }
         
         let message = URLSessionWebSocketTask.Message.data(data)
         try await task.send(message)
+        await metrics?.didSend(url: url, message: message)
     }
     
     func send(string: String) async throws {
@@ -157,35 +238,49 @@ extension WebSocket {
         
         let message = URLSessionWebSocketTask.Message.string(string)
         try await task.send(message)
+        await metrics?.didSend(url: url, message: message)
     }
 }
 
 // MARK: - Receive
+
 extension WebSocket {
+    private func startReader() {
+        guard receivedTask == nil else { return }
+        receivedTask = Task { [weak self] in
+            guard let self else { return }
+            await self.receiveContinuously()
+        }
+    }
+    
     func ensureAutoReceive() {
-        guard wantsAutoReceive, sharedMessagesStream == nil else { return }
-        _ = messages()
+        guard wantsAutoReceive else { return }
+        if sharedMessagesStream == nil {
+            _ = messages(enableAutoResume: true)
+            return
+        }
+        
+        if receivedTask == nil { startReader() }
     }
     
     func messages(enableAutoResume: Bool = true) -> AsyncThrowingStream<URLSessionWebSocketTask.Message, Swift.Error> {
         wantsAutoReceive = enableAutoResume
         
-        if let stream = sharedMessagesStream { return stream }
+        if let stream = sharedMessagesStream {
+            if enableAutoResume && receivedTask == nil { startReader() }
+            return stream
+        }
         
         let stream = AsyncThrowingStream<URLSessionWebSocketTask.Message, Swift.Error> { continuation in
             self.messageContinuation = continuation
-            
-            self.receivedTask = Task { [weak self] in
-                guard let self else { return }
-                await self.receiveContinuously()
-            }
-            
+            self.startReader()
             continuation.onTermination = { @Sendable _ in
                 Task { await self.resetMessageStreamAndReader() }
             }
         }
         
         sharedMessagesStream = stream
+        
         return stream
     }
     
@@ -196,6 +291,8 @@ extension WebSocket {
     }
     
     private func receiveContinuously() async {
+        defer { receivedTask = nil }
+        
         while !Task.isCancelled {
             guard let task = task else { break }
             
@@ -205,23 +302,21 @@ extension WebSocket {
                 } onCancel: {
                     task.cancel(with: .goingAway, reason: nil)
                 }
-                
                 switch messageContinuation?.yield(with: .success(message)) {
-                case .some(.enqueued):
-                    break
+                case .some(.enqueued): break
                 default:
                     messageContinuation?.finish()
                     messageContinuation = nil
                     break
                 }
-            } catch let error as URLError {
-                if error.code == .cancelled {
-                    break
-                }
+                await metrics?.didReceive(url: url, message: message)
+            } catch let urlError as URLError where urlError.code == .cancelled {
+                break
             } catch {
-                print("Receive failed: \(error.localizedDescription) - reconnecting...")
+                emitLog(.warning, "receive.failed_reconnecting",
+                        metadata: ["error": (error as NSError).localizedDescription])
                 do {
-                    try await reconnector.attemptReconnection(for: self)
+                    try await reconnector.attemptReconnection(for: self, cancelReceiver: false)
                     continue
                 } catch {
                     messageContinuation?.finish(throwing: error)
@@ -232,5 +327,16 @@ extension WebSocket {
             
             await Task.yield()
         }
+    }
+}
+
+extension WebSocket {
+    func emitLog(_ level: Log.Level,
+                 _ message: @autoclosure () -> String,
+                 metadata: [String: String]? = nil,
+                 file: String = #fileID, function: String = #function, line: UInt = #line) {
+        var data = ["component": "WebSocket", "url": url.absoluteString]
+        if let metadata { for (k, v) in metadata { data[k] = v } }
+        logger.log(level, message(), metadata: data, file: file, function: function, line: line)
     }
 }

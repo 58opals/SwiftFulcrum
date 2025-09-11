@@ -1,4 +1,4 @@
-![Swift 6.0](https://img.shields.io/badge/swift-6.0-orange)
+![Swift 6.2](https://img.shields.io/badge/swift-6.2-orange)
 ![SPM](https://img.shields.io/badge/Package%20Manager-SPM-informational)
 ![Platforms](https://img.shields.io/badge/platforms-iOS%20|%20macOS%20|%20watchOS%20|%20tvOS%20|%20visionOS-blue)
 
@@ -15,7 +15,7 @@ SwiftFulcrum is a **pure‑Swift**, type‑safe framework for interacting with F
 | **Real‑time notifications** | Subscribe to address, transaction, header, and DS‑Proof events via `AsyncThrowingStream`. |
 | **Robust error model** | Every issue surfaces as `Fulcrum.Error`; pending requests are finished with `.connectionClosed` when the socket closes. |
 | **Safe lifecycle** | Idempotent `start()`/`stop()` and a configurable WebSocket handshake timeout. |
-| **Automatic reconnection** | Automatic exponential back‑off and a `Fulcrum.reconnect(url:)` helper for instant server switching. |
+| **Automatic reconnection** | Automatic exponential back‑off and a `Fulcrum.reconnect()` helper for instant server switching. |
 | **Swift PM package** | Runs on iOS, macOS, watchOS, tvOS and visionOS. |
 
 ---
@@ -29,7 +29,7 @@ SwiftFulcrum is a **pure‑Swift**, type‑safe framework for interacting with F
 dependencies: [
     .package(
         url: "https://github.com/58opals/SwiftFulcrum.git",
-        .upToNextMajor(from: "0.3.0")
+        .upToNextMajor(from: "0.4.0")
     )
 ]
 ```
@@ -41,10 +41,9 @@ dependencies: [
 ```swift
 import SwiftFulcrum
 
-let fulcrum = try Fulcrum(url: "wss://fulcrum.example.com:50004")
-
 Task {
     do {
+        let fulcrum = try await Fulcrum(url: "wss://fulcrum.example.com:50004")
         try await fulcrum.start()
         print("Connected to Fulcrum server.")
         defer { await fulcrum.stop() }
@@ -57,19 +56,19 @@ Task {
 #### Reconnect
 
 ```swift
-try await fulcrum.reconnect(url: "wss://backup.fulcrum.example.com:50004")
+try await fulcrum.reconnect()
 ```
 
-Use ``Fulcrum/reconnect(url:)`` to switch servers or recover after a disconnect.
-Supplying a URL validates its scheme and throws ``Fulcrum/Error/Transport/setupFailed``
-when invalid. Reconnection failures bubble up as ``Fulcrum/Error/Transport``.
+Use ``Fulcrum/reconnect()`` to switch servers or recover after a disconnect.
+Reconnection failures bubble up as ``Fulcrum/Error/Transport``.
 
 #### One‑shot Request
 
 ```swift
-let response = try await fulcrum.submit(
-    method: .blockchain(.estimateFee(numberOfBlocks: 6)),
-    responseType: Response.Result.Blockchain.EstimateFee.self
+let response: Fulcrum.RPCResponse<
+    Response.Result.Blockchain.EstimateFee, Never
+> = try await fulcrum.submit(
+    method: .blockchain(.estimateFee(numberOfBlocks: 6))
 )
 
 if let estimate = response.extractRegularResponse() {
@@ -82,18 +81,20 @@ if let estimate = response.extractRegularResponse() {
 ```swift
 let address = "qrsrz5mzve6kyr6ne6lgsvlgxvs3hqm6huxhd8gqwj"
 
-let stream = try await fulcrum.submit(
-    method: .blockchain(.address(.subscribe(address: address))),
-    notificationType: Response.Result.Blockchain.Address.Subscribe.self
+let response: Fulcrum.RPCResponse<
+    Response.Result.Blockchain.Address.Subscribe,
+    Response.Result.Blockchain.Address.SubscribeNotification
+> = try await fulcrum.submit(
+    method: .blockchain(.address(.subscribe(address: address)))
 )
 
-guard case .stream(_, let initial, let updates, let cancel) = stream else { return }
+guard let (initial, updates, cancel) = response.extractSubscriptionStream() else { return }
 
 print("Initial status: \(initial)")
 
 Task {
-    for try await note in updates {
-        print("Update: \(note)")
+    for try await update in updates {
+        print("Update: \(update)")
     }
 }
 

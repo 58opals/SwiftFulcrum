@@ -5,6 +5,7 @@ import Foundation
 extension Method {
     func createRequest(with uuid: UUID) -> Request {
         switch self {
+            // MARK: - Blockchain
         case .blockchain(let blockchain):
             switch blockchain {
                 
@@ -32,6 +33,120 @@ extension Method {
                                method: self,
                                params: Parameters())
                 
+                // MARK: - Blockchain.ScriptHash
+            case .scripthash(let scripthash):
+                switch scripthash {
+                    
+                    // MARK: Blockchain.ScriptHash.getBalance
+                case .getBalance(let scripthash, let tokenFilter):
+                    struct Parameters: Encodable {
+                        let scripthash: String
+                        let tokenFilter: Method.Blockchain.CashTokens.TokenFilter?
+                        func encode(to encoder: Encoder) throws {
+                            var container = encoder.unkeyedContainer()
+                            try container.encode(scripthash)
+                            if let tokenFilter = tokenFilter { try container.encode(tokenFilter) }
+                        }
+                    }
+                    return Request(id: uuid,
+                                   method: self,
+                                   params: Parameters(scripthash: scripthash,
+                                                      tokenFilter: tokenFilter))
+                    
+                    // MARK: Blockchain.ScriptHash.getFirstUse
+                case .getFirstUse(let scripthash):
+                    struct Parameters: Encodable {
+                        let scripthash: String
+                        func encode(to encoder: Encoder) throws {
+                            var container = encoder.unkeyedContainer()
+                            try container.encode(scripthash)
+                        }
+                    }
+                    return Request(id: uuid,
+                                   method: self,
+                                   params: Parameters(scripthash: scripthash))
+                    
+                    // MARK: Blockchain.ScriptHash.getHistory
+                case .getHistory(let scripthash, let fromHeight, let toHeight, let includeUnconfirmed):
+                    struct Parameters: Encodable {
+                        let scripthash: String
+                        let fromHeight: UInt?
+                        let toHeight: UInt?
+                        let includeUnconfirmed: Bool
+                        func encode(to encoder: Encoder) throws {
+                            var container = encoder.unkeyedContainer()
+                            
+                            try container.encode(scripthash)
+                            try container.encode(fromHeight ?? 0)
+                            if includeUnconfirmed { try container.encode(Int(-1)) }
+                            else if let toHeight { try container.encode(toHeight) }
+                            else { try container.encode(UInt.max) }
+                        }
+                    }
+                    return Request(id: uuid,
+                                   method: self,
+                                   params: Parameters(scripthash: scripthash,
+                                                      fromHeight: fromHeight,
+                                                      toHeight: toHeight,
+                                                      includeUnconfirmed: includeUnconfirmed))
+                    
+                    // MARK: Blockchain.ScriptHash.getMempool
+                case .getMempool(let scripthash):
+                    struct Parameters: Encodable {
+                        let scripthash: String
+                        func encode(to encoder: Encoder) throws {
+                            var container = encoder.unkeyedContainer()
+                            try container.encode(scripthash)
+                        }
+                    }
+                    return Request(id: uuid,
+                                   method: self,
+                                   params: Parameters(scripthash: scripthash))
+                    
+                    // MARK: Blockchain.ScriptHash.listUnspent
+                case .listUnspent(let scripthash, let tokenFilter):
+                    struct Parameters: Encodable {
+                        let scripthash: String
+                        let tokenFilter: Method.Blockchain.CashTokens.TokenFilter?
+                        func encode(to encoder: Encoder) throws {
+                            var container = encoder.unkeyedContainer()
+                            try container.encode(scripthash)
+                            if let tokenFilter = tokenFilter { try container.encode(tokenFilter) }
+                        }
+                    }
+                    return Request(id: uuid,
+                                   method: self,
+                                   params: Parameters(scripthash: scripthash,
+                                                      tokenFilter: tokenFilter))
+                    
+                    // MARK: Blockchain.ScriptHash.subscribe
+                case .subscribe(let scripthash):
+                    struct Parameters: Encodable {
+                        let scripthash: String
+                        func encode(to encoder: Encoder) throws {
+                            var container = encoder.unkeyedContainer()
+                            try container.encode(scripthash)
+                        }
+                    }
+                    return Request(id: uuid,
+                                   method: self,
+                                   params: Parameters(scripthash: scripthash))
+                    
+                    // MARK: Blockchain.ScriptHash.unsubscribe
+                case .unsubscribe(let scripthash):
+                    struct Parameters: Encodable {
+                        let scripthash: String
+                        func encode(to encoder: Encoder) throws {
+                            var container = encoder.unkeyedContainer()
+                            try container.encode(scripthash)
+                        }
+                    }
+                    return Request(id: uuid,
+                                   method: self,
+                                   params: Parameters(scripthash: scripthash))
+                }
+                
+                // MARK: - Blockchain.Address
             case .address(let address):
                 switch address {
                     
@@ -157,6 +272,7 @@ extension Method {
                                    params: Parameters(address: address))
                 }
                 
+                // MARK: - Blockchain.Block
             case .block(let block):
                 switch block {
                     
@@ -196,6 +312,7 @@ extension Method {
                                                       checkpointHeight: checkpointHeight ?? 0))
                 }
                 
+                // MARK: - Blockchain.Header
             case .header(let header):
                 switch header {
                     
@@ -212,6 +329,8 @@ extension Method {
                                    method: self,
                                    params: Parameters(blockHash: blockHash))
                 }
+                
+                // MARK: - Blockchain.Headers
             case .headers(let headers):
                 switch headers {
                     
@@ -248,6 +367,8 @@ extension Method {
                                    method: self,
                                    params: Parameters())
                 }
+                
+                // MARK: - Blockchain.Transaction
             case .transaction(let transaction):
                 switch transaction {
                     
@@ -367,6 +488,7 @@ extension Method {
                                    method: self,
                                    params: Parameters(transactionHash: transactionHash))
                     
+                    // MARK: - Blockchain.Transaction.DSProof
                 case .dsProof(let dSProof):
                     switch dSProof {
                         
@@ -422,6 +544,7 @@ extension Method {
                     }
                 }
                 
+                // MARK: - Blockchain.UTXO
             case .utxo(let utxo):
                 switch utxo {
                     
@@ -443,6 +566,7 @@ extension Method {
                 }
             }
             
+            // MARK: - Mempool
         case .mempool(let mempool):
             switch mempool {
                 

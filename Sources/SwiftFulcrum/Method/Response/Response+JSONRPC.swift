@@ -21,6 +21,11 @@ extension Response {
             let method: String?
             let params: Result?
             
+            private let hasResultKey: Bool
+            private let hasParamsKey: Bool
+            var hasResult: Bool { hasResultKey }
+            var hasParams: Bool { hasParamsKey }
+            
             enum CodingKeys: String, CodingKey {
                 case jsonrpc, id, result, error, method, params
             }
@@ -33,6 +38,8 @@ extension Response {
                 self.error = try container.decodeIfPresent(Response.Error.Result.self, forKey: .error)
                 self.method = try container.decodeIfPresent(String.self, forKey: .method)
                 self.params = try container.decodeIfPresent(Result.self, forKey: .params)
+                self.hasResultKey = container.contains(.result)
+                self.hasParamsKey = container.contains(.params)
             }
         }
     }
@@ -54,6 +61,17 @@ extension Response.JSONRPC {
 
 extension Response.JSONRPC.Generic {
     func getResponseType() throws -> Response.Kind<Result> {
+        if let id,
+           error == nil,
+           method == nil,
+           result == nil,
+           hasResult {
+            if let nilProducer = ResultNilProducer.produceNilIfOptional(Result.self) {
+                return .regular(Response.Regular(id: id, result: nilProducer))
+            }
+        }
+        
+        
         switch (id, result, error, method, params) {
         case let (id?, result?, _, _, _):
             return .regular(Response.Regular(id: id, result: result))
@@ -66,5 +84,14 @@ extension Response.JSONRPC.Generic {
         default:
             throw Response.JSONRPC.Error.cannotIdentifyResponseType(id)
         }
+    }
+}
+
+private protocol NilConstructible { static var nilValue: Self { get } }
+extension Optional: NilConstructible { static var nilValue: Self { nil } }
+
+private enum ResultNilProducer {
+    static func produceNilIfOptional<T>(_ type: T.Type) -> T? {
+        (any NilConstructible.Type)?.nilValue as? T
     }
 }

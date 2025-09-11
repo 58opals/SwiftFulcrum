@@ -8,6 +8,15 @@ extension Method {
         case BlockchainEstimateFee(Response.Result.Blockchain.EstimateFee)
         case BlockchainRelayFee(Response.Result.Blockchain.RelayFee)
         
+        // Blockchain.ScriptHash
+        case BlockchainScriptHashGetBalance(Response.Result.Blockchain.ScriptHash.GetBalance)
+        case BlockchainScriptHashGetFirstUse(Response.Result.Blockchain.ScriptHash.GetFirstUse)
+        case BlockchainScriptHashGetHistory(Response.Result.Blockchain.ScriptHash.GetHistory)
+        case BlockchainScriptHashGetMempool(Response.Result.Blockchain.ScriptHash.GetMempool)
+        case BlockchainScriptHashListUnspent(Response.Result.Blockchain.ScriptHash.ListUnspent)
+        case BlockchainScriptHashSubscribe(Response.Result.Blockchain.ScriptHash.Subscribe)
+        case BlockchainScriptHashUnsubscribe(Response.Result.Blockchain.ScriptHash.Unsubscribe)
+        
         // Blockchain.Address
         case BlockchainAddressGetBalance(Response.Result.Blockchain.Address.GetBalance)
         case BlockchainAddressGetFirstUse(Response.Result.Blockchain.Address.GetFirstUse)

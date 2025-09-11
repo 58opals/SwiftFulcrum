@@ -11,6 +11,17 @@ struct MethodAssortment {
             switch blockchain {
             case .estimateFee(_): return
             case .relayFee: return
+                // MARK: - Blockchain.ScriptHash
+            case .scripthash(let scripthash):
+                switch scripthash {
+                case .getBalance(_, _): return
+                case .getFirstUse(_): return
+                case .getHistory(_, _, _, _): return
+                case .getMempool(_): return
+                case .listUnspent(_, _): return
+                case .subscribe(_): return
+                case .unsubscribe(_): return
+                }
                 // MARK: - Blockchain.Address
             case .address(let address):
                 switch address {
@@ -80,6 +91,14 @@ struct MethodAssortment {
             // MARK: - Blockchain
         case "blockchain.estimatefee": return
         case "blockchain.relayfee": return
+            // MARK: - Blockchain.ScriptHash
+        case "blockchain.scripthash.get_balance": return
+        case "blockchain.scripthash.get_first_use": return
+        case "blockchain.scripthash.get_history": return
+        case "blockchain.scripthash.get_mempool": return
+        case "blockchain.scripthash.listunspent": return
+        case "blockchain.scripthash.subscribe": return
+        case "blockchain.scripthash.unsubscribe": return
             // MARK: - Blockchain.Address
         case "blockchain.address.get_balance": return
         case "blockchain.address.get_first_use": return
@@ -130,6 +149,35 @@ extension MethodAssortment {
                 .estimateFee(numberOfBlocks: 6)),
             .blockchain(
                 .relayFee),
+            
+            // Blockchain.ScriptHash
+            .blockchain(
+                .scripthash(
+                    .getBalance(scripthash: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+                                tokenFilter: .include))),
+            .blockchain(
+                .scripthash(
+                    .getFirstUse(scripthash: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"))),
+            .blockchain(
+                .scripthash(
+                    .getHistory(scripthash: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+                                fromHeight: nil,
+                                toHeight: nil,
+                                includeUnconfirmed: true))),
+            .blockchain(
+                .scripthash(
+                    .getMempool(scripthash: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"))),
+            .blockchain(
+                .scripthash(
+                    .listUnspent(scripthash: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+                                 tokenFilter: .include))),
+            .blockchain(
+                .scripthash(
+                    .subscribe(scripthash: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"))),
+            .blockchain(
+                .scripthash(
+                    .unsubscribe(scripthash: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"))),
+            
             
             // Blockchain.Address
             .blockchain(
