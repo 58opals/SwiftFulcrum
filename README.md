@@ -1,4 +1,4 @@
-![Swift 6.2](https://img.shields.io/badge/swift-6.2-orange)
+![Swift 6.0](https://img.shields.io/badge/swift-6.2-orange)
 ![SPM](https://img.shields.io/badge/Package%20Manager-SPM-informational)
 ![Platforms](https://img.shields.io/badge/platforms-iOS%20|%20macOS%20|%20watchOS%20|%20tvOS%20|%20visionOS-blue)
 
