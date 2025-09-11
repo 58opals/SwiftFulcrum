@@ -10,6 +10,15 @@ extension Client {
         let id = UUID()
         let request = method.createRequest(with: id)
         
+        if let token = options.token {
+            await token.register { Task { await self.router.cancel(identifier: .uuid(id)) } }
+        }
+        
+        if let token = options.token, await token.isCancelled {
+            await router.cancel(identifier: .uuid(id))
+            throw Fulcrum.Error.client(.cancelled)
+        }
+        
         let callTask = Task<Data, Swift.Error> {
             try await withTaskCancellationHandler {
                 try await withCheckedThrowingContinuation { continuation in
@@ -33,9 +42,6 @@ extension Client {
             }
         }
         
-        if let token = options.token {
-            await token.register { callTask.cancel() }
-        }
         
         let raw: Data
         if let limit = options.timeout {

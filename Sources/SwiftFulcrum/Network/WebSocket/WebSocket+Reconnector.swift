@@ -63,6 +63,7 @@ extension WebSocket {
                     await webSocket.ensureAutoReceive()
                     try await webSocket.connect(withEmitLifecycle: true)
                     await webSocket.emitLog(.info, "reconnect.succeeded")
+                    await webSocket.emitLifecycle(.connected(isReconnect: true))
                     return
                 } catch {
                     await webSocket.emitLog(.warning, "reconnect.failed",

@@ -14,6 +14,10 @@ public actor Client {
     private var receiveTask: Task<Void, Never>?
     private var lifecycleTask: Task<Void, Never>?
     
+    var rpcHeartbeatTask: Task<Void, Never>?
+    let rpcHeartbeatInterval: Duration = .seconds(25)
+    let rpcHeartbeatTimeout: Duration = .seconds(10)
+    
     init(webSocket: WebSocket, metrics: MetricsCollectable? = nil, logger: Log.Handler? = nil) {
         self.id = .init()
         self.webSocket = webSocket
@@ -42,6 +46,8 @@ public actor Client {
                 }
             }
         }
+        
+        startRPCHeartbeat()
     }
     
     func stop() async {
@@ -57,16 +63,16 @@ public actor Client {
         lifecycleTask?.cancel()
         await lifecycleTask?.value
         lifecycleTask = nil
+        await stopRPCHeartbeat()
         
         await webSocket.disconnect(with: "Client.stop() called")
     }
     
     func reconnect(with url: URL? = nil) async throws {
-        try await webSocket.reconnect(with: url)
-        
         receiveTask?.cancel()
         await receiveTask?.value
-        
+        receiveTask = nil
+        try await webSocket.reconnect(with: url)
         receiveTask = Task { await self.startReceiving() }
     }
 }

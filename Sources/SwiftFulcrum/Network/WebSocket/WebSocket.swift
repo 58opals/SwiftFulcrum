@@ -90,6 +90,67 @@ extension WebSocket {
 // MARK: - Connect & Disconnect & Reconnect
 
 extension WebSocket {
+    func connect(withEmitLifecycle: Bool = true) async throws {
+        guard !self.isConnected else { return }
+        state = .connecting
+        
+        await createNewTask(with: nil, cancelReceiver: true)
+        guard let task else {
+            throw Fulcrum.Error.transport(.connectionClosed(closeInformation.code, closeInformation.reason))
+        }
+        
+        task.resume()
+        emitLog(.info, "connect.begin")
+        
+        do {
+            let isConnected = try await waitForConnection(timeout: connectionTimeout)
+            if isConnected {
+                state = .connected
+                emitLog(.info, "connect.succeeded")
+                await metrics?.didConnect(url: url)
+                if withEmitLifecycle { emitLifecycle(.connected(isReconnect: false)) }
+                ensureAutoReceive()
+            } else {
+                state = .disconnected
+                task.cancel(with: .goingAway, reason: "Connection timed out.".data(using: .utf8))
+                emitLog(.error, "connect.timeout")
+                throw Fulcrum.Error.transport(.connectionClosed(closeInformation.code, closeInformation.reason))
+            }
+        } catch let networkError as Fulcrum.Error.Network {
+            throw Fulcrum.Error.transport(.network(networkError))
+        }
+    }
+    
+    func reconnect(with url: URL? = nil) async throws {
+        await disconnect(with: "WebSocket.reconnect()")
+        let newURL = url ?? self.url
+        try await reconnector.attemptReconnection(for: self, with: newURL, cancelReceiver: false)
+    }
+    
+    func disconnect(with reason: String? = nil) async {
+        await cancelReceiverTask()
+        
+        let information = getCurrentCloseInformation()
+        
+        task?.cancel(with: .goingAway, reason: reason?.data(using: .utf8))
+        task = nil
+        state = .disconnected
+        
+        finishConnectWaiters(.failure(Fulcrum.Error.transport(.connectionClosed(information.code, information.reason))))
+        
+        messageContinuation?.finish(
+            throwing: Fulcrum.Error.transport(.connectionClosed(information.code, information.reason))
+        )
+        
+        await metrics?.didDisconnect(url: url, closeCode: information.code, reason: reason)
+        await resetMessageStreamAndReader()
+        emitLog(.info, "disconnect", metadata: ["reason": reason ?? "nil",
+                                                "code": String(information.code.rawValue)])
+        emitLifecycle(.disconnected(code: information.code, reason: reason))
+    }
+}
+
+extension WebSocket {
     private func finishConnectWaiters(_ result: Result<Bool, Error>) {
         let waiters = connectWaiters
         connectWaiters.removeAll(keepingCapacity: false)
@@ -158,68 +219,6 @@ extension WebSocket {
             group.cancelAll()
             return winner
         }
-    }
-    
-    func connect(withEmitLifecycle: Bool = true) async throws {
-        guard !self.isConnected else { return }
-        state = .connecting
-        
-        await createNewTask(with: nil, cancelReceiver: true)
-        
-        guard let task else {
-            throw Fulcrum.Error.transport(.connectionClosed(closeInformation.code, closeInformation.reason))
-        }
-        
-        task.resume()
-        emitLog(.info, "connect.begin")
-        
-        do {
-            let isConnected = try await waitForConnection(timeout: connectionTimeout)
-            if isConnected {
-                state = .connected
-                emitLog(.info, "connect.succeeded")
-                await metrics?.didConnect(url: url)
-                if withEmitLifecycle { emitLifecycle(.connected(isReconnect: false)) }
-                ensureAutoReceive()
-            } else {
-                state = .disconnected
-                task.cancel(with: .goingAway, reason: "Connection timed out.".data(using: .utf8))
-                emitLog(.error, "connect.timeout")
-                throw Fulcrum.Error.transport(.connectionClosed(closeInformation.code, closeInformation.reason))
-            }
-        } catch let networkError as Fulcrum.Error.Network {
-            throw Fulcrum.Error.transport(.network(networkError))
-        }
-    }
-    
-    func reconnect(with url: URL? = nil) async throws {
-        let currentURL = self.url
-        let newURL = url ?? currentURL
-        if currentURL != newURL { await reconnector.resetReconnectionAttemptCount() }
-        
-        try await reconnector.attemptReconnection(for: self, with: url, cancelReceiver: false)
-    }
-    
-    func disconnect(with reason: String? = nil) async {
-        await cancelReceiverTask()
-        
-        let information = getCurrentCloseInformation()
-        
-        task?.cancel(with: .goingAway, reason: reason?.data(using: .utf8))
-        task = nil
-        state = .disconnected
-        
-        finishConnectWaiters(.failure(Fulcrum.Error.transport(.connectionClosed(information.code, information.reason))))
-        
-        messageContinuation?.finish(
-            throwing: Fulcrum.Error.transport(.connectionClosed(information.code, information.reason))
-        )
-        
-        await metrics?.didDisconnect(url: url, closeCode: information.code, reason: reason)
-        await resetMessageStreamAndReader()
-        emitLog(.info, "disconnect", metadata: ["reason": reason ?? "nil",
-                                                "code": String(information.code.rawValue)])
-        emitLifecycle(.disconnected(code: information.code, reason: reason))
     }
 }
 
