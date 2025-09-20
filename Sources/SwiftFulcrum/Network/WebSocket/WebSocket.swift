@@ -31,7 +31,7 @@ public actor WebSocket {
     
     public init(url: URL,
                 configuration: Configuration = .init(),
-                reconnectConfiguration: Reconnector.Configuration = .defaultConfiguration,
+                reconnectConfiguration: Reconnector.Configuration = .basic,
                 connectionTimeout: TimeInterval = 10) {
         self.url = url
         self.task = nil

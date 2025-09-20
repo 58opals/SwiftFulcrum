@@ -12,10 +12,10 @@ extension WebSocket {
             
             public var isUnlimited: Bool { maximumReconnectionAttempts <= 0 }
             
-            public static let defaultConfiguration = Self(maximumReconnectionAttempts: 0,
-                                                          reconnectionDelay: 1.0,
-                                                          maximumDelay: 30,
-                                                          jitterRange: 0.8 ... 1.3)
+            public static let basic = Self(maximumReconnectionAttempts: 0,
+                                           reconnectionDelay: 1.0,
+                                           maximumDelay: 30,
+                                           jitterRange: 0.8 ... 1.3)
             
             public init(maximumReconnectionAttempts: Int,
                         reconnectionDelay: TimeInterval,
@@ -49,12 +49,12 @@ extension WebSocket {
                 let base = pow(2.0, Double(reconnectionAttempts)) * configuration.reconnectionDelay
                 let delay = min(base, configuration.maximumDelay) * .random(in: configuration.jitterRange)
                 try await Task.sleep(for: .seconds(delay))
-
+                
                 reconnectionAttempts += 1
                 await webSocket.emitLog(.info, "reconnect.attempt",
                                         metadata: ["attempt": String(reconnectionAttempts),
                                                    "unlimited": String(configuration.isUnlimited)])
-
+                
                 do {
                     if cancelReceiver { await webSocket.cancelReceiverTask() }
                     if let url { await webSocket.setURL(url) }
@@ -71,7 +71,7 @@ extension WebSocket {
                                                        "error": (error as NSError).localizedDescription])
                 }
             }
-
+            
             await webSocket.emitLog(.error, "reconnect.max_attempts_reached")
             throw await Fulcrum.Error.transport(.connectionClosed(webSocket.closeInformation.code,
                                                                   webSocket.closeInformation.reason))

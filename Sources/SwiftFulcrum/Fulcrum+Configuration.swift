@@ -17,7 +17,7 @@ extension Fulcrum {
         
         public init(
             tls: WebSocket.TLSDescriptor? = nil,
-            reconnect: WebSocket.Reconnector.Configuration = .defaultConfiguration,
+            reconnect: WebSocket.Reconnector.Configuration = .basic,
             metrics: MetricsCollectable? = nil,
             logger: Log.Handler? = nil,
             urlSession: URLSession? = nil,
