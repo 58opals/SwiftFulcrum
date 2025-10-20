@@ -2,7 +2,12 @@ import Foundation
 import Testing
 @testable import SwiftFulcrum
 
-@Suite("WebSocket.Reconnector")
+@Suite(
+    "WebSocket.Reconnector",
+    .serialized,
+    .timeLimit(.minutes(2))
+)
+
 struct WebSocketReconnectorTests {
     enum StubError: Swift.Error, Equatable {
         case timedOut
