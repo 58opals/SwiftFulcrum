@@ -23,7 +23,7 @@ struct WebSocketReconnectorTests {
         
         guard
             let failingURL = URL(string: "wss://fulcrum.jettscythe.xyz:50004"),
-            let healthyURL = URL(string: "wss://cash.freeradiants.org:50004")
+            let healthyURL = URL(string: "wss://bch.imaginary.cash:50004")
         else {
             Issue.record("Failed to create test URLs")
             return
