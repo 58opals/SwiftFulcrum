@@ -3,7 +3,7 @@
 import Foundation
 
 public actor WebSocket {
-    var url: URL
+    public var url: URL
     var task: URLSessionWebSocketTask?
     private var state: ConnectionState
     
@@ -62,7 +62,7 @@ public actor WebSocket {
 // MARK: - Create & Cancel
 
 extension WebSocket {
-    func setURL(_ newURL: URL) { self.url = newURL }
+    public func setURL(_ newURL: URL) { self.url = newURL }
     
     func createNewTask(with url: URL? = nil, cancelReceiver: Bool = true) async {
         if let url { self.url = url }
@@ -72,7 +72,7 @@ extension WebSocket {
         task = session.webSocketTask(with: self.url)
     }
     
-    func cancelReceiverTask() async {
+    public func cancelReceiverTask() async {
         receivedTask?.cancel()
         await receivedTask?.value
         receivedTask = nil
@@ -84,13 +84,13 @@ extension WebSocket {
         return (code, reason)
     }
     
-    var closeInformation: (code: URLSessionWebSocketTask.CloseCode, reason: String?) { self.getCurrentCloseInformation() }
+    public var closeInformation: (code: URLSessionWebSocketTask.CloseCode, reason: String?) { self.getCurrentCloseInformation() }
 }
 
 // MARK: - Connect & Disconnect & Reconnect
 
 extension WebSocket {
-    func connect(withEmitLifecycle: Bool = true) async throws {
+    public func connect(withEmitLifecycle: Bool = true) async throws {
         guard !self.isConnected else { return }
         state = .connecting
         
@@ -253,7 +253,7 @@ extension WebSocket {
         }
     }
     
-    func ensureAutoReceive() {
+    public func ensureAutoReceive() {
         guard wantsAutoReceive else { return }
         if sharedMessagesStream == nil {
             _ = messages(enableAutoResume: true)
@@ -331,7 +331,7 @@ extension WebSocket {
 }
 
 extension WebSocket {
-    func emitLog(_ level: Log.Level,
+    public func emitLog(_ level: Log.Level,
                  _ message: @autoclosure () -> String,
                  metadata: [String: String]? = nil,
                  file: String = #fileID, function: String = #function, line: UInt = #line) {

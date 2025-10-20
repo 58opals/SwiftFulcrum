@@ -19,7 +19,6 @@ struct WebSocketReconnectorTests {
         ])
         
         let loggerProbe = LoggerProbe()
-        let configuration = WebSocket.Configuration(logger: RecordingLogger(probe: loggerProbe))
         
         guard
             let failingURL = URL(string: "wss://fulcrum.jettscythe.xyz:50004"),
@@ -29,18 +28,21 @@ struct WebSocketReconnectorTests {
             return
         }
         
-        let webSocket = WebSocket(
+        let logger = RecordingLogger(probe: loggerProbe)
+        let reconnectionConfiguration = WebSocket.Reconnector.Configuration(
+            maximumReconnectionAttempts: 3,
+            reconnectionDelay: 0.01,
+            maximumDelay: 0.01,
+            jitterRange: 1.0 ... 1.0
+        )
+        let reconnector = WebSocket.Reconnector(reconnectionConfiguration)
+        let webSocket = TestReconnectionContext(
             url: failingURL,
-            configuration: configuration,
-            reconnectConfiguration: .init(
-                maximumReconnectionAttempts: 3,
-                reconnectionDelay: 0.01,
-                maximumDelay: 0.01,
-                jitterRange: 1.0 ... 1.0
-            )
+            harness: harness,
+            logger: logger
         )
         
-        try await webSocket.reconnector.attemptReconnection(for: webSocket, with: healthyURL)
+        try await reconnector.attemptReconnection(for: webSocket, with: healthyURL)
         
         let entriesSatisfied = await waitUntil(timeout: .seconds(1)) {
             let entries = await loggerProbe.entries
@@ -75,26 +77,28 @@ struct WebSocketReconnectorTests {
         ])
         
         let loggerProbe = LoggerProbe()
-        let configuration = WebSocket.Configuration(logger: RecordingLogger(probe: loggerProbe))
         
         guard let failingURL = URL(string: "wss://fulcrum.jettscythe.xyz:50004") else {
             Issue.record("Failed to create test URL")
             return
         }
         
-        let webSocket = WebSocket(
+        let logger = RecordingLogger(probe: loggerProbe)
+        let reconnectionConfiguration = WebSocket.Reconnector.Configuration(
+            maximumReconnectionAttempts: 2,
+            reconnectionDelay: 0.01,
+            maximumDelay: 0.01,
+            jitterRange: 1.0 ... 1.0
+        )
+        let reconnector = WebSocket.Reconnector(reconnectionConfiguration)
+        let webSocket = TestReconnectionContext(
             url: failingURL,
-            configuration: configuration,
-            reconnectConfiguration: .init(
-                maximumReconnectionAttempts: 2,
-                reconnectionDelay: 0.01,
-                maximumDelay: 0.01,
-                jitterRange: 1.0 ... 1.0
-            )
+            harness: harness,
+            logger: logger
         )
         
         do {
-            try await webSocket.reconnector.attemptReconnection(for: webSocket)
+            try await reconnector.attemptReconnection(for: webSocket)
             Issue.record("Expected reconnection to fail")
         } catch let error as Fulcrum.Error {
             #expect(error == .transport(.connectionClosed(.invalid, nil)))
@@ -130,17 +134,54 @@ private actor WebSocketReconnectionHarness {
         connectCalls = []
     }
     
-    func nextResult(withEmitLifecycle: Bool) throws -> Result<Void, Swift.Error> {
+    func dequeueResult(withEmitLifecycle: Bool) throws -> Result<Void, Swift.Error> {
         connectCalls.append(withEmitLifecycle)
         guard !queuedResults.isEmpty else { throw WebSocketReconnectorTests.StubError.missingStub }
         return queuedResults.removeFirst()
     }
     
-    func connect(withEmitLifecycle: Bool) throws {
-        let outcome = try nextResult(withEmitLifecycle: withEmitLifecycle)
+}
+
+private actor TestReconnectionContext: WebSocket.Reconnector.Context {
+    private let harness: WebSocketReconnectionHarness
+    private let logger: Log.Handler
+    
+    var url: URL
+    var closeInformation: (code: URLSessionWebSocketTask.CloseCode, reason: String?) = (.invalid, nil)
+    
+    init(url: URL, harness: WebSocketReconnectionHarness, logger: Log.Handler) {
+        self.url = url
+        self.harness = harness
+        self.logger = logger
+    }
+    
+    func cancelReceiverTask() async {}
+    
+    func setURL(_ newURL: URL) { url = newURL }
+    
+    func connect(withEmitLifecycle: Bool) async throws {
+        let outcome = try await harness.dequeueResult(withEmitLifecycle: withEmitLifecycle)
         switch outcome {
         case .success: break
         case .failure(let error): throw error
         }
     }
+    
+    func ensureAutoReceive() {}
+    
+    func emitLog(_ level: Log.Level,
+                 _ message: @autoclosure () -> String,
+                 metadata: [String: String]?,
+                 file: String,
+                 function: String,
+                 line: UInt) {
+        var enrichedMetadata = ["component": "WebSocket", "url": url.absoluteString]
+        if let metadata {
+            for (key, value) in metadata { enrichedMetadata[key] = value }
+        }
+        
+        logger.log(level, message(), metadata: enrichedMetadata, file: file, function: function, line: line)
+    }
+    
+    func emitLifecycle(_ event: WebSocket.Lifecycle.Event) {}
 }
