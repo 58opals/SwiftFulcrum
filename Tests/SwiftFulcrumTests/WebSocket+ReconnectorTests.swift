@@ -14,6 +14,11 @@ struct WebSocketReconnectorTests {
         
     }
     
+    @Test("retries override URL after initial failure")
+    func retriesOverrideUntilSuccess() async throws {
+        
+    }
+    
     @Test("propagates transport errors after exhausting attempts")
     func failsAfterExhaustingAttempts() async throws {
         

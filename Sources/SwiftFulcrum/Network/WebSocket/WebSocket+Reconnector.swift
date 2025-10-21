@@ -50,16 +50,22 @@ extension WebSocket {
             cancelReceiver: Bool = true
         ) async throws {
             let currentURL = await webSocket.url
-            var preferredEndpoint = url
-            var rotation = try await buildCandidateRotation(preferredURL: preferredEndpoint, currentURL: currentURL)
+            let overrideURL = url
+            var rotation = try await buildCandidateRotation(preferredURL: overrideURL, currentURL: currentURL)
             var rotationCursor = 0
             
             while configuration.isUnlimited || reconnectionAttempts < configuration.maximumReconnectionAttempts {
-                if rotation.isEmpty { rotation = [currentURL] }
-                if rotationCursor >= rotation.count { rotationCursor = 0 }
+                let candidateURL: URL
                 
-                let candidateURL = rotation[rotationCursor]
-                rotationCursor += 1
+                if let overrideURL {
+                    candidateURL = overrideURL
+                } else {
+                    if rotation.isEmpty { rotation = [currentURL] }
+                    if rotationCursor >= rotation.count { rotationCursor = 0 }
+                    
+                    candidateURL = rotation[rotationCursor]
+                    rotationCursor += 1
+                }
                 
                 if let index = indexOfServer(candidateURL) {
                     nextServerIndex = (index + 1) % max(serverCatalog.count, 1)
@@ -117,9 +123,10 @@ extension WebSocket {
                     )
                 }
                 
-                preferredEndpoint = nil
-                rotation = try await buildCandidateRotation(preferredURL: preferredEndpoint, currentURL: currentURL)
-                rotationCursor = 0
+                if overrideURL == nil {
+                    rotation = try await buildCandidateRotation(preferredURL: nil, currentURL: currentURL)
+                    rotationCursor = 0
+                }
             }
             
             await webSocket.emitLog(
