@@ -79,6 +79,42 @@ struct SwiftFulcrumLiveConformanceTests {
             print("initialResponse: \(initialResponse)")
             print("updates: \(updates)")
             print("cancel: \(String(describing: cancel))")
+            
+            try await fulcrum.reconnect()
+            try await Task.sleep(for: .seconds(5))
+            
+            var unsubscribeSucceeded = false
+            let maximumAttempts = 5
+            
+            attemptLoop: for attempt in 0 ..< maximumAttempts {
+                let unsubscribeResponse = try await fulcrum.submit(
+                    method: .blockchain(.headers(.unsubscribe)),
+                    responseType: Response.Result.Blockchain.Headers.Unsubscribe.self
+                )
+                
+                switch unsubscribeResponse {
+                case .single(let unsubscribeID, let unsubscribeResult):
+                    print("unsubscribe.id: \(unsubscribeID)")
+                    print("unsubscribe.result: \(unsubscribeResult)")
+                    if unsubscribeResult.success {
+                        unsubscribeSucceeded = true
+                        break attemptLoop
+                    }
+                case .stream(let unsubscribeID, let initial, let streamUpdates, let unsubscribeCancel):
+                    print("unexpected stream id: \(unsubscribeID)")
+                    print("unexpected stream initial: \(initial)")
+                    print("unexpected stream updates: \(streamUpdates)")
+                    print("unexpected stream cancel: \(String(describing: unsubscribeCancel))")
+                    #expect(Bool(false), "headers.unsubscribe should never produce a streaming response")
+                    break attemptLoop
+                }
+                
+                guard attempt < maximumAttempts - 1 else { break }
+                try await Task.sleep(for: .seconds(1))
+            }
+            
+            #expect(unsubscribeSucceeded, "headers.unsubscribe should report success after reconnect auto-resubscribe")
+            print(updates)
         }
     }
     
