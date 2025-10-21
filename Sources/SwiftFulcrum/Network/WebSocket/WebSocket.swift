@@ -332,11 +332,11 @@ extension WebSocket {
 
 extension WebSocket {
     public func emitLog(_ level: Log.Level,
-                 _ message: @autoclosure () -> String,
-                 metadata: [String: String]? = nil,
-                 file: String = #fileID, function: String = #function, line: UInt = #line) {
+                        _ message: @autoclosure () -> String,
+                        metadata: [String: String] = .init(),
+                        file: String = #fileID, function: String = #function, line: UInt = #line) {
         var data = ["component": "WebSocket", "url": url.absoluteString]
-        if let metadata { for (k, v) in metadata { data[k] = v } }
+        for (key, value) in metadata { data[key] = value }
         logger.log(level, message(), metadata: data, file: file, function: function, line: line)
     }
 }
