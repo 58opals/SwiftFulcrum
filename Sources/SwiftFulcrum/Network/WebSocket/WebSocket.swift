@@ -90,7 +90,10 @@ extension WebSocket {
 // MARK: - Connect & Disconnect & Reconnect
 
 extension WebSocket {
-    public func connect(withEmitLifecycle: Bool = true) async throws {
+    public func connect(
+        withEmitLifecycle: Bool = true,
+        allowFailover: Bool = true
+    ) async throws {
         guard !self.isConnected else { return }
         state = .connecting
         
@@ -114,10 +117,50 @@ extension WebSocket {
                 state = .disconnected
                 task.cancel(with: .goingAway, reason: "Connection timed out.".data(using: .utf8))
                 emitLog(.error, "connect.timeout")
-                throw Fulcrum.Error.transport(.connectionClosed(closeInformation.code, closeInformation.reason))
+                try await performInitialFailoverIfNeeded(
+                    allowFailover: allowFailover,
+                    failure: Fulcrum.Error.transport(
+                        .connectionClosed(closeInformation.code, closeInformation.reason)
+                    )
+                )
             }
         } catch let networkError as Fulcrum.Error.Network {
-            throw Fulcrum.Error.transport(.network(networkError))
+            state = .disconnected
+            task.cancel(with: .goingAway, reason: "Network error during connect.".data(using: .utf8))
+            try await performInitialFailoverIfNeeded(
+                allowFailover: allowFailover,
+                failure: Fulcrum.Error.transport(.network(networkError))
+            )
+        } catch {
+            state = .disconnected
+            task.cancel(with: .goingAway, reason: "Connect failed.".data(using: .utf8))
+            try await performInitialFailoverIfNeeded(
+                allowFailover: allowFailover,
+                failure: error
+            )
+        }
+    }
+    
+    private func performInitialFailoverIfNeeded(
+        allowFailover: Bool,
+        failure: Error
+    ) async throws {
+        guard allowFailover else { throw failure }
+        
+        emitLog(
+            .warning,
+            "connect.failover",
+            metadata: ["error": (failure as NSError).localizedDescription]
+        )
+        
+        do {
+            try await reconnector.attemptReconnection(
+                for: self,
+                cancelReceiver: true,
+                isInitialConnection: true
+            )
+        } catch {
+            throw error
         }
     }
     

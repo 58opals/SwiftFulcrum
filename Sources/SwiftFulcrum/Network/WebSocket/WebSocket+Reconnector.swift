@@ -47,7 +47,8 @@ extension WebSocket {
         func attemptReconnection(
             for webSocket: WebSocket,
             with url: URL? = nil,
-            cancelReceiver: Bool = true
+            cancelReceiver: Bool = true,
+            isInitialConnection: Bool = false
         ) async throws {
             let currentURL = await webSocket.url
             let overrideURL = url
@@ -83,6 +84,7 @@ extension WebSocket {
                     "reconnect.attempt",
                     metadata: [
                         "attempt": String(reconnectionAttempts),
+                        "phase": isInitialConnection ? "initial" : "reconnect",
                         "unlimited": String(configuration.isUnlimited),
                         "url": candidateURL.absoluteString
                     ],
@@ -94,19 +96,20 @@ extension WebSocket {
                 do {
                     if cancelReceiver { await webSocket.cancelReceiverTask() }
                     await webSocket.setURL(candidateURL)
-                    try await webSocket.connect(withEmitLifecycle: false)
+                    try await webSocket.connect(withEmitLifecycle: false, allowFailover: false)
                     resetReconnectionAttemptCount()
-                    await webSocket.ensureAutoReceive()
-                    try await webSocket.connect(withEmitLifecycle: true)
                     await webSocket.emitLog(
                         .info,
                         "reconnect.succeeded",
-                        metadata: ["url": candidateURL.absoluteString],
+                        metadata: [
+                            "phase": isInitialConnection ? "initial" : "reconnect",
+                            "url": candidateURL.absoluteString
+                        ],
                         file: "",
                         function: "",
                         line: 0
                     )
-                    await webSocket.emitLifecycle(.connected(isReconnect: true))
+                    await webSocket.emitLifecycle(.connected(isReconnect: !isInitialConnection))
                     return
                 } catch {
                     await webSocket.emitLog(
@@ -115,6 +118,7 @@ extension WebSocket {
                         metadata: [
                             "attempt": String(reconnectionAttempts),
                             "error": (error as NSError).localizedDescription,
+                            "phase": isInitialConnection ? "initial" : "reconnect",
                             "url": candidateURL.absoluteString
                         ],
                         file: "",
@@ -132,7 +136,10 @@ extension WebSocket {
             await webSocket.emitLog(
                 .error,
                 "reconnect.max_attempts_reached",
-                metadata: ["url": currentURL.absoluteString],
+                metadata: [
+                    "phase": isInitialConnection ? "initial" : "reconnect",
+                    "url": currentURL.absoluteString
+                ],
                 file: "",
                 function: "",
                 line: 0

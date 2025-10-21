@@ -4,7 +4,6 @@ import SwiftFulcrum
 
 @Suite(
     "SwiftFulcrum minimal live conformance",
-    .serialized,
     .timeLimit(.minutes(2))
 )
 struct SwiftFulcrumLiveConformanceTests {
