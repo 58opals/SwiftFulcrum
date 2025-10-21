@@ -2,26 +2,20 @@ import Foundation
 import Testing
 @testable import SwiftFulcrum
 
-private enum TestError: Swift.Error {
-    case general
-    case urlNotFound
-}
-
 struct TestBed {
     @Test
     func connectAndProbe() async throws {
-        let urls = try await WebSocket.Server.getServerList()
-        guard let url = urls.randomElement() else { throw TestError.urlNotFound }
-        let webSocket = WebSocket(
-            url: url,
-            reconnectConfiguration: .init(
-                maximumReconnectionAttempts: 0,
-                reconnectionDelay: 0.5,
-                maximumDelay: 1,
-                jitterRange: 1...1
-            ),
-            connectionTimeout: 5
-        )
+        guard let url = try await WebSocket.Server.getServerList().randomElement() else { throw Fulcrum.Error.client(.urlNotFound) }
+        let webSocket = WebSocket(url: url,
+                                  configuration: .init(session: nil,
+                                                       tls: nil,
+                                                       metrics: nil,
+                                                       logger: nil),
+                                  reconnectConfiguration: .init(maximumReconnectionAttempts: 3,
+                                                                reconnectionDelay: 1,
+                                                                maximumDelay: 3,
+                                                                jitterRange: 0.1 ... 0.5),
+                                  connectionTimeout: 5)
         
         let client = Client(webSocket: webSocket)
         #expect(await !client.webSocket.isConnected)

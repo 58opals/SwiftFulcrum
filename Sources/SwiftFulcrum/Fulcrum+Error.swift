@@ -33,6 +33,7 @@ extension Fulcrum {
         }
         
         public enum Client {
+            case urlNotFound
             case duplicateHandler
             case cancelled
             case timeout(Duration)
@@ -69,7 +70,8 @@ extension Fulcrum.Error.Coding: Swift.Error, Equatable, Sendable {
 extension Fulcrum.Error.Client: Swift.Error, Equatable, Sendable {
     public static func == (lhs: Fulcrum.Error.Client, rhs: Fulcrum.Error.Client) -> Bool {
         switch (lhs, rhs) {
-        case (.duplicateHandler, .duplicateHandler),
+        case (.urlNotFound, .urlNotFound),
+            (.duplicateHandler, .duplicateHandler),
             (.cancelled, .cancelled):
             return true
         case (.timeout(let leftDuration), .timeout(let rightDuration)):
