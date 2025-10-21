@@ -45,7 +45,7 @@ extension WebSocket {
         }
         
         func attemptReconnection(
-            for webSocket: any Context,
+            for webSocket: WebSocket,
             with url: URL? = nil,
             cancelReceiver: Bool = true
         ) async throws {
