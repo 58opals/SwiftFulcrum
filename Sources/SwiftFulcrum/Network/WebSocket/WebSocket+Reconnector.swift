@@ -12,8 +12,8 @@ extension WebSocket {
             
             public var isUnlimited: Bool { maximumReconnectionAttempts <= 0 }
             
-            public static let basic = Self(maximumReconnectionAttempts: 0,
-                                           reconnectionDelay: 1.0,
+            public static let basic = Self(maximumReconnectionAttempts: 1,
+                                           reconnectionDelay: 1.5,
                                            maximumDelay: 30,
                                            jitterRange: 0.8 ... 1.3)
             

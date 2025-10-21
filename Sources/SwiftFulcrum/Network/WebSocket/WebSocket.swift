@@ -123,8 +123,7 @@ extension WebSocket {
     
     func reconnect(with url: URL? = nil) async throws {
         await disconnect(with: "WebSocket.reconnect()")
-        let newURL = url ?? self.url
-        try await reconnector.attemptReconnection(for: self, with: newURL, cancelReceiver: false)
+        try await reconnector.attemptReconnection(for: self, with: url, cancelReceiver: false)
     }
     
     func disconnect(with reason: String? = nil) async {
