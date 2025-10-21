@@ -1,4 +1,4 @@
-![Swift 6.0](https://img.shields.io/badge/swift-6.2-orange)
+![Swift 6.0](https://img.shields.io/badge/swift-6.0-orange)
 ![SPM](https://img.shields.io/badge/Package%20Manager-SPM-informational)
 ![Platforms](https://img.shields.io/badge/platforms-iOS%20|%20macOS%20|%20watchOS%20|%20tvOS%20|%20visionOS-blue)
 
@@ -65,42 +65,29 @@ Reconnection failures bubble up as ``Fulcrum/Error/Transport``.
 #### One‑shot Request
 
 ```swift
-let response: Fulcrum.RPCResponse<
-    Response.Result.Blockchain.EstimateFee, Never
-> = try await fulcrum.submit(
-    method: .blockchain(.estimateFee(numberOfBlocks: 6))
+let response = try await fulcrum.submit(
+    method: .blockchain(.headers(.getTip)),
+    responseType: Response.Result.Blockchain.Headers.GetTip.self
 )
 
-if let estimate = response.extractRegularResponse() {
-    print("Current fee ≈ \(estimate.fee) BCH")
-}
+let tip = response.extractRegularResponse()
 ```
+
+Use ``RPCResponse/extractRegularResponse()`` to read the single-value result. Handle the optional return to process server responses or gracefully recover when the socket closes.
 
 #### Streaming Subscription
 
 ```swift
-let address = "qrsrz5mzve6kyr6ne6lgsvlgxvs3hqm6huxhd8gqwj"
-
-let response: Fulcrum.RPCResponse<
-    Response.Result.Blockchain.Address.Subscribe,
-    Response.Result.Blockchain.Address.SubscribeNotification
-> = try await fulcrum.submit(
-    method: .blockchain(.address(.subscribe(address: address)))
+let response = try await fulcrum.submit(
+    method: .blockchain(.headers(.subscribe)),
+    initialType: Response.Result.Blockchain.Headers.Subscribe.self,
+    notificationType: Response.Result.Blockchain.Headers.SubscribeNotification.self
 )
 
-guard let (initial, updates, cancel) = response.extractSubscriptionStream() else { return }
-
-print("Initial status: \(initial)")
-
-Task {
-    for try await update in updates {
-        print("Update: \(update)")
-    }
-}
-
-// …later
-await cancel()   // stop the server‑side subscription
+let blockSubscription = response.extractSubscriptionStream()
 ```
+
+The ``RPCResponse/extractSubscriptionStream()`` helper returns the initial payload, an `AsyncThrowingStream` of notifications, and a cancellation closure. Unwrap the tuple—`guard let (initial, updates, cancel) = result else { return }`—to iterate updates and tear down the subscription when finished.
 
 ---
 
