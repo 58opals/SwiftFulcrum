@@ -60,7 +60,26 @@ struct SwiftFulcrumLiveConformanceTests {
     // 3) SUBSCRIBE → RECONNECT → AUTO‑RESUBSCRIBE (headers)
     @Test("headers.subscribe → reconnect → auto‑resubscribe proven by unsubscribe==true")
     func subscribe_reconnect_autoresubscribe() async throws {
+        let fulcrum = try await Fulcrum()
+        try await fulcrum.start()
         
+        let response = try await fulcrum.submit(
+            method: .blockchain(.headers(.subscribe)),
+            initialType: Response.Result.Blockchain.Headers.Subscribe.self,
+            notificationType: Response.Result.Blockchain.Headers.SubscribeNotification.self
+        )
+        switch response {
+        case .single(let id, let result):
+            print("id: \(id)")
+            print("result: \(result)")
+            #expect(result.height > 0)
+            #expect(!result.hex.isEmpty)
+        case .stream(let id, let initialResponse, let updates, let cancel):
+            print("id: \(id)")
+            print("initialResponse: \(initialResponse)")
+            print("updates: \(updates)")
+            print("cancel: \(String(describing: cancel))")
+        }
     }
     
     // 4) Unsubscribe on stream termination (address)
