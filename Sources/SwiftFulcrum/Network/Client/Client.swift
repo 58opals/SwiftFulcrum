@@ -78,12 +78,14 @@ public actor Client {
 }
 
 extension Client {
-    func emitLog(_ level: Log.Level,
-                 _ message: @autoclosure () -> String,
-                 metadata: [String: String] = [:],
-                 file: String = #fileID, function: String = #function, line: UInt = #line) {
-        var md = ["component": "Client", "client_id": id.uuidString]
-        for (k, v) in metadata { md[k] = v }
-        logger.log(level, message(), metadata: md, file: file, function: function, line: line)
+    public func emitLog(
+        _ level: Log.Level,
+        _ message: @autoclosure () -> String,
+        metadata: [String: String] = [:],
+        file: String = #fileID, function: String = #function, line: UInt = #line
+    ) {
+        var mergedMetadata = ["component": "Client", "client_id": id.uuidString]
+        mergedMetadata.merge(metadata, uniquingKeysWith: { _, new in new })
+        logger.log(level, message(), metadata: mergedMetadata, file: file, function: function, line: line)
     }
 }

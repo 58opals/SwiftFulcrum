@@ -27,7 +27,7 @@ extension WebSocket {
         return stream
     }
     
-    func emitLifecycle(_ event: Lifecycle.Event) {
+    public func emitLifecycle(_ event: Lifecycle.Event) {
         lifecycleContinuation?.yield(event)
     }
     

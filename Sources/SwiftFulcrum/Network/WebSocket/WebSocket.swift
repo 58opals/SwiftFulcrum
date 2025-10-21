@@ -3,7 +3,7 @@
 import Foundation
 
 public actor WebSocket {
-    var url: URL
+    public var url: URL
     var task: URLSessionWebSocketTask?
     private var state: ConnectionState
     
@@ -31,7 +31,7 @@ public actor WebSocket {
     
     public init(url: URL,
                 configuration: Configuration = .init(),
-                reconnectConfiguration: Reconnector.Configuration = .defaultConfiguration,
+                reconnectConfiguration: Reconnector.Configuration = .basic,
                 connectionTimeout: TimeInterval = 10) {
         self.url = url
         self.task = nil
@@ -62,7 +62,7 @@ public actor WebSocket {
 // MARK: - Create & Cancel
 
 extension WebSocket {
-    func setURL(_ newURL: URL) { self.url = newURL }
+    public func setURL(_ newURL: URL) { self.url = newURL }
     
     func createNewTask(with url: URL? = nil, cancelReceiver: Bool = true) async {
         if let url { self.url = url }
@@ -72,7 +72,7 @@ extension WebSocket {
         task = session.webSocketTask(with: self.url)
     }
     
-    func cancelReceiverTask() async {
+    public func cancelReceiverTask() async {
         receivedTask?.cancel()
         await receivedTask?.value
         receivedTask = nil
@@ -84,13 +84,16 @@ extension WebSocket {
         return (code, reason)
     }
     
-    var closeInformation: (code: URLSessionWebSocketTask.CloseCode, reason: String?) { self.getCurrentCloseInformation() }
+    public var closeInformation: (code: URLSessionWebSocketTask.CloseCode, reason: String?) { self.getCurrentCloseInformation() }
 }
 
 // MARK: - Connect & Disconnect & Reconnect
 
 extension WebSocket {
-    func connect(withEmitLifecycle: Bool = true) async throws {
+    public func connect(
+        withEmitLifecycle: Bool = true,
+        allowFailover: Bool = true
+    ) async throws {
         guard !self.isConnected else { return }
         state = .connecting
         
@@ -114,17 +117,62 @@ extension WebSocket {
                 state = .disconnected
                 task.cancel(with: .goingAway, reason: "Connection timed out.".data(using: .utf8))
                 emitLog(.error, "connect.timeout")
-                throw Fulcrum.Error.transport(.connectionClosed(closeInformation.code, closeInformation.reason))
+                try await performInitialFailoverIfNeeded(
+                    allowFailover: allowFailover,
+                    failure: Fulcrum.Error.transport(
+                        .connectionClosed(closeInformation.code, closeInformation.reason)
+                    )
+                )
             }
         } catch let networkError as Fulcrum.Error.Network {
-            throw Fulcrum.Error.transport(.network(networkError))
+            state = .disconnected
+            task.cancel(with: .goingAway, reason: "Network error during connect.".data(using: .utf8))
+            try await performInitialFailoverIfNeeded(
+                allowFailover: allowFailover,
+                failure: Fulcrum.Error.transport(.network(networkError))
+            )
+        } catch {
+            state = .disconnected
+            task.cancel(with: .goingAway, reason: "Connect failed.".data(using: .utf8))
+            try await performInitialFailoverIfNeeded(
+                allowFailover: allowFailover,
+                failure: error
+            )
+        }
+    }
+    
+    private func performInitialFailoverIfNeeded(
+        allowFailover: Bool,
+        failure: Error
+    ) async throws {
+        guard allowFailover else { throw failure }
+        
+        emitLog(
+            .warning,
+            "connect.failover",
+            metadata: ["error": failure.localizedDescription]
+        )
+        
+        do {
+            try await reconnector.attemptReconnection(
+                for: self,
+                cancelReceiver: true,
+                isInitialConnection: true
+            )
+        } catch {
+            emitLog(
+                .error,
+                "connect.failover_exhausted",
+                metadata: ["error": error.localizedDescription]
+            )
+            
+            throw error
         }
     }
     
     func reconnect(with url: URL? = nil) async throws {
         await disconnect(with: "WebSocket.reconnect()")
-        let newURL = url ?? self.url
-        try await reconnector.attemptReconnection(for: self, with: newURL, cancelReceiver: false)
+        try await reconnector.attemptReconnection(for: self, with: url, cancelReceiver: false)
     }
     
     func disconnect(with reason: String? = nil) async {
@@ -253,7 +301,7 @@ extension WebSocket {
         }
     }
     
-    func ensureAutoReceive() {
+    public func ensureAutoReceive() {
         guard wantsAutoReceive else { return }
         if sharedMessagesStream == nil {
             _ = messages(enableAutoResume: true)
@@ -331,12 +379,14 @@ extension WebSocket {
 }
 
 extension WebSocket {
-    func emitLog(_ level: Log.Level,
-                 _ message: @autoclosure () -> String,
-                 metadata: [String: String]? = nil,
-                 file: String = #fileID, function: String = #function, line: UInt = #line) {
-        var data = ["component": "WebSocket", "url": url.absoluteString]
-        if let metadata { for (k, v) in metadata { data[k] = v } }
-        logger.log(level, message(), metadata: data, file: file, function: function, line: line)
+    public func emitLog(
+        _ level: Log.Level,
+        _ message: @autoclosure () -> String,
+        metadata: [String: String] = .init(),
+        file: String = #fileID, function: String = #function, line: UInt = #line
+    ) {
+        var mergedMetadata = ["component": "WebSocket", "url": url.absoluteString]
+        mergedMetadata.merge(metadata, uniquingKeysWith: { _, new in new })
+        logger.log(level, message(), metadata: mergedMetadata, file: file, function: function, line: line)
     }
 }

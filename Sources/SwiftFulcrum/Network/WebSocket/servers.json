@@ -1,26 +1,8 @@
 [
-    {
-        "host": "fulcrum.jettscythe.xyz",
-        "port": 50004
-    },
-    {
-        "host": "electroncash.dk",
-        "port": 50004
-    },
-    {
-        "host": "electrum.imaginary.cash",
-        "port": 50004
-    },
-    {
-        "host": "bch.imaginary.cash",
-        "port": 50004
-    },
-    {
-        "host": "bch.soul-dev.com",
-        "port": 50004
-    },
-    {
-        "host": "bch.loping.net",
-        "port": 50004
-    }
+    { "url": "wss://fulcrum.jettscythe.xyz:50004" },
+    { "url": "wss://electroncash.dk:50004" },
+    { "url": "wss://electrum.imaginary.cash:50004" },
+    { "url": "wss://bch.imaginary.cash:50004" },
+    { "url": "wss://bch.soul-dev.com:50004" },
+    { "url": "wss://bch.loping.net:50004" }
 ]
