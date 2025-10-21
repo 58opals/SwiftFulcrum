@@ -124,6 +124,56 @@ struct WebSocketReconnectorTests {
         let connectCalls = await harness.connectCalls
         #expect(connectCalls == [false, false])
     }
+    
+    @Test("advances through bundled server list when no override URL is provided")
+    func iteratesBundledServers() async throws {
+        let harness = WebSocketReconnectionHarness.shared
+        await harness.reset(results: [
+            .failure(StubError.timedOut),
+            .success(())
+        ])
+        
+        let loggerProbe = LoggerProbe()
+        
+        guard let startingURL = URL(string: "wss://fulcrum.jettscythe.xyz:50004") else {
+            Issue.record("Failed to create initial URL")
+            return
+        }
+        
+        let logger = RecordingLogger(probe: loggerProbe)
+        let reconnectionConfiguration = WebSocket.Reconnector.Configuration(
+            maximumReconnectionAttempts: 2,
+            reconnectionDelay: 0.01,
+            maximumDelay: 0.01,
+            jitterRange: 1.0 ... 1.0
+        )
+        let reconnector = WebSocket.Reconnector(reconnectionConfiguration)
+        let webSocket = TestReconnectionContext(
+            url: startingURL,
+            harness: harness,
+            logger: logger
+        )
+        
+        try await reconnector.attemptReconnection(for: webSocket)
+        
+        let attemptEntriesSatisfied = await waitUntil(timeout: .seconds(1)) {
+            let entries = await loggerProbe.entries
+            let attempts = entries.filter { $0.message == "reconnect.attempt" }
+            return attempts.count == 2
+        }
+        #expect(attemptEntriesSatisfied)
+        
+        let attemptEntries = await loggerProbe.entries
+            .filter { $0.message == "reconnect.attempt" }
+        let attemptedURLs = attemptEntries.compactMap { $0.metadata?["url"] }
+        #expect(attemptedURLs.count == 2)
+        #expect(attemptedURLs.first != startingURL.absoluteString)
+        let finalURL = await webSocket.url
+        #expect(attemptedURLs.last == finalURL.absoluteString)
+        
+        let connectCalls = await harness.connectCalls
+        #expect(connectCalls == [false, false, true])
+    }
 }
 
 private actor WebSocketReconnectionHarness {
