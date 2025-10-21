@@ -150,7 +150,7 @@ extension WebSocket {
         emitLog(
             .warning,
             "connect.failover",
-            metadata: ["error": (failure as NSError).localizedDescription]
+            metadata: ["error": failure.localizedDescription]
         )
         
         do {
@@ -160,6 +160,12 @@ extension WebSocket {
                 isInitialConnection: true
             )
         } catch {
+            emitLog(
+                .error,
+                "connect.failover_exhausted",
+                metadata: ["error": error.localizedDescription]
+            )
+            
             throw error
         }
     }
