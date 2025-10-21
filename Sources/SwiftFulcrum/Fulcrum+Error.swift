@@ -34,6 +34,7 @@ extension Fulcrum {
         
         public enum Client {
             case urlNotFound
+            case invalidURL(String)
             case duplicateHandler
             case cancelled
             case timeout(Duration)
@@ -74,6 +75,8 @@ extension Fulcrum.Error.Client: Swift.Error, Equatable, Sendable {
             (.duplicateHandler, .duplicateHandler),
             (.cancelled, .cancelled):
             return true
+        case (.invalidURL(let leftURL), .invalidURL(let rightURL)):
+            return leftURL == rightURL
         case (.timeout(let leftDuration), .timeout(let rightDuration)):
             return leftDuration == rightDuration
         case (.emptyResponse(let leftUUID), .emptyResponse(let rightUUID)):

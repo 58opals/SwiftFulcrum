@@ -102,7 +102,7 @@ extension WebSocket {
 }
 
 extension WebSocket.Server {
-    private static func decodeBundledServers() throws -> [URL] {
+    public static func decodeBundledServers() throws -> [URL] {
         guard let path = Bundle.module.path(forResource: "servers", ofType: "json") else {
             throw Fulcrum.Error.transport(.setupFailed)
         }

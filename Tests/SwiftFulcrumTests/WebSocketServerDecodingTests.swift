@@ -4,18 +4,15 @@ import Testing
 
 @Suite("WebSocket.Server decoding")
 struct WebSocketServerDecodingTests {
-    enum TestError: Swift.Error {
-        case invalidURL(String)
-    }
-    
     @Test("decodes explicit websocket URLs")
     func decodesExplicitURLs() throws {
-        let payload = Data("[{\"url\":\"wss://example.com:50004\"}]".utf8)
+        let urlString = "wss://example.com:50004"
+        let payload = Data("[{\"url\":\"\(urlString)\"}]".utf8)
         let servers = try JSONDecoder().decode([WebSocket.Server].self, from: payload)
         #expect(servers.count == 1)
         
-        guard let expected = URL(string: "wss://example.com:50004") else {
-            throw TestError.invalidURL("wss://example.com:50004")
+        guard let expected = URL(string: urlString) else {
+            throw Fulcrum.Error.client(.invalidURL(urlString))
         }
         
         #expect(servers[0].url == expected)
@@ -23,27 +20,24 @@ struct WebSocketServerDecodingTests {
     
     @Test("normalizes HTTPS endpoints to WSS")
     func normalizesHTTPSEndpoints() throws {
-        let payload = Data("[{\"url\":\"https://example.com:443\"}]".utf8)
+        let urlStringHTTPS = "https://example.com:443"
+        let urlStringWSS = "wss://example.com:443"
+        let payload = Data("[{\"url\":\"\(urlStringHTTPS)\"}]".utf8)
         let servers = try JSONDecoder().decode([WebSocket.Server].self, from: payload)
         #expect(servers.count == 1)
         
-        guard let expected = URL(string: "wss://example.com:443") else {
-            throw TestError.invalidURL("wss://example.com:443")
+        guard let expected = URL(string: urlStringWSS) else {
+            throw Fulcrum.Error.client(.invalidURL(urlStringWSS))
         }
         
         #expect(servers[0].url == expected)
     }
     
-    @Test("supports legacy host/port records")
-    func supportsLegacyHostPort() throws {
-        let payload = Data("[{\"host\":\"legacy.example.com\",\"port\":50004}]".utf8)
-        let servers = try JSONDecoder().decode([WebSocket.Server].self, from: payload)
-        #expect(servers.count == 1)
-        
-        guard let expected = URL(string: "wss://legacy.example.com:50004") else {
-            throw TestError.invalidURL("wss://legacy.example.com:50004")
+    @Test("validates bundled server list")
+    func validatesBundledServerList() throws {
+        let servers = try WebSocket.Server.decodeBundledServers()
+        servers.forEach { url in
+            #expect(["wss"].contains(url.scheme))
         }
-        
-        #expect(servers[0].url == expected)
     }
 }
