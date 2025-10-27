@@ -5,7 +5,7 @@ import Testing
 struct TestBed {
     @Test
     func connectAndProbe() async throws {
-        guard let url = try await WebSocket.Server.getServerList().randomElement() else { throw Fulcrum.Error.client(.urlNotFound) }
+        guard let url = try await WebSocket.Server.fetchServerList().randomElement() else { throw Fulcrum.Error.client(.urlNotFound) }
         print(url)
         
         let webSocket = WebSocket(url: url,

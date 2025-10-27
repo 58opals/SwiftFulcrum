@@ -19,14 +19,14 @@ extension Client.Call {
     
     public actor Token {
         private var handler: (@Sendable () -> Void)?
-        private var cancelled = false
+        private var isCancellationRequested = false
         public init() {}
         
         func register(_ handler: @escaping @Sendable () -> Void) {
-            if cancelled { handler() } else { self.handler = handler }
+            if isCancellationRequested { handler() } else { self.handler = handler }
         }
         
-        public func cancel() { cancelled = true; handler?() }
-        public var isCancelled: Bool { cancelled }
+        public func cancel() { isCancellationRequested = true; handler?() }
+        public var isCancelled: Bool { isCancellationRequested }
     }
 }

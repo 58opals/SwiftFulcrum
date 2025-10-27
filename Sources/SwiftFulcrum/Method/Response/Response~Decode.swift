@@ -5,7 +5,7 @@ import Foundation
 extension Data {
     func decode<Result: Decodable>(_ type: Result.Type) throws -> Result {
         let rpcResult = try JSONRPC.Coder.decoder.decode(Response.JSONRPC.Generic<Result>.self, from: self)
-        let resultType = try rpcResult.getResponseType()
+        let resultType = try rpcResult.determineResponseType()
         
         switch resultType {
         case .regular(let regular):
@@ -24,7 +24,7 @@ extension Data {
             Response.JSONRPC.Generic<Result.JSONRPC>.self,
             from: self
         )
-        let responseKind = try rpcContainer.getResponseType()
+        let responseKind = try rpcContainer.determineResponseType()
         do {
             switch responseKind {
             case .regular(let regular):

@@ -15,7 +15,7 @@ extension Client {
 extension Client {
     func startReceiving() async {
         do {
-            for try await message in await webSocket.messages() {
+            for try await message in await webSocket.makeMessageStream() {
                 await handleMessage(message)
             }
         } catch {

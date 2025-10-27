@@ -18,7 +18,7 @@ public actor Client {
     let rpcHeartbeatInterval: Duration = .seconds(25)
     let rpcHeartbeatTimeout: Duration = .seconds(10)
     
-    init(webSocket: WebSocket, metrics: MetricsCollectable? = nil, logger: Log.Handler? = nil) {
+    public init(webSocket: WebSocket, metrics: MetricsCollectable? = nil, logger: Log.Handler? = nil) {
         self.id = .init()
         self.webSocket = webSocket
         self.jsonRPC = .init()
@@ -29,7 +29,7 @@ public actor Client {
         Task { await self.webSocket.updateLogger(self.logger) }
     }
     
-    func start() async throws {
+    public func start() async throws {
         guard receiveTask == nil else { return }
         
         try await self.webSocket.connect()
@@ -50,7 +50,7 @@ public actor Client {
         startRPCHeartbeat()
     }
     
-    func stop() async {
+    public func stop() async {
         let closedError = await Fulcrum.Error.transport(
             .connectionClosed(webSocket.closeInformation.code, webSocket.closeInformation.reason)
         )
@@ -68,7 +68,7 @@ public actor Client {
         await webSocket.disconnect(with: "Client.stop() called")
     }
     
-    func reconnect(with url: URL? = nil) async throws {
+    public func reconnect(with url: URL? = nil) async throws {
         receiveTask?.cancel()
         await receiveTask?.value
         receiveTask = nil

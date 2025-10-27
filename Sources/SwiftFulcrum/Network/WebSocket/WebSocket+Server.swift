@@ -3,7 +3,7 @@
 import Foundation
 
 extension WebSocket {
-    struct Server: Decodable, Sendable {
+    public struct Server: Decodable, Sendable {
         private enum CodingKeys: String, CodingKey {
             case host
             case port
@@ -13,11 +13,11 @@ extension WebSocket {
         
         let url: URL
         
-        init(url: URL) {
+        public init(url: URL) {
             self.url = url
         }
         
-        init(from decoder: Decoder) throws {
+        public init(from decoder: Decoder) throws {
             let codingPath = decoder.codingPath
             
             if let singleValue = try? decoder.singleValueContainer(),
@@ -113,7 +113,7 @@ extension WebSocket.Server {
         return list.map(\.url)
     }
     
-    static func getServerList(fallback: [URL] = []) async throws -> [URL] {
+    static func fetchServerList(fallback: [URL] = []) async throws -> [URL] {
         await Task.yield()
         if let bundled = try? decodeBundledServers(), !bundled.isEmpty { return bundled }
         let sanitized = fallback.filter { ["ws","wss"].contains($0.scheme?.lowercased()) }
