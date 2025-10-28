@@ -42,7 +42,7 @@ extension Client {
 }
 
 extension Client {
-    func getSubscriptionIdentifier(for method: Method) -> String? {
+    func deriveSubscriptionIdentifier(for method: Method) -> String? {
         switch method {
         case .blockchain(.scripthash(.subscribe(scripthash: let scripthash))):
             return scripthash

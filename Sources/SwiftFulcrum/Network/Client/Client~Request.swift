@@ -3,7 +3,7 @@
 import Foundation
 
 extension Client {
-    func call<Result: JSONRPCConvertible>(
+    public func call<Result: JSONRPCConvertible>(
         method: Method,
         options: Call.Options = .init()
     ) async throws -> (UUID, Result) {
@@ -63,7 +63,7 @@ extension Client {
         return try (id, raw.decode(Result.self, context: .init(methodPath: method.path)))
     }
     
-    func subscribe<Initial: JSONRPCConvertible, Notification: JSONRPCConvertible>(
+    public func subscribe<Initial: JSONRPCConvertible, Notification: JSONRPCConvertible>(
         method: Method,
         options: Call.Options = .init()
     ) async throws -> (UUID, Initial, AsyncThrowingStream<Notification, Swift.Error>) {
@@ -71,7 +71,7 @@ extension Client {
         let request = method.createRequest(with: id)
         let subscriptionKey = SubscriptionKey(
             methodPath: method.path,
-            identifier: getSubscriptionIdentifier(for: method)
+            identifier: deriveSubscriptionIdentifier(for: method)
         )
         
         let subscriptionTask = Task<(UUID, Initial, AsyncThrowingStream<Notification, Swift.Error>), Swift.Error> {

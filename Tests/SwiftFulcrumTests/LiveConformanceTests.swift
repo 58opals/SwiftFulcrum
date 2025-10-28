@@ -83,7 +83,7 @@ struct SwiftFulcrumLiveConformanceTests {
             try await fulcrum.reconnect()
             try await Task.sleep(for: .seconds(5))
             
-            var unsubscribeSucceeded = false
+            var didUnsubscribeSucceed = false
             let maximumAttempts = 5
             
             attemptLoop: for attempt in 0 ..< maximumAttempts {
@@ -97,7 +97,7 @@ struct SwiftFulcrumLiveConformanceTests {
                     print("unsubscribe.id: \(unsubscribeID)")
                     print("unsubscribe.result: \(unsubscribeResult)")
                     if unsubscribeResult.success {
-                        unsubscribeSucceeded = true
+                        didUnsubscribeSucceed = true
                         break attemptLoop
                     }
                 case .stream(let unsubscribeID, let initial, let streamUpdates, let unsubscribeCancel):
@@ -113,7 +113,7 @@ struct SwiftFulcrumLiveConformanceTests {
                 try await Task.sleep(for: .seconds(1))
             }
             
-            #expect(unsubscribeSucceeded, "headers.unsubscribe should report success after reconnect auto-resubscribe")
+            #expect(didUnsubscribeSucceed, "headers.unsubscribe should report success after reconnect auto-resubscribe")
             print(updates)
         }
     }

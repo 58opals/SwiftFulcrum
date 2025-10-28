@@ -47,7 +47,7 @@ extension WebSocket {
         func attemptReconnection(
             for webSocket: WebSocket,
             with url: URL? = nil,
-            cancelReceiver: Bool = true,
+            shouldCancelReceiver: Bool = true,
             isInitialConnection: Bool = false
         ) async throws {
             let currentURL = await webSocket.url
@@ -94,9 +94,9 @@ extension WebSocket {
                 )
                 
                 do {
-                    if cancelReceiver { await webSocket.cancelReceiverTask() }
-                    await webSocket.setURL(candidateURL)
-                    try await webSocket.connect(withEmitLifecycle: false, allowFailover: false)
+                    if shouldCancelReceiver { await webSocket.cancelReceiverTask() }
+                    await webSocket.updateURL(candidateURL)
+                    try await webSocket.connect(shouldEmitLifecycle: false, shouldAllowFailover: false)
                     resetReconnectionAttemptCount()
                     await webSocket.emitLog(
                         .info,

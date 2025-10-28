@@ -24,7 +24,7 @@ extension Client: Hashable {
 extension Client.SubscriptionKey: Hashable, Sendable {}
 
 extension Client {
-    static func subscriptionIdentifier(methodPath: String, data: Data) -> String? {
+    static func makeSubscriptionIdentifier(methodPath: String, data: Data) -> String? {
         switch methodPath {
         case "blockchain.scripthash.subscribe", "blockchain.address.subscribe", "blockchain.transaction.subscribe":
             struct Envelope: Decodable { let params: [DecodableValue] }
@@ -37,7 +37,7 @@ extension Client {
             }
             return try? JSONRPC.Coder.decoder
                 .decode(Envelope.self, from: data).params.first?.string
-
+            
         case "blockchain.transaction.dsproof.subscribe":
             struct Envelope: Decodable { let params: [DecodableValue] }
             struct DecodableValue: Decodable {
@@ -55,7 +55,7 @@ extension Client {
                 if let proof = first.dsProof { return proof.txid }
             }
             return nil
-
+            
         default:
             return nil
         }

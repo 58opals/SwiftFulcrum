@@ -13,12 +13,12 @@ public actor WebSocket {
     let reconnector: Reconnector
     var logger: Log.Handler
     
-    private var connectInFlight = false
+    private var isConnectionInFlight = false
     private var connectWaiters = [CheckedContinuation<Bool, Error>]()
     var isConnected: Bool { state == .connected }
     
     private var receivedTask: Task<Void, Never>?
-    private var wantsAutoReceive = false
+    private var shouldAutomaticallyReceive = false
     
     var sharedLifecycleStream: AsyncStream<Lifecycle.Event>?
     var lifecycleContinuation: AsyncStream<Lifecycle.Event>.Continuation?
@@ -41,7 +41,7 @@ public actor WebSocket {
         
         self.metrics = configuration.metrics
         self.logger = configuration.logger ?? Log.NoOpHandler()
-        self.tlsDescriptor = configuration.tls
+        self.tlsDescriptor = configuration.tlsDescriptor
         
         if let session = configuration.session {
             self.session = session
@@ -50,8 +50,8 @@ public actor WebSocket {
             sessionConfiguration.timeoutIntervalForRequest = connectionTimeout
             sessionConfiguration.timeoutIntervalForResource = connectionTimeout
             
-            if let tls = configuration.tls {
-                self.session = URLSession(configuration: sessionConfiguration, delegate: tls.delegate, delegateQueue: nil)
+            if let descriptor = configuration.tlsDescriptor {
+                self.session = URLSession(configuration: sessionConfiguration, delegate: descriptor.delegate, delegateQueue: nil)
             } else {
                 self.session = URLSession(configuration: sessionConfiguration)
             }
@@ -62,12 +62,12 @@ public actor WebSocket {
 // MARK: - Create & Cancel
 
 extension WebSocket {
-    public func setURL(_ newURL: URL) { self.url = newURL }
+    public func updateURL(_ newURL: URL) { self.url = newURL }
     
-    func createNewTask(with url: URL? = nil, cancelReceiver: Bool = true) async {
+    func createNewTask(with url: URL? = nil, shouldCancelReceiver: Bool = true) async {
         if let url { self.url = url }
         
-        if cancelReceiver { await cancelReceiverTask() }
+        if shouldCancelReceiver { await cancelReceiverTask() }
         task?.cancel(with: .goingAway, reason: "Recreating task.".data(using: .utf8))
         task = session.webSocketTask(with: self.url)
     }
@@ -78,26 +78,24 @@ extension WebSocket {
         receivedTask = nil
     }
     
-    private func getCurrentCloseInformation() -> (code: URLSessionWebSocketTask.CloseCode, reason: String?) {
+    public var closeInformation: (code: URLSessionWebSocketTask.CloseCode, reason: String?) {
         let code = task?.closeCode ?? .invalid
         let reason = task?.closeReason.flatMap { String(data: $0, encoding: .utf8) }
         return (code, reason)
     }
-    
-    public var closeInformation: (code: URLSessionWebSocketTask.CloseCode, reason: String?) { self.getCurrentCloseInformation() }
 }
 
 // MARK: - Connect & Disconnect & Reconnect
 
 extension WebSocket {
     public func connect(
-        withEmitLifecycle: Bool = true,
-        allowFailover: Bool = true
+        shouldEmitLifecycle: Bool = true,
+        shouldAllowFailover: Bool = true
     ) async throws {
         guard !self.isConnected else { return }
         state = .connecting
         
-        await createNewTask(with: nil, cancelReceiver: true)
+        await createNewTask(with: nil, shouldCancelReceiver: true)
         guard let task else {
             throw Fulcrum.Error.transport(.connectionClosed(closeInformation.code, closeInformation.reason))
         }
@@ -111,14 +109,14 @@ extension WebSocket {
                 state = .connected
                 emitLog(.info, "connect.succeeded")
                 await metrics?.didConnect(url: url)
-                if withEmitLifecycle { emitLifecycle(.connected(isReconnect: false)) }
-                ensureAutoReceive()
+                if shouldEmitLifecycle { emitLifecycle(.connected(isReconnect: false)) }
+                ensureAutomaticReceiving()
             } else {
                 state = .disconnected
                 task.cancel(with: .goingAway, reason: "Connection timed out.".data(using: .utf8))
                 emitLog(.error, "connect.timeout")
                 try await performInitialFailoverIfNeeded(
-                    allowFailover: allowFailover,
+                    shouldAllowFailover: shouldAllowFailover,
                     failure: Fulcrum.Error.transport(
                         .connectionClosed(closeInformation.code, closeInformation.reason)
                     )
@@ -128,24 +126,24 @@ extension WebSocket {
             state = .disconnected
             task.cancel(with: .goingAway, reason: "Network error during connect.".data(using: .utf8))
             try await performInitialFailoverIfNeeded(
-                allowFailover: allowFailover,
+                shouldAllowFailover: shouldAllowFailover,
                 failure: Fulcrum.Error.transport(.network(networkError))
             )
         } catch {
             state = .disconnected
             task.cancel(with: .goingAway, reason: "Connect failed.".data(using: .utf8))
             try await performInitialFailoverIfNeeded(
-                allowFailover: allowFailover,
+                shouldAllowFailover: shouldAllowFailover,
                 failure: error
             )
         }
     }
     
     private func performInitialFailoverIfNeeded(
-        allowFailover: Bool,
+        shouldAllowFailover: Bool,
         failure: Error
     ) async throws {
-        guard allowFailover else { throw failure }
+        guard shouldAllowFailover else { throw failure }
         
         emitLog(
             .warning,
@@ -156,7 +154,7 @@ extension WebSocket {
         do {
             try await reconnector.attemptReconnection(
                 for: self,
-                cancelReceiver: true,
+                shouldCancelReceiver: true,
                 isInitialConnection: true
             )
         } catch {
@@ -172,13 +170,13 @@ extension WebSocket {
     
     func reconnect(with url: URL? = nil) async throws {
         await disconnect(with: "WebSocket.reconnect()")
-        try await reconnector.attemptReconnection(for: self, with: url, cancelReceiver: false)
+        try await reconnector.attemptReconnection(for: self, with: url, shouldCancelReceiver: false)
     }
     
     func disconnect(with reason: String? = nil) async {
         await cancelReceiverTask()
         
-        let information = getCurrentCloseInformation()
+        let information = closeInformation
         
         task?.cancel(with: .goingAway, reason: reason?.data(using: .utf8))
         task = nil
@@ -202,7 +200,7 @@ extension WebSocket {
     private func finishConnectWaiters(_ result: Result<Bool, Error>) {
         let waiters = connectWaiters
         connectWaiters.removeAll(keepingCapacity: false)
-        connectInFlight = false
+        isConnectionInFlight = false
         for continuation in waiters {
             switch result {
             case .success(let isSuccessful): continuation.resume(returning: isSuccessful)
@@ -214,13 +212,13 @@ extension WebSocket {
     private func waitForConnection(timeout: TimeInterval) async throws -> Bool {
         if isConnected { return true }
         
-        if connectInFlight {
+        if isConnectionInFlight {
             return try await withCheckedThrowingContinuation { continuation in
                 connectWaiters.append(continuation)
             }
         }
         
-        connectInFlight = true
+        isConnectionInFlight = true
         do {
             let isSuccessful = try await waitForConnectionOnce(timeout: timeout)
             finishConnectWaiters(.success(isSuccessful))
@@ -301,21 +299,21 @@ extension WebSocket {
         }
     }
     
-    public func ensureAutoReceive() {
-        guard wantsAutoReceive else { return }
+    public func ensureAutomaticReceiving() {
+        guard shouldAutomaticallyReceive else { return }
         if sharedMessagesStream == nil {
-            _ = messages(enableAutoResume: true)
+            _ = makeMessageStream(shouldEnableAutomaticResumption: true)
             return
         }
         
         if receivedTask == nil { startReader() }
     }
     
-    func messages(enableAutoResume: Bool = true) -> AsyncThrowingStream<URLSessionWebSocketTask.Message, Swift.Error> {
-        wantsAutoReceive = enableAutoResume
+    func makeMessageStream(shouldEnableAutomaticResumption: Bool = true) -> AsyncThrowingStream<URLSessionWebSocketTask.Message, Swift.Error> {
+        shouldAutomaticallyReceive = shouldEnableAutomaticResumption
         
         if let stream = sharedMessagesStream {
-            if enableAutoResume && receivedTask == nil { startReader() }
+            if shouldEnableAutomaticResumption && receivedTask == nil { startReader() }
             return stream
         }
         
@@ -364,7 +362,7 @@ extension WebSocket {
                 emitLog(.warning, "receive.failed_reconnecting",
                         metadata: ["error": (error as NSError).localizedDescription])
                 do {
-                    try await reconnector.attemptReconnection(for: self, cancelReceiver: false)
+                    try await reconnector.attemptReconnection(for: self, shouldCancelReceiver: false)
                     continue
                 } catch {
                     messageContinuation?.finish(throwing: error)

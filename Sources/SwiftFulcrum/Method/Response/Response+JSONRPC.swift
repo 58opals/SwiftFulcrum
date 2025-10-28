@@ -60,7 +60,7 @@ extension Response.JSONRPC {
 }
 
 extension Response.JSONRPC.Generic {
-    func getResponseType() throws -> Response.Kind<Result> {
+    func determineResponseType() throws -> Response.Kind<Result> {
         if let id,
            error == nil,
            method == nil,

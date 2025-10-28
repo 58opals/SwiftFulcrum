@@ -77,7 +77,7 @@ func waitUntil(
 /// Selects a random Fulcrum server URL for live integration tests.
 /// - Throws: ``Fulcrum.Error.transport`` if no servers are available.
 func randomFulcrumURL() async throws -> URL {
-    let list = try await WebSocket.Server.getServerList()
+    let list = try await WebSocket.Server.fetchServerList()
     guard let url = list.randomElement() else {
         throw Fulcrum.Error.transport(.setupFailed)
     }

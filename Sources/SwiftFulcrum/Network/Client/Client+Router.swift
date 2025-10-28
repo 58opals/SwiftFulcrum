@@ -29,7 +29,7 @@ extension Client {
             case .uuid:
                 resolve(identifier: id, with: raw)
             case .string(let methodPath):
-                let suffix = Client.subscriptionIdentifier(methodPath: methodPath, data: raw)
+                let suffix = Client.makeSubscriptionIdentifier(methodPath: methodPath, data: raw)
                 let key = suffix.map { "\(methodPath):\($0)" } ?? methodPath
                 resolve(identifier: .string(key), with: raw)
             }
