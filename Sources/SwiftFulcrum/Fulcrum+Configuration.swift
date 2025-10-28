@@ -4,7 +4,7 @@ import Foundation
 
 extension Fulcrum {
     public struct Configuration: Sendable {
-        public var tls: WebSocket.TLSDescriptor?
+        public var tlsDescriptor: WebSocket.TLSDescriptor?
         public var reconnect: WebSocket.Reconnector.Configuration
         public var metrics: MetricsCollectable?
         public var logger: Log.Handler?
@@ -16,7 +16,7 @@ extension Fulcrum {
         public static let basic = Configuration()
         
         public init(
-            tls: WebSocket.TLSDescriptor? = nil,
+            tlsDescriptor: WebSocket.TLSDescriptor? = nil,
             reconnect: WebSocket.Reconnector.Configuration = .basic,
             metrics: MetricsCollectable? = nil,
             logger: Log.Handler? = nil,
@@ -24,7 +24,7 @@ extension Fulcrum {
             connectionTimeout: TimeInterval = 10,
             bootstrapServers: [URL]? = nil
         ) {
-            self.tls = tls
+            self.tlsDescriptor = tlsDescriptor
             self.reconnect = reconnect
             self.metrics = metrics
             self.logger = logger
@@ -39,7 +39,7 @@ extension Fulcrum.Configuration {
     func convertToWebSocketConfiguration() -> WebSocket.Configuration {
         WebSocket.Configuration(
             session: urlSession,
-            tls: tls,
+            tlsDescriptor: tlsDescriptor,
             metrics: metrics,
             logger: logger
         )

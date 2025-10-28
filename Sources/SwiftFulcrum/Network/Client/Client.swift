@@ -36,7 +36,7 @@ public actor Client {
         self.receiveTask = Task { await self.startReceiving() }
         self.lifecycleTask = Task { [weak self] in
             guard let self else { return }
-            for await event in await self.webSocket.lifecycleEvents() {
+            for await event in await self.webSocket.makeLifecycleEvents() {
                 switch event {
                 case .connected(let isReconnect) where isReconnect:
                     await self.emitLog(.info, "client.autoresubscribe.begin")

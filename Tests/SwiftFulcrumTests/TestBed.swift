@@ -10,7 +10,7 @@ struct TestBed {
         
         let webSocket = WebSocket(url: url,
                                   configuration: .init(session: nil,
-                                                       tls: nil,
+                                                       tlsDescriptor: nil,
                                                        metrics: nil,
                                                        logger: nil),
                                   reconnectConfiguration: .init(maximumReconnectionAttempts: 3,

@@ -14,7 +14,7 @@ extension WebSocket.Lifecycle {
 }
 
 extension WebSocket {
-    func lifecycleEvents() -> AsyncStream<Lifecycle.Event> {
+    func makeLifecycleEvents() -> AsyncStream<Lifecycle.Event> {
         if let stream = sharedLifecycleStream { return stream }
         let stream = AsyncStream<Lifecycle.Event> { continuation in
             self.lifecycleContinuation = continuation

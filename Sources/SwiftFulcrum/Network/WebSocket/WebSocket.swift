@@ -18,7 +18,7 @@ public actor WebSocket {
     var isConnected: Bool { state == .connected }
     
     private var receivedTask: Task<Void, Never>?
-    private var shouldAutoReceive = false
+    private var shouldAutomaticallyReceive = false
     
     var sharedLifecycleStream: AsyncStream<Lifecycle.Event>?
     var lifecycleContinuation: AsyncStream<Lifecycle.Event>.Continuation?
@@ -41,7 +41,7 @@ public actor WebSocket {
         
         self.metrics = configuration.metrics
         self.logger = configuration.logger ?? Log.NoOpHandler()
-        self.tlsDescriptor = configuration.tls
+        self.tlsDescriptor = configuration.tlsDescriptor
         
         if let session = configuration.session {
             self.session = session
@@ -50,8 +50,8 @@ public actor WebSocket {
             sessionConfiguration.timeoutIntervalForRequest = connectionTimeout
             sessionConfiguration.timeoutIntervalForResource = connectionTimeout
             
-            if let tls = configuration.tls {
-                self.session = URLSession(configuration: sessionConfiguration, delegate: tls.delegate, delegateQueue: nil)
+            if let descriptor = configuration.tlsDescriptor {
+                self.session = URLSession(configuration: sessionConfiguration, delegate: descriptor.delegate, delegateQueue: nil)
             } else {
                 self.session = URLSession(configuration: sessionConfiguration)
             }
@@ -110,7 +110,7 @@ extension WebSocket {
                 emitLog(.info, "connect.succeeded")
                 await metrics?.didConnect(url: url)
                 if shouldEmitLifecycle { emitLifecycle(.connected(isReconnect: false)) }
-                ensureAutoReceive()
+                ensureAutomaticReceiving()
             } else {
                 state = .disconnected
                 task.cancel(with: .goingAway, reason: "Connection timed out.".data(using: .utf8))
@@ -299,21 +299,21 @@ extension WebSocket {
         }
     }
     
-    public func ensureAutoReceive() {
-        guard shouldAutoReceive else { return }
+    public func ensureAutomaticReceiving() {
+        guard shouldAutomaticallyReceive else { return }
         if sharedMessagesStream == nil {
-            _ = makeMessageStream(shouldEnableAutoResume: true)
+            _ = makeMessageStream(shouldEnableAutomaticResumption: true)
             return
         }
         
         if receivedTask == nil { startReader() }
     }
     
-    func makeMessageStream(shouldEnableAutoResume: Bool = true) -> AsyncThrowingStream<URLSessionWebSocketTask.Message, Swift.Error> {
-        shouldAutoReceive = shouldEnableAutoResume
+    func makeMessageStream(shouldEnableAutomaticResumption: Bool = true) -> AsyncThrowingStream<URLSessionWebSocketTask.Message, Swift.Error> {
+        shouldAutomaticallyReceive = shouldEnableAutomaticResumption
         
         if let stream = sharedMessagesStream {
-            if shouldEnableAutoResume && receivedTask == nil { startReader() }
+            if shouldEnableAutomaticResumption && receivedTask == nil { startReader() }
             return stream
         }
         

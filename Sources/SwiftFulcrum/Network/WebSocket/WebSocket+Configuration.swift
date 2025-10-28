@@ -6,16 +6,16 @@ import Network
 extension WebSocket {
     public struct Configuration: Sendable {
         public let session: URLSession?
-        public let tls: TLSDescriptor?
+        public let tlsDescriptor: TLSDescriptor?
         public let metrics: MetricsCollectable?
         public let logger: Log.Handler?
         
         public init(session: URLSession? = nil,
-                    tls: TLSDescriptor? = nil,
+                    tlsDescriptor: TLSDescriptor? = nil,
                     metrics: MetricsCollectable? = nil,
                     logger: Log.Handler? = nil) {
             self.session = session
-            self.tls = tls
+            self.tlsDescriptor = tlsDescriptor
             self.metrics = metrics
             self.logger = logger
         }
