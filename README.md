@@ -4,19 +4,17 @@
 
 # SwiftFulcrum
 
-SwiftFulcrum is a **pure‑Swift**, type‑safe framework for interacting with Fulcrum servers on the Bitcoin Cash network. Built on modern Swift Concurrency—actors, `async/await`, `AsyncThrowingStream`—it streams live blockchain data with almost zero boiler‑plate.
+SwiftFulcrum is a **pure-Swift**, type-safe framework for interacting with Fulcrum servers on the Bitcoin Cash network. Built on modern Swift Concurrency-actors, `async/await`, `AsyncThrowingStream`, it streams live blockchain data with almost zero boiler-plate.
 
 ## Features
 
-| Area | What you get |
-| ---- | ------------ |
-| **Type‑safe RPC layer** | Exhaustive `Method` enum generates JSON‑RPC at compile‑time. |
-| **Structured concurrency** | All shared state lives in actors (`Fulcrum`, `Client`, `WebSocket`) for race‑free access. |
-| **Real‑time notifications** | Subscribe to address, transaction, header, and DS‑Proof events via `AsyncThrowingStream`. |
-| **Robust error model** | Every issue surfaces as `Fulcrum.Error`; pending requests are finished with `.connectionClosed` when the socket closes. |
-| **Safe lifecycle** | Idempotent `start()`/`stop()` and a configurable WebSocket handshake timeout. |
-| **Automatic reconnection** | Automatic exponential back‑off and a `Fulcrum.reconnect()` helper for instant server switching. |
-| **Swift PM package** | Runs on iOS, macOS, watchOS, tvOS and visionOS. |
+- **Type-safe RPC surface.** Every Fulcrum method is modelled by the ``Method`` enum and strongly typed ``Response.Result`` structures so you get compile-time checking and autocompletion for parameters and payloads.
+- **Automatic server bootstrap.** Provide a WebSocket URL or let SwiftFulcrum choose from the curated bootstrap catalog (`Network/WebSocket/servers.json`) with optional custom fallbacks.
+- **Actor-isolated concurrency.** ``Fulcrum``, ``Client``, and ``WebSocket`` actors encapsulate state, replays, and reconnection for race-free access.
+- **Resilient streaming.** Subscriptions surface as `AsyncThrowingStream` values, automatically resubscribe after reconnects, and expose a cancellation closure.
+- **Configurable reconnection.** Tune exponential back-off, jitter, and handshake timeouts through ``Fulcrum.Configuration`` and ``WebSocket.Reconnector.Configuration``.
+- **First-class observability.** Plug in custom ``Log.Handler`` instances and ``MetricsCollectable`` implementations to track connections, payload flow, and pings.
+- **Robust error model.** Every failure reports through ``Fulcrum.Error`` with precise transport, RPC, coding, and client cases, pending requests complete as soon as the socket closes.
 
 ---
 
@@ -34,7 +32,7 @@ dependencies: [
 ]
 ```
 
-### Basic Usage
+### Quick Start
 
 #### Connect
 
@@ -53,6 +51,9 @@ Task {
 }
 ```
 
+Pass `nil` for the `url:` parameter to let SwiftFulcrum select a server from the bundled bootstrap list or your custom
+``Fulcrum.Configuration.bootstrapServers``.
+
 #### Reconnect
 
 ```swift
@@ -62,7 +63,9 @@ try await fulcrum.reconnect()
 Use ``Fulcrum/reconnect()`` to switch servers or recover after a disconnect.
 Reconnection failures bubble up as ``Fulcrum/Error/Transport``.
 
-#### One‑shot Request
+`Fulcrum` handles exponential back-off and resubscribes active streams after a reconnect completes.
+
+#### One-shot Request
 
 ```swift
 let response = try await fulcrum.submit(
@@ -72,6 +75,9 @@ let response = try await fulcrum.submit(
 
 let tip = response.extractRegularResponse()
 ```
+
+Use ``Fulcrum/RPCResponse/extractRegularResponse()`` to read the single value. Handle the optional return to detect protocol
+mismatches or closed sockets.
 
 Use ``RPCResponse/extractRegularResponse()`` to read the single-value result. Handle the optional return to process server responses or gracefully recover when the socket closes.
 
@@ -84,26 +90,37 @@ let response = try await fulcrum.submit(
     notificationType: Response.Result.Blockchain.Headers.SubscribeNotification.self
 )
 
-let blockSubscription = response.extractSubscriptionStream()
+let subscription = response.extractSubscriptionStream()
 ```
 
-The ``RPCResponse/extractSubscriptionStream()`` helper returns the initial payload, an `AsyncThrowingStream` of notifications, and a cancellation closure. Unwrap the tuple—`guard let (initial, updates, cancel) = result else { return }`—to iterate updates and tear down the subscription when finished.
+`extractSubscriptionStream()` returns the initial payload, an `AsyncThrowingStream` of notifications, and a cancellation closure.
+`guard let (initial, updates, cancel) = subscription else { return }` to iterate updates and tear down the stream when finished.
 
 ---
 
-## 🧵 Concurrency Design
+## ⏱️ Request Options, Timeouts, and Cancellation
 
-```text
-┌── Your App
-│
-│ await fulcrum.submit(…)
-│ ← RPCResponse
-├─ Fulcrum   (actor) – public API, validation
-├─ Client    (actor) – routing, reconnect helper
-└─ WebSocket (actor) – URLSessionWebSocketTask + back‑off loop
+Every `submit` call accepts `Client.Call.Options` so you can set per-request timeouts or hook up a cancellation token:
+
+```swift
+var options = Client.Call.Options(timeout: .seconds(5))
+let token = Client.Call.Token()
+options.token = token
+
+Task.detached {
+    try await Task.sleep(for: .seconds(2))
+    await token.cancel()
+}
+
+let block = try await fulcrum.submit(
+    method: .blockchain(.block(.header(height: 820_000))),
+    responseType: Response.Result.Blockchain.Block.Header.self,
+    options: options
+)
 ```
 
-All mutable state is actor‑isolated: **no locks, no data races.**
+When the timeout elapses or the token cancels, SwiftFulcrum completes the request with `Fulcrum.Error.client(.timeout)` or
+`.cancelled` and removes any pending handlers from the router.
 
 ---
 
@@ -115,7 +132,7 @@ do {
 } catch let error as Fulcrum.Error {
     switch error {
     case .transport(.connectionClosed(let code, let reason)):
-        print("Socket closed: \(code) – \(reason ?? "none")")
+        print("Socket closed: \(code) - \(reason ?? "none")")
     case .rpc(let server):
         print("Server error \(server.code): \(server.message)")
     case .coding(let detail), .client(let detail):
@@ -124,7 +141,7 @@ do {
 }
 ```
 
-Every RPC either returns a value, throws an encode/ server error, or returns `.connectionClosed`—**no silent time‑outs.**
+Every RPC either returns a value, throws an encode/server error, or returns `.connectionClosed`, **no silent time-outs.**
 
 ---
 
