@@ -10,7 +10,7 @@ extension Fulcrum {
         public var logger: Log.Handler?
         public var urlSession: URLSession?
         public var connectionTimeout: TimeInterval
-        
+        public var maximumMessageSize: Int
         public var bootstrapServers: [URL]?
         
         public static let basic = Configuration()
@@ -22,6 +22,7 @@ extension Fulcrum {
             logger: Log.Handler? = nil,
             urlSession: URLSession? = nil,
             connectionTimeout: TimeInterval = 10,
+            maximumMessageSize: Int = WebSocket.Configuration.defaultMaximumMessageSize,
             bootstrapServers: [URL]? = nil
         ) {
             self.tlsDescriptor = tlsDescriptor
@@ -30,6 +31,7 @@ extension Fulcrum {
             self.logger = logger
             self.urlSession = urlSession
             self.connectionTimeout = connectionTimeout
+            self.maximumMessageSize = maximumMessageSize
             self.bootstrapServers = bootstrapServers
         }
     }
@@ -41,7 +43,8 @@ extension Fulcrum.Configuration {
             session: urlSession,
             tlsDescriptor: tlsDescriptor,
             metrics: metrics,
-            logger: logger
+            logger: logger,
+            maximumMessageSize: maximumMessageSize
         )
     }
 }
