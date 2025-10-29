@@ -5,19 +5,24 @@ import Network
 
 extension WebSocket {
     public struct Configuration: Sendable {
+        public static let defaultMaximumMessageSize = 64 * 1024 * 1024
+        
         public let session: URLSession?
         public let tlsDescriptor: TLSDescriptor?
         public let metrics: MetricsCollectable?
         public let logger: Log.Handler?
+        public let maximumMessageSize: Int
         
         public init(session: URLSession? = nil,
                     tlsDescriptor: TLSDescriptor? = nil,
                     metrics: MetricsCollectable? = nil,
-                    logger: Log.Handler? = nil) {
+                    logger: Log.Handler? = nil,
+                    maximumMessageSize: Int = defaultMaximumMessageSize) {
             self.session = session
             self.tlsDescriptor = tlsDescriptor
             self.metrics = metrics
             self.logger = logger
+            self.maximumMessageSize = maximumMessageSize
         }
     }
     

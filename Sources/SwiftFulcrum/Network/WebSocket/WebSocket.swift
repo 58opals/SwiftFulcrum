@@ -25,6 +25,7 @@ public actor WebSocket {
     
     let session: URLSession
     private let connectionTimeout: TimeInterval
+    private let maximumMessageSize: Int
     
     private let tlsDescriptor: TLSDescriptor?
     var metrics: MetricsCollectable?
@@ -42,6 +43,7 @@ public actor WebSocket {
         self.metrics = configuration.metrics
         self.logger = configuration.logger ?? Log.NoOpHandler()
         self.tlsDescriptor = configuration.tlsDescriptor
+        self.maximumMessageSize = configuration.maximumMessageSize
         
         if let session = configuration.session {
             self.session = session
@@ -70,6 +72,7 @@ extension WebSocket {
         if shouldCancelReceiver { await cancelReceiverTask() }
         task?.cancel(with: .goingAway, reason: "Recreating task.".data(using: .utf8))
         task = session.webSocketTask(with: self.url)
+        task?.maximumMessageSize = maximumMessageSize
     }
     
     public func cancelReceiverTask() async {
