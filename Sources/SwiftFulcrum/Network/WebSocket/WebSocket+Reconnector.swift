@@ -30,12 +30,14 @@ extension WebSocket {
         
         private let configuration: Configuration
         private var reconnectionAttempts: Int
+        private let network: Fulcrum.Configuration.Network
         private var serverCatalog: [URL]
         private var nextServerIndex: Int
         
-        public init(_ configuration: Configuration, reconnectionAttempts: Int = 0) {
+        public init(_ configuration: Configuration, reconnectionAttempts: Int = 0, network: Fulcrum.Configuration.Network) {
             self.configuration = configuration
             self.reconnectionAttempts = reconnectionAttempts
+            self.network = network
             self.serverCatalog = .init()
             self.nextServerIndex = 0
         }
@@ -155,7 +157,8 @@ extension WebSocket {
             if let preferredURL { fallbacks.append(preferredURL) }
             
             if serverCatalog.isEmpty {
-                serverCatalog = Self.uniqued(try await WebSocket.Server.loadServerList(fallback: fallbacks))
+                let network = network
+                serverCatalog = Self.uniqued(try await WebSocket.Server.loadServerList(for: network, fallback: fallbacks))
             } else {
                 serverCatalog = Self.uniqued(serverCatalog + fallbacks)
             }
@@ -195,7 +198,7 @@ extension WebSocket {
         
         private static func uniqued(_ urls: [URL]) -> [URL] {
             var seen = Set<String>()
-            var unique: [URL] = []
+            var unique: [URL] = .init()
             unique.reserveCapacity(urls.count)
             
             for url in urls {

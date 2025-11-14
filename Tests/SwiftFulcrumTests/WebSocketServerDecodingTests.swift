@@ -33,11 +33,46 @@ struct WebSocketServerDecodingTests {
         #expect(servers[0].url == expected)
     }
     
-    @Test("validates bundled server list")
-    func validatesBundledServerList() throws {
-        let servers = try WebSocket.Server.decodeBundledServers()
+    @Test("validates bundled mainnet server list")
+    func validatesBundledMainnetServerList() throws {
+        let servers = try WebSocket.Server.decodeBundledServers(for: .mainnet)
+        #expect(!servers.isEmpty)
         servers.forEach { url in
             #expect(["wss"].contains(url.scheme))
         }
+    }
+    
+    @Test("validates bundled testnet server list")
+    func validatesBundledTestnetServerList() throws {
+        let servers = try WebSocket.Server.decodeBundledServers(for: .testnet)
+        #expect(!servers.isEmpty)
+        servers.forEach { url in
+            #expect(["wss"].contains(url.scheme))
+        }
+    }
+    
+    @Test("separates mainnet and testnet catalogs")
+    func separatesNetworkCatalogs() throws {
+        let mainnet = try Set(WebSocket.Server.decodeBundledServers(for: .mainnet))
+        let testnet = try Set(WebSocket.Server.decodeBundledServers(for: .testnet))
+        #expect(!mainnet.isEmpty)
+        #expect(!testnet.isEmpty)
+        #expect(mainnet.isDisjoint(with: testnet))
+    }
+    
+    @Test("fetchServerList honors mainnet selection")
+    func fetchesMainnetCatalog() async throws {
+        let decoded = try Set(WebSocket.Server.decodeBundledServers(for: .mainnet))
+        let fetchedList = try await WebSocket.Server.fetchServerList(for: .mainnet)
+        let fetched = Set(fetchedList)
+        #expect(decoded == fetched)
+    }
+    
+    @Test("fetchServerList honors testnet selection")
+    func fetchesTestnetCatalog() async throws {
+        let decoded = try Set(WebSocket.Server.decodeBundledServers(for: .testnet))
+        let fetchedList = try await WebSocket.Server.fetchServerList(for: .testnet)
+        let fetched = Set(fetchedList)
+        #expect(decoded == fetched)
     }
 }
