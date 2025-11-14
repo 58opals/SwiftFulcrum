@@ -1,0 +1,5 @@
+[
+    { "url": "wss://testnet.imaginary.cash:50004" },
+    { "url": "wss://testnet.bch.loping.net:51004" },
+    { "url": "wss://chipnet.imaginary.cash:50004" }
+]

@@ -81,7 +81,7 @@ extension Client {
     public func emitLog(
         _ level: Log.Level,
         _ message: @autoclosure () -> String,
-        metadata: [String: String] = [:],
+        metadata: [String: String] = .init(),
         file: String = #fileID, function: String = #function, line: UInt = #line
     ) {
         var mergedMetadata = ["component": "Client", "client_id": id.uuidString]

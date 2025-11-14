@@ -531,7 +531,7 @@ extension Response.Result {
                         public let type: String
                         
                         init(from json: Response.JSONRPC.Result.Blockchain.Transaction.Get.Detailed.Output.ScriptPubKey) {
-                            self.addresses = json.addresses ?? []
+                            self.addresses = json.addresses ?? .init()
                             self.assemblyScriptLanguage = json.asm
                             self.hex = json.hex
                             self.requiredSignatures = json.reqSigs ?? 0

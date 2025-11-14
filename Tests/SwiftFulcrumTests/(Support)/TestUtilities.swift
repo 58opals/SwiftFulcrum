@@ -9,7 +9,7 @@ actor MetricsRecorder: MetricsCollectable {
     private(set) var didReceives = 0
     private(set) var didPings = 0
     
-    func didConnect(url: URL) async { didConnects += 1 }
+    func didConnect(url: URL, network: Fulcrum.Configuration.Network) async { didConnects += 1; _ = network }
     func didDisconnect(url: URL, closeCode: URLSessionWebSocketTask.CloseCode?, reason: String?) async { didDisconnects += 1 }
     func didSend(url: URL, message: URLSessionWebSocketTask.Message) async { didSends += 1 }
     func didReceive(url: URL, message: URLSessionWebSocketTask.Message) async { didReceives += 1 }
@@ -24,7 +24,7 @@ actor LoggerProbe {
         let metadata: [String: String]?
     }
     
-    private(set) var entries: [Entry] = []
+    private(set) var entries: [Entry] = .init()
     
     func record(_ entry: Entry) {
         entries.append(entry)
@@ -76,8 +76,8 @@ func waitUntil(
 
 /// Selects a random Fulcrum server URL for live integration tests.
 /// - Throws: ``Fulcrum.Error.transport`` if no servers are available.
-func randomFulcrumURL() async throws -> URL {
-    let list = try await WebSocket.Server.fetchServerList()
+func randomFulcrumURL(network: Fulcrum.Configuration.Network = .mainnet) async throws -> URL {
+    let list = try await WebSocket.Server.fetchServerList(for: network)
     guard let url = list.randomElement() else {
         throw Fulcrum.Error.transport(.setupFailed)
     }

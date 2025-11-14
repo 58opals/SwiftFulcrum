@@ -6,6 +6,7 @@ public actor WebSocket {
     public var url: URL
     var task: URLSessionWebSocketTask?
     private var state: ConnectionState
+    let network: Fulcrum.Configuration.Network
     
     private var sharedMessagesStream: AsyncThrowingStream<URLSessionWebSocketTask.Message, Swift.Error>?
     var messageContinuation: AsyncThrowingStream<URLSessionWebSocketTask.Message, Swift.Error>.Continuation?
@@ -37,8 +38,9 @@ public actor WebSocket {
         self.url = url
         self.task = nil
         self.state = .disconnected
-        self.reconnector = Reconnector(reconnectConfiguration)
+        self.reconnector = Reconnector(reconnectConfiguration, network: configuration.network)
         self.connectionTimeout = connectionTimeout
+        self.network = configuration.network
         
         self.metrics = configuration.metrics
         self.logger = configuration.logger ?? Log.NoOpHandler()
@@ -111,7 +113,7 @@ extension WebSocket {
             if isConnected {
                 state = .connected
                 emitLog(.info, "connect.succeeded")
-                await metrics?.didConnect(url: url)
+                await metrics?.didConnect(url: url, network: network)
                 if shouldEmitLifecycle { emitLifecycle(.connected(isReconnect: false)) }
                 ensureAutomaticReceiving()
             } else {
@@ -386,7 +388,11 @@ extension WebSocket {
         metadata: [String: String] = .init(),
         file: String = #fileID, function: String = #function, line: UInt = #line
     ) {
-        var mergedMetadata = ["component": "WebSocket", "url": url.absoluteString]
+        var mergedMetadata = [
+            "component": "WebSocket",
+            "url": url.absoluteString,
+            "network": network.resourceName
+        ]
         mergedMetadata.merge(metadata, uniquingKeysWith: { _, new in new })
         logger.log(level, message(), metadata: mergedMetadata, file: file, function: function, line: line)
     }
