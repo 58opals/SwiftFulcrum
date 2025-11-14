@@ -4,145 +4,83 @@
 
 # SwiftFulcrum
 
-SwiftFulcrum is a **pure-Swift**, type-safe framework for interacting with Fulcrum servers on the Bitcoin Cash network. Built on modern Swift Concurrency-actors, `async/await`, `AsyncThrowingStream`, it streams live blockchain data with almost zero boiler-plate.
+SwiftFulcrum is a **pure Swift**, actor-based client for interacting with [Fulcrum](https://github.com/cculianu/Fulcrum) servers on the Bitcoin Cash network. It ships with a complete RPC surface, resilient WebSocket connectivity, and ergonomic types tailored to modern Swift Concurrency.
 
 ## Features
 
-- **Type-safe RPC surface.** Every Fulcrum method is modelled by the ``Method`` enum and strongly typed ``Response.Result`` structures so you get compile-time checking and autocompletion for parameters and payloads.
-- **Automatic server bootstrap.** Provide a WebSocket URL or let SwiftFulcrum choose from the curated bootstrap catalog (`Network/WebSocket/servers.json`) with optional custom fallbacks.
-- **Actor-isolated concurrency.** ``Fulcrum``, ``Client``, and ``WebSocket`` actors encapsulate state, replays, and reconnection for race-free access.
-- **Resilient streaming.** Subscriptions surface as `AsyncThrowingStream` values, automatically resubscribe after reconnects, and expose a cancellation closure.
-- **Configurable reconnection.** Tune exponential back-off, jitter, and handshake timeouts through ``Fulcrum.Configuration`` and ``WebSocket.Reconnector.Configuration``.
-- **First-class observability.** Plug in custom ``Log.Handler`` instances and ``MetricsCollectable`` implementations to track connections, payload flow, and pings.
-- **Robust error model.** Every failure reports through ``Fulcrum.Error`` with precise transport, RPC, coding, and client cases, pending requests complete as soon as the socket closes.
+- **Typed RPC coverage.** Every Fulcrum method is represented by ``Method`` enums and strongly typed ``Response.Result`` models, including CashTokens helpers and DSProof endpoints.
+- **Automatic bootstrap & failover.** Pass an explicit WebSocket URL or allow SwiftFulcrum to choose from the bundled mainnet/testnet catalogs with back-off, jitter, and heartbeat-driven reconnection handled for you.
+- **Actor-isolated concurrency.** ``Fulcrum``, ``Client``, and ``WebSocket`` are actors that encapsulate state, request routing, and stream resubscription after reconnects.
+- **First-class observability.** Plug in custom ``Log.Handler`` implementations and ``MetricsCollectable`` collectors to trace connection lifecycle, messages, and pings.
+- **Configurable networking.** Tune TLS, URLSession usage, message size limits, reconnection policy, network selection, and bootstrap overrides through ``Fulcrum.Configuration``.
 
 ---
 
-## 🚀 Getting Started
+## Requirements
 
-### Installation (Swift Package Manager)
+- Swift 6.0 or newer
+- iOS 18, macOS 15, watchOS 11, tvOS 18, or visionOS 2 and later (per package manifest)
+
+## Installation (Swift Package Manager)
+
+Add SwiftFulcrum to your `Package.swift` dependencies:
 
 ```swift
 // Package.swift
 dependencies: [
-    .package(
-        url: "https://github.com/58opals/SwiftFulcrum.git",
-        .upToNextMajor(from: "0.4.0")
-    )
+    .package(url: "https://github.com/58opals/SwiftFulcrum.git", .upToNextMajor(from: "0.4.0"))
 ]
 ```
 
-### Quick Start
+## Quick Start
 
-#### Connect
+### Connect
 
 ```swift
 import SwiftFulcrum
 
 Task {
     do {
-        let fulcrum = try await Fulcrum(url: "wss://fulcrum.example.com:50004")
+        let fulcrum = try await Fulcrum()
         try await fulcrum.start()
-        print("Connected to Fulcrum server.")
-        defer { await fulcrum.stop() }
+        
+        if let tip = try await fulcrum.submit(
+            method: .blockchain(.headers(.getTip)),
+            responseType: Response.Result.Blockchain.Headers.GetTip.self).extractRegularResponse() {
+                print("Best header height: \(tip.height)")
+            }
+    
+        await fulcrum.stop()
     } catch {
         print("Connection error: \(error.localizedDescription)")
     }
 }
 ```
 
-Pass `nil` for the `url:` parameter to let SwiftFulcrum select a server from the bundled bootstrap list or your custom
-``Fulcrum.Configuration.bootstrapServers``.
+## Error Handling
 
-#### Reconnect
-
-```swift
-try await fulcrum.reconnect()
-```
-
-Use ``Fulcrum/reconnect()`` to switch servers or recover after a disconnect.
-Reconnection failures bubble up as ``Fulcrum/Error/Transport``.
-
-`Fulcrum` handles exponential back-off and resubscribes active streams after a reconnect completes.
-
-#### One-shot Request
-
-```swift
-let response = try await fulcrum.submit(
-    method: .blockchain(.headers(.getTip)),
-    responseType: Response.Result.Blockchain.Headers.GetTip.self
-)
-
-let tip = response.extractRegularResponse()
-```
-
-Use ``Fulcrum/RPCResponse/extractRegularResponse()`` to read the single value. Handle the optional return to detect protocol
-mismatches or closed sockets.
-
-Use ``RPCResponse/extractRegularResponse()`` to read the single-value result. Handle the optional return to process server responses or gracefully recover when the socket closes.
-
-#### Streaming Subscription
-
-```swift
-let response = try await fulcrum.submit(
-    method: .blockchain(.headers(.subscribe)),
-    initialType: Response.Result.Blockchain.Headers.Subscribe.self,
-    notificationType: Response.Result.Blockchain.Headers.SubscribeNotification.self
-)
-
-let subscription = response.extractSubscriptionStream()
-```
-
-`extractSubscriptionStream()` returns the initial payload, an `AsyncThrowingStream` of notifications, and a cancellation closure.
-`guard let (initial, updates, cancel) = subscription else { return }` to iterate updates and tear down the stream when finished.
-
----
-
-## ⏱️ Request Options, Timeouts, and Cancellation
-
-Every `submit` call accepts `Client.Call.Options` so you can set per-request timeouts or hook up a cancellation token:
-
-```swift
-var options = Client.Call.Options(timeout: .seconds(5))
-let token = Client.Call.Token()
-options.token = token
-
-Task.detached {
-    try await Task.sleep(for: .seconds(2))
-    await token.cancel()
-}
-
-let block = try await fulcrum.submit(
-    method: .blockchain(.block(.header(height: 820_000))),
-    responseType: Response.Result.Blockchain.Block.Header.self,
-    options: options
-)
-```
-
-When the timeout elapses or the token cancels, SwiftFulcrum completes the request with `Fulcrum.Error.client(.timeout)` or
-`.cancelled` and removes any pending handlers from the router.
-
----
-
-## ⚠️ Error Handling
+All failures funnel through `Fulcrum.Error` with transport, RPC, coding, and client-specific cases. This keeps retries, UI messaging, and analytics easy to reason about.
 
 ```swift
 do {
-    let result = try await fulcrum.submit(…)
+    let result = try await fulcrum.submit(method: .mempool(.getFeeHistogram),
+                                          responseType: Response.Result.Mempool.GetFeeHistogram.self)
+    guard let histogram = result.extractRegularResponse() else { return }
+    print(histogram)
 } catch let error as Fulcrum.Error {
     switch error {
     case .transport(.connectionClosed(let code, let reason)):
         print("Socket closed: \(code) - \(reason ?? "none")")
     case .rpc(let server):
         print("Server error \(server.code): \(server.message)")
-    case .coding(let detail), .client(let detail):
-        print("Library error: \(detail)")
+    case .coding, .client:
+        print("Library error: \(error)")
     }
+} catch {
+    print("Unexpected error: \(error)")
 }
 ```
 
-Every RPC either returns a value, throws an encode/server error, or returns `.connectionClosed`, **no silent time-outs.**
-
 ---
 
-© 2025 Opal Wallet • 58 Opals
+SwiftFulcrum is crafted by © 2025 Opal Wallet • 58 Opals.
