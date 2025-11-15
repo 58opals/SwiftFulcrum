@@ -11,7 +11,7 @@ struct ResponseDecodeTests {
             
             let jsonResult = try responseData.decode(Response.JSONRPC.Result.Blockchain.Headers.GetTip.self)
             #expect(jsonResult.height > 0)
-            #expect(jsonResult.hex.count == 64)
+            #expect(jsonResult.hex.count == 160)
             
             let converted = try responseData.decode(
                 Response.Result.Blockchain.Headers.GetTip.self,
@@ -62,6 +62,9 @@ struct ResponseDecodeTests {
                 switch error {
                 case .client(.emptyResponse(let identifier)):
                     #expect(identifier == requestIdentifier)
+                case .rpc(let serverError):
+                    #expect(serverError.id == requestIdentifier)
+                    #expect(!serverError.message.isEmpty)
                 default:
                     Issue.record("Unexpected error: \(error)")
                 }
@@ -121,7 +124,7 @@ struct ResponseDecodeTests {
             jsonValues.append(value)
         }
         #expect(jsonValues.count == captured.count)
-        #expect(jsonValues.allSatisfy { $0.hex.count == 64 })
+        #expect(jsonValues.allSatisfy { $0.hex.count == 160 })
         
         let secondRawStream = AsyncThrowingStream<Data, Swift.Error> { continuation in
             for chunk in capturedChunks {
