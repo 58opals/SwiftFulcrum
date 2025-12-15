@@ -37,11 +37,18 @@ actor WebSocket {
     init(url: URL,
          configuration: Configuration = .init(),
          reconnectConfiguration: Reconnector.Configuration = .basic,
-         connectionTimeout: TimeInterval = 10) {
+         connectionTimeout: TimeInterval = 10,
+         sleep: @escaping @Sendable (Duration) async throws -> Void = { duration in try await Task.sleep(for: duration) },
+         jitter: @escaping @Sendable (ClosedRange<Double>) -> Double = { range in .random(in: range) }) {
         self.url = url
         self.task = nil
         self.connectionStateTracker = .init()
-        self.reconnector = Reconnector(reconnectConfiguration, network: configuration.network)
+        self.reconnector = Reconnector(
+            reconnectConfiguration,
+            network: configuration.network,
+            sleep: sleep,
+            jitter: jitter
+        )
         self.connectionTimeout = connectionTimeout
         self.network = configuration.network
         

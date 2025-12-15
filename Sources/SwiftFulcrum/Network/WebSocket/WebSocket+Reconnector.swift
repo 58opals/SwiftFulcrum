@@ -34,12 +34,23 @@ extension WebSocket {
         private var serverCatalog: [URL]
         private var nextServerIndex: Int
         
-        init(_ configuration: Configuration, reconnectionAttempts: Int = 0, network: Fulcrum.Configuration.Network) {
+        private let sleep: @Sendable (Duration) async throws -> Void
+        private let jitter: @Sendable (ClosedRange<Double>) -> Double
+        
+        var attemptCount: Int { reconnectionAttempts }
+        
+        init(_ configuration: Configuration,
+             reconnectionAttempts: Int = 0,
+             network: Fulcrum.Configuration.Network,
+             sleep: @escaping @Sendable (Duration) async throws -> Void = { duration in try await Task.sleep(for: duration) },
+             jitter: @escaping @Sendable (ClosedRange<Double>) -> Double = { range in .random(in: range) }) {
             self.configuration = configuration
             self.reconnectionAttempts = reconnectionAttempts
             self.network = network
             self.serverCatalog = .init()
             self.nextServerIndex = 0
+            self.sleep = sleep
+            self.jitter = jitter
         }
         
         func resetReconnectionAttemptCount() {
@@ -75,10 +86,8 @@ extension WebSocket {
                     nextServerIndex = (index + 1) % max(serverCatalog.count, 1)
                 }
                 
-                if reconnectionAttempts > 0 {
-                    let base = pow(2.0, Double(reconnectionAttempts)) * configuration.reconnectionDelay
-                    let delay = min(base, configuration.maximumDelay) * .random(in: configuration.jitterRange)
-                    try await Task.sleep(for: .seconds(delay))
+                if let delay = makeDelay(for: reconnectionAttempts) {
+                    try await sleep(delay)
                 }
                 
                 reconnectionAttempts += 1
@@ -157,7 +166,7 @@ extension WebSocket {
             )
         }
         
-        private func buildCandidateRotation(preferredURL: URL?, currentURL: URL) async throws -> [URL] {
+        func buildCandidateRotation(preferredURL: URL?, currentURL: URL) async throws -> [URL] {
             var fallbacks = [currentURL]
             if let preferredURL { fallbacks.append(preferredURL) }
             
@@ -192,6 +201,16 @@ extension WebSocket {
             }
             
             return rotation
+        }
+        
+        func makeDelay(for attempt: Int) -> Duration? {
+            guard attempt > 0 else { return nil }
+            
+            let base = pow(2.0, Double(attempt)) * configuration.reconnectionDelay
+            let capped = min(base, configuration.maximumDelay)
+            let jittered = capped * jitter(configuration.jitterRange)
+            
+            return .seconds(jittered)
         }
         
         private func indexOfServer(_ url: URL) -> Int? {
