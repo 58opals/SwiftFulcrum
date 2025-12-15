@@ -4,12 +4,12 @@ import Testing
 
 @Test("WebSocket tracker emits ordered states for start and disconnect")
 func webSocketTrackerEmitsStartThroughDisconnect() async {
-    var tracker = WebSocket.ConnectionStateTracker()
-    let stream = tracker.makeStream()
+    let tracker = WebSocket.ConnectionStateTracker()
+    let stream = await tracker.makeStream()
     
-    tracker.update(to: .connecting)
-    tracker.update(to: .connected)
-    tracker.update(to: .disconnected)
+    await tracker.update(to: .connecting)
+    await tracker.update(to: .connected)
+    await tracker.update(to: .disconnected)
     
     var iterator = stream.makeAsyncIterator()
     let expected: [WebSocket.ConnectionState] = [.idle, .connecting, .connected, .disconnected]
@@ -25,14 +25,14 @@ func webSocketTrackerEmitsStartThroughDisconnect() async {
 
 @Test("Tracker ignores duplicates while capturing reconnection flow")
 func webSocketTrackerDeduplicatesStates() async {
-    var tracker = WebSocket.ConnectionStateTracker()
-    let stream = tracker.makeStream()
+    let tracker = WebSocket.ConnectionStateTracker()
+    let stream = await tracker.makeStream()
     
-    tracker.update(to: .connecting)
-    tracker.update(to: .connecting)
-    tracker.update(to: .reconnecting)
-    tracker.update(to: .reconnecting)
-    tracker.update(to: .connected)
+    await tracker.update(to: .connecting)
+    await tracker.update(to: .connecting)
+    await tracker.update(to: .reconnecting)
+    await tracker.update(to: .reconnecting)
+    await tracker.update(to: .connected)
     
     var iterator = stream.makeAsyncIterator()
     let expected: [WebSocket.ConnectionState] = [.idle, .connecting, .reconnecting, .connected]

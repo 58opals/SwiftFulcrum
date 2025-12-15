@@ -22,12 +22,10 @@ extension WebSocket {
         func makeStream() -> AsyncStream<ConnectionState> {
             if let sharedStream { return sharedStream }
             
-            let stream = AsyncStream<ConnectionState> { [weak self] continuation in
-                guard let self else { return }
-                self.continuation = continuation
-                continuation.yield(self.state)
-                continuation.onTermination = { @Sendable [weak self] _ in
-                    self?.reset()
+            let stream = AsyncStream<ConnectionState> { continuation in
+                Task { [weak self] in
+                    guard let self else { return }
+                    await self.storeContinuation(continuation)
                 }
             }
             
@@ -39,6 +37,14 @@ extension WebSocket {
             guard state != newState else { return }
             state = newState
             continuation?.yield(newState)
+        }
+        
+        private func storeContinuation(_ continuation: AsyncStream<ConnectionState>.Continuation) async {
+            self.continuation = continuation
+            continuation.yield(state)
+            continuation.onTermination = { @Sendable [weak self] _ in
+                Task { await self?.reset() }
+            }
         }
         
         private func reset() {

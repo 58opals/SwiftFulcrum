@@ -18,7 +18,7 @@ actor Client {
     let rpcHeartbeatInterval: Duration = .seconds(25)
     let rpcHeartbeatTimeout: Duration = .seconds(10)
     
-    var connectionState: WebSocket.ConnectionState { webSocket.connectionState }
+    var connectionState: WebSocket.ConnectionState { get async { await webSocket.connectionState } }
     
     init(webSocket: WebSocket, metrics: MetricsCollectable? = nil, logger: Log.Handler? = nil) {
         self.id = .init()
