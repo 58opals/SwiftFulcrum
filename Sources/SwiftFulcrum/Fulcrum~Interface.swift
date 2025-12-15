@@ -14,6 +14,7 @@ extension Fulcrum {
         responseType: RegularResponseResult.Type = RegularResponseResult.self,
         options: Fulcrum.Call.Options = .init()
     ) async throws -> RPCResponse<RegularResponseResult, Never> {
+        try await ensureClientIsReadyForRequests()
         if method.isSubscription {
             throw Fulcrum.Error.client(.protocolMismatch("submit() cannot be used with subscription methods. Use subscribe(...)."))
         }
@@ -39,6 +40,7 @@ extension Fulcrum {
         notificationType: Notification.Type = Notification.self,
         options: Fulcrum.Call.Options = .init()
     ) async throws -> RPCResponse<Initial, Notification> {
+        try await ensureClientIsReadyForRequests()
         if !method.isSubscription {
             throw Fulcrum.Error.client(
                 .protocolMismatch("subscribe() requires subscription methods. Use submit(...) for unary calls.")
@@ -60,6 +62,23 @@ extension Fulcrum {
             throw fulcrumError
         } catch {
             throw Fulcrum.Error.client(.unknown(error))
+        }
+    }
+    
+    private func ensureClientIsReadyForRequests() async throws {
+        if !isRunning {
+            try await start()
+        }
+        
+        let state = await client.connectionState
+        
+        switch state {
+        case .connected:
+            return
+        case .connecting, .idle, .reconnecting:
+            try await client.start()
+        case .disconnected:
+            try await client.reconnect()
         }
     }
 }

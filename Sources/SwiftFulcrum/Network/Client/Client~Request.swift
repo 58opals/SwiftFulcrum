@@ -56,6 +56,7 @@ extension Client {
                 group.addTask {
                     try await Task.sleep(for: limit)
                     callTask.cancel()
+                    await self.router.cancel(identifier: .uuid(id))
                     throw Fulcrum.Error.client(.timeout(limit))
                 }
                 let value = try await group.next()!
