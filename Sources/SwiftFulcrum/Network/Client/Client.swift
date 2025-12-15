@@ -18,6 +18,8 @@ actor Client {
     let rpcHeartbeatInterval: Duration = .seconds(25)
     let rpcHeartbeatTimeout: Duration = .seconds(10)
     
+    var connectionState: WebSocket.ConnectionState { webSocket.connectionState }
+    
     init(webSocket: WebSocket, metrics: MetricsCollectable? = nil, logger: Log.Handler? = nil) {
         self.id = .init()
         self.webSocket = webSocket
@@ -74,6 +76,10 @@ actor Client {
         receiveTask = nil
         try await webSocket.reconnect(with: url)
         receiveTask = Task { await self.startReceiving() }
+    }
+    
+    func makeConnectionStateEvents() async -> AsyncStream<WebSocket.ConnectionState> {
+        await webSocket.makeConnectionStateEvents()
     }
 }
 

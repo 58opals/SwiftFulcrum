@@ -10,6 +10,10 @@ public actor Fulcrum {
     let client: Client
     
     private(set) var isRunning = false
+    var currentConnectionState: ConnectionState = .idle
+    var connectionStateObservationTask: Task<Void, Never>?
+    var sharedConnectionStateStream: AsyncStream<ConnectionState>?
+    var connectionStateContinuation: AsyncStream<ConnectionState>.Continuation?
     
     /// Creates a Fulcrum client.
     /// - Parameters:
@@ -45,9 +49,10 @@ public actor Fulcrum {
         }()
         
         self.client = .init(webSocket: webSocket, metrics: configuration.metrics, logger: configuration.logger)
+        startConnectionStateObservation()
     }
     
-    init(servers: [URL], configuration: Configuration = .init()) throws {
+    init(servers: [URL], configuration: Configuration = .init()) async throws {
         guard let server = servers.randomElement(), ["ws", "wss"].contains(server.scheme?.lowercased()) else { throw Error.transport(.setupFailed) }
         self.client = .init(
             webSocket: WebSocket(
@@ -59,6 +64,7 @@ public actor Fulcrum {
             metrics: configuration.metrics,
             logger: configuration.logger
         )
+        startConnectionStateObservation()
     }
     
     /// Establishes the WebSocket connection and prepares stream resubscription.

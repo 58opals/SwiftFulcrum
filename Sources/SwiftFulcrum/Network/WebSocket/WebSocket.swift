@@ -5,7 +5,7 @@ import Foundation
 actor WebSocket {
     var url: URL
     var task: URLSessionWebSocketTask?
-    private var state: ConnectionState
+    private var connectionStateTracker: ConnectionStateTracker
     let network: Fulcrum.Configuration.Network
     
     private var sharedMessagesStream: AsyncThrowingStream<URLSessionWebSocketTask.Message, Swift.Error>?
@@ -16,7 +16,7 @@ actor WebSocket {
     
     private var isConnectionInFlight = false
     private var connectWaiters = [CheckedContinuation<Bool, Error>]()
-    var isConnected: Bool { state == .connected }
+    var isConnected: Bool { connectionStateTracker.state == .connected }
     
     private var receivedTask: Task<Void, Never>?
     private var shouldAutomaticallyReceive = false
@@ -37,7 +37,7 @@ actor WebSocket {
          connectionTimeout: TimeInterval = 10) {
         self.url = url
         self.task = nil
-        self.state = .disconnected
+        self.connectionStateTracker = .init()
         self.reconnector = Reconnector(reconnectConfiguration, network: configuration.network)
         self.connectionTimeout = connectionTimeout
         self.network = configuration.network
@@ -88,6 +88,16 @@ extension WebSocket {
         let reason = task?.closeReason.flatMap { String(data: $0, encoding: .utf8) }
         return (code, reason)
     }
+    
+    var connectionState: ConnectionState { connectionStateTracker.state }
+    
+    func makeConnectionStateEvents() -> AsyncStream<ConnectionState> {
+        connectionStateTracker.makeStream()
+    }
+    
+    func updateConnectionState(_ newState: ConnectionState) {
+        connectionStateTracker.update(to: newState)
+    }
 }
 
 // MARK: - Connect & Disconnect & Reconnect
@@ -98,7 +108,7 @@ extension WebSocket {
         shouldAllowFailover: Bool = true
     ) async throws {
         guard !self.isConnected else { return }
-        state = .connecting
+        updateConnectionState(.connecting)
         
         await createNewTask(with: nil, shouldCancelReceiver: true)
         guard let task else {
@@ -111,13 +121,13 @@ extension WebSocket {
         do {
             let isConnected = try await waitForConnection(timeout: connectionTimeout)
             if isConnected {
-                state = .connected
+                updateConnectionState(.connected)
                 emitLog(.info, "connect.succeeded")
                 await metrics?.didConnect(url: url, network: network)
                 if shouldEmitLifecycle { emitLifecycle(.connected(isReconnect: false)) }
                 ensureAutomaticReceiving()
             } else {
-                state = .disconnected
+                updateConnectionState(.disconnected)
                 task.cancel(with: .goingAway, reason: "Connection timed out.".data(using: .utf8))
                 emitLog(.error, "connect.timeout")
                 try await performInitialFailoverIfNeeded(
@@ -128,14 +138,14 @@ extension WebSocket {
                 )
             }
         } catch let networkError as Fulcrum.Error.Network {
-            state = .disconnected
+            updateConnectionState(.disconnected)
             task.cancel(with: .goingAway, reason: "Network error during connect.".data(using: .utf8))
             try await performInitialFailoverIfNeeded(
                 shouldAllowFailover: shouldAllowFailover,
                 failure: Fulcrum.Error.transport(.network(networkError))
             )
         } catch {
-            state = .disconnected
+            updateConnectionState(.disconnected)
             task.cancel(with: .goingAway, reason: "Connect failed.".data(using: .utf8))
             try await performInitialFailoverIfNeeded(
                 shouldAllowFailover: shouldAllowFailover,
@@ -157,6 +167,7 @@ extension WebSocket {
         )
         
         do {
+            updateConnectionState(.reconnecting)
             try await reconnector.attemptReconnection(
                 for: self,
                 shouldCancelReceiver: true,
@@ -175,6 +186,7 @@ extension WebSocket {
     
     func reconnect(with url: URL? = nil) async throws {
         await disconnect(with: "WebSocket.reconnect()")
+        updateConnectionState(.reconnecting)
         try await reconnector.attemptReconnection(for: self, with: url, shouldCancelReceiver: false)
     }
     
@@ -185,7 +197,7 @@ extension WebSocket {
         
         task?.cancel(with: .goingAway, reason: reason?.data(using: .utf8))
         task = nil
-        state = .disconnected
+        updateConnectionState(.disconnected)
         
         finishConnectWaiters(.failure(Fulcrum.Error.transport(.connectionClosed(information.code, information.reason))))
         
@@ -367,7 +379,9 @@ extension WebSocket {
                 emitLog(.warning, "receive.failed_reconnecting",
                         metadata: ["error": (error as NSError).localizedDescription])
                 do {
+                    updateConnectionState(.reconnecting)
                     try await reconnector.attemptReconnection(for: self, shouldCancelReceiver: false)
+                    updateConnectionState(.connected)
                     continue
                 } catch {
                     messageContinuation?.finish(throwing: error)
