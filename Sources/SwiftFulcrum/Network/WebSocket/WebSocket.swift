@@ -43,7 +43,7 @@ actor WebSocket {
         self.network = configuration.network
         
         self.metrics = configuration.metrics
-        self.logger = configuration.logger ?? Log.NoOpHandler()
+        self.logger = configuration.logger ?? Log.ConsoleHandler()
         self.tlsDescriptor = configuration.tlsDescriptor
         self.maximumMessageSize = configuration.maximumMessageSize
         

@@ -26,7 +26,7 @@ actor Client {
         self.jsonRPC = .init()
         self.router = .init()
         self.subscriptionMethods = .init()
-        self.logger = logger ?? Log.NoOpHandler()
+        self.logger = logger ?? Log.ConsoleHandler()
         if let metrics { Task { await self.webSocket.updateMetrics(metrics) } }
         Task { await self.webSocket.updateLogger(self.logger) }
     }
