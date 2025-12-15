@@ -29,8 +29,12 @@ extension Client {
                                        metadata: ["error": error.localizedDescription])
                     
                     do {
+                        try Task.checkCancellation()
                         try await self.reconnect()
+                        try Task.checkCancellation()
                         await self.resubscribeStoredMethods()
+                    } catch is CancellationError {
+                        break
                     } catch {
                         await self.router.failUnaries(with: Fulcrum.Error.transport(.heartbeatTimeout))
                         break

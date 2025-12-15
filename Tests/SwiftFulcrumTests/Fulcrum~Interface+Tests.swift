@@ -58,6 +58,29 @@ struct FulcrumInterfaceTests {
         }
     }
     
+    @Test("Submit starts Fulcrum when idle", .timeLimit(.minutes(1)))
+    func submitStartsFulcrumWhenIdle() async throws {
+        let url = try await randomFulcrumURL()
+        let fulcrum = try await Fulcrum(url: url.absoluteString)
+        
+        // Avoid calling start() directly to exercise prepareClientForRequests.
+        let response = try await fulcrum.submit(
+            method: .blockchain(.headers(.getTip)),
+            responseType: Response.Result.Blockchain.Headers.GetTip.self,
+            options: .init(timeout: .seconds(30))
+        )
+        
+        guard case .single(_, let tip) = response else {
+            Issue.record("Expected unary response for headers.getTip")
+            return
+        }
+        
+        #expect(tip.height > 0)
+        #expect(await fulcrum.isRunning)
+        
+        await fulcrum.stop()
+    }
+    
     @Test("Subscription submit rejects unary methods", .timeLimit(.minutes(1)))
     func subscribeRejectsUnaryMethods() async throws {
         // No network dependency: subscribe() should reject before attempting to connect.
