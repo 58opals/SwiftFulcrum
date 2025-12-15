@@ -58,6 +58,37 @@ struct FulcrumInterfaceTests {
         }
     }
     
+    @Test("Subscription submit rejects unary methods", .timeLimit(.minutes(1)))
+    func subscribeRejectsUnaryMethods() async throws {
+        // No network dependency: subscribe() should reject before attempting to connect.
+        let fulcrum = try await Fulcrum(url: "ws://example.com")
+        
+        let unaryMethods: [SwiftFulcrum.Method] = [
+            .blockchain(.headers(.getTip)),
+            .mempool(.getFeeHistogram)
+        ]
+        
+        for method in unaryMethods {
+            do {
+                _ = try await fulcrum.submit(
+                    method: method,
+                    initialType: Response.Result.Blockchain.Headers.Subscribe.self,
+                    notificationType: Response.Result.Blockchain.Headers.SubscribeNotification.self
+                )
+                Issue.record("subscribe should reject unary methods (method: \(method))")
+            } catch let error as Fulcrum.Error {
+                switch error {
+                case .client(.protocolMismatch(let message)):
+                    #expect(message?.contains("subscribe() requires subscription methods") == true)
+                default:
+                    Issue.record("Unexpected Fulcrum.Error: \(error)")
+                }
+            } catch {
+                Issue.record("Unexpected non-Fulcrum error: \(error)")
+            }
+        }
+    }
+    
     // MARK: - Subscriptions
     @Test("Subscriptions expose cancellable header streams", .timeLimit(.minutes(1)))
     func submitCreatesCancellableHeaderSubscription() async throws {

@@ -39,6 +39,12 @@ extension Fulcrum {
         notificationType: Notification.Type = Notification.self,
         options: Fulcrum.Call.Options = .init()
     ) async throws -> RPCResponse<Initial, Notification> {
+        if !method.isSubscription {
+            throw Fulcrum.Error.client(
+                .protocolMismatch("subscribe() requires subscription methods. Use submit(...) for unary calls.")
+            )
+        }
+        
         let token = options.cancellation?.token ?? Client.Call.Token()
         let effectiveOptions = Client.Call.Options(timeout: options.timeout, token: token)
         do {

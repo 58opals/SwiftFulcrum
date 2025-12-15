@@ -7,6 +7,12 @@ extension Client {
         method: Method,
         options: Call.Options = .init()
     ) async throws -> (UUID, Result) {
+        if method.isSubscription {
+            throw Fulcrum.Error.client(
+                .protocolMismatch("call() cannot be used with subscription methods. Use subscribe(...) instead.")
+            )
+        }
+        
         let id = UUID()
         let request = method.createRequest(with: id)
         
@@ -67,6 +73,12 @@ extension Client {
         method: Method,
         options: Call.Options = .init()
     ) async throws -> (UUID, Initial, AsyncThrowingStream<Notification, Swift.Error>) {
+        if !method.isSubscription {
+            throw Fulcrum.Error.client(
+                .protocolMismatch("subscribe() requires subscription methods. Use call(...) for unary requests.")
+            )
+        }
+        
         let id = UUID()
         let request = method.createRequest(with: id)
         let subscriptionKey = SubscriptionKey(
