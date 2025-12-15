@@ -2,7 +2,7 @@
 
 import Foundation
 
-public actor Client {
+actor Client {
     let id: UUID
     let webSocket: WebSocket
     var jsonRPC: JSONRPC
@@ -18,7 +18,7 @@ public actor Client {
     let rpcHeartbeatInterval: Duration = .seconds(25)
     let rpcHeartbeatTimeout: Duration = .seconds(10)
     
-    public init(webSocket: WebSocket, metrics: MetricsCollectable? = nil, logger: Log.Handler? = nil) {
+    init(webSocket: WebSocket, metrics: MetricsCollectable? = nil, logger: Log.Handler? = nil) {
         self.id = .init()
         self.webSocket = webSocket
         self.jsonRPC = .init()
@@ -29,7 +29,7 @@ public actor Client {
         Task { await self.webSocket.updateLogger(self.logger) }
     }
     
-    public func start() async throws {
+    func start() async throws {
         guard receiveTask == nil else { return }
         
         try await self.webSocket.connect()
@@ -50,7 +50,7 @@ public actor Client {
         startRPCHeartbeat()
     }
     
-    public func stop() async {
+    func stop() async {
         let closedError = await Fulcrum.Error.transport(
             .connectionClosed(webSocket.closeInformation.code, webSocket.closeInformation.reason)
         )
@@ -68,7 +68,7 @@ public actor Client {
         await webSocket.disconnect(with: "Client.stop() called")
     }
     
-    public func reconnect(with url: URL? = nil) async throws {
+    func reconnect(with url: URL? = nil) async throws {
         receiveTask?.cancel()
         await receiveTask?.value
         receiveTask = nil
@@ -78,7 +78,7 @@ public actor Client {
 }
 
 extension Client {
-    public func emitLog(
+    func emitLog(
         _ level: Log.Level,
         _ message: @autoclosure () -> String,
         metadata: [String: String] = .init(),

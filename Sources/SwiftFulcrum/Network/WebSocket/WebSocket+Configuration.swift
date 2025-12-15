@@ -4,22 +4,22 @@ import Foundation
 import Network
 
 extension WebSocket {
-    public struct Configuration: Sendable {
-        public static let defaultMaximumMessageSize = 64 * 1024 * 1024
+    struct Configuration: Sendable {
+        static let defaultMaximumMessageSize = 64 * 1024 * 1024
         
-        public let session: URLSession?
-        public let tlsDescriptor: TLSDescriptor?
-        public let metrics: MetricsCollectable?
-        public let logger: Log.Handler?
-        public let maximumMessageSize: Int
-        public let network: Fulcrum.Configuration.Network
+        let session: URLSession?
+        let tlsDescriptor: TLSDescriptor?
+        let metrics: MetricsCollectable?
+        let logger: Log.Handler?
+        let maximumMessageSize: Int
+        let network: Fulcrum.Configuration.Network
         
-        public init(session: URLSession? = nil,
-                    tlsDescriptor: TLSDescriptor? = nil,
-                    metrics: MetricsCollectable? = nil,
-                    logger: Log.Handler? = nil,
-                    maximumMessageSize: Int = defaultMaximumMessageSize,
-                    network: Fulcrum.Configuration.Network = .mainnet) {
+        init(session: URLSession? = nil,
+             tlsDescriptor: TLSDescriptor? = nil,
+             metrics: MetricsCollectable? = nil,
+             logger: Log.Handler? = nil,
+             maximumMessageSize: Int = defaultMaximumMessageSize,
+             network: Fulcrum.Configuration.Network = .mainnet) {
             self.session = session
             self.tlsDescriptor = tlsDescriptor
             self.metrics = metrics
@@ -37,13 +37,18 @@ extension WebSocket {
         self.logger = handler ?? Log.NoOpHandler()
     }
     
-    public struct TLSDescriptor: Sendable {
-        public let options: NWProtocolTLS.Options
-        public let delegate: URLSessionDelegate?
+    struct TLSDescriptor: Sendable {
+        let options: NWProtocolTLS.Options
+        let delegate: URLSessionDelegate?
         
-        public init(options: NWProtocolTLS.Options = .init(), delegate: URLSessionDelegate? = nil) {
+        init(options: NWProtocolTLS.Options = .init(), delegate: URLSessionDelegate? = nil) {
             self.options = options
             self.delegate = delegate
+        }
+        
+        init(_ descriptor: Fulcrum.Configuration.TLSDescriptor) {
+            self.options = descriptor.options
+            self.delegate = descriptor.delegate
         }
     }
 }

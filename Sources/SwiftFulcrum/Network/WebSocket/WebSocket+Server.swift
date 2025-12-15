@@ -3,7 +3,7 @@
 import Foundation
 
 extension WebSocket {
-    public struct Server: Decodable, Sendable {
+    struct Server: Decodable, Sendable {
         private enum CodingKeys: String, CodingKey {
             case host
             case port
@@ -13,11 +13,11 @@ extension WebSocket {
         
         let url: URL
         
-        public init(url: URL) {
+        init(url: URL) {
             self.url = url
         }
         
-        public init(from decoder: Decoder) throws {
+        init(from decoder: Decoder) throws {
             let codingPath = decoder.codingPath
             
             if let singleValue = try? decoder.singleValueContainer(),
@@ -102,7 +102,7 @@ extension WebSocket {
 }
 
 extension WebSocket.Server {
-    public static func decodeBundledServers(for network: Fulcrum.Configuration.Network) throws -> [URL] {
+    static func decodeBundledServers(for network: Fulcrum.Configuration.Network) throws -> [URL] {
         guard let path = Bundle.module.path(forResource: network.resourceName, ofType: "json") else {
             throw Fulcrum.Error.transport(.setupFailed)
         }

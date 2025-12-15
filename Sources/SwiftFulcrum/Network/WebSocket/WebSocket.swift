@@ -2,8 +2,8 @@
 
 import Foundation
 
-public actor WebSocket {
-    public var url: URL
+actor WebSocket {
+    var url: URL
     var task: URLSessionWebSocketTask?
     private var state: ConnectionState
     let network: Fulcrum.Configuration.Network
@@ -31,10 +31,10 @@ public actor WebSocket {
     private let tlsDescriptor: TLSDescriptor?
     var metrics: MetricsCollectable?
     
-    public init(url: URL,
-                configuration: Configuration = .init(),
-                reconnectConfiguration: Reconnector.Configuration = .basic,
-                connectionTimeout: TimeInterval = 10) {
+    init(url: URL,
+         configuration: Configuration = .init(),
+         reconnectConfiguration: Reconnector.Configuration = .basic,
+         connectionTimeout: TimeInterval = 10) {
         self.url = url
         self.task = nil
         self.state = .disconnected
@@ -66,7 +66,7 @@ public actor WebSocket {
 // MARK: - Create & Cancel
 
 extension WebSocket {
-    public func updateURL(_ newURL: URL) { self.url = newURL }
+    func updateURL(_ newURL: URL) { self.url = newURL }
     
     func createNewTask(with url: URL? = nil, shouldCancelReceiver: Bool = true) async {
         if let url { self.url = url }
@@ -77,13 +77,13 @@ extension WebSocket {
         task?.maximumMessageSize = maximumMessageSize
     }
     
-    public func cancelReceiverTask() async {
+    func cancelReceiverTask() async {
         receivedTask?.cancel()
         await receivedTask?.value
         receivedTask = nil
     }
     
-    public var closeInformation: (code: URLSessionWebSocketTask.CloseCode, reason: String?) {
+    var closeInformation: (code: URLSessionWebSocketTask.CloseCode, reason: String?) {
         let code = task?.closeCode ?? .invalid
         let reason = task?.closeReason.flatMap { String(data: $0, encoding: .utf8) }
         return (code, reason)
@@ -93,7 +93,7 @@ extension WebSocket {
 // MARK: - Connect & Disconnect & Reconnect
 
 extension WebSocket {
-    public func connect(
+    func connect(
         shouldEmitLifecycle: Bool = true,
         shouldAllowFailover: Bool = true
     ) async throws {
@@ -304,7 +304,7 @@ extension WebSocket {
         }
     }
     
-    public func ensureAutomaticReceiving() {
+    func ensureAutomaticReceiving() {
         guard shouldAutomaticallyReceive else { return }
         if sharedMessagesStream == nil {
             _ = makeMessageStream(shouldEnableAutomaticResumption: true)
@@ -382,7 +382,7 @@ extension WebSocket {
 }
 
 extension WebSocket {
-    public func emitLog(
+    func emitLog(
         _ level: Log.Level,
         _ message: @autoclosure () -> String,
         metadata: [String: String] = .init(),

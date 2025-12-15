@@ -3,24 +3,24 @@
 import Foundation
 
 extension WebSocket {
-    public actor Reconnector {
-        public struct Configuration: Sendable {
-            public var maximumReconnectionAttempts: Int
-            public var reconnectionDelay: TimeInterval
-            public var maximumDelay: TimeInterval
-            public var jitterRange: ClosedRange<TimeInterval>
+    actor Reconnector {
+        struct Configuration: Sendable {
+            var maximumReconnectionAttempts: Int
+            var reconnectionDelay: TimeInterval
+            var maximumDelay: TimeInterval
+            var jitterRange: ClosedRange<TimeInterval>
             
-            public var isUnlimited: Bool { maximumReconnectionAttempts <= 0 }
+            var isUnlimited: Bool { maximumReconnectionAttempts <= 0 }
             
-            public static let basic = Self(maximumReconnectionAttempts: 1,
-                                           reconnectionDelay: 1.5,
-                                           maximumDelay: 30,
-                                           jitterRange: 0.8 ... 1.3)
+            static let basic = Self(maximumReconnectionAttempts: 1,
+                                    reconnectionDelay: 1.5,
+                                    maximumDelay: 30,
+                                    jitterRange: 0.8 ... 1.3)
             
-            public init(maximumReconnectionAttempts: Int,
-                        reconnectionDelay: TimeInterval,
-                        maximumDelay: TimeInterval,
-                        jitterRange: ClosedRange<TimeInterval>) {
+            init(maximumReconnectionAttempts: Int,
+                 reconnectionDelay: TimeInterval,
+                 maximumDelay: TimeInterval,
+                 jitterRange: ClosedRange<TimeInterval>) {
                 self.maximumReconnectionAttempts = maximumReconnectionAttempts
                 self.reconnectionDelay = reconnectionDelay
                 self.maximumDelay = maximumDelay
@@ -34,7 +34,7 @@ extension WebSocket {
         private var serverCatalog: [URL]
         private var nextServerIndex: Int
         
-        public init(_ configuration: Configuration, reconnectionAttempts: Int = 0, network: Fulcrum.Configuration.Network) {
+        init(_ configuration: Configuration, reconnectionAttempts: Int = 0, network: Fulcrum.Configuration.Network) {
             self.configuration = configuration
             self.reconnectionAttempts = reconnectionAttempts
             self.network = network

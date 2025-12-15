@@ -1,6 +1,7 @@
 // Fulcrum+Configuration.swift
 
 import Foundation
+import Network
 
 extension Fulcrum {
     public struct Configuration: Sendable {
@@ -16,8 +17,46 @@ extension Fulcrum {
             }
         }
         
-        public var tlsDescriptor: WebSocket.TLSDescriptor?
-        public var reconnect: WebSocket.Reconnector.Configuration
+        public struct TLSDescriptor: Sendable {
+            public let delegate: URLSessionDelegate?
+            public let options: NWProtocolTLS.Options
+            
+            public init(options: NWProtocolTLS.Options = .init(), delegate: URLSessionDelegate? = nil) {
+                self.options = options
+                self.delegate = delegate
+            }
+        }
+        
+        public struct Reconnect: Sendable {
+            public var maximumReconnectionAttempts: Int
+            public var reconnectionDelay: TimeInterval
+            public var maximumDelay: TimeInterval
+            public var jitterRange: ClosedRange<TimeInterval>
+            
+            public var isUnlimited: Bool { maximumReconnectionAttempts <= 0 }
+            
+            public static let basic = Self(
+                maximumReconnectionAttempts: 1,
+                reconnectionDelay: 1.5,
+                maximumDelay: 30,
+                jitterRange: 0.8 ... 1.3
+            )
+            
+            public init(
+                maximumReconnectionAttempts: Int,
+                reconnectionDelay: TimeInterval,
+                maximumDelay: TimeInterval,
+                jitterRange: ClosedRange<TimeInterval>
+            ) {
+                self.maximumReconnectionAttempts = maximumReconnectionAttempts
+                self.reconnectionDelay = reconnectionDelay
+                self.maximumDelay = maximumDelay
+                self.jitterRange = jitterRange
+            }
+        }
+        
+        public var tlsDescriptor: TLSDescriptor?
+        public var reconnect: Reconnect
         public var metrics: MetricsCollectable?
         public var logger: Log.Handler?
         public var urlSession: URLSession?
@@ -29,13 +68,13 @@ extension Fulcrum {
         public static let basic = Configuration()
         
         public init(
-            tlsDescriptor: WebSocket.TLSDescriptor? = nil,
-            reconnect: WebSocket.Reconnector.Configuration = .basic,
+            tlsDescriptor: TLSDescriptor? = nil,
+            reconnect: Reconnect = .basic,
             metrics: MetricsCollectable? = nil,
             logger: Log.Handler? = nil,
             urlSession: URLSession? = nil,
             connectionTimeout: TimeInterval = 10,
-            maximumMessageSize: Int = WebSocket.Configuration.defaultMaximumMessageSize,
+            maximumMessageSize: Int = 64 * 1024 * 1024,
             bootstrapServers: [URL]? = nil,
             network: Network = .mainnet
         ) {
@@ -54,13 +93,26 @@ extension Fulcrum {
 
 extension Fulcrum.Configuration {
     func convertToWebSocketConfiguration() -> WebSocket.Configuration {
-        WebSocket.Configuration(
+        let socketTLSDescriptor = tlsDescriptor.map { WebSocket.TLSDescriptor($0) }
+        
+        return WebSocket.Configuration(
             session: urlSession,
-            tlsDescriptor: tlsDescriptor,
+            tlsDescriptor: socketTLSDescriptor,
             metrics: metrics,
             logger: logger,
             maximumMessageSize: maximumMessageSize,
             network: network
+        )
+    }
+}
+
+extension Fulcrum.Configuration.Reconnect {
+    var reconnectorConfiguration: WebSocket.Reconnector.Configuration {
+        .init(
+            maximumReconnectionAttempts: maximumReconnectionAttempts,
+            reconnectionDelay: reconnectionDelay,
+            maximumDelay: maximumDelay,
+            jitterRange: jitterRange
         )
     }
 }
