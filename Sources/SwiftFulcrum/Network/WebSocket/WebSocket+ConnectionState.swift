@@ -13,7 +13,7 @@ extension WebSocket {
 }
 
 extension WebSocket {
-    final class ConnectionStateTracker {
+    actor ConnectionStateTracker {
         private(set) var state: ConnectionState = .idle
         
         private var sharedStream: AsyncStream<ConnectionState>?

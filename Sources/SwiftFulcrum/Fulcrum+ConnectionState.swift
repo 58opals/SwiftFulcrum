@@ -3,7 +3,7 @@
 import Foundation
 
 extension Fulcrum {
-    public enum ConnectionState: Equatable {
+    public enum ConnectionState: Equatable, Sendable {
         case idle
         case connecting
         case connected
