@@ -106,12 +106,13 @@ extension WebSocket {
 extension WebSocket {
     func connect(
         shouldEmitLifecycle: Bool = true,
-        shouldAllowFailover: Bool = true
+        shouldAllowFailover: Bool = true,
+        shouldCancelReceiver: Bool = true
     ) async throws {
         guard await !self.isConnected else { return }
         await updateConnectionState(.connecting)
         
-        await createNewTask(with: nil, shouldCancelReceiver: true)
+        await createNewTask(with: nil, shouldCancelReceiver: shouldCancelReceiver)
         guard let task else {
             throw Fulcrum.Error.transport(.connectionClosed(closeInformation.code, closeInformation.reason))
         }
@@ -441,6 +442,7 @@ extension WebSocket {
             } catch let urlError as URLError where urlError.code == .cancelled {
                 break
             } catch {
+                if Task.isCancelled { break }
                 emitLog(.warning, "receive.failed_reconnecting",
                         metadata: ["error": (error as NSError).localizedDescription])
                 do {

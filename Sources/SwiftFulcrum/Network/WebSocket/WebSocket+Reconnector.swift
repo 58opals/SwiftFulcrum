@@ -99,7 +99,11 @@ extension WebSocket {
                 do {
                     if shouldCancelReceiver { await webSocket.cancelReceiverTask() }
                     await webSocket.updateURL(candidateURL)
-                    try await webSocket.connect(shouldEmitLifecycle: false, shouldAllowFailover: false)
+                    try await webSocket.connect(
+                        shouldEmitLifecycle: false,
+                        shouldAllowFailover: false,
+                        shouldCancelReceiver: shouldCancelReceiver
+                    )
                     resetReconnectionAttemptCount()
                     await webSocket.emitLog(
                         .info,
