@@ -4,7 +4,7 @@ import Foundation
 
 actor Client {
     let id: UUID
-    let webSocket: WebSocket
+    let transport: Transportable
     var jsonRPC: JSONRPC
     let router: Router
     let logger: Log.Handler
@@ -18,27 +18,27 @@ actor Client {
     let rpcHeartbeatInterval: Duration = .seconds(25)
     let rpcHeartbeatTimeout: Duration = .seconds(10)
     
-    var connectionState: WebSocket.ConnectionState { get async { await webSocket.connectionState } }
+    var connectionState: Fulcrum.ConnectionState { get async { await transport.connectionState } }
     
-    init(webSocket: WebSocket, metrics: MetricsCollectable? = nil, logger: Log.Handler? = nil) {
+    init(transport: Transportable, metrics: MetricsCollectable? = nil, logger: Log.Handler? = nil) {
         self.id = .init()
-        self.webSocket = webSocket
+        self.transport = transport
         self.jsonRPC = .init()
         self.router = .init()
         self.subscriptionMethods = .init()
         self.logger = logger ?? Log.ConsoleHandler()
-        if let metrics { Task { await self.webSocket.updateMetrics(metrics) } }
-        Task { await self.webSocket.updateLogger(self.logger) }
+        if let metrics { Task { await self.transport.updateMetrics(metrics) } }
+        Task { await self.transport.updateLogger(self.logger) }
     }
     
     func start() async throws {
         guard receiveTask == nil else { return }
         
-        try await self.webSocket.connect()
+        try await self.transport.connect()
         self.receiveTask = Task { await self.startReceiving() }
         self.lifecycleTask = Task { [weak self] in
             guard let self else { return }
-            for await event in await self.webSocket.makeLifecycleEvents() {
+            for await event in await self.transport.makeLifecycleEvents() {
                 switch event {
                 case .connected(let isReconnect) where isReconnect:
                     await self.emitLog(.info, "client.autoresubscribe.begin")
@@ -53,9 +53,8 @@ actor Client {
     }
     
     func stop() async {
-        let closedError = await Fulcrum.Error.transport(
-            .connectionClosed(webSocket.closeInformation.code, webSocket.closeInformation.reason)
-        )
+        let info = await transport.closeInformation
+        let closedError = await Fulcrum.Error.transport(.connectionClosed(info.code, info.reason))
         await router.failAll(with: closedError)
         
         await stopRPCHeartbeat()              // move earlier
@@ -68,19 +67,19 @@ actor Client {
         await lifecycleTask?.value
         lifecycleTask = nil
         
-        await webSocket.disconnect(with: "Client.stop() called")
+        await transport.disconnect(with: "Client.stop() called")
     }
     
     func reconnect(with url: URL? = nil) async throws {
         receiveTask?.cancel()
         await receiveTask?.value
         receiveTask = nil
-        try await webSocket.reconnect(with: url)
+        try await transport.reconnect(with: url)
         receiveTask = Task { await self.startReceiving() }
     }
     
-    func makeConnectionStateEvents() async -> AsyncStream<WebSocket.ConnectionState> {
-        await webSocket.makeConnectionStateEvents()
+    func makeConnectionStateEvents() async -> AsyncStream<Fulcrum.ConnectionState> {
+        await transport.makeConnectionStateEvents()
     }
 }
 

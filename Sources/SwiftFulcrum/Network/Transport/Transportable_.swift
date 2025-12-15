@@ -6,7 +6,7 @@ protocol Transportable: Sendable {
     typealias CloseInformation = (code: URLSessionWebSocketTask.CloseCode, reason: String?)
     
     var connectionState: Fulcrum.ConnectionState { get async }
-    func closeInformation() async -> CloseInformation
+    var closeInformation: CloseInformation { get async }
     
     func connect() async throws
     func disconnect(with reason: String?) async

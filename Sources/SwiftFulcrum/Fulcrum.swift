@@ -48,18 +48,22 @@ public actor Fulcrum {
             }
         }()
         
-        self.client = .init(webSocket: webSocket, metrics: configuration.metrics, logger: configuration.logger)
+        self.client = .init(transport: WebSocketTransport(webSocket: webSocket),
+                            metrics: configuration.metrics,
+                            logger: configuration.logger)
         startConnectionStateObservation()
     }
     
     init(servers: [URL], configuration: Configuration = .init()) async throws {
         guard let server = servers.randomElement(), ["ws", "wss"].contains(server.scheme?.lowercased()) else { throw Error.transport(.setupFailed) }
         self.client = .init(
-            webSocket: WebSocket(
-                url: server,
-                configuration: configuration.convertToWebSocketConfiguration(),
-                reconnectConfiguration: configuration.reconnect.reconnectorConfiguration,
-                connectionTimeout: configuration.connectionTimeout
+            transport: WebSocketTransport(
+                webSocket: WebSocket(
+                    url: server,
+                    configuration: configuration.convertToWebSocketConfiguration(),
+                    reconnectConfiguration: configuration.reconnect.reconnectorConfiguration,
+                    connectionTimeout: configuration.connectionTimeout
+                )
             ),
             metrics: configuration.metrics,
             logger: configuration.logger

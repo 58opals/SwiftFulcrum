@@ -38,8 +38,8 @@ extension Fulcrum {
         connectionStateObservationTask = Task { [weak self] in
             guard let self else { return }
             let stream = await self.client.makeConnectionStateEvents()
-            for await webSocketState in stream {
-                await self.updateConnectionState(mapped(from: webSocketState))
+            for await state in stream {
+                await self.updateConnectionState(state)
             }
         }
     }
@@ -53,15 +53,5 @@ extension Fulcrum {
     func resetConnectionStateStream() async {
         sharedConnectionStateStream = nil
         connectionStateContinuation = nil
-    }
-    
-    func mapped(from webSocketState: WebSocket.ConnectionState) -> ConnectionState {
-        switch webSocketState {
-        case .idle: .idle
-        case .connecting: .connecting
-        case .connected: .connected
-        case .disconnected: .disconnected
-        case .reconnecting: .reconnecting
-        }
     }
 }
