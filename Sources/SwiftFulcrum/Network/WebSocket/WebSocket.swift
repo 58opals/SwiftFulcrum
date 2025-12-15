@@ -18,6 +18,9 @@ actor WebSocket {
     private var connectWaiters = [CheckedContinuation<Bool, Error>]()
     var isConnected: Bool { get async { await connectionStateTracker.state == .connected } }
     
+    private var nextOutgoingMessageIdentifier: UInt64 = 0
+    private var nextIncomingMessageIdentifier: UInt64 = 0
+    
     private var receivedTask: Task<Void, Never>?
     private var shouldAutomaticallyReceive = false
     
@@ -64,7 +67,6 @@ actor WebSocket {
 }
 
 // MARK: - Create & Cancel
-
 extension WebSocket {
     func updateURL(_ newURL: URL) { self.url = newURL }
     
@@ -101,7 +103,6 @@ extension WebSocket {
 }
 
 // MARK: - Connect & Disconnect & Reconnect
-
 extension WebSocket {
     func connect(
         shouldEmitLifecycle: Bool = true,
@@ -286,27 +287,55 @@ extension WebSocket {
 }
 
 // MARK: - Send
-
 extension WebSocket {
     func send(data: Data) async throws {
         guard let task else { throw Fulcrum.Error.transport(.connectionClosed(closeInformation.code, closeInformation.reason)) }
         
         let message = URLSessionWebSocketTask.Message.data(data)
+        let messageIdentifier = makeOutgoingMessageIdentifier()
+        emitLog(.info,
+                "send.begin",
+                metadata: [
+                    "messageIdentifier": String(messageIdentifier),
+                    "payloadType": "data",
+                    "byteCount": String(data.count)
+                ])
         try await task.send(message)
         await metrics?.didSend(url: url, message: message)
+        emitLog(.info,
+                "send.succeeded",
+                metadata: [
+                    "messageIdentifier": String(messageIdentifier),
+                    "payloadType": "data",
+                    "byteCount": String(data.count)
+                ])
     }
     
     func send(string: String) async throws {
         guard let task else { throw Fulcrum.Error.transport(.connectionClosed(closeInformation.code, closeInformation.reason)) }
         
         let message = URLSessionWebSocketTask.Message.string(string)
+        let messageIdentifier = makeOutgoingMessageIdentifier()
+        emitLog(.info,
+                "send.begin",
+                metadata: [
+                    "messageIdentifier": String(messageIdentifier),
+                    "payloadType": "string",
+                    "characterCount": String(string.count)
+                ])
         try await task.send(message)
         await metrics?.didSend(url: url, message: message)
+        emitLog(.info,
+                "send.succeeded",
+                metadata: [
+                    "messageIdentifier": String(messageIdentifier),
+                    "payloadType": "string",
+                    "characterCount": String(string.count)
+                ])
     }
 }
 
 // MARK: - Receive
-
 extension WebSocket {
     private func startReader() {
         guard receivedTask == nil else { return }
@@ -330,10 +359,16 @@ extension WebSocket {
         shouldAutomaticallyReceive = shouldEnableAutomaticResumption
         
         if let stream = sharedMessagesStream {
+            emitLog(.info,
+                    "message_stream.reuse",
+                    metadata: ["automaticResumption": String(shouldEnableAutomaticResumption)])
             if shouldEnableAutomaticResumption && receivedTask == nil { startReader() }
             return stream
         }
         
+        emitLog(.info,
+                "message_stream.create",
+                metadata: ["automaticResumption": String(shouldEnableAutomaticResumption)])
         let stream = AsyncThrowingStream<URLSessionWebSocketTask.Message, Swift.Error> { continuation in
             self.messageContinuation = continuation
             self.startReader()
@@ -349,8 +384,30 @@ extension WebSocket {
     
     private func resetMessageStreamAndReader() async {
         await cancelReceiverTask()
+        emitLog(.info, "message_stream.reset")
         sharedMessagesStream = nil
         messageContinuation = nil
+    }
+    
+    private func makeOutgoingMessageIdentifier() -> UInt64 {
+        nextOutgoingMessageIdentifier &+= 1
+        return nextOutgoingMessageIdentifier
+    }
+    
+    private func makeIncomingMessageIdentifier() -> UInt64 {
+        nextIncomingMessageIdentifier &+= 1
+        return nextIncomingMessageIdentifier
+    }
+    
+    private func payloadMetadata(for message: URLSessionWebSocketTask.Message) -> (type: String, length: Int) {
+        switch message {
+        case .data(let data):
+            return ("data", data.count)
+        case .string(let string):
+            return ("string", string.count)
+        @unknown default:
+            return ("unknown", 0)
+        }
     }
     
     private func receiveContinuously() async {
@@ -365,6 +422,14 @@ extension WebSocket {
                 } onCancel: {
                     task.cancel(with: .goingAway, reason: nil)
                 }
+                let metadata = payloadMetadata(for: message)
+                emitLog(.info,
+                        "receive.message",
+                        metadata: [
+                            "messageIdentifier": String(makeIncomingMessageIdentifier()),
+                            "payloadType": metadata.type,
+                            "length": String(metadata.length)
+                        ])
                 switch messageContinuation?.yield(with: .success(message)) {
                 case .some(.enqueued): break
                 default:
@@ -381,6 +446,7 @@ extension WebSocket {
                 do {
                     await updateConnectionState(.reconnecting)
                     try await reconnector.attemptReconnection(for: self, shouldCancelReceiver: false)
+                    emitLog(.info, "receive.reconnected")
                     await updateConnectionState(.connected)
                     continue
                 } catch {
