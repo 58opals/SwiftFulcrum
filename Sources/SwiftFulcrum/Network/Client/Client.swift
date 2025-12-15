@@ -56,16 +56,17 @@ actor Client {
         let closedError = await Fulcrum.Error.transport(
             .connectionClosed(webSocket.closeInformation.code, webSocket.closeInformation.reason)
         )
+        await router.failAll(with: closedError)
         
-        await self.router.failAll(with: closedError)
+        await stopRPCHeartbeat()              // move earlier
         
         receiveTask?.cancel()
         await receiveTask?.value
         receiveTask = nil
+        
         lifecycleTask?.cancel()
         await lifecycleTask?.value
         lifecycleTask = nil
-        await stopRPCHeartbeat()
         
         await webSocket.disconnect(with: "Client.stop() called")
     }

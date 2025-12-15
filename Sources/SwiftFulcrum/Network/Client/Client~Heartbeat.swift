@@ -7,15 +7,27 @@ extension Client {
         rpcHeartbeatTask?.cancel()
         rpcHeartbeatTask = Task { [weak self] in
             guard let self else { return }
+            
             while !Task.isCancelled {
                 do {
                     try await Task.sleep(for: rpcHeartbeatInterval)
+                    try Task.checkCancellation()
+                    
+                    let (_, _): (UUID, Response.Result.Blockchain.Headers.GetTip) =
+                    try await self.call(
+                        method: .blockchain(.headers(.getTip)),
+                        options: .init(timeout: rpcHeartbeatTimeout)
+                    )
+                } catch is CancellationError {
+                    // Expected during stop(); do not treat as timeout.
+                    break
+                } catch {
+                    // If we were cancelled while handling an error, bail out.
                     if Task.isCancelled { break }
                     
-                    let (_, _): (UUID, Response.Result.Blockchain.Headers.GetTip) = try await self.call(method: .blockchain(.headers(.getTip)), options: .init(timeout: rpcHeartbeatTimeout))
-                } catch {
                     await self.emitLog(.warning, "client.heartbeat.rpc_timeout",
-                                       metadata: ["error" : error.localizedDescription])
+                                       metadata: ["error": error.localizedDescription])
+                    
                     do {
                         try await self.reconnect()
                         await self.resubscribeStoredMethods()

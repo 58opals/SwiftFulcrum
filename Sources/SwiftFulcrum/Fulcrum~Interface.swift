@@ -14,10 +14,11 @@ extension Fulcrum {
         responseType: RegularResponseResult.Type = RegularResponseResult.self,
         options: Fulcrum.Call.Options = .init()
     ) async throws -> RPCResponse<RegularResponseResult, Never> {
-        try await ensureClientIsReadyForRequests()
         if method.isSubscription {
             throw Fulcrum.Error.client(.protocolMismatch("submit() cannot be used with subscription methods. Use subscribe(...)."))
         }
+        
+        try await ensureClientIsReadyForRequests(within: options.timeout)
         
         do {
             let (id, result): (UUID, RegularResponseResult) = try await client.call(method: method, options: options.clientOptions)
@@ -40,12 +41,13 @@ extension Fulcrum {
         notificationType: Notification.Type = Notification.self,
         options: Fulcrum.Call.Options = .init()
     ) async throws -> RPCResponse<Initial, Notification> {
-        try await ensureClientIsReadyForRequests()
         if !method.isSubscription {
             throw Fulcrum.Error.client(
                 .protocolMismatch("subscribe() requires subscription methods. Use submit(...) for unary calls.")
             )
         }
+        
+        try await ensureClientIsReadyForRequests(within: options.timeout)
         
         let token = options.cancellation?.token ?? Client.Call.Token()
         let effectiveOptions = Client.Call.Options(timeout: options.timeout, token: token)
@@ -65,7 +67,18 @@ extension Fulcrum {
         }
     }
     
-    private func ensureClientIsReadyForRequests() async throws {
+    private func ensureClientIsReadyForRequests(within timeout: Duration?) async throws {
+        guard let timeout else {
+            try await prepareClientForRequests()
+            return
+        }
+        
+        try await executeWithTimeout(limit: timeout) {
+            try await self.prepareClientForRequests()
+        }
+    }
+    
+    private func prepareClientForRequests() async throws {
         if !isRunning {
             try await start()
         }
@@ -79,6 +92,27 @@ extension Fulcrum {
             try await client.start()
         case .disconnected:
             try await client.reconnect()
+        }
+    }
+    
+    private func executeWithTimeout<T: Sendable>(
+        limit: Duration,
+        operation: @Sendable @escaping () async throws -> T
+    ) async throws -> T {
+        try await withThrowingTaskGroup(of: T.self) { group in
+            group.addTask { try await operation() }
+            
+            group.addTask {
+                try await Task.sleep(for: limit)
+                throw Fulcrum.Error.client(.timeout(limit))
+            }
+            
+            guard let result = try await group.next() else {
+                throw CancellationError()
+            }
+            
+            group.cancelAll()
+            return result
         }
     }
 }
