@@ -41,16 +41,20 @@ struct WebSocketReconnectorTests {
             jitterRange: 0.8 ... 1.3
         )
         
-        var jitterValues = [configuration.jitterRange.lowerBound, configuration.jitterRange.upperBound]
-        
-        let reconnector = WebSocket.Reconnector(
+        let minimumJitterReconnector = WebSocket.Reconnector(
             configuration,
             network: .mainnet,
-            jitter: { _ in jitterValues.removeFirst() }
+            jitter: { _ in configuration.jitterRange.lowerBound }
         )
         
-        let minimumDelay = await reconnector.makeDelay(for: 1)
-        let maximumDelay = await reconnector.makeDelay(for: 2)
+        let maximumJitterReconnector = WebSocket.Reconnector(
+            configuration,
+            network: .mainnet,
+            jitter: { _ in configuration.jitterRange.upperBound }
+        )
+        
+        let minimumDelay = await minimumJitterReconnector.makeDelay(for: 1)
+        let maximumDelay = await maximumJitterReconnector.makeDelay(for: 2)
         
         #expect(minimumDelay == .seconds(2.4))
         #expect(maximumDelay == .seconds(7.8))
