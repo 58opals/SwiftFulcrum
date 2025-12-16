@@ -25,7 +25,12 @@ extension Client {
         guard let metrics else { return }
         
         let transportSnapshot = await transport.makeDiagnosticsSnapshot()
-        let inflightCount = inflightUnaryCallCount ?? await router.makeInflightUnaryCallCount()
+        let inflightCount: Int
+        if let inflightUnaryCallCount {
+            inflightCount = inflightUnaryCallCount
+        } else {
+            inflightCount = await router.makeInflightUnaryCallCount()
+        }
         let snapshot = Fulcrum.Diagnostics.Snapshot(
             reconnectAttempts: transportSnapshot.reconnectAttempts,
             reconnectSuccesses: transportSnapshot.reconnectSuccesses,

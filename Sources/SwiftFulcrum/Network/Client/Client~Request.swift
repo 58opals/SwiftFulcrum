@@ -21,18 +21,30 @@ extension Client {
                 Task {
                     guard let self else { return }
                     let inflightCount = await self.router.cancel(identifier: .uuid(id))
-                    await self.publishDiagnosticsSnapshot(
-                        inflightUnaryCallCount: inflightCount ?? await self.router.makeInflightUnaryCallCount()
-                    )
+                    
+                    let inflightUnaryCallCount: Int
+                    if let inflightCount {
+                        inflightUnaryCallCount = inflightCount
+                    } else {
+                        inflightUnaryCallCount = await self.router.makeInflightUnaryCallCount()
+                    }
+                    
+                    await self.publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightUnaryCallCount)
                 }
             }
         }
         
         if let token = options.token, await token.isCancelled {
             let inflightCount = await router.cancel(identifier: .uuid(id))
-            await publishDiagnosticsSnapshot(
-                inflightUnaryCallCount: inflightCount ?? await router.makeInflightUnaryCallCount()
-            )
+            
+            let inflightUnaryCallCount: Int
+            if let inflightCount {
+                inflightUnaryCallCount = inflightCount
+            } else {
+                inflightUnaryCallCount = await self.router.makeInflightUnaryCallCount()
+            }
+            
+            await publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightUnaryCallCount)
             throw Fulcrum.Error.client(.cancelled)
         }
         
@@ -52,18 +64,30 @@ extension Client {
                             try await send(request: request)
                         } catch {
                             let inflightCount = await router.cancel(identifier: .uuid(id), error: error)
-                            await publishDiagnosticsSnapshot(
-                                inflightUnaryCallCount: inflightCount ?? await router.makeInflightUnaryCallCount()
-                            )
+                            
+                            let inflightUnaryCallCount: Int
+                            if let inflightCount {
+                                inflightUnaryCallCount = inflightCount
+                            } else {
+                                inflightUnaryCallCount = await self.router.makeInflightUnaryCallCount()
+                            }
+                            
+                            await publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightUnaryCallCount)
                         }
                     }
                 }
             } onCancel: {
                 Task {
                     let inflightCount = await self.router.cancel(identifier: .uuid(id))
-                    await self.publishDiagnosticsSnapshot(
-                        inflightUnaryCallCount: inflightCount ?? await self.router.makeInflightUnaryCallCount()
-                    )
+                    
+                    let inflightUnaryCallCount: Int
+                    if let inflightCount {
+                        inflightUnaryCallCount = inflightCount
+                    } else {
+                        inflightUnaryCallCount = await self.router.makeInflightUnaryCallCount()
+                    }
+                    
+                    await self.publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightUnaryCallCount)
                 }
             }
         }
@@ -77,9 +101,15 @@ extension Client {
                     try await Task.sleep(for: limit)
                     callTask.cancel()
                     let inflightCount = await self.router.cancel(identifier: .uuid(id))
-                    await self.publishDiagnosticsSnapshot(
-                        inflightUnaryCallCount: inflightCount ?? await self.router.makeInflightUnaryCallCount()
-                    )
+                    
+                    let inflightUnaryCallCount: Int
+                    if let inflightCount {
+                        inflightUnaryCallCount = inflightCount
+                    } else {
+                        inflightUnaryCallCount = await self.router.makeInflightUnaryCallCount()
+                    }
+                    
+                    await self.publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightUnaryCallCount)
                     throw Fulcrum.Error.client(.timeout(limit))
                 }
                 let value = try await group.next()!
@@ -121,12 +151,12 @@ extension Client {
                 subscriptionMethods[subscriptionKey] = method
                 
                 emitLog(.info,
-                              "subscription_registry.added",
-                              metadata: [
-                                "identifier": subscriptionKey.identifier ?? "",
-                                "method": method.path,
-                                "subscriptionCount": String(subscriptionMethods.count)
-                              ]
+                        "subscription_registry.added",
+                        metadata: [
+                            "identifier": subscriptionKey.identifier ?? "",
+                            "method": method.path,
+                            "subscriptionCount": String(subscriptionMethods.count)
+                        ]
                 )
                 await publishSubscriptionRegistry()
                 await publishDiagnosticsSnapshot()
@@ -136,8 +166,16 @@ extension Client {
                     
                     Task {
                         let inflightCount = await self.router.cancel(identifier: .uuid(id))
+                        
+                        let inflightUnaryCallCount: Int
+                        if let inflightCount {
+                            inflightUnaryCallCount = inflightCount
+                        } else {
+                            inflightUnaryCallCount = await self.router.makeInflightUnaryCallCount()
+                        }
+                        
                         await self.router.cancel(identifier: .string(subscriptionKey.string))
-                        await self.publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightCount ?? await self.router.makeInflightUnaryCallCount())
+                        await self.publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightUnaryCallCount)
                         await self.removeStoredSubscriptionMethod(for: subscriptionKey)
                         
                         if let method = await self.makeUnsubscribeMethod(for: subscriptionKey) {
@@ -161,8 +199,16 @@ extension Client {
                             try await send(request: request)
                         } catch {
                             let inflightCount = await router.cancel(identifier: .uuid(id), error: error)
+                            
+                            let inflightUnaryCallCount: Int
+                            if let inflightCount {
+                                inflightUnaryCallCount = inflightCount
+                            } else {
+                                inflightUnaryCallCount = await self.router.makeInflightUnaryCallCount()
+                            }
+                            
                             await router.cancel(identifier: .string(subscriptionKey.string), error: error)
-                            await publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightCount ?? await router.makeInflightUnaryCallCount())
+                            await publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightUnaryCallCount)
                         }
                     }
                 }.decode(
@@ -177,8 +223,16 @@ extension Client {
             } onCancel: {
                 Task {
                     let inflightCount = await self.router.cancel(identifier: .uuid(id))
+                    
+                    let inflightUnaryCallCount: Int
+                    if let inflightCount {
+                        inflightUnaryCallCount = inflightCount
+                    } else {
+                        inflightUnaryCallCount = await self.router.makeInflightUnaryCallCount()
+                    }
+                    
                     await self.router.cancel(identifier: .string(subscriptionKey.string))
-                    await self.publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightCount ?? await self.router.makeInflightUnaryCallCount())
+                    await self.publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightUnaryCallCount)
                 }
             }
         }
@@ -190,8 +244,16 @@ extension Client {
                 Task {
                     guard let self else { return }
                     let inflightCount = await self.router.cancel(identifier: .uuid(idCopy))
+                    
+                    let inflightUnaryCallCount: Int
+                    if let inflightCount {
+                        inflightUnaryCallCount = inflightCount
+                    } else {
+                        inflightUnaryCallCount = await self.router.makeInflightUnaryCallCount()
+                    }
+                    
                     await self.router.cancel(identifier: .string(keyCopy))
-                    await self.publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightCount ?? await self.router.makeInflightUnaryCallCount())
+                    await self.publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightUnaryCallCount)
                 }
             }
         }
