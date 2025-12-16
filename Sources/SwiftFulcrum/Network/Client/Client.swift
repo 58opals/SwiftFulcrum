@@ -17,12 +17,16 @@ actor Client {
     private var diagnosticsStateTask: Task<Void, Never>?
     
     var rpcHeartbeatTask: Task<Void, Never>?
-    let rpcHeartbeatInterval: Duration = .seconds(25)
-    let rpcHeartbeatTimeout: Duration = .seconds(10)
+    let rpcHeartbeatInterval: Duration
+    let rpcHeartbeatTimeout: Duration
     
     var connectionState: Fulcrum.ConnectionState { get async { await transport.connectionState } }
     
-    init(transport: Transportable, metrics: MetricsCollectable? = nil, logger: Log.Handler? = nil) {
+    init(transport: Transportable,
+         metrics: MetricsCollectable? = nil,
+         logger: Log.Handler? = nil,
+         heartbeatInterval: Duration = .seconds(25),
+         heartbeatTimeout: Duration = .seconds(10)) {
         self.id = .init()
         self.transport = transport
         self.jsonRPC = .init()
@@ -30,6 +34,8 @@ actor Client {
         self.metrics = metrics
         self.subscriptionMethods = .init()
         self.logger = logger ?? Log.ConsoleHandler()
+        self.rpcHeartbeatInterval = heartbeatInterval
+        self.rpcHeartbeatTimeout = heartbeatTimeout
         if let metrics { Task { await self.transport.updateMetrics(metrics) } }
         Task { await self.transport.updateLogger(self.logger) }
     }

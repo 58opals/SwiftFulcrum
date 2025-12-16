@@ -71,6 +71,11 @@ public actor Fulcrum {
         startConnectionStateObservation()
     }
     
+    init(client: Client) async {
+        self.client = client
+        startConnectionStateObservation()
+    }
+    
     /// Establishes the WebSocket connection and prepares stream resubscription.
     ///
     /// This call is idempotent and safe to invoke from concurrent tasks. It suspends until the

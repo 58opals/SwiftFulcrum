@@ -50,7 +50,9 @@ actor TestTransport: Transportable {
     func reconnect(with url: URL?) async throws {
         _ = url
         updateState(to: .reconnecting)
+        try? await Task.sleep(for: .milliseconds(10))
         lifecycleContinuation?.yield(.connected(isReconnect: true))
+        try? await Task.sleep(for: .milliseconds(10))
         updateState(to: .connected)
     }
     

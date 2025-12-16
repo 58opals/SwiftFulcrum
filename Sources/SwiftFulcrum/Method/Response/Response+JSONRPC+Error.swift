@@ -14,3 +14,5 @@ extension Response.JSONRPC {
         case cannotIdentifyResponseType(UUID?)
     }
 }
+
+extension Response.JSONRPC.Error: Sendable {}

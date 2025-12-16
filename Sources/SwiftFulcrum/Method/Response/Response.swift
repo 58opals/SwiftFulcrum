@@ -39,3 +39,6 @@ extension Response {
 }
 
 extension Response.Identifier: Hashable, Sendable {}
+extension Response.Regular: Sendable where Result: Sendable {}
+extension Response.Subscription: Sendable where Result: Sendable {}
+extension Response.Kind: Sendable where Result: Sendable {}

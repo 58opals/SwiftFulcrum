@@ -4,7 +4,7 @@ import Foundation
 
 extension Response {
     public struct JSONRPC {
-        struct IdentifierExtractable: Decodable {
+        struct IdentifierExtractable: Decodable, Sendable {
             let id: UUID?
             let method: String?
         }
@@ -44,6 +44,9 @@ extension Response {
         }
     }
 }
+
+extension Response.JSONRPC: Sendable {}
+extension Response.JSONRPC.Generic: Sendable where Result: Sendable {}
 
 extension Response.JSONRPC {
     static func extractIdentifier(from data: Data) throws -> Response.Identifier {
