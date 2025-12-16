@@ -7,12 +7,14 @@ actor Client {
     let transport: Transportable
     var jsonRPC: JSONRPC
     let router: Router
+    let metrics: MetricsCollectable?
     let logger: Log.Handler
     
     var subscriptionMethods: [SubscriptionKey: Method]
     
     private var receiveTask: Task<Void, Never>?
     private var lifecycleTask: Task<Void, Never>?
+    private var diagnosticsStateTask: Task<Void, Never>?
     
     var rpcHeartbeatTask: Task<Void, Never>?
     let rpcHeartbeatInterval: Duration = .seconds(25)
@@ -25,6 +27,7 @@ actor Client {
         self.transport = transport
         self.jsonRPC = .init()
         self.router = .init()
+        self.metrics = metrics
         self.subscriptionMethods = .init()
         self.logger = logger ?? Log.ConsoleHandler()
         if let metrics { Task { await self.transport.updateMetrics(metrics) } }
@@ -39,6 +42,7 @@ actor Client {
         self.lifecycleTask = Task { [weak self] in
             guard let self else { return }
             for await event in await self.transport.makeLifecycleEvents() {
+                await self.publishDiagnosticsSnapshot()
                 switch event {
                 case .connected(let isReconnect) where isReconnect:
                     await self.emitLog(.info, "client.autoresubscribe.begin")
@@ -49,15 +53,25 @@ actor Client {
             }
         }
         
+        self.diagnosticsStateTask = Task { [weak self] in
+            guard let self else { return }
+            let stream = await self.transport.makeConnectionStateEvents()
+            for await _ in stream {
+                await self.publishDiagnosticsSnapshot()
+            }
+        }
+        
         startRPCHeartbeat()
+        await publishDiagnosticsSnapshot()
     }
     
     func stop() async {
         let info = await transport.closeInformation
         let closedError = await Fulcrum.Error.transport(.connectionClosed(info.code, info.reason))
-        await router.failAll(with: closedError)
+        let inflightCount = await router.failAll(with: closedError)
+        await publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightCount)
         
-        await stopRPCHeartbeat()              // move earlier
+        await stopRPCHeartbeat()
         
         receiveTask?.cancel()
         await receiveTask?.value
@@ -66,6 +80,10 @@ actor Client {
         lifecycleTask?.cancel()
         await lifecycleTask?.value
         lifecycleTask = nil
+        
+        diagnosticsStateTask?.cancel()
+        await diagnosticsStateTask?.value
+        diagnosticsStateTask = nil
         
         await transport.disconnect(with: "Client.stop() called")
     }
@@ -76,6 +94,7 @@ actor Client {
         receiveTask = nil
         try await transport.reconnect(with: url)
         receiveTask = Task { await self.startReceiving() }
+        await publishDiagnosticsSnapshot()
     }
     
     func makeConnectionStateEvents() async -> AsyncStream<Fulcrum.ConnectionState> {

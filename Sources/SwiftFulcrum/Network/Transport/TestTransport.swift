@@ -5,6 +5,7 @@ import Foundation
 actor TestTransport: Transportable {
     private var currentState: Fulcrum.ConnectionState = .idle
     private var currentCloseInformation: CloseInformation = (.invalid, nil)
+    private var currentURL: URL = URL(string: "wss://example.invalid")!
     
     private var sharedMessageStream: AsyncThrowingStream<URLSessionWebSocketTask.Message, Swift.Error>?
     private var messageContinuation: AsyncThrowingStream<URLSessionWebSocketTask.Message, Swift.Error>.Continuation?
@@ -19,8 +20,8 @@ actor TestTransport: Transportable {
     private var outgoingContinuation: AsyncStream<URLSessionWebSocketTask.Message>.Continuation?
     
     var connectionState: Fulcrum.ConnectionState { currentState }
-    
     var closeInformation: CloseInformation { currentCloseInformation }
+    var endpoint: URL { currentURL }
     
     var outgoingMessages: AsyncStream<URLSessionWebSocketTask.Message> {
         if let sharedOutgoingMessages { return sharedOutgoingMessages }
@@ -96,6 +97,10 @@ actor TestTransport: Transportable {
         }
         sharedConnectionStateStream = stream
         return stream
+    }
+    
+    func makeDiagnosticsSnapshot() async -> Fulcrum.Diagnostics.TransportSnapshot {
+        .init(reconnectAttempts: 0, reconnectSuccesses: 0)
     }
     
     func updateMetrics(_ collector: MetricsCollectable?) async { _ = collector }

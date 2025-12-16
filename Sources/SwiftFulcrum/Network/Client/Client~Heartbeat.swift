@@ -36,7 +36,8 @@ extension Client {
                     } catch is CancellationError {
                         break
                     } catch {
-                        await self.router.failUnaries(with: Fulcrum.Error.transport(.heartbeatTimeout))
+                        let inflightCount = await self.router.failUnaries(with: Fulcrum.Error.transport(.heartbeatTimeout))
+                        await self.publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightCount)
                         break
                     }
                 }

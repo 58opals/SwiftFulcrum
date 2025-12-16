@@ -16,7 +16,7 @@ extension Client {
     func startReceiving() async {
         do {
             for try await message in await transport.makeMessageStream() {
-                await handleMessage(message)
+                if let inflightCount = await handleMessage(message) { await publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightCount) }
             }
         } catch {
             emitLog(.warning,
@@ -26,7 +26,8 @@ extension Client {
             let info = await transport.closeInformation
             let closedError = await Fulcrum.Error.transport(.connectionClosed(info.code, info.reason))
             
-            await self.router.failUnaries(with: closedError)
+            let inflightCount = await self.router.failUnaries(with: closedError)
+            await publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightCount)
         }
     }
 }

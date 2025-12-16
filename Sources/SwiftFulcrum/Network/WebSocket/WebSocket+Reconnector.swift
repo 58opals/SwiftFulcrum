@@ -90,12 +90,17 @@ extension WebSocket {
                     try await sleep(delay)
                 }
                 
+                await webSocket.recordReconnectAttempt()
+                let attemptSnapshot = await webSocket.makeDiagnosticsSnapshot()
+                
                 reconnectionAttempts += 1
                 await webSocket.emitLog(
                     .info,
                     "reconnect.attempt",
                     metadata: [
                         "attempt": String(reconnectionAttempts),
+                        "attemptTotal": String(attemptSnapshot.reconnectAttempts),
+                        "successTotal": String(attemptSnapshot.reconnectSuccesses),
                         "phase": isInitialConnection ? "initial" : "reconnect",
                         "unlimited": String(configuration.isUnlimited),
                         "url": candidateURL.absoluteString
@@ -113,12 +118,16 @@ extension WebSocket {
                         shouldAllowFailover: false,
                         shouldCancelReceiver: shouldCancelReceiver
                     )
+                    await webSocket.recordReconnectSuccess()
+                    let successSnapshot = await webSocket.makeDiagnosticsSnapshot()
                     resetReconnectionAttemptCount()
                     await webSocket.emitLog(
                         .info,
                         "reconnect.succeeded",
                         metadata: [
+                            "attemptTotal": String(successSnapshot.reconnectAttempts),
                             "phase": isInitialConnection ? "initial" : "reconnect",
+                            "successTotal": String(successSnapshot.reconnectSuccesses),
                             "url": candidateURL.absoluteString
                         ],
                         file: "",
@@ -133,8 +142,10 @@ extension WebSocket {
                         "reconnect.failed",
                         metadata: [
                             "attempt": String(reconnectionAttempts),
+                            "attemptTotal": String(attemptSnapshot.reconnectAttempts),
                             "error": (error as NSError).localizedDescription,
                             "phase": isInitialConnection ? "initial" : "reconnect",
+                            "successTotal": String(attemptSnapshot.reconnectSuccesses),
                             "url": candidateURL.absoluteString
                         ],
                         file: "",
@@ -154,6 +165,7 @@ extension WebSocket {
                 "reconnect.max_attempts_reached",
                 metadata: [
                     "phase": isInitialConnection ? "initial" : "reconnect",
+                    "attemptTotal": String(await webSocket.makeDiagnosticsSnapshot().reconnectAttempts),
                     "url": currentURL.absoluteString
                 ],
                 file: "",

@@ -10,8 +10,8 @@ actor WebSocketTransport: Transportable {
     }
     
     var connectionState: Fulcrum.ConnectionState { get async { mapConnectionState(await webSocket.connectionState) } }
-    
     var closeInformation: CloseInformation { get async { await webSocket.closeInformation } }
+    var endpoint: URL { get async { await webSocket.url } }
     
     func connect() async throws { try await webSocket.connect() }
     
@@ -59,6 +59,8 @@ actor WebSocketTransport: Transportable {
             continuation.onTermination = { @Sendable _ in task.cancel() }
         }
     }
+    
+    func makeDiagnosticsSnapshot() async -> Fulcrum.Diagnostics.TransportSnapshot { await webSocket.makeDiagnosticsSnapshot() }
     
     func updateMetrics(_ collector: MetricsCollectable?) async { await webSocket.updateMetrics(collector) }
     

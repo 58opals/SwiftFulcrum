@@ -7,6 +7,7 @@ protocol Transportable: Sendable {
     
     var connectionState: Fulcrum.ConnectionState { get async }
     var closeInformation: CloseInformation { get async }
+    var endpoint: URL { get async }
     
     func connect() async throws
     func disconnect(with reason: String?) async
@@ -18,6 +19,7 @@ protocol Transportable: Sendable {
     func makeMessageStream() async -> AsyncThrowingStream<URLSessionWebSocketTask.Message, Swift.Error>
     func makeLifecycleEvents() async -> AsyncStream<FulcrumTransportLifecycle.Event>
     func makeConnectionStateEvents() async -> AsyncStream<Fulcrum.ConnectionState>
+    func makeDiagnosticsSnapshot() async -> Fulcrum.Diagnostics.TransportSnapshot
     
     func updateMetrics(_ collector: MetricsCollectable?) async
     func updateLogger(_ handler: Log.Handler?) async

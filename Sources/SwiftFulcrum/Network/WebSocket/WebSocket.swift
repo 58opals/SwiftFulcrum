@@ -14,6 +14,9 @@ actor WebSocket {
     let reconnector: Reconnector
     var logger: Log.Handler
     
+    private var reconnectAttemptCount = 0
+    private var reconnectSuccessCount = 0
+    
     private var isConnectionInFlight = false
     private var connectWaiters = [CheckedContinuation<Bool, Error>]()
     var isConnected: Bool { get async { await connectionStateTracker.state == .connected } }
@@ -106,6 +109,17 @@ extension WebSocket {
     
     func updateConnectionState(_ newState: ConnectionState) async {
         await connectionStateTracker.update(to: newState)
+    }
+    
+    func recordReconnectAttempt() { reconnectAttemptCount &+= 1 }
+    
+    func recordReconnectSuccess() { reconnectSuccessCount &+= 1 }
+    
+    func makeDiagnosticsSnapshot() -> Fulcrum.Diagnostics.TransportSnapshot {
+        .init(
+            reconnectAttempts: reconnectAttemptCount,
+            reconnectSuccesses: reconnectSuccessCount
+        )
     }
 }
 
