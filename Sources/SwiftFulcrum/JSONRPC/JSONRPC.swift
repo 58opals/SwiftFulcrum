@@ -11,14 +11,15 @@ struct JSONRPC {
 
 extension JSONRPC {
     enum Coder {
-        static let encoder: JSONEncoder = {
+        static var encoder: JSONEncoder {
             let encoder = JSONEncoder()
             return encoder
-        }()
-        static let decoder: JSONDecoder = {
+        }
+        
+        static var decoder: JSONDecoder {
             let decoder = JSONDecoder()
             return decoder
-        }()
+        }
     }
 }
 

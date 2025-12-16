@@ -12,11 +12,11 @@ extension Client {
 }
 
 extension Client: Hashable {
-    nonisolated public func hash(into hasher: inout Hasher) {
+    nonisolated func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }
     
-    public static func == (lhs: Client, rhs: Client) -> Bool {
+    static func == (lhs: Client, rhs: Client) -> Bool {
         lhs.id == rhs.id
     }
 }

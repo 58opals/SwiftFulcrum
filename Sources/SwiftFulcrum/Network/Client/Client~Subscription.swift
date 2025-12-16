@@ -36,8 +36,19 @@ extension Client {
 }
 
 extension Client {
-    func removeStoredSubscriptionMethod(for key: SubscriptionKey) {
-        subscriptionMethods.removeValue(forKey: key)
+    func removeStoredSubscriptionMethod(for key: SubscriptionKey) async {
+        if subscriptionMethods.removeValue(forKey: key) != nil {
+            emitLog(.info,
+                    "subscription_registry.removed",
+                    metadata: [
+                        "identifier": key.identifier ?? "",
+                        "method": key.methodPath,
+                        "subscriptionCount": String(subscriptionMethods.count)
+                    ]
+            )
+            await publishSubscriptionRegistry()
+            await publishDiagnosticsSnapshot()
+        }
     }
 }
 

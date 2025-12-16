@@ -3,24 +3,24 @@
 import Foundation
 
 extension WebSocket {
-    public actor Reconnector {
-        public struct Configuration: Sendable {
-            public var maximumReconnectionAttempts: Int
-            public var reconnectionDelay: TimeInterval
-            public var maximumDelay: TimeInterval
-            public var jitterRange: ClosedRange<TimeInterval>
+    actor Reconnector {
+        struct Configuration: Sendable {
+            var maximumReconnectionAttempts: Int
+            var reconnectionDelay: TimeInterval
+            var maximumDelay: TimeInterval
+            var jitterRange: ClosedRange<TimeInterval>
             
-            public var isUnlimited: Bool { maximumReconnectionAttempts <= 0 }
+            var isUnlimited: Bool { maximumReconnectionAttempts <= 0 }
             
-            public static let basic = Self(maximumReconnectionAttempts: 1,
-                                           reconnectionDelay: 1.5,
-                                           maximumDelay: 30,
-                                           jitterRange: 0.8 ... 1.3)
+            static let basic = Self(maximumReconnectionAttempts: 1,
+                                    reconnectionDelay: 1.5,
+                                    maximumDelay: 30,
+                                    jitterRange: 0.8 ... 1.3)
             
-            public init(maximumReconnectionAttempts: Int,
-                        reconnectionDelay: TimeInterval,
-                        maximumDelay: TimeInterval,
-                        jitterRange: ClosedRange<TimeInterval>) {
+            init(maximumReconnectionAttempts: Int,
+                 reconnectionDelay: TimeInterval,
+                 maximumDelay: TimeInterval,
+                 jitterRange: ClosedRange<TimeInterval>) {
                 self.maximumReconnectionAttempts = maximumReconnectionAttempts
                 self.reconnectionDelay = reconnectionDelay
                 self.maximumDelay = maximumDelay
@@ -34,12 +34,23 @@ extension WebSocket {
         private var serverCatalog: [URL]
         private var nextServerIndex: Int
         
-        public init(_ configuration: Configuration, reconnectionAttempts: Int = 0, network: Fulcrum.Configuration.Network) {
+        private let sleep: @Sendable (Duration) async throws -> Void
+        private let jitter: @Sendable (ClosedRange<Double>) -> Double
+        
+        var attemptCount: Int { reconnectionAttempts }
+        
+        init(_ configuration: Configuration,
+             reconnectionAttempts: Int = 0,
+             network: Fulcrum.Configuration.Network,
+             sleep: @escaping @Sendable (Duration) async throws -> Void = { duration in try await Task.sleep(for: duration) },
+             jitter: @escaping @Sendable (ClosedRange<Double>) -> Double = { range in .random(in: range) }) {
             self.configuration = configuration
             self.reconnectionAttempts = reconnectionAttempts
             self.network = network
             self.serverCatalog = .init()
             self.nextServerIndex = 0
+            self.sleep = sleep
+            self.jitter = jitter
         }
         
         func resetReconnectionAttemptCount() {
@@ -57,7 +68,8 @@ extension WebSocket {
             var rotation = try await buildCandidateRotation(preferredURL: overrideURL, currentURL: currentURL)
             var rotationCursor = 0
             
-            while configuration.isUnlimited || reconnectionAttempts < configuration.maximumReconnectionAttempts {
+            let maximumAttempts = configuration.isUnlimited ? Int.max : max(configuration.maximumReconnectionAttempts, rotation.count)
+            while reconnectionAttempts < maximumAttempts {
                 let candidateURL: URL
                 
                 if let overrideURL {
@@ -74,11 +86,12 @@ extension WebSocket {
                     nextServerIndex = (index + 1) % max(serverCatalog.count, 1)
                 }
                 
-                if reconnectionAttempts > 0 {
-                    let base = pow(2.0, Double(reconnectionAttempts)) * configuration.reconnectionDelay
-                    let delay = min(base, configuration.maximumDelay) * .random(in: configuration.jitterRange)
-                    try await Task.sleep(for: .seconds(delay))
+                if let delay = makeDelay(for: reconnectionAttempts) {
+                    try await sleep(delay)
                 }
+                
+                await webSocket.recordReconnectAttempt()
+                let attemptSnapshot = await webSocket.makeDiagnosticsSnapshot()
                 
                 reconnectionAttempts += 1
                 await webSocket.emitLog(
@@ -86,6 +99,8 @@ extension WebSocket {
                     "reconnect.attempt",
                     metadata: [
                         "attempt": String(reconnectionAttempts),
+                        "attemptTotal": String(attemptSnapshot.reconnectAttempts),
+                        "successTotal": String(attemptSnapshot.reconnectSuccesses),
                         "phase": isInitialConnection ? "initial" : "reconnect",
                         "unlimited": String(configuration.isUnlimited),
                         "url": candidateURL.absoluteString
@@ -98,13 +113,21 @@ extension WebSocket {
                 do {
                     if shouldCancelReceiver { await webSocket.cancelReceiverTask() }
                     await webSocket.updateURL(candidateURL)
-                    try await webSocket.connect(shouldEmitLifecycle: false, shouldAllowFailover: false)
+                    try await webSocket.connect(
+                        shouldEmitLifecycle: false,
+                        shouldAllowFailover: false,
+                        shouldCancelReceiver: shouldCancelReceiver
+                    )
+                    await webSocket.recordReconnectSuccess()
+                    let successSnapshot = await webSocket.makeDiagnosticsSnapshot()
                     resetReconnectionAttemptCount()
                     await webSocket.emitLog(
                         .info,
                         "reconnect.succeeded",
                         metadata: [
+                            "attemptTotal": String(successSnapshot.reconnectAttempts),
                             "phase": isInitialConnection ? "initial" : "reconnect",
+                            "successTotal": String(successSnapshot.reconnectSuccesses),
                             "url": candidateURL.absoluteString
                         ],
                         file: "",
@@ -119,8 +142,10 @@ extension WebSocket {
                         "reconnect.failed",
                         metadata: [
                             "attempt": String(reconnectionAttempts),
+                            "attemptTotal": String(attemptSnapshot.reconnectAttempts),
                             "error": (error as NSError).localizedDescription,
                             "phase": isInitialConnection ? "initial" : "reconnect",
+                            "successTotal": String(attemptSnapshot.reconnectSuccesses),
                             "url": candidateURL.absoluteString
                         ],
                         file: "",
@@ -140,6 +165,7 @@ extension WebSocket {
                 "reconnect.max_attempts_reached",
                 metadata: [
                     "phase": isInitialConnection ? "initial" : "reconnect",
+                    "attemptTotal": String(await webSocket.makeDiagnosticsSnapshot().reconnectAttempts),
                     "url": currentURL.absoluteString
                 ],
                 file: "",
@@ -152,7 +178,7 @@ extension WebSocket {
             )
         }
         
-        private func buildCandidateRotation(preferredURL: URL?, currentURL: URL) async throws -> [URL] {
+        func buildCandidateRotation(preferredURL: URL?, currentURL: URL) async throws -> [URL] {
             var fallbacks = [currentURL]
             if let preferredURL { fallbacks.append(preferredURL) }
             
@@ -187,6 +213,24 @@ extension WebSocket {
             }
             
             return rotation
+        }
+        
+        func makeDelay(for attempt: Int) -> Duration? {
+            guard attempt > 0 else { return nil }
+            
+            let base = pow(2.0, Double(attempt)) * configuration.reconnectionDelay
+            let capped = min(base, configuration.maximumDelay)
+            let jitteredSeconds = capped * jitter(configuration.jitterRange)
+            let roundedSeconds = Self.roundToNanosecondPrecision(jitteredSeconds)
+            
+            return .seconds(roundedSeconds)
+        }
+        
+        private static func roundToNanosecondPrecision(_ seconds: Double) -> Double {
+            guard seconds.isFinite else { return seconds }
+            
+            let nsPerSecond = 1_000_000_000.0
+            return (seconds * nsPerSecond).rounded(.toNearestOrAwayFromZero) / nsPerSecond
         }
         
         private func indexOfServer(_ url: URL) -> Int? {

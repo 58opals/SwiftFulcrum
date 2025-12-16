@@ -1,65 +1,6 @@
 import Foundation
 @testable import SwiftFulcrum
 
-/// Records WebSocket metrics for tests.
-actor MetricsRecorder: MetricsCollectable {
-    private(set) var didConnects = 0
-    private(set) var didDisconnects = 0
-    private(set) var didSends = 0
-    private(set) var didReceives = 0
-    private(set) var didPings = 0
-    
-    func didConnect(url: URL, network: Fulcrum.Configuration.Network) async { didConnects += 1; _ = network }
-    func didDisconnect(url: URL, closeCode: URLSessionWebSocketTask.CloseCode?, reason: String?) async { didDisconnects += 1 }
-    func didSend(url: URL, message: URLSessionWebSocketTask.Message) async { didSends += 1 }
-    func didReceive(url: URL, message: URLSessionWebSocketTask.Message) async { didReceives += 1 }
-    func didPing(url: URL, error: Swift.Error?) async { didPings += 1 }
-}
-
-/// Captures log messages during tests.
-actor LoggerProbe {
-    struct Entry: Sendable {
-        let level: Log.Level
-        let message: String
-        let metadata: [String: String]?
-    }
-    
-    private(set) var entries: [Entry] = .init()
-    
-    func record(_ entry: Entry) {
-        entries.append(entry)
-    }
-}
-
-/// Forwards log entries to a ``LoggerProbe``.
-struct RecordingLogger: Log.Handler, Sendable {
-    let probe: LoggerProbe
-    
-    func log(
-        _ level: Log.Level,
-        _ message: @autoclosure () -> String,
-        metadata: [String: String]?,
-        file: String,
-        function: String,
-        line: UInt
-    ) {
-        let entry = LoggerProbe.Entry(
-            level: level,
-            message: message(),
-            metadata: metadata
-        )
-        Task { @Sendable in await probe.record(entry) }
-    }
-}
-
-/// Waits until the given asynchronous condition becomes ``true``.
-/// Returns ``false`` if the timeout elapses before the condition passes.
-///
-/// - Parameters:
-///   - timeout: Maximum duration to wait.
-///   - interval: Polling interval.
-///   - condition: Asynchronous check to evaluate.
-/// - Returns: ``true`` if the condition succeeded before timing out.
 @discardableResult
 func waitUntil(
     timeout: Duration = .seconds(5),
@@ -74,8 +15,51 @@ func waitUntil(
     return true
 }
 
-/// Selects a random Fulcrum server URL for live integration tests.
-/// - Throws: ``Fulcrum.Error.transport`` if no servers are available.
+func withRunningFulcrum(
+    _ url: URL,
+    _ body: @Sendable (Fulcrum) async throws -> Void
+) async throws {
+    let fulcrum = try await Fulcrum(url: url.absoluteString)
+    
+    do {
+        try await fulcrum.start()
+        try await body(fulcrum)
+        await fulcrum.stop()
+    } catch {
+        await fulcrum.stop()
+        throw error
+    }
+}
+
+func streamTerminates<Element: Sendable>(
+    _ stream: AsyncThrowingStream<Element, Swift.Error>,
+    within timeout: Duration
+) async -> Bool {
+    await withTaskGroup(of: Bool.self) { group in
+        group.addTask {
+            var iterator = stream.makeAsyncIterator()
+            do {
+                while let _ = try await iterator.next() {
+                    // Drain until termination.
+                }
+                return true
+            } catch {
+                // Treat errors as termination for test purposes.
+                return true
+            }
+        }
+        
+        group.addTask {
+            try? await Task.sleep(for: timeout)
+            return false
+        }
+        
+        let result = await group.next() ?? false
+        group.cancelAll()
+        return result
+    }
+}
+
 func randomFulcrumURL(network: Fulcrum.Configuration.Network = .mainnet) async throws -> URL {
     let list = try await WebSocket.Server.fetchServerList(for: network)
     guard let url = list.randomElement() else {

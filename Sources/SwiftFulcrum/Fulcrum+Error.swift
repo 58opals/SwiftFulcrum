@@ -54,7 +54,22 @@ extension Fulcrum.Error.Network: Swift.Error, Equatable, Sendable {
         }
     }
 }
-extension Fulcrum.Error.Transport: Swift.Error, Equatable, Sendable {}
+extension Fulcrum.Error.Transport: Swift.Error, Equatable, Sendable {
+    public static func == (lhs: Fulcrum.Error.Transport, rhs: Fulcrum.Error.Transport) -> Bool {
+        switch (lhs, rhs) {
+        case (.setupFailed, .setupFailed),
+            (.reconnectFailed, .reconnectFailed),
+            (.heartbeatTimeout, .heartbeatTimeout):
+            return true
+        case (.connectionClosed(let leftCode, let leftReason), .connectionClosed(let rightCode, let rightReason)):
+            return leftCode.rawValue == rightCode.rawValue && leftReason == rightReason
+        case (.network(let leftError), .network(let rightError)):
+            return leftError == rightError
+        default:
+            return false
+        }
+    }
+}
 extension Fulcrum.Error.Server: Swift.Error, Equatable, Sendable {}
 extension Fulcrum.Error.Coding: Swift.Error, Equatable, Sendable {
     public static func == (lhs: Fulcrum.Error.Coding, rhs: Fulcrum.Error.Coding) -> Bool {

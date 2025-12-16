@@ -3,11 +3,11 @@
 import Foundation
 
 extension WebSocket {
-    public enum Lifecycle {}
+    enum Lifecycle {}
 }
 
 extension WebSocket.Lifecycle {
-    public enum Event: Sendable {
+    enum Event: Sendable {
         case connected(isReconnect: Bool)
         case disconnected(code: URLSessionWebSocketTask.CloseCode, reason: String?)
     }
@@ -27,7 +27,7 @@ extension WebSocket {
         return stream
     }
     
-    public func emitLifecycle(_ event: Lifecycle.Event) {
+    func emitLifecycle(_ event: Lifecycle.Event) {
         lifecycleContinuation?.yield(event)
     }
     
