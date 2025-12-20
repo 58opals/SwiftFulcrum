@@ -61,9 +61,30 @@ func streamTerminates<Element: Sendable>(
 }
 
 func randomFulcrumURL(network: Fulcrum.Configuration.Network = .mainnet) async throws -> URL {
-    let list = try await WebSocket.Server.fetchServerList(for: network)
+    let list = try await FulcrumServerCatalogLoader.bundled.loadServers(for: network, fallback: .init())
     guard let url = list.randomElement() else {
         throw Fulcrum.Error.transport(.setupFailed)
     }
     return url
+}
+
+func awaitNextValue<Element: Sendable>(
+    in stream: AsyncThrowingStream<Element, Swift.Error>,
+    timeout: Duration
+) async -> Element? {
+    await withTaskGroup(of: Element?.self) { group in
+        group.addTask {
+            var iterator = stream.makeAsyncIterator()
+            return try? await iterator.next()
+        }
+        
+        group.addTask {
+            try? await Task.sleep(for: timeout)
+            return nil
+        }
+        
+        let result = await group.next() ?? nil
+        group.cancelAll()
+        return result
+    }
 }

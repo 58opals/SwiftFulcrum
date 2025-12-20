@@ -49,6 +49,7 @@ actor WebSocket {
         self.reconnector = Reconnector(
             reconnectConfiguration,
             network: configuration.network,
+            serverCatalogLoader: configuration.serverCatalogLoader,
             sleep: sleep,
             jitter: jitter
         )

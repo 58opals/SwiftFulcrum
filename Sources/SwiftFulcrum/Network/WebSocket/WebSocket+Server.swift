@@ -112,27 +112,4 @@ extension WebSocket.Server {
         
         return list.map(\.url)
     }
-    
-    static func fetchServerList(
-        for network: Fulcrum.Configuration.Network,
-        fallback: [URL] = .init()
-    ) async throws -> [URL] {
-        await Task.yield()
-        if let bundled = try? decodeBundledServers(for: network), !bundled.isEmpty { return bundled }
-        let sanitized = fallback.filter { ["ws","wss"].contains($0.scheme?.lowercased()) }
-        guard !sanitized.isEmpty else { throw Fulcrum.Error.transport(.setupFailed) }
-        return sanitized
-    }
-    
-    static func loadServerList(
-        for network: Fulcrum.Configuration.Network,
-        fallback: [URL] = .init()
-    ) async throws -> [URL] {
-        try await Task.detached(priority: .utility) {
-            if let bundled = try? decodeBundledServers(for: network), !bundled.isEmpty { return bundled }
-            let sanitized = fallback.filter { ["ws","wss"].contains($0.scheme?.lowercased()) }
-            guard !sanitized.isEmpty else { throw Fulcrum.Error.transport(.setupFailed) }
-            return sanitized
-        }.value
-    }
 }

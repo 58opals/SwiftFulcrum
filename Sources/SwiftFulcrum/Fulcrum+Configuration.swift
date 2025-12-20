@@ -63,6 +63,7 @@ extension Fulcrum {
         public var connectionTimeout: TimeInterval
         public var maximumMessageSize: Int
         public var bootstrapServers: [URL]?
+        public var serverCatalogLoader: FulcrumServerCatalogLoader
         public var network: Network
         
         public static let basic = Configuration()
@@ -76,6 +77,7 @@ extension Fulcrum {
             connectionTimeout: TimeInterval = 10,
             maximumMessageSize: Int = 64 * 1024 * 1024,
             bootstrapServers: [URL]? = nil,
+            serverCatalogLoader: FulcrumServerCatalogLoader = .bundled,
             network: Network = .mainnet
         ) {
             self.tlsDescriptor = tlsDescriptor
@@ -86,6 +88,7 @@ extension Fulcrum {
             self.connectionTimeout = connectionTimeout
             self.maximumMessageSize = maximumMessageSize
             self.bootstrapServers = bootstrapServers
+            self.serverCatalogLoader = serverCatalogLoader
             self.network = network
         }
     }
@@ -101,6 +104,7 @@ extension Fulcrum.Configuration {
             metrics: metrics,
             logger: logger,
             maximumMessageSize: maximumMessageSize,
+            serverCatalogLoader: serverCatalogLoader,
             network: network
         )
     }
@@ -114,5 +118,45 @@ extension Fulcrum.Configuration.Reconnect {
             maximumDelay: maximumDelay,
             jitterRange: jitterRange
         )
+    }
+}
+
+public struct FulcrumServerCatalogLoader: Sendable {
+    private let loadCatalog: @Sendable (Fulcrum.Configuration.Network, [URL]) async throws -> [URL]
+    
+    public init(load: @escaping @Sendable (Fulcrum.Configuration.Network, [URL]) async throws -> [URL]) {
+        self.loadCatalog = load
+    }
+    
+    public func loadServers(
+        for network: Fulcrum.Configuration.Network,
+        fallback: [URL]
+    ) async throws -> [URL] {
+        try await loadCatalog(network, fallback)
+    }
+}
+
+extension FulcrumServerCatalogLoader {
+    public static let bundled = Self { network, fallback in
+        try await Task.detached(priority: .utility) {
+            if let bundled = try? WebSocket.Server.decodeBundledServers(for: network), !bundled.isEmpty {
+                return bundled
+            }
+            
+            let sanitizedFallback = sanitizeServers(fallback)
+            guard !sanitizedFallback.isEmpty else { throw Fulcrum.Error.transport(.setupFailed) }
+            return sanitizedFallback
+        }.value
+    }
+    
+    public static func constant(_ servers: [URL]) -> Self {
+        Self { _, _ in servers }
+    }
+    
+    static func sanitizeServers(_ servers: [URL]) -> [URL] {
+        servers.filter { server in
+            guard let scheme = server.scheme?.lowercased() else { return false }
+            return scheme == "ws" || scheme == "wss"
+        }
     }
 }

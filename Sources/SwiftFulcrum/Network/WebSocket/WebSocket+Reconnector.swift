@@ -31,6 +31,7 @@ extension WebSocket {
         private let configuration: Configuration
         private var reconnectionAttempts: Int
         private let network: Fulcrum.Configuration.Network
+        private let serverCatalogLoader: FulcrumServerCatalogLoader
         private var serverCatalog: [URL]
         private var nextServerIndex: Int
         
@@ -42,11 +43,13 @@ extension WebSocket {
         init(_ configuration: Configuration,
              reconnectionAttempts: Int = 0,
              network: Fulcrum.Configuration.Network,
+             serverCatalogLoader: FulcrumServerCatalogLoader = .bundled,
              sleep: @escaping @Sendable (Duration) async throws -> Void = { duration in try await Task.sleep(for: duration) },
              jitter: @escaping @Sendable (ClosedRange<Double>) -> Double = { range in .random(in: range) }) {
             self.configuration = configuration
             self.reconnectionAttempts = reconnectionAttempts
             self.network = network
+            self.serverCatalogLoader = serverCatalogLoader
             self.serverCatalog = .init()
             self.nextServerIndex = 0
             self.sleep = sleep
@@ -183,8 +186,9 @@ extension WebSocket {
             if let preferredURL { fallbacks.append(preferredURL) }
             
             if serverCatalog.isEmpty {
-                let network = network
-                serverCatalog = Self.uniqued(try await WebSocket.Server.loadServerList(for: network, fallback: fallbacks))
+                serverCatalog = Self.uniqued(
+                    try await serverCatalogLoader.loadServers(for: network, fallback: fallbacks)
+                )
             } else {
                 serverCatalog = Self.uniqued(serverCatalog + fallbacks)
             }

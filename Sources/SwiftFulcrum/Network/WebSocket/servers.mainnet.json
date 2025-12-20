@@ -1,8 +1,10 @@
 [
-    { "url": "wss://fulcrum.jettscythe.xyz:50004" },
-    { "url": "wss://electroncash.dk:50004" },
-    { "url": "wss://electrum.imaginary.cash:50004" },
-    { "url": "wss://bch.imaginary.cash:50004" },
-    { "url": "wss://bch.soul-dev.com:50004" },
-    { "url": "wss://bch.loping.net:50004" }
+  { "url": "wss://bch.imaginary.cash:50004" },
+  { "url": "wss://fulcrum.greyh.at:50004" },
+  { "url": "wss://cashnode.bch.ninja:50004" },
+  { "url": "wss://fulcrum.fountainhead.cash:50002" },
+  { "url": "wss://electrum.imaginary.cash:50004" },
+  { "url": "wss://electroncash.dk:50004" },
+  { "url": "wss://bch.loping.net:50004" },
+  { "url": "wss://fulcrum.jettscythe.xyz:50004" }
 ]
