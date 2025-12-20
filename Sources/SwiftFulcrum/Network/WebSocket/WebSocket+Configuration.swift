@@ -12,6 +12,7 @@ extension WebSocket {
         let metrics: MetricsCollectable?
         let logger: Log.Handler?
         let maximumMessageSize: Int
+        let serverCatalogLoader: FulcrumServerCatalogLoader
         let network: Fulcrum.Configuration.Network
         
         init(session: URLSession? = nil,
@@ -19,12 +20,14 @@ extension WebSocket {
              metrics: MetricsCollectable? = nil,
              logger: Log.Handler? = nil,
              maximumMessageSize: Int = defaultMaximumMessageSize,
+             serverCatalogLoader: FulcrumServerCatalogLoader = .bundled,
              network: Fulcrum.Configuration.Network = .mainnet) {
             self.session = session
             self.tlsDescriptor = tlsDescriptor
             self.metrics = metrics
             self.logger = logger
             self.maximumMessageSize = maximumMessageSize
+            self.serverCatalogLoader = serverCatalogLoader
             self.network = network
         }
     }

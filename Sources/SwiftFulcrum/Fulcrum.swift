@@ -33,13 +33,12 @@ public actor Fulcrum {
                     connectionTimeout: configuration.connectionTimeout
                 )
             } else {
-                let serverList = try await Task.detached(priority: .utility) {
-                    try await WebSocket.Server.fetchServerList(
-                        for: configuration.network,
-                        fallback: configuration.bootstrapServers ?? .init()
-                    )
-                }.value
-                guard let server = serverList.randomElement() else { throw Error.transport(.setupFailed) }
+                let serverList = try await configuration.serverCatalogLoader.loadServers(
+                    for: configuration.network,
+                    fallback: configuration.bootstrapServers ?? .init()
+                )
+                guard let server = serverList.randomElement(),
+                      ["ws", "wss"].contains(server.scheme?.lowercased()) else { throw Error.transport(.setupFailed) }
                 return WebSocket(
                     url: server,
                     configuration: configuration.convertToWebSocketConfiguration(),

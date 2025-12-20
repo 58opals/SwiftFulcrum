@@ -61,7 +61,7 @@ func streamTerminates<Element: Sendable>(
 }
 
 func randomFulcrumURL(network: Fulcrum.Configuration.Network = .mainnet) async throws -> URL {
-    let list = try await WebSocket.Server.fetchServerList(for: network)
+    let list = try await FulcrumServerCatalogLoader.bundled.loadServers(for: network, fallback: .init())
     guard let url = list.randomElement() else {
         throw Fulcrum.Error.transport(.setupFailed)
     }
