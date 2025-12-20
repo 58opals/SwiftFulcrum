@@ -67,3 +67,24 @@ func randomFulcrumURL(network: Fulcrum.Configuration.Network = .mainnet) async t
     }
     return url
 }
+
+func awaitNextValue<Element: Sendable>(
+    in stream: AsyncThrowingStream<Element, Swift.Error>,
+    timeout: Duration
+) async -> Element? {
+    await withTaskGroup(of: Element?.self) { group in
+        group.addTask {
+            var iterator = stream.makeAsyncIterator()
+            return try? await iterator.next()
+        }
+        
+        group.addTask {
+            try? await Task.sleep(for: timeout)
+            return nil
+        }
+        
+        let result = await group.next() ?? nil
+        group.cancelAll()
+        return result
+    }
+}
