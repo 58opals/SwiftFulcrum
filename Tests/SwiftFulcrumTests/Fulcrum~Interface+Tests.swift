@@ -81,7 +81,7 @@ struct FulcrumInterfaceTests {
         await fulcrum.stop()
     }
     
-    @Test("Subscription submit rejects unary methods", .timeLimit(.minutes(1)))
+    @Test("subscribe rejects unary methods", .timeLimit(.minutes(1)))
     func subscribeRejectsUnaryMethods() async throws {
         // No network dependency: subscribe() should reject before attempting to connect.
         let fulcrum = try await Fulcrum(url: "ws://example.com")
@@ -93,12 +93,12 @@ struct FulcrumInterfaceTests {
         
         for method in unaryMethods {
             do {
-                _ = try await fulcrum.submit(
+                _ = try await fulcrum.subscribe(
                     method: method,
                     initialType: Response.Result.Blockchain.Headers.Subscribe.self,
                     notificationType: Response.Result.Blockchain.Headers.SubscribeNotification.self
                 )
-                Issue.record("subscribe should reject unary methods (method: \(method))")
+                Issue.record("subscribe() should reject unary methods (method: \(method))")
             } catch let error as Fulcrum.Error {
                 switch error {
                 case .client(.protocolMismatch(let message)):
@@ -114,63 +114,49 @@ struct FulcrumInterfaceTests {
     
     // MARK: - Subscriptions
     @Test("Subscriptions expose cancellable header streams", .timeLimit(.minutes(1)))
-    func submitCreatesCancellableHeaderSubscription() async throws {
+    func subscribeCreatesCancellableHeaderSubscription() async throws {
         let url = try await randomFulcrumURL()
         let cancellation = Fulcrum.Call.Cancellation()
         
         try await withRunningFulcrum(url) { fulcrum in
-            let response = try await fulcrum.submit(
+            let (initial, updates, cancel) = try await fulcrum.subscribe(
                 method: .blockchain(.headers(.subscribe)),
                 initialType: Response.Result.Blockchain.Headers.Subscribe.self,
                 notificationType: Response.Result.Blockchain.Headers.SubscribeNotification.self,
                 options: .init(timeout: .seconds(30), cancellation: cancellation)
             )
             
-            switch response {
-            case .single:
-                Issue.record("Expected stream response for headers.subscribe")
-            case .stream(let identifier, let initial, let updates, let cancel):
-                #expect(!identifier.uuidString.isEmpty)
-                #expect(initial.height > 0)
-                #expect(initial.hex.count == 160)
-                
-                // Sanity-check the helper API too.
-                #expect(response.extractSubscriptionStream() != nil)
-                
-                await cancel()
-                
-                #expect(await cancellation.isCancelled())
-                
-                let terminated = await streamTerminates(updates, within: .seconds(10))
-                #expect(terminated)
-            }
+            #expect(initial.height > 0)
+            #expect(initial.hex.count == 160)
+            
+            await cancel()
+            
+            #expect(await cancellation.isCancelled())
+            
+            let terminated = await streamTerminates(updates, within: .seconds(10))
+            #expect(terminated)
         }
     }
     
     @Test("Subscribes to address status and cancels the stream", .timeLimit(.minutes(1)))
-    func submitStartsAndStopsAddressSubscription() async throws {
+    func subscribeStartsAndStopsAddressSubscription() async throws {
         let url = try await randomFulcrumURL()
         
         try await withRunningFulcrum(url) { fulcrum in
-            let response = try await fulcrum.submit(
+            let (initial, updates, cancel) = try await fulcrum.subscribe(
                 method: .blockchain(.address(.subscribe(address: Self.testAddress))),
                 initialType: Response.Result.Blockchain.Address.Subscribe.self,
                 notificationType: Response.Result.Blockchain.Address.SubscribeNotification.self,
                 options: .init(timeout: .seconds(30))
             )
             
-            switch response {
-            case .single:
-                Issue.record("Expected stream response for address.subscribe")
-            case .stream(_, let initial, let updates, let cancel):
-                // nil is valid for never-seen addresses; if present, it should be non-empty.
-                #expect(initial.status?.isEmpty != true)
-                
-                await cancel()
-                
-                let terminated = await streamTerminates(updates, within: .seconds(10))
-                #expect(terminated)
-            }
+            // nil is valid for never-seen addresses; if present, it should be non-empty.
+            #expect(initial.status?.isEmpty != true)
+            
+            await cancel()
+            
+            let terminated = await streamTerminates(updates, within: .seconds(10))
+            #expect(terminated)
         }
     }
     

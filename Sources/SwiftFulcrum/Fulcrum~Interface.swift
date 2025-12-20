@@ -32,41 +32,30 @@ extension Fulcrum {
     
     /// Starts a subscription and returns the initial response plus an update stream.
     ///
-    /// The returned ``RPCResponse.stream`` includes a `cancel` closure wired to the provided
-    /// cancellation token if supplied. Cancelling the caller halts the subscription setup;
-    /// cancelling the returned stream or the provided token terminates the server subscription.
-    public func submit<Initial: JSONRPCConvertible, Notification: JSONRPCConvertible>(
+    /// - Parameters:
+    ///   - method: Subscription RPC method to invoke.
+    ///   - initialType: Expected model for decoding the initial response.
+    ///   - notificationType: Expected model for decoding subscription updates.
+    ///   - options: Optional timeout and cancellation controls. Cancelling the calling task cancels the subscription setup.
+    /// - Returns: The initial subscription payload, an update stream, and a cancellation closure tied to the subscription token.
+    public func subscribe<Initial: JSONRPCConvertible, Notification: JSONRPCConvertible>(
         method: Method,
         initialType: Initial.Type = Initial.self,
         notificationType: Notification.Type = Notification.self,
         options: Fulcrum.Call.Options = .init()
-    ) async throws -> RPCResponse<Initial, Notification> {
-        if !method.isSubscription {
-            throw Fulcrum.Error.client(
-                .protocolMismatch("subscribe() requires subscription methods. Use submit(...) for unary calls.")
-            )
-        }
-        
-        try await ensureClientIsReadyForRequests(within: options.timeout)
-        
-        let token = options.cancellation?.token ?? Client.Call.Token()
-        let effectiveOptions = Client.Call.Options(timeout: options.timeout, token: token)
-        do {
-            let (id, initial, updates): (UUID, Initial, AsyncThrowingStream<Notification, Swift.Error>) =
-            try await client.subscribe(method: method, options: effectiveOptions)
-            return .stream(
-                id: id,
-                initialResponse: initial,
-                updates: updates,
-                cancel: { await token.cancel() }
-            )
-        } catch let fulcrumError as Fulcrum.Error {
-            throw fulcrumError
-        } catch {
-            throw Fulcrum.Error.client(.unknown(error))
-        }
+    ) async throws -> (Initial, AsyncThrowingStream<Notification, Swift.Error>, @Sendable () async -> Void) {
+        let subscription = try await makeSubscription(
+            method: method,
+            initialType: initialType,
+            notificationType: notificationType,
+            options: options
+        )
+        return (subscription.initialResponse, subscription.updates, subscription.cancel)
     }
-    
+}
+
+// MARK: -
+extension Fulcrum {
     private func ensureClientIsReadyForRequests(within timeout: Duration?) async throws {
         guard let timeout else {
             try await prepareClientForRequests()
@@ -92,6 +81,43 @@ extension Fulcrum {
             try await client.start()
         case .disconnected:
             try await client.reconnect()
+        }
+    }
+    
+    private func makeSubscription<Initial: JSONRPCConvertible, Notification: JSONRPCConvertible>(
+        method: Method,
+        initialType: Initial.Type,
+        notificationType: Notification.Type,
+        options: Fulcrum.Call.Options
+    ) async throws -> (
+        identifier: UUID,
+        initialResponse: Initial,
+        updates: AsyncThrowingStream<Notification, Swift.Error>,
+        cancel: @Sendable () async -> Void
+    ) {
+        if !method.isSubscription {
+            throw Fulcrum.Error.client(
+                .protocolMismatch("subscribe() requires subscription methods. Use submit(...) for unary calls.")
+            )
+        }
+        
+        try await ensureClientIsReadyForRequests(within: options.timeout)
+        
+        let token = options.cancellation?.token ?? Client.Call.Token()
+        let effectiveOptions = Client.Call.Options(timeout: options.timeout, token: token)
+        do {
+            let (identifier, initial, updates): (UUID, Initial, AsyncThrowingStream<Notification, Swift.Error>) =
+            try await client.subscribe(method: method, options: effectiveOptions)
+            return (
+                identifier,
+                initial,
+                updates,
+                { await token.cancel() }
+            )
+        } catch let fulcrumError as Fulcrum.Error {
+            throw fulcrumError
+        } catch {
+            throw Fulcrum.Error.client(.unknown(error))
         }
     }
     

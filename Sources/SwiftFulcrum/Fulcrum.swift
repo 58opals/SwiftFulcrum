@@ -4,8 +4,9 @@ import Foundation
 
 /// Actor-based entry point for interacting with Fulcrum servers over WebSocket RPC.
 ///
-/// Create an instance, call ``start()`` to establish connectivity, use ``submit(...)`` or
-/// ``subscribe(...)`` to perform work, and finish by invoking ``stop()`` to release resources.
+/// Create an instance, call ``start()`` to establish connectivity, use ``submit(...)`` for unary
+/// requests or ``subscribe(...)`` for streaming updates, and finish by invoking ``stop()`` to
+/// release resources.
 public actor Fulcrum {
     let client: Client
     

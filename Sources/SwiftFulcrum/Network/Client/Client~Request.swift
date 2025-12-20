@@ -129,7 +129,7 @@ extension Client {
     ) async throws -> (UUID, Initial, AsyncThrowingStream<Notification, Swift.Error>) {
         if !method.isSubscription {
             throw Fulcrum.Error.client(
-                .protocolMismatch("subscribe() requires subscription methods. Use call(...) for unary requests.")
+                .protocolMismatch("subscribe() requires subscription methods. Use submit(...) for unary calls.")
             )
         }
         
