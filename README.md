@@ -13,6 +13,7 @@ SwiftFulcrum is a **pure Swift**, actor-based client for interacting with [Fulcr
 - **Actor-isolated concurrency.** `Fulcrum`, `Client`, and `WebSocket` are actors that encapsulate state, request routing, and stream lifecycles.
 - **First-class observability.** Plug in custom `Log.Handler` implementations and `MetricsCollectable` collectors to track lifecycle, send/receive, pings, diagnostics snapshots, and the subscription registry.
 - **Connection state + diagnostics.** Consume an `AsyncStream` of `Fulcrum.ConnectionState`, and query `makeDiagnosticsSnapshot()` / `listSubscriptions()`.
+- **Configurable server catalogs.** Use the bundled catalogs, inject your own `FulcrumServerCatalogLoader`, or supply a sanitized bootstrap list for custom networks.
 
 ---
 
@@ -66,11 +67,7 @@ Task {
 
 ### Subscription (streaming updates)
 
-Subscriptions use the overloaded `submit(...)` that returns `RPCResponse.stream`, which includes:
-
-* the initial response,
-* an `AsyncThrowingStream` of notifications,
-* and a `cancel` closure.
+Subscriptions use `subscribe(...)`, which returns the initial payload, an `AsyncThrowingStream` of notifications, and a `cancel` closure.
 
 ```swift
 import SwiftFulcrum
@@ -80,13 +77,12 @@ Task {
         let fulcrum = try await Fulcrum()
         try await fulcrum.start()
 
-        let response = try await fulcrum.submit(
+        let (initial, updates, cancel) = try await fulcrum.subscribe(
             method: .blockchain(.headers(.subscribe)),
             initialType: Response.Result.Blockchain.Headers.Subscribe.self,
             notificationType: Response.Result.Blockchain.Headers.SubscribeNotification.self
         )
 
-        guard let (initial, updates, cancel) = response.extractSubscriptionStream() else { return }
         print("Initial best height: \(initial.height)")
 
         let updatesTask = Task {
@@ -127,6 +123,51 @@ print("Active subscriptions: \(snapshot.activeSubscriptionCount)")
 
 let subscriptions = await fulcrum.listSubscriptions()
 print("Subscriptions: \(subscriptions)")
+```
+
+## Configuration and server selection
+
+Pass a `Fulcrum.Configuration` when you want to customize networking behavior. You can tune TLS, reconnection, metrics/logging hooks, maximum message size, and server sourcing.
+
+```swift
+let loader = FulcrumServerCatalogLoader.constant([
+    URL(string: "wss://my.fulcrum.example")!,
+    URL(string: "wss://backup.fulcrum.example")!
+])
+
+let configuration = Fulcrum.Configuration(
+    reconnect: .init(
+        maximumReconnectionAttempts: 5,
+        reconnectionDelay: 1.5,
+        maximumDelay: 30,
+        jitterRange: 0.9 ... 1.2
+    ),
+    metrics: MyMetricsCollector(),
+    logger: MyLogHandler(),
+    bootstrapServers: [URL(string: "wss://fallback.fulcrum.example")!],
+    serverCatalogLoader: loader,
+    network: .testnet
+)
+
+let fulcrum = try await Fulcrum(configuration: configuration)
+```
+
+SwiftFulcrum sanitizes fallback bootstrap URLs to `ws`/`wss` schemes and throws `Fulcrum.Error.transport(.setupFailed)` when no valid servers remain. Injecting a custom catalog loader lets you source endpoints from your own discovery service while retaining the resubscription and reconnection behavior described above.
+
+## Timeouts and cancellation
+
+Use `Fulcrum.Call.Options` to control per-call behavior. Supply a timeout to bound request setup, or pass a `Cancellation` to cancel long-lived subscriptions.
+
+```swift
+let cancellation = Fulcrum.Call.Cancellation()
+let response = try await fulcrum.submit(
+    method: .mempool(.getFeeHistogram),
+    responseType: Response.Result.Mempool.GetFeeHistogram.self,
+    options: .init(timeout: .seconds(10), cancellation: cancellation)
+)
+
+// ... later in your workflow ...
+await cancellation.cancel()
 ```
 
 ## Error Handling
