@@ -31,8 +31,6 @@ extension Client {
                     do {
                         try Task.checkCancellation()
                         try await self.reconnect()
-                        try Task.checkCancellation()
-                        await self.resubscribeStoredMethods()
                     } catch is CancellationError {
                         break
                     } catch {
