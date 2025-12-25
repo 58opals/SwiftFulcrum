@@ -7,7 +7,10 @@ struct ClientWebSocketTests {
     func startReceivesUnaryResponses() async throws {
         let url = try await randomFulcrumURL()
         let webSocket = WebSocket(url: url)
-        let client = Client(transport: WebSocketTransport(webSocket: webSocket))
+        let client = Client(
+            transport: WebSocketTransport(webSocket: webSocket),
+            protocolNegotiation: .init()
+        )
         
         try await client.start()
         
@@ -27,7 +30,10 @@ struct ClientWebSocketTests {
     func stopTerminatesSubscriptions() async throws {
         let url = try await randomFulcrumURL()
         let webSocket = WebSocket(url: url)
-        let client = Client(transport: WebSocketTransport(webSocket: webSocket))
+        let client = Client(
+            transport: WebSocketTransport(webSocket: webSocket),
+            protocolNegotiation: .init()
+        )
         
         try await client.start()
         
