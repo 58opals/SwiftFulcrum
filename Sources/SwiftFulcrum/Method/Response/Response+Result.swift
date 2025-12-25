@@ -923,6 +923,23 @@ extension Response.Result {
     }
     
     public struct Mempool {
+        public struct GetInfo: JSONRPCConvertible {
+            public let mempoolMinimumFee: Double?
+            public let minimumRelayTransactionFee: Double?
+            public let incrementalRelayFee: Double?
+            public let unbroadcastCount: Int?
+            public let isFullReplaceByFeeEnabled: Bool?
+            
+            public typealias JSONRPC = Response.JSONRPC.Result.Mempool.GetInfo
+            public init(fromRPC jsonrpc: JSONRPC) {
+                self.mempoolMinimumFee = jsonrpc.mempoolminfee?.value
+                self.minimumRelayTransactionFee = jsonrpc.minrelaytxfee?.value
+                self.incrementalRelayFee = jsonrpc.incrementalrelayfee?.value
+                self.unbroadcastCount = jsonrpc.unbroadcastcount
+                self.isFullReplaceByFeeEnabled = jsonrpc.fullrbf
+            }
+        }
+        
         public struct GetFeeHistogram: JSONRPCConvertible {
             public let histogram: [Result]
             

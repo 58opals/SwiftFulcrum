@@ -613,6 +613,17 @@ extension Method {
         case .mempool(let mempool):
             switch mempool {
                 
+                // MARK: Mempool.getInfo
+            case .getInfo:
+                struct Parameters: Encodable {
+                    func encode(to encoder: Encoder) throws {
+                        _ = encoder.unkeyedContainer()
+                    }
+                }
+                return Request(id: uuid,
+                               method: self,
+                               params: Parameters())
+                
                 // MARK: Mempool.getFeeHistogram
             case .getFeeHistogram:
                 struct Parameters: Encodable {

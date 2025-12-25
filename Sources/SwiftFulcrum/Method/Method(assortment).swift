@@ -88,6 +88,7 @@ struct MethodAssortment {
             // MARK: - Mempool
         case .mempool(let mempool):
             switch mempool {
+            case .getInfo: return
             case .getFeeHistogram: return
             }
         }
@@ -145,6 +146,7 @@ struct MethodAssortment {
             // MARK: - Blockchain.UTXO
         case "blockchain.utxo.get_info": return
             // MARK: - Mempool
+        case "mempool.get_info": return
         case "mempool.get_fee_histogram": return
             
         default: fatalError()
@@ -315,6 +317,7 @@ extension MethodAssortment {
                              outputIndex: 0))),
             
             // Mempool
+            .mempool(.getInfo),
             .mempool(.getFeeHistogram)
         ]
     }

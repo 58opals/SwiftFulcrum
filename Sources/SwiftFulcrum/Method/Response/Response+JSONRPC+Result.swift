@@ -531,6 +531,14 @@ extension Response.JSONRPC {
                 }
             }
             
+            public struct GetInfo: Decodable, Sendable {
+                public let mempoolminfee: FlexibleNumber?
+                public let minrelaytxfee: FlexibleNumber?
+                public let incrementalrelayfee: FlexibleNumber?
+                public let unbroadcastcount: Int?
+                public let fullrbf: Bool?
+            }
+            
             public typealias FeeHistogram = [FlexibleNumber]
             public typealias GetFeeHistogram = [FeeHistogram]
         }

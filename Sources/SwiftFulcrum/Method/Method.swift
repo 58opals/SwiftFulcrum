@@ -91,6 +91,7 @@ public enum Method {
     }
     
     public enum Mempool {
+        case getInfo
         case getFeeHistogram
     }
 }

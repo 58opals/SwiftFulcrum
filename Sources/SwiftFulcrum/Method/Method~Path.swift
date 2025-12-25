@@ -100,5 +100,6 @@ extension Method.Blockchain.UTXO { var path: String {
 
 extension Method.Mempool { var path: String {
     switch self {
+    case .getInfo: return "get_info"
     case .getFeeHistogram: return "get_fee_histogram"
     }}}
