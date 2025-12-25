@@ -9,6 +9,9 @@ actor Client {
     let router: Router
     let metrics: MetricsCollectable?
     let logger: Log.Handler
+    let protocolNegotiation: Fulcrum.Configuration.ProtocolNegotiation
+    
+    var state: State
     
     var subscriptionMethods: [SubscriptionKey: Method]
     
@@ -26,7 +29,8 @@ actor Client {
          metrics: MetricsCollectable? = nil,
          logger: Log.Handler? = nil,
          heartbeatInterval: Duration = .seconds(25),
-         heartbeatTimeout: Duration = .seconds(10)) {
+         heartbeatTimeout: Duration = .seconds(10),
+         protocolNegotiation: Fulcrum.Configuration.ProtocolNegotiation) {
         self.id = .init()
         self.transport = transport
         self.jsonRPC = .init()
@@ -34,6 +38,8 @@ actor Client {
         self.metrics = metrics
         self.subscriptionMethods = .init()
         self.logger = logger ?? Log.ConsoleHandler()
+        self.protocolNegotiation = protocolNegotiation
+        self.state = .init()
         self.rpcHeartbeatInterval = heartbeatInterval
         self.rpcHeartbeatTimeout = heartbeatTimeout
         if let metrics { Task { await self.transport.updateMetrics(metrics) } }
@@ -41,6 +47,8 @@ actor Client {
     }
     
     func start() async throws {
+        resetNegotiatedSession()
+        
         guard receiveTask == nil else { return }
         
         try await self.transport.connect()
@@ -51,9 +59,21 @@ actor Client {
                 await self.publishDiagnosticsSnapshot()
                 switch event {
                 case .connected(let isReconnect) where isReconnect:
+                    await self.resetNegotiatedSession()
                     await self.emitLog(.info, "client.autoresubscribe.begin")
-                    await self.resubscribeStoredMethods()
-                    await self.emitLog(.info, "client.autoresubscribe.end", metadata: ["count": String(await self.subscriptionMethods.count)])
+                    do {
+                        _ = try await self.ensureNegotiatedProtocol()
+                        await self.resubscribeStoredMethods()
+                        await self.emitLog(.info,
+                                           "client.autoresubscribe.end",
+                                           metadata: ["count": String(self.subscriptionMethods.count)])
+                    } catch {
+                        await self.emitLog(.error,
+                                           "client.protocol_negotiation.failed",
+                                           metadata: ["error": error.localizedDescription])
+                    }
+                case .disconnected:
+                    await self.resetNegotiatedSession()
                 default: break
                 }
             }
@@ -66,6 +86,8 @@ actor Client {
                 await self.publishDiagnosticsSnapshot()
             }
         }
+        
+        _ = try await ensureNegotiatedProtocol()
         
         startRPCHeartbeat()
         await publishDiagnosticsSnapshot()
@@ -92,12 +114,14 @@ actor Client {
         diagnosticsStateTask = nil
         
         await transport.disconnect(with: "Client.stop() called")
+        resetNegotiatedSession()
     }
     
     func reconnect(with url: URL? = nil) async throws {
         receiveTask?.cancel()
         await receiveTask?.value
         receiveTask = nil
+        resetNegotiatedSession()
         try await transport.reconnect(with: url)
         receiveTask = Task { await self.startReceiving() }
         await publishDiagnosticsSnapshot()

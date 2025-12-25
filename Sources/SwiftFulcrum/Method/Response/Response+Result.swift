@@ -14,6 +14,101 @@ public protocol JSONRPCNilAcceptingConvertible: JSONRPCConvertible {
 }
 
 extension Response.Result {
+    public struct Server {
+        public struct Ping: JSONRPCConvertible {
+            public typealias JSONRPC = Response.JSONRPC.Result.Server.Ping?
+            
+            public init(fromRPC jsonrpc: JSONRPC) throws {
+                guard jsonrpc == nil else {
+                    throw Response.Result.Error.unexpectedFormat("Expected null result for server.ping().")
+                }
+            }
+        }
+        
+        public struct Version: JSONRPCConvertible {
+            public let serverVersion: String
+            public let negotiatedProtocolVersion: ProtocolVersion
+            
+            public typealias JSONRPC = Response.JSONRPC.Result.Server.Version
+            
+            public init(fromRPC jsonrpc: JSONRPC) throws {
+                guard let protocolVersion = ProtocolVersion(string: jsonrpc.protocolVersion) else {
+                    throw Error.unexpectedFormat("Negotiated protocol version is invalid: \(jsonrpc.protocolVersion)")
+                }
+                
+                self.serverVersion = jsonrpc.serverVersion
+                self.negotiatedProtocolVersion = protocolVersion
+            }
+        }
+        
+        public struct Features: JSONRPCConvertible {
+            public let genesisHash: String
+            public let hashFunction: String
+            public let serverVersion: String
+            public let minimumProtocolVersion: ProtocolVersion
+            public let maximumProtocolVersion: ProtocolVersion
+            public let pruningLimit: Int?
+            public let hosts: [String: Host]?
+            public let hasDoubleSpendProofs: Bool?
+            public let hasCashTokens: Bool?
+            public let reusablePaymentAddress: ReusablePaymentAddress?
+            public let hasBroadcastPackageSupport: Bool?
+            
+            public typealias JSONRPC = Response.JSONRPC.Result.Server.Features
+            
+            public init(fromRPC jsonrpc: JSONRPC) throws {
+                guard let minVersion = ProtocolVersion(string: jsonrpc.protocol_min) else {
+                    throw Error.unexpectedFormat("Minimum protocol version is invalid: \(jsonrpc.protocol_min)")
+                }
+                guard let maxVersion = ProtocolVersion(string: jsonrpc.protocol_max) else {
+                    throw Error.unexpectedFormat("Maximum protocol version is invalid: \(jsonrpc.protocol_max)")
+                }
+                
+                self.genesisHash = jsonrpc.genesis_hash
+                self.hashFunction = jsonrpc.hash_function
+                self.serverVersion = jsonrpc.server_version
+                self.minimumProtocolVersion = minVersion
+                self.maximumProtocolVersion = maxVersion
+                self.pruningLimit = jsonrpc.pruning
+                self.hosts = jsonrpc.hosts?.mapValues { Host(from: $0) }
+                self.hasDoubleSpendProofs = jsonrpc.dsproof
+                self.hasCashTokens = jsonrpc.cashtokens
+                self.reusablePaymentAddress = jsonrpc.rpa.map(ReusablePaymentAddress.init(from:))
+                self.hasBroadcastPackageSupport = jsonrpc.broadcast_package
+            }
+            
+            public struct Host: Decodable, Sendable {
+                public let sslPort: Int?
+                public let tcpPort: Int?
+                public let webSocketPort: Int?
+                public let secureWebSocketPort: Int?
+                
+                init(from json: JSONRPC.Host) {
+                    self.sslPort = json.ssl_port
+                    self.tcpPort = json.tcp_port
+                    self.webSocketPort = json.ws_port
+                    self.secureWebSocketPort = json.wss_port
+                }
+            }
+            
+            public struct ReusablePaymentAddress: Decodable, Sendable {
+                public let historyBlockLimit: Int?
+                public let maximumHistoryItems: Int?
+                public let indexedPrefixBits: Int?
+                public let minimumPrefixBits: Int?
+                public let startingHeight: Int?
+                
+                init(from json: JSONRPC.ReusablePaymentAddress) {
+                    self.historyBlockLimit = json.history_block_limit
+                    self.maximumHistoryItems = json.max_history
+                    self.indexedPrefixBits = json.prefix_bits
+                    self.minimumPrefixBits = json.prefix_bits_min
+                    self.startingHeight = json.starting_height
+                }
+            }
+        }
+    }
+    
     public struct Blockchain {
         public struct EstimateFee: JSONRPCConvertible {
             public let fee: Double
@@ -355,12 +450,50 @@ extension Response.Result {
                 public let count: UInt
                 public let hex: String
                 public let max: UInt
+                public let proof: Block.Header.Proof?
+                private let originalHeaders: [String]?
+                
+                public var headers: [String] {
+                    if let originalHeaders {
+                        return originalHeaders
+                    }
+                    
+                    let headerCharacterLength = 160
+                    var headers: [String] = .init()
+                    var currentIndex = hex.startIndex
+                    
+                    while currentIndex < hex.endIndex {
+                        guard let endIndex = hex.index(currentIndex,
+                                                       offsetBy: headerCharacterLength,
+                                                       limitedBy: hex.endIndex) else {
+                            break
+                        }
+                        
+                        guard hex.distance(from: currentIndex, to: endIndex) == headerCharacterLength else {
+                            break
+                        }
+                        
+                        headers.append(String(hex[currentIndex..<endIndex]))
+                        currentIndex = endIndex
+                    }
+                    
+                    return headers
+                }
                 
                 public typealias JSONRPC = Response.JSONRPC.Result.Blockchain.Block.Headers
                 public init(fromRPC jsonrpc: JSONRPC) {
                     self.count = jsonrpc.count
                     self.hex = jsonrpc.hex
                     self.max = jsonrpc.max
+                    self.proof = {
+                        guard let branch = jsonrpc.branch,
+                              let root = jsonrpc.root else {
+                            return nil
+                        }
+                        
+                        return Block.Header.Proof(branch: branch, root: root)
+                    }()
+                    self.originalHeaders = jsonrpc.headers
                 }
             }
         }
@@ -790,6 +923,23 @@ extension Response.Result {
     }
     
     public struct Mempool {
+        public struct GetInfo: JSONRPCConvertible {
+            public let mempoolMinimumFee: Double?
+            public let minimumRelayTransactionFee: Double?
+            public let incrementalRelayFee: Double?
+            public let unbroadcastCount: Int?
+            public let isFullReplaceByFeeEnabled: Bool?
+            
+            public typealias JSONRPC = Response.JSONRPC.Result.Mempool.GetInfo
+            public init(fromRPC jsonrpc: JSONRPC) {
+                self.mempoolMinimumFee = jsonrpc.mempoolminfee?.value
+                self.minimumRelayTransactionFee = jsonrpc.minrelaytxfee?.value
+                self.incrementalRelayFee = jsonrpc.incrementalrelayfee?.value
+                self.unbroadcastCount = jsonrpc.unbroadcastcount
+                self.isFullReplaceByFeeEnabled = jsonrpc.fullrbf
+            }
+        }
+        
         public struct GetFeeHistogram: JSONRPCConvertible {
             public let histogram: [Result]
             

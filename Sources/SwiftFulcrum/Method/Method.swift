@@ -3,8 +3,15 @@
 import Foundation
 
 public enum Method {
+    case server(Server)
     case blockchain(Blockchain)
     case mempool(Mempool)
+    
+    public enum Server {
+        case ping
+        case version(clientName: String, protocolNegotiation: Fulcrum.Configuration.ProtocolNegotiation.Argument)
+        case features
+    }
     
     public enum Blockchain {
         case estimateFee(numberOfBlocks: Int)
@@ -19,13 +26,13 @@ public enum Method {
         case utxo(UTXO)
         
         public enum ScriptHash {
-          case getBalance(scripthash: String, tokenFilter: CashTokens.TokenFilter?)
-          case getFirstUse(scripthash: String)
-          case getHistory(scripthash: String, fromHeight: UInt?, toHeight: UInt?, includeUnconfirmed: Bool)
-          case getMempool(scripthash: String)
-          case listUnspent(scripthash: String, tokenFilter: CashTokens.TokenFilter?)
-          case subscribe(scripthash: String)
-          case unsubscribe(scripthash: String)
+            case getBalance(scripthash: String, tokenFilter: CashTokens.TokenFilter?)
+            case getFirstUse(scripthash: String)
+            case getHistory(scripthash: String, fromHeight: UInt?, toHeight: UInt?, includeUnconfirmed: Bool)
+            case getMempool(scripthash: String)
+            case listUnspent(scripthash: String, tokenFilter: CashTokens.TokenFilter?)
+            case subscribe(scripthash: String)
+            case unsubscribe(scripthash: String)
         }
         
         public enum Address {
@@ -84,6 +91,7 @@ public enum Method {
     }
     
     public enum Mempool {
+        case getInfo
         case getFeeHistogram
     }
 }
@@ -117,6 +125,7 @@ extension Method.Blockchain {
 }
 
 extension Method: Sendable {}
+extension Method.Server: Sendable {}
 extension Method.Blockchain: Sendable {}
 extension Method.Blockchain.ScriptHash: Sendable {}
 extension Method.Blockchain.Address: Sendable {}

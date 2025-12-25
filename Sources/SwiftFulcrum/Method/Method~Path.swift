@@ -4,8 +4,16 @@ import Foundation
 
 extension Method { var path: String {
     switch self {
+    case .server(let serverPath): return "server.\(serverPath.path)"
     case .blockchain(let blockchainPath): return "blockchain.\(blockchainPath.path)"
     case .mempool(let mempoolPath): return "mempool.\(mempoolPath.path)"
+    }}}
+
+extension Method.Server { var path: String {
+    switch self {
+    case .ping: return "ping"
+    case .version: return "version"
+    case .features: return "features"
     }}}
 
 extension Method.Blockchain { var path: String {
@@ -92,5 +100,6 @@ extension Method.Blockchain.UTXO { var path: String {
 
 extension Method.Mempool { var path: String {
     switch self {
+    case .getInfo: return "get_info"
     case .getFeeHistogram: return "get_fee_histogram"
     }}}

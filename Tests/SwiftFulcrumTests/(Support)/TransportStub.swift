@@ -8,21 +8,21 @@ actor TransportStub: Transportable {
     private var closeInformationValue: CloseInformation = (.invalid, nil)
     private var currentEndpoint: URL
     
-    private var incomingBuffer: [Result<URLSessionWebSocketTask.Message, Swift.Error>] = []
+    private var incomingBuffer: [Result<URLSessionWebSocketTask.Message, Swift.Error>] = .init()
     private var incomingStream: AsyncThrowingStream<URLSessionWebSocketTask.Message, Swift.Error>?
     private var incomingContinuation: AsyncThrowingStream<URLSessionWebSocketTask.Message, Swift.Error>.Continuation?
     
-    private var lifecycleBuffer: [FulcrumTransportLifecycle.Event] = []
+    private var lifecycleBuffer: [FulcrumTransportLifecycle.Event] = .init()
     private var lifecycleStream: AsyncStream<FulcrumTransportLifecycle.Event>?
     private var lifecycleContinuation: AsyncStream<FulcrumTransportLifecycle.Event>.Continuation?
     
-    private var connectionStateBuffer: [Fulcrum.ConnectionState] = []
+    private var connectionStateBuffer: [Fulcrum.ConnectionState] = .init()
     private var connectionStateStream: AsyncStream<Fulcrum.ConnectionState>?
     private var connectionStateContinuation: AsyncStream<Fulcrum.ConnectionState>.Continuation?
     
-    private var outgoingQueue: [URLSessionWebSocketTask.Message] = []
-    private var pendingOutgoingContinuations: [CheckedContinuation<URLSessionWebSocketTask.Message, Never>] = []
-    private(set) var sentMessages: [URLSessionWebSocketTask.Message] = []
+    private var outgoingQueue: [URLSessionWebSocketTask.Message] = .init()
+    private var pendingOutgoingContinuations: [CheckedContinuation<URLSessionWebSocketTask.Message, Never>] = .init()
+    private(set) var sentMessages: [URLSessionWebSocketTask.Message] = .init()
     
     init(endpoint: URL = URL(string: "wss://example.invalid")!) {
         self.currentEndpoint = endpoint

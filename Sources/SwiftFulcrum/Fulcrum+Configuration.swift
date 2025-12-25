@@ -65,6 +65,7 @@ extension Fulcrum {
         public var bootstrapServers: [URL]?
         public var serverCatalogLoader: FulcrumServerCatalogLoader
         public var network: Network
+        public var protocolNegotiation: ProtocolNegotiation
         
         public static let basic = Configuration()
         
@@ -78,7 +79,8 @@ extension Fulcrum {
             maximumMessageSize: Int = 64 * 1024 * 1024,
             bootstrapServers: [URL]? = nil,
             serverCatalogLoader: FulcrumServerCatalogLoader = .bundled,
-            network: Network = .mainnet
+            network: Network = .mainnet,
+            protocolNegotiation: ProtocolNegotiation = .init()
         ) {
             self.tlsDescriptor = tlsDescriptor
             self.reconnect = reconnect
@@ -90,6 +92,7 @@ extension Fulcrum {
             self.bootstrapServers = bootstrapServers
             self.serverCatalogLoader = serverCatalogLoader
             self.network = network
+            self.protocolNegotiation = protocolNegotiation
         }
     }
 }

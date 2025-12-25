@@ -278,6 +278,14 @@ extension Client {
 
 extension Client {
     func send(request: Request) async throws {
+        if case .server(.version) = request.requestedMethod {
+                    guard let data = request.data else { throw Fulcrum.Error.coding(.encode(nil)) }
+                    try await self.send(data: data)
+                    return
+                }
+
+                _ = try await ensureNegotiatedProtocol()
+        
         guard let data = request.data else { throw Fulcrum.Error.coding(.encode(nil)) }
         try await self.send(data: data)
     }

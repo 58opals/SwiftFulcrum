@@ -4,6 +4,59 @@ import Foundation
 
 extension Response.JSONRPC {
     public struct Result {
+        public struct Server {
+            public struct Ping: Decodable, Sendable {}
+            
+            public struct Version: Decodable, Sendable {
+                public let serverVersion: String
+                public let protocolVersion: String
+                
+                public init(from decoder: Decoder) throws {
+                    var container = try decoder.unkeyedContainer()
+                    guard !container.isAtEnd else {
+                        throw DecodingError.dataCorruptedError(in: container,
+                                                               debugDescription: "Expected server and protocol version pair")
+                    }
+                    
+                    self.serverVersion = try container.decode(String.self)
+                    guard !container.isAtEnd else {
+                        throw DecodingError.dataCorruptedError(in: container,
+                                                               debugDescription: "Missing negotiated protocol version")
+                    }
+                    self.protocolVersion = try container.decode(String.self)
+                }
+            }
+            
+            public struct Features: Decodable, Sendable {
+                public let genesis_hash: String
+                public let hash_function: String
+                public let server_version: String
+                public let protocol_max: String
+                public let protocol_min: String
+                public let pruning: Int?
+                public let hosts: [String: Host]?
+                public let dsproof: Bool?
+                public let cashtokens: Bool?
+                public let rpa: ReusablePaymentAddress?
+                public let broadcast_package: Bool?
+                
+                public struct Host: Decodable, Sendable {
+                    public let ssl_port: Int?
+                    public let tcp_port: Int?
+                    public let ws_port: Int?
+                    public let wss_port: Int?
+                }
+                
+                public struct ReusablePaymentAddress: Decodable, Sendable {
+                    public let history_block_limit: Int?
+                    public let max_history: Int?
+                    public let prefix_bits: Int?
+                    public let prefix_bits_min: Int?
+                    public let starting_height: Int?
+                }
+            }
+        }
+        
         public struct Blockchain {
             public typealias EstimateFee = Double
             
@@ -170,6 +223,39 @@ extension Response.JSONRPC {
                     public let count: UInt
                     public let hex: String
                     public let max: UInt
+                    public let root: String?
+                    public let branch: [String]?
+                    public let headers: [String]?
+                    
+                    private enum CodingKeys: String, CodingKey {
+                        case count
+                        case hex
+                        case headers
+                        case max
+                        case root
+                        case branch
+                    }
+                    
+                    public init(from decoder: Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        
+                        self.count = try container.decode(UInt.self, forKey: .count)
+                        self.max = try container.decode(UInt.self, forKey: .max)
+                        self.headers = try container.decodeIfPresent([String].self, forKey: .headers)
+                        
+                        if let headerList = headers {
+                            self.hex = headerList.joined()
+                        } else if let legacyHex = try container.decodeIfPresent(String.self, forKey: .hex) {
+                            self.hex = legacyHex
+                        } else {
+                            throw DecodingError.valueNotFound(String.self,
+                                                              .init(codingPath: decoder.codingPath,
+                                                                    debugDescription: "Expected either hex or headers fields"))
+                        }
+                        
+                        self.root = try container.decodeIfPresent(String.self, forKey: .root)
+                        self.branch = try container.decodeIfPresent([String].self, forKey: .branch)
+                    }
                 }
             }
             
@@ -443,6 +529,14 @@ extension Response.JSONRPC {
                     
                     throw DecodingError.typeMismatch(Double.self, .init(codingPath: decoder.codingPath, debugDescription: "Expected number or numeric string"))
                 }
+            }
+            
+            public struct GetInfo: Decodable, Sendable {
+                public let mempoolminfee: FlexibleNumber?
+                public let minrelaytxfee: FlexibleNumber?
+                public let incrementalrelayfee: FlexibleNumber?
+                public let unbroadcastcount: Int?
+                public let fullrbf: Bool?
             }
             
             public typealias FeeHistogram = [FlexibleNumber]

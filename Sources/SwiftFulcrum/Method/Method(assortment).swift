@@ -6,6 +6,13 @@ struct MethodAssortment {
     
     func methodAssortment() {
         switch method {
+            // MARK: - Server
+        case .server(let server):
+            switch server {
+            case .ping: return
+            case .version(_, _): return
+            case .features: return
+            }
             // MARK: - Blockchain
         case .blockchain(let blockchain):
             switch blockchain {
@@ -81,6 +88,7 @@ struct MethodAssortment {
             // MARK: - Mempool
         case .mempool(let mempool):
             switch mempool {
+            case .getInfo: return
             case .getFeeHistogram: return
             }
         }
@@ -88,6 +96,10 @@ struct MethodAssortment {
     
     func methodPathAssortment() {
         switch methodPath {
+            // MARK: - Server
+        case "server.ping": return
+        case "server.version": return
+        case "server.features": return
             // MARK: - Blockchain
         case "blockchain.estimatefee": return
         case "blockchain.relayfee": return
@@ -134,6 +146,7 @@ struct MethodAssortment {
             // MARK: - Blockchain.UTXO
         case "blockchain.utxo.get_info": return
             // MARK: - Mempool
+        case "mempool.get_info": return
         case "mempool.get_fee_histogram": return
             
         default: fatalError()
@@ -143,7 +156,19 @@ struct MethodAssortment {
 
 extension MethodAssortment {
     static var sampleMethods: [Method] {
+        guard let minimumVersion = ProtocolVersion(string: "1.4"),
+              let maximumVersion = ProtocolVersion(string: "1.6.0") else {
+            preconditionFailure("Sample protocol versions must be valid")
+        }
+        
         return [
+            // Server
+            .server(.ping),
+            .server(.version(clientName: "Sample Client",
+                             protocolNegotiation: .init(minimumVersion: minimumVersion,
+                                                        maximumVersion: maximumVersion))),
+            .server(.features),
+            
             // Blockchain
             .blockchain(
                 .estimateFee(numberOfBlocks: 6)),
@@ -292,6 +317,7 @@ extension MethodAssortment {
                              outputIndex: 0))),
             
             // Mempool
+            .mempool(.getInfo),
             .mempool(.getFeeHistogram)
         ]
     }

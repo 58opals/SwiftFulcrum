@@ -13,9 +13,9 @@ extension Client {
                     try await Task.sleep(for: rpcHeartbeatInterval)
                     try Task.checkCancellation()
                     
-                    let (_, _): (UUID, Response.Result.Blockchain.Headers.GetTip) =
+                    let (_, _): (UUID, Response.Result.Server.Ping) =
                     try await self.call(
-                        method: .blockchain(.headers(.getTip)),
+                        method: .server(.ping),
                         options: .init(timeout: rpcHeartbeatTimeout)
                     )
                 } catch is CancellationError {
@@ -31,8 +31,6 @@ extension Client {
                     do {
                         try Task.checkCancellation()
                         try await self.reconnect()
-                        try Task.checkCancellation()
-                        await self.resubscribeStoredMethods()
                     } catch is CancellationError {
                         break
                     } catch {

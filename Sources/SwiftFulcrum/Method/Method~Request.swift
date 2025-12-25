@@ -5,6 +5,49 @@ import Foundation
 extension Method {
     func createRequest(with uuid: UUID) -> Request {
         switch self {
+            // MARK: - Server
+        case .server(let server):
+            switch server {
+            case .ping:
+                struct Parameters: Encodable {
+                    func encode(to encoder: Encoder) throws {
+                        _ = encoder.unkeyedContainer()
+                    }
+                }
+                
+                return Request(id: uuid,
+                               method: self,
+                               params: Parameters())
+                
+            case .version(let clientName, let negotiationArgument):
+                struct Parameters: Encodable {
+                    let clientName: String
+                    let negotiationArgument: Fulcrum.Configuration.ProtocolNegotiation.Argument
+                    
+                    func encode(to encoder: Encoder) throws {
+                        var container = encoder.unkeyedContainer()
+                        try container.encode(clientName)
+                        try container.encode(negotiationArgument)
+                    }
+                }
+                
+                return Request(id: uuid,
+                               method: self,
+                               params: Parameters(clientName: clientName,
+                                                  negotiationArgument: negotiationArgument))
+                
+            case .features:
+                struct Parameters: Encodable {
+                    func encode(to encoder: Encoder) throws {
+                        _ = encoder.unkeyedContainer()
+                    }
+                }
+                
+                return Request(id: uuid,
+                               method: self,
+                               params: Parameters())
+            }
+            
             // MARK: - Blockchain
         case .blockchain(let blockchain):
             switch blockchain {
@@ -569,6 +612,17 @@ extension Method {
             // MARK: - Mempool
         case .mempool(let mempool):
             switch mempool {
+                
+                // MARK: Mempool.getInfo
+            case .getInfo:
+                struct Parameters: Encodable {
+                    func encode(to encoder: Encoder) throws {
+                        _ = encoder.unkeyedContainer()
+                    }
+                }
+                return Request(id: uuid,
+                               method: self,
+                               params: Parameters())
                 
                 // MARK: Mempool.getFeeHistogram
             case .getFeeHistogram:
