@@ -450,12 +450,50 @@ extension Response.Result {
                 public let count: UInt
                 public let hex: String
                 public let max: UInt
+                public let proof: Block.Header.Proof?
+                private let originalHeaders: [String]?
+                
+                public var headers: [String] {
+                    if let originalHeaders {
+                        return originalHeaders
+                    }
+                    
+                    let headerCharacterLength = 160
+                    var headers: [String] = .init()
+                    var currentIndex = hex.startIndex
+                    
+                    while currentIndex < hex.endIndex {
+                        guard let endIndex = hex.index(currentIndex,
+                                                       offsetBy: headerCharacterLength,
+                                                       limitedBy: hex.endIndex) else {
+                            break
+                        }
+                        
+                        guard hex.distance(from: currentIndex, to: endIndex) == headerCharacterLength else {
+                            break
+                        }
+                        
+                        headers.append(String(hex[currentIndex..<endIndex]))
+                        currentIndex = endIndex
+                    }
+                    
+                    return headers
+                }
                 
                 public typealias JSONRPC = Response.JSONRPC.Result.Blockchain.Block.Headers
                 public init(fromRPC jsonrpc: JSONRPC) {
                     self.count = jsonrpc.count
                     self.hex = jsonrpc.hex
                     self.max = jsonrpc.max
+                    self.proof = {
+                        guard let branch = jsonrpc.branch,
+                              let root = jsonrpc.root else {
+                            return nil
+                        }
+                        
+                        return Block.Header.Proof(branch: branch, root: root)
+                    }()
+                    self.originalHeaders = jsonrpc.headers
                 }
             }
         }

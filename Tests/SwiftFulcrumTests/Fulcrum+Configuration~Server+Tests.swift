@@ -54,7 +54,7 @@ struct FulcrumServerCatalogLoaderTests {
     func throwsWhenCatalogCannotBeBuilt() async {
         let loader = FulcrumServerCatalogLoader { _, _ in
             try await Task.detached(priority: .utility) { () -> [URL] in
-                let fallback: [URL] = []
+                let fallback: [URL] = .init()
                 let sanitized = FulcrumServerCatalogLoader.sanitizeServers(fallback)
                 guard !sanitized.isEmpty else { throw Fulcrum.Error.transport(.setupFailed) }
                 return sanitized
