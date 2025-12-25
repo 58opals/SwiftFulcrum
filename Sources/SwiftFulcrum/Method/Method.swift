@@ -9,6 +9,8 @@ public enum Method {
     
     public enum Server {
         case ping
+        case version(clientName: String, protocolNegotiation: Fulcrum.Configuration.ProtocolNegotiation.Argument)
+        case features
     }
     
     public enum Blockchain {

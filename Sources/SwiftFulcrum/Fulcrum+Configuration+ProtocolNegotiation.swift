@@ -7,6 +7,7 @@ extension Fulcrum.Configuration {
         public var clientName: String
         public var min: ProtocolVersion
         public var max: ProtocolVersion
+        public var argument: Argument { .init(range: supportedRange) }
         
         public var supportedRange: ProtocolVersion.Range {
             guard let range = ProtocolVersion.Range(min: min, max: max) else {
@@ -24,6 +25,34 @@ extension Fulcrum.Configuration {
             self.clientName = clientName
             self.min = min
             self.max = max
+        }
+    }
+}
+
+extension Fulcrum.Configuration.ProtocolNegotiation {
+    public struct Argument: Encodable, Sendable {
+        public let minimumVersion: ProtocolVersion
+        public let maximumVersion: ProtocolVersion
+        
+        public init(minimumVersion: ProtocolVersion, maximumVersion: ProtocolVersion) {
+            precondition(minimumVersion <= maximumVersion, "Minimum protocol version cannot exceed maximum protocol version")
+            self.minimumVersion = minimumVersion
+            self.maximumVersion = maximumVersion
+        }
+        
+        public init(range: ProtocolVersion.Range) {
+            self.minimumVersion = range.min
+            self.maximumVersion = range.max
+        }
+        
+        public func encode(to encoder: Encoder) throws {
+            var container = encoder.singleValueContainer()
+            if minimumVersion == maximumVersion {
+                try container.encode(minimumVersion.description)
+                return
+            }
+            
+            try container.encode([minimumVersion.description, maximumVersion.description])
         }
     }
 }

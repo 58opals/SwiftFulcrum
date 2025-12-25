@@ -12,6 +12,8 @@ extension Method { var path: String {
 extension Method.Server { var path: String {
     switch self {
     case .ping: return "ping"
+    case .version: return "version"
+    case .features: return "features"
     }}}
 
 extension Method.Blockchain { var path: String {

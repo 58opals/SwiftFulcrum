@@ -10,6 +10,8 @@ struct MethodAssortment {
         case .server(let server):
             switch server {
             case .ping: return
+            case .version(_, _): return
+            case .features: return
             }
             // MARK: - Blockchain
         case .blockchain(let blockchain):
@@ -95,6 +97,8 @@ struct MethodAssortment {
         switch methodPath {
             // MARK: - Server
         case "server.ping": return
+        case "server.version": return
+        case "server.features": return
             // MARK: - Blockchain
         case "blockchain.estimatefee": return
         case "blockchain.relayfee": return
@@ -150,9 +154,18 @@ struct MethodAssortment {
 
 extension MethodAssortment {
     static var sampleMethods: [Method] {
+        guard let minimumVersion = ProtocolVersion(string: "1.4"),
+              let maximumVersion = ProtocolVersion(string: "1.6.0") else {
+            preconditionFailure("Sample protocol versions must be valid")
+        }
+        
         return [
             // Server
             .server(.ping),
+            .server(.version(clientName: "Sample Client",
+                             protocolNegotiation: .init(minimumVersion: minimumVersion,
+                                                        maximumVersion: maximumVersion))),
+            .server(.features),
             
             // Blockchain
             .blockchain(

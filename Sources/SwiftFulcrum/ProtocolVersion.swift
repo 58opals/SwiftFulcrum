@@ -2,7 +2,7 @@
 
 import Foundation
 
-public struct ProtocolVersion: Comparable, CustomStringConvertible, Sendable {
+public struct ProtocolVersion: Comparable, CustomStringConvertible, Decodable, Sendable {
     public let major: Int
     public let minor: Int
     public let patch: Int
