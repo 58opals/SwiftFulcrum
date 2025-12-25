@@ -95,6 +95,7 @@ extension Optional: NilConstructible { static var nilValue: Self { nil } }
 
 private enum ResultNilProducer {
     static func produceNilIfOptional<T>(_ type: T.Type) -> T? {
-        (any NilConstructible.Type)?.nilValue as? T
+        guard let optionalType = T.self as? NilConstructible.Type else { return nil }
+        return optionalType.nilValue as? T
     }
 }

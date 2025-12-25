@@ -4,6 +4,10 @@ import Foundation
 
 extension Response.JSONRPC {
     public struct Result {
+        public struct Server {
+            public struct Ping: Decodable, Sendable {}
+        }
+        
         public struct Blockchain {
             public typealias EstimateFee = Double
             

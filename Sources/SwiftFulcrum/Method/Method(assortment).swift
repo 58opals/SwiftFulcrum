@@ -6,6 +6,11 @@ struct MethodAssortment {
     
     func methodAssortment() {
         switch method {
+            // MARK: - Server
+        case .server(let server):
+            switch server {
+            case .ping: return
+            }
             // MARK: - Blockchain
         case .blockchain(let blockchain):
             switch blockchain {
@@ -88,6 +93,8 @@ struct MethodAssortment {
     
     func methodPathAssortment() {
         switch methodPath {
+            // MARK: - Server
+        case "server.ping": return
             // MARK: - Blockchain
         case "blockchain.estimatefee": return
         case "blockchain.relayfee": return
@@ -144,6 +151,9 @@ struct MethodAssortment {
 extension MethodAssortment {
     static var sampleMethods: [Method] {
         return [
+            // Server
+            .server(.ping),
+            
             // Blockchain
             .blockchain(
                 .estimateFee(numberOfBlocks: 6)),

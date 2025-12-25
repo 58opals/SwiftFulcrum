@@ -14,6 +14,18 @@ public protocol JSONRPCNilAcceptingConvertible: JSONRPCConvertible {
 }
 
 extension Response.Result {
+    public struct Server {
+        public struct Ping: JSONRPCConvertible {
+            public typealias JSONRPC = Response.JSONRPC.Result.Server.Ping?
+            
+            public init(fromRPC jsonrpc: JSONRPC) throws {
+                guard jsonrpc == nil else {
+                    throw Response.Result.Error.unexpectedFormat("Expected null result for server.ping().")
+                }
+            }
+        }
+    }
+    
     public struct Blockchain {
         public struct EstimateFee: JSONRPCConvertible {
             public let fee: Double

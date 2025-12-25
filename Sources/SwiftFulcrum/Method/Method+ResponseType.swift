@@ -4,6 +4,9 @@ import Foundation
 
 extension Method {
     enum ResponseType {
+        // Server
+        case ServerPing(Response.Result.Server.Ping)
+        
         // Blockchain
         case BlockchainEstimateFee(Response.Result.Blockchain.EstimateFee)
         case BlockchainRelayFee(Response.Result.Blockchain.RelayFee)

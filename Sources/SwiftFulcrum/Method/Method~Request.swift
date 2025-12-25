@@ -5,6 +5,21 @@ import Foundation
 extension Method {
     func createRequest(with uuid: UUID) -> Request {
         switch self {
+            // MARK: - Server
+        case .server(let server):
+            switch server {
+            case .ping:
+                struct Parameters: Encodable {
+                    func encode(to encoder: Encoder) throws {
+                        _ = encoder.unkeyedContainer()
+                    }
+                }
+                
+                return Request(id: uuid,
+                               method: self,
+                               params: Parameters())
+            }
+            
             // MARK: - Blockchain
         case .blockchain(let blockchain):
             switch blockchain {
