@@ -71,7 +71,14 @@ extension WebSocket {
             var rotation = try await buildCandidateRotation(preferredURL: overrideURL, currentURL: currentURL)
             var rotationCursor = 0
             
-            let maximumAttempts = configuration.isUnlimited ? Int.max : configuration.maximumReconnectionAttempts
+            let maximumAttempts: Int
+            if configuration.isUnlimited {
+                maximumAttempts = Int.max
+            } else if serverCatalogLoader.isBundled, overrideURL == nil {
+                maximumAttempts = max(configuration.maximumReconnectionAttempts, rotation.count)
+            } else {
+                maximumAttempts = configuration.maximumReconnectionAttempts
+            }
             while reconnectionAttempts < maximumAttempts {
                 let candidateURL: URL
                 

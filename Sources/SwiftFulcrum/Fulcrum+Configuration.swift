@@ -125,10 +125,18 @@ extension Fulcrum.Configuration.Reconnect {
 }
 
 public struct FulcrumServerCatalogLoader: Sendable {
+    enum Kind { case bundled, constant, custom }
+    
+    private let kind: Kind
     private let loadCatalog: @Sendable (Fulcrum.Configuration.Network, [URL]) async throws -> [URL]
     
     public init(load: @escaping @Sendable (Fulcrum.Configuration.Network, [URL]) async throws -> [URL]) {
+        self.init(load: load, kind: .custom)
+    }
+    
+    init(load: @escaping @Sendable (Fulcrum.Configuration.Network, [URL]) async throws -> [URL], kind: Kind) {
         self.loadCatalog = load
+        self.kind = kind
     }
     
     public func loadServers(
@@ -137,10 +145,12 @@ public struct FulcrumServerCatalogLoader: Sendable {
     ) async throws -> [URL] {
         try await loadCatalog(network, fallback)
     }
+    
+    var isBundled: Bool { kind == .bundled }
 }
 
 extension FulcrumServerCatalogLoader {
-    public static let bundled = Self { network, fallback in
+    public static let bundled = Self(load: { network, fallback in
         try await Task.detached(priority: .utility) {
             if let bundled = try? WebSocket.Server.decodeBundledServers(for: network), !bundled.isEmpty {
                 return bundled
@@ -150,10 +160,10 @@ extension FulcrumServerCatalogLoader {
             guard !sanitizedFallback.isEmpty else { throw Fulcrum.Error.transport(.setupFailed) }
             return sanitizedFallback
         }.value
-    }
+    }, kind: .bundled)
     
     public static func constant(_ servers: [URL]) -> Self {
-        Self { _, _ in servers }
+        Self(load: { _, _ in servers }, kind: .constant)
     }
     
     static func sanitizeServers(_ servers: [URL]) -> [URL] {
