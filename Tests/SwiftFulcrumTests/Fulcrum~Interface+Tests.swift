@@ -113,6 +113,17 @@ struct FulcrumInterfaceTests {
     }
     
     // MARK: - Subscriptions
+    @Test("Cancellation cancels underlying token synchronously")
+    func cancellationMarksTokenImmediately() async {
+        let cancellation = Fulcrum.Call.Cancellation()
+        
+        #expect(await cancellation.isCancelled() == false)
+        
+        await cancellation.cancel()
+        
+        #expect(await cancellation.isCancelled())
+    }
+    
     @Test("Subscriptions expose cancellable header streams", .timeLimit(.minutes(1)))
     func subscribeCreatesCancellableHeaderSubscription() async throws {
         let url = try await randomFulcrumURL()

@@ -24,8 +24,8 @@ extension Fulcrum.Call {
             self.token = .init()
         }
         
-        public func cancel() {
-            Task { await token.cancel() }
+        public func cancel() async {
+            await token.cancel()
         }
         
         public func isCancelled() async -> Bool {

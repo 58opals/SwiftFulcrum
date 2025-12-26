@@ -4,7 +4,7 @@
 
 # SwiftFulcrum
 
-SwiftFulcrum is a **pure Swift**, actor-based client for interacting with [Fulcrum](https://github.com/cculianu/Fulcrum) WebSocket JSON-RPC servers on the Bitcoin Cash network. It ships with typed RPC models for the endpoints implemented by this package, **automatic protocol negotiation** (`server.version`), resilient WebSocket connectivity (failover + reconnect + heartbeat), and ergonomics tailored to modern Swift Concurrency.
+SwiftFulcrum is a **pure Swift**, actor-based client for interacting with [Fulcrum](https://github.com/cculianu/Fulcrum) WebSocket JSON-RPC servers on the Bitcoin Cash network. It ships with typed RPC models for the endpoints implemented by this package, **automatic protocol negotiation** via `server.version`, resilient WebSocket connectivity (failover + reconnect + heartbeat), and ergonomics tailored to modern Swift Concurrency.
 
 ## Features
 

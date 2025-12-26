@@ -100,6 +100,49 @@ struct WebSocketReconnectorTests {
         }
     }
     
+    @Test("Reconnector stops after configured attempts with injected catalog", .timeLimit(.minutes(1)))
+    func stopAfterConfiguredAttemptsWithInjectedCatalog() async throws {
+        let configuration = WebSocket.Reconnector.Configuration(
+            maximumReconnectionAttempts: 2,
+            reconnectionDelay: 0.01,
+            maximumDelay: 0.01,
+            jitterRange: 1.0 ... 1.0
+        )
+        
+        let injectedCatalog = [
+            URL(string: "wss://127.0.0.1:9"),
+            URL(string: "wss://127.0.0.1:10"),
+            URL(string: "wss://127.0.0.1:11")
+        ].compactMap { $0 }
+        
+        guard let current = injectedCatalog.first else {
+            Issue.record("Injected catalog is empty")
+            return
+        }
+        
+        let webSocket = WebSocket(
+            url: current,
+            configuration: .init(serverCatalogLoader: .constant(injectedCatalog)),
+            reconnectConfiguration: configuration,
+            connectionTimeout: 0.05,
+            sleep: { _ in },
+            jitter: { _ in 1 }
+        )
+        
+        do {
+            try await webSocket.reconnector.attemptReconnection(
+                for: webSocket,
+                with: nil,
+                shouldCancelReceiver: false,
+                isInitialConnection: false
+            )
+            Issue.record("Reconnection should exhaust attempts")
+        } catch {
+            let attempts = await webSocket.reconnector.attemptCount
+            #expect(attempts == configuration.maximumReconnectionAttempts)
+        }
+    }
+    
     @Test("Reconnector rotates through bundled servers", .timeLimit(.minutes(1)))
     func rotateThroughBundledServers() async throws {
         let configuration = WebSocket.Reconnector.Configuration.basic
