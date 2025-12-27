@@ -438,14 +438,31 @@ extension WebSocket {
         return nextIncomingMessageIdentifier
     }
     
-    private func payloadMetadata(for message: URLSessionWebSocketTask.Message) -> (type: String, length: Int) {
+    private func makePayloadMetadata(for message: URLSessionWebSocketTask.Message) -> [String: String] {
         switch message {
         case .data(let data):
-            return ("data", data.count)
+            var metadata = [
+                "payloadType": "data",
+                "length": String(data.count)
+            ]
+            if let preview = makePayloadPreview(from: data) {
+                metadata["payloadPreview"] = preview
+            }
+            return metadata
         case .string(let string):
-            return ("string", string.count)
+            var metadata = [
+                "payloadType": "string",
+                "length": String(string.count)
+            ]
+            if let preview = makePayloadPreview(from: string) {
+                metadata["payloadPreview"] = preview
+            }
+            return metadata
         @unknown default:
-            return ("unknown", 0)
+            return [
+                "payloadType": "unknown",
+                "length": "0"
+            ]
         }
     }
     
@@ -461,14 +478,11 @@ extension WebSocket {
                 } onCancel: {
                     task.cancel(with: .goingAway, reason: nil)
                 }
-                let metadata = payloadMetadata(for: message)
+                var metadata = makePayloadMetadata(for: message)
+                metadata["messageIdentifier"] = String(makeIncomingMessageIdentifier())
                 emitLog(.info,
                         "receive.message",
-                        metadata: [
-                            "messageIdentifier": String(makeIncomingMessageIdentifier()),
-                            "payloadType": metadata.type,
-                            "length": String(metadata.length)
-                        ])
+                        metadata: metadata)
                 switch messageContinuation?.yield(with: .success(message)) {
                 case .some(.enqueued): break
                 default:
