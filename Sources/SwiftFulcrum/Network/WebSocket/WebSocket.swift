@@ -316,22 +316,22 @@ extension WebSocket {
         
         let message = URLSessionWebSocketTask.Message.data(data)
         let messageIdentifier = makeOutgoingMessageIdentifier()
+        var metadata = [
+            "messageIdentifier": String(messageIdentifier),
+            "payloadType": "data",
+            "byteCount": String(data.count)
+        ]
+        if let preview = makePayloadPreview(from: data) {
+            metadata["payloadPreview"] = preview
+        }
         emitLog(.info,
                 "send.begin",
-                metadata: [
-                    "messageIdentifier": String(messageIdentifier),
-                    "payloadType": "data",
-                    "byteCount": String(data.count)
-                ])
+                metadata: metadata)
         try await task.send(message)
         await metrics?.didSend(url: url, message: message)
         emitLog(.info,
                 "send.succeeded",
-                metadata: [
-                    "messageIdentifier": String(messageIdentifier),
-                    "payloadType": "data",
-                    "byteCount": String(data.count)
-                ])
+                metadata: metadata)
     }
     
     func send(string: String) async throws {
@@ -339,22 +339,38 @@ extension WebSocket {
         
         let message = URLSessionWebSocketTask.Message.string(string)
         let messageIdentifier = makeOutgoingMessageIdentifier()
+        var metadata = [
+            "messageIdentifier": String(messageIdentifier),
+            "payloadType": "string",
+            "characterCount": String(string.count)
+        ]
+        if let preview = makePayloadPreview(from: string) {
+            metadata["payloadPreview"] = preview
+        }
         emitLog(.info,
                 "send.begin",
-                metadata: [
-                    "messageIdentifier": String(messageIdentifier),
-                    "payloadType": "string",
-                    "characterCount": String(string.count)
-                ])
+                metadata: metadata)
         try await task.send(message)
         await metrics?.didSend(url: url, message: message)
         emitLog(.info,
                 "send.succeeded",
-                metadata: [
-                    "messageIdentifier": String(messageIdentifier),
-                    "payloadType": "string",
-                    "characterCount": String(string.count)
-                ])
+                metadata: metadata)
+    }
+    
+    private func makePayloadPreview(from data: Data) -> String? {
+        guard let decoded = String(data: data, encoding: .utf8) else { return nil }
+        return makePayloadPreview(from: decoded)
+    }
+    
+    private func makePayloadPreview(from string: String) -> String? {
+        let trimmed = string.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        
+        let maximumLength = 120
+        guard trimmed.count > maximumLength else { return trimmed }
+        
+        let endIndex = trimmed.index(trimmed.startIndex, offsetBy: maximumLength)
+        return "\(trimmed[..<endIndex])…"
     }
 }
 
@@ -492,6 +508,10 @@ extension WebSocket {
         metadata: [String: String] = .init(),
         file: String = #fileID, function: String = #function, line: UInt = #line
     ) {
+        if Log.Context.behavior == .quiet && level.priority <= Log.Level.info.priority {
+            return
+        }
+        
         var mergedMetadata = [
             "component": "WebSocket",
             "url": url.absoluteString,

@@ -171,6 +171,47 @@ struct FulcrumInterfaceTests {
         }
     }
     
+    @Test("Subscribes new header", .timeLimit(.minutes(15)))
+    func subscribeNewHeader() async throws {
+        let url = try await randomFulcrumURL()
+        
+        try await withRunningFulcrum(url) { fulcrum in
+            let (initial, updates, cancel) = try await fulcrum.subscribe(
+                method: .blockchain(.headers(.subscribe)),
+                initialType: Response.Result.Blockchain.Headers.Subscribe.self,
+                notificationType: Response.Result.Blockchain.Headers.SubscribeNotification.self,
+                options: .init(timeout: .seconds(30))
+            )
+            
+            #expect(initial.height > 0)
+            #expect(initial.hex.count == 160)
+            
+            print("Current tip height: \(initial.height)")
+            
+            var updateCount = 0
+            for try await update in updates {
+                if updateCount == 0 {
+                    print("Subscription identifier (method): \(update.subscriptionIdentifier)")
+                    print("Number of blocks: \(update.blocks.count)")
+                    for block in update.blocks {
+                        #expect(block.height > 0)
+                        #expect(block.hex.count == 160)
+                        
+                        print("\(block.height): \(block.hex)")
+                    }
+                    updateCount += 1
+                }
+                
+                break
+            }
+            
+            await cancel()
+            
+            let terminated = await streamTerminates(updates, within: .seconds(10))
+            #expect(terminated)
+        }
+    }
+    
     // MARK: - Misc RPC
     @Test("Submit resolves address metadata over live Fulcrum", .timeLimit(.minutes(1)))
     func submitResolvesAddressQueries() async throws {

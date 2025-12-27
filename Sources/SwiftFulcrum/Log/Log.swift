@@ -201,6 +201,24 @@ extension Log {
             ].joined(separator: "|")
         }
     }
+    
+    public enum Behavior: Sendable {
+        case normal
+        case quiet
+    }
+    
+    enum Context {
+        @TaskLocal static var behavior: Behavior = .normal
+    }
+    
+    public static func withBehavior<T>(
+        _ behavior: Behavior,
+        operation: @Sendable () async throws -> T
+    ) async rethrows -> T {
+        try await Context.behavior.withValue(behavior) {
+            try await operation()
+        }
+    }
 }
 
 extension Log.ConsoleHandler {
@@ -220,6 +238,7 @@ extension Log.ConsoleHandler {
         public static let shared = OutputSink()
         
         private var lastSignature: String?
+        private var lastRendered: String?
         private var repeatCount = 0
         private var debounceTask: Task<Void, Never>?
         
@@ -233,6 +252,7 @@ extension Log.ConsoleHandler {
             flushRepeatsIfNeeded()
             
             lastSignature = signature
+            lastRendered = rendered
             print(rendered)
         }
         
@@ -247,7 +267,13 @@ extension Log.ConsoleHandler {
         private func flushRepeatsIfNeeded() {
             debounceTask?.cancel()
             guard repeatCount > 0 else { return }
-            print("↑ repeated x\(repeatCount)")
+            let times = repeatCount
+            let repetitionDescriptor = times == 1 ? "1 more time" : "\(times) more times"
+            if let lastRendered {
+                print("↑ previous line repeated \(repetitionDescriptor): \(lastRendered)")
+            } else {
+                print("↑ previous line repeated \(repetitionDescriptor)")
+            }
             repeatCount = 0
         }
     }

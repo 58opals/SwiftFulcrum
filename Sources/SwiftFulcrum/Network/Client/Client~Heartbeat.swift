@@ -14,10 +14,12 @@ extension Client {
                     try Task.checkCancellation()
                     
                     let (_, _): (UUID, Response.Result.Server.Ping) =
-                    try await self.call(
-                        method: .server(.ping),
-                        options: .init(timeout: rpcHeartbeatTimeout)
-                    )
+                    try await Log.withBehavior(.quiet) {
+                        try await self.call(
+                            method: .server(.ping),
+                            options: .init(timeout: rpcHeartbeatTimeout)
+                        )
+                    }
                 } catch is CancellationError {
                     // Expected during stop(); do not treat as timeout.
                     break
