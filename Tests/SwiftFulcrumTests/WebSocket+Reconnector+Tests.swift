@@ -3,6 +3,20 @@ import Testing
 @testable import SwiftFulcrum
 
 struct WebSocketReconnectorTests {
+    actor Counter {
+        private var value = 0
+        
+        func increment() {
+            value += 1
+        }
+        
+        func reset() {
+            value = 0
+        }
+        
+        func read() -> Int { value }
+    }
+    
     @Test("Reconnector calculates deterministic backoff", .timeLimit(.minutes(1)))
     func calculateDeterministicBackoff() async throws {
         let configuration = WebSocket.Reconnector.Configuration(
@@ -159,5 +173,50 @@ struct WebSocketReconnectorTests {
         #expect(rotation.count == servers.count)
         #expect(rotation.last == current)
         #expect(rotation.dropLast().allSatisfy { $0.absoluteString != current.absoluteString })
+    }
+    
+    @Test("Reconnector resets exhausted attempts for new sessions", .timeLimit(.minutes(1)))
+    func resetExhaustedAttemptsForNewSessions() async throws {
+        let counter = Counter()
+        
+        let configuration = WebSocket.Reconnector.Configuration(
+            maximumReconnectionAttempts: 2,
+            reconnectionDelay: 0.01,
+            maximumDelay: 0.01,
+            jitterRange: 1.0 ... 1.0
+        )
+        
+        let unreachable = URL(string: "wss://127.0.0.1:9")!
+        
+        let webSocket = WebSocket(
+            url: unreachable,
+            configuration: .init(serverCatalogLoader: .constant([unreachable])),
+            reconnectConfiguration: configuration,
+            connectionTimeout: 0.01,
+            sleep: { _ in await counter.increment() },
+            jitter: { _ in 1 }
+        )
+        
+        func exhaust() async {
+            do {
+                try await webSocket.reconnector.attemptReconnection(
+                    for: webSocket,
+                    shouldCancelReceiver: false,
+                    isInitialConnection: false
+                )
+                Issue.record("Reconnector should exhaust instead of succeeding")
+            } catch {
+                return
+            }
+        }
+        
+        await exhaust()
+        let firstSleepCount = await counter.read()
+        #expect(firstSleepCount > 0)
+        
+        await counter.reset()
+        await exhaust()
+        let secondSleepCount = await counter.read()
+        #expect(secondSleepCount > 0)
     }
 }

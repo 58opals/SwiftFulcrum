@@ -213,7 +213,12 @@ extension WebSocket {
     func reconnect(with url: URL? = nil) async throws {
         await disconnect(with: "WebSocket.reconnect()")
         await updateConnectionState(.reconnecting)
-        try await reconnector.attemptReconnection(for: self, with: url, shouldCancelReceiver: false)
+        do {
+                    try await reconnector.attemptReconnection(for: self, with: url, shouldCancelReceiver: false)
+                } catch {
+                    await updateConnectionState(.disconnected)
+                    throw error
+                }
     }
     
     func disconnect(with reason: String? = nil) async {
@@ -508,6 +513,7 @@ extension WebSocket {
                     await updateConnectionState(.connected)
                     continue
                 } catch {
+                    await updateConnectionState(.disconnected)
                     messageContinuation?.finish(throwing: error)
                     messageContinuation = nil
                     break

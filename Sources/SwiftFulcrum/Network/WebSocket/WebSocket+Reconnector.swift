@@ -66,6 +66,8 @@ extension WebSocket {
             shouldCancelReceiver: Bool = true,
             isInitialConnection: Bool = false
         ) async throws {
+            resetReconnectionAttemptCount()
+            
             let currentURL = await webSocket.url
             let overrideURL = url
             var rotation = try await buildCandidateRotation(preferredURL: overrideURL, currentURL: currentURL)

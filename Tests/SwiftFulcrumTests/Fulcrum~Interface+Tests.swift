@@ -171,7 +171,7 @@ struct FulcrumInterfaceTests {
         }
     }
     
-    @Test("Subscribes new header", .timeLimit(.minutes(15)))
+    @Test("Subscribes new header", .timeLimit(.minutes(1)))
     func subscribeNewHeader() async throws {
         let url = try await randomFulcrumURL()
         
