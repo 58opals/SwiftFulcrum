@@ -41,8 +41,12 @@ extension Client {
             )
         )
         
+        let negotiatedProtocol = try protocolNegotiation.supportedRange.validateNegotiatedVersion(
+            version.negotiatedProtocolVersion
+        )
+        
         var negotiatedSession = NegotiatedSession()
-        negotiatedSession.negotiatedProtocol = version.negotiatedProtocolVersion
+        negotiatedSession.negotiatedProtocol = negotiatedProtocol
         negotiatedSession.serverSoftwareVersion = version.serverVersion
         state.negotiatedSession.negotiatedProtocol = negotiatedSession.negotiatedProtocol
         state.negotiatedSession.serverSoftwareVersion = negotiatedSession.serverSoftwareVersion

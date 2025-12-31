@@ -5,7 +5,8 @@ import Foundation
 extension Client {
     func call<Result: JSONRPCConvertible>(
         method: Method,
-        options: Call.Options = .init()
+        options: Call.Options = .init(),
+        suppressTransportLogging: Bool = false
     ) async throws -> (UUID, Result) {
         if method.isSubscription {
             throw Fulcrum.Error.client(
@@ -15,6 +16,10 @@ extension Client {
         
         let id = UUID()
         let request = method.createRequest(with: id)
+        
+        if suppressTransportLogging {
+            await transport.registerQuietResponse(for: id)
+        }
         
         if let token = options.token {
             await token.register { [weak self] in
@@ -279,12 +284,12 @@ extension Client {
 extension Client {
     func send(request: Request) async throws {
         if case .server(.version) = request.requestedMethod {
-                    guard let data = request.data else { throw Fulcrum.Error.coding(.encode(nil)) }
-                    try await self.send(data: data)
-                    return
-                }
-
-                _ = try await ensureNegotiatedProtocol()
+            guard let data = request.data else { throw Fulcrum.Error.coding(.encode(nil)) }
+            try await self.send(data: data)
+            return
+        }
+        
+        _ = try await ensureNegotiatedProtocol()
         
         guard let data = request.data else { throw Fulcrum.Error.coding(.encode(nil)) }
         try await self.send(data: data)

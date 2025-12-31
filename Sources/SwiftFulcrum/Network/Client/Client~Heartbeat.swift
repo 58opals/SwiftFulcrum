@@ -17,7 +17,8 @@ extension Client {
                     try await Log.withBehavior(.quiet) {
                         try await self.call(
                             method: .server(.ping),
-                            options: .init(timeout: rpcHeartbeatTimeout)
+                            options: .init(timeout: rpcHeartbeatTimeout),
+                            suppressTransportLogging: true
                         )
                     }
                 } catch is CancellationError {

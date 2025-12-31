@@ -23,6 +23,8 @@ protocol Transportable: Sendable {
     
     func updateMetrics(_ collector: MetricsCollectable?) async
     func updateLogger(_ handler: Log.Handler?) async
+    
+    func registerQuietResponse(for identifier: UUID) async
 }
 
 public enum FulcrumTransportLifecycle {

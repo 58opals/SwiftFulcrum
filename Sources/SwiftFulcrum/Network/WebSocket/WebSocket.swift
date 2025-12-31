@@ -24,6 +24,8 @@ actor WebSocket {
     private var nextOutgoingMessageIdentifier: UInt64 = 0
     private var nextIncomingMessageIdentifier: UInt64 = 0
     
+    private var quietResponseIdentifiers: Set<UUID> = .init()
+    
     private var receivedTask: Task<Void, Never>?
     private var shouldAutomaticallyReceive = false
     
@@ -480,9 +482,11 @@ extension WebSocket {
                 }
                 var metadata = makePayloadMetadata(for: message)
                 metadata["messageIdentifier"] = String(makeIncomingMessageIdentifier())
-                emitLog(.info,
-                        "receive.message",
-                        metadata: metadata)
+                if !shouldSuppressLogging(for: message) {
+                    emitLog(.info,
+                            "receive.message",
+                            metadata: metadata)
+                }
                 switch messageContinuation?.yield(with: .success(message)) {
                 case .some(.enqueued): break
                 default:
@@ -533,5 +537,30 @@ extension WebSocket {
         ]
         mergedMetadata.merge(metadata, uniquingKeysWith: { _, new in new })
         logger.log(level, message(), metadata: mergedMetadata, file: file, function: function, line: line)
+    }
+    
+    func registerQuietResponse(for identifier: UUID) {
+        quietResponseIdentifiers.insert(identifier)
+    }
+    
+    private func shouldSuppressLogging(for message: URLSessionWebSocketTask.Message) -> Bool {
+        let data: Data
+        
+        switch message {
+        case .data(let raw):
+            data = raw
+        case .string(let string):
+            guard let converted = string.data(using: .utf8) else { return false }
+            data = converted
+        @unknown default:
+            return false
+        }
+        
+        guard
+            case .uuid(let identifier) = try? Response.JSONRPC.extractIdentifier(from: data),
+            quietResponseIdentifiers.remove(identifier) != nil
+        else { return false }
+        
+        return true
     }
 }

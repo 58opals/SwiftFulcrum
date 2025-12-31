@@ -66,6 +66,8 @@ actor WebSocketTransport: Transportable {
     
     func updateLogger(_ handler: Log.Handler?) async { await webSocket.updateLogger(handler) }
     
+    func registerQuietResponse(for identifier: UUID) async { await webSocket.registerQuietResponse(for: identifier) }
+    
     private func mapConnectionState(_ state: WebSocket.ConnectionState) -> Fulcrum.ConnectionState {
         switch state {
         case .idle: .idle

@@ -107,6 +107,7 @@ actor TransportStub: Transportable {
     }
     func updateMetrics(_ collector: MetricsCollectable?) async { _ = collector }
     func updateLogger(_ handler: Log.Handler?) async { _ = handler }
+    func registerQuietResponse(for identifier: UUID) async { _ = identifier }
     
     func enqueueIncoming(_ message: URLSessionWebSocketTask.Message) {
         incomingBuffer.append(.success(message))
