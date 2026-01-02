@@ -36,6 +36,7 @@ struct ClientProtocolNegotiationTests {
             Issue.record("Client.start() should fail for unsupported negotiated protocol")
         } catch let error as ProtocolVersion.Range.Error {
             #expect(error == .unsupportedVersionRange)
+            #expect(await transport.connectionState == .disconnected)
         } catch {
             Issue.record("Unexpected error: \(error)")
         }

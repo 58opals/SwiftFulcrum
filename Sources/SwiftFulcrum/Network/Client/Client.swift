@@ -55,10 +55,27 @@ actor Client {
         startReceivingTask()
         startLifecycleObservationTasks()
         
-        _ = try await ensureNegotiatedProtocol()
-        
-        startRPCHeartbeat()
-        await publishDiagnosticsSnapshot()
+        do {
+            _ = try await ensureNegotiatedProtocol()
+            
+            startRPCHeartbeat()
+            await publishDiagnosticsSnapshot()
+        } catch {
+            receiveTask?.cancel()
+            await receiveTask?.value
+            receiveTask = nil
+            
+            lifecycleTask?.cancel()
+            await lifecycleTask?.value
+            lifecycleTask = nil
+            
+            diagnosticsStateTask?.cancel()
+            await diagnosticsStateTask?.value
+            diagnosticsStateTask = nil
+            
+            await transport.disconnect(with: "Client.start() negotiation failed")
+            throw error
+        }
     }
     
     func stop() async {

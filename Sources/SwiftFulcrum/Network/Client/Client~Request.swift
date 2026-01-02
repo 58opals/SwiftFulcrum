@@ -213,6 +213,7 @@ extension Client {
                             }
                             
                             await router.cancel(identifier: .string(subscriptionKey.string), error: error)
+                            await removeStoredSubscriptionMethod(for: subscriptionKey)
                             await publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightUnaryCallCount)
                         }
                     }
