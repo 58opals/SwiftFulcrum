@@ -146,120 +146,99 @@ extension Client {
         )
         
         let subscriptionTask = Task<(UUID, Initial, AsyncThrowingStream<Notification, Swift.Error>), Swift.Error> {
-            try await withTaskCancellationHandler {
-                let (rawStream, rawContinuation) = AsyncThrowingStream<Data, Swift.Error>.makeStream()
-                
-                try await router.addStream(
-                    key: subscriptionKey.string,
-                    continuation: rawContinuation
-                )
-                subscriptionMethods[subscriptionKey] = method
-                
-                emitLog(.info,
-                        "subscription_registry.added",
-                        metadata: [
-                            "identifier": subscriptionKey.identifier ?? "",
-                            "method": method.path,
-                            "subscriptionCount": String(subscriptionMethods.count)
-                        ]
-                )
-                await publishSubscriptionRegistry()
-                await publishDiagnosticsSnapshot()
-                
-                rawContinuation.onTermination = { @Sendable [weak self] _ in
-                    guard let self else { return }
+            do {
+                return try await withTaskCancellationHandler {
+                    let (rawStream, rawContinuation) = AsyncThrowingStream<Data, Swift.Error>.makeStream()
                     
-                    Task {
-                        let inflightCount = await self.router.cancel(identifier: .uuid(id))
+                    try await router.addStream(
+                        key: subscriptionKey.string,
+                        continuation: rawContinuation
+                    )
+                    subscriptionMethods[subscriptionKey] = method
+                    
+                    emitLog(.info,
+                            "subscription_registry.added",
+                            metadata: [
+                                "identifier": subscriptionKey.identifier ?? "",
+                                "method": method.path,
+                                "subscriptionCount": String(subscriptionMethods.count)
+                            ]
+                    )
+                    await publishSubscriptionRegistry()
+                    await publishDiagnosticsSnapshot()
+                    
+                    rawContinuation.onTermination = { @Sendable [weak self] _ in
+                        guard let self else { return }
                         
-                        let inflightUnaryCallCount: Int
-                        if let inflightCount {
-                            inflightUnaryCallCount = inflightCount
-                        } else {
-                            inflightUnaryCallCount = await self.router.makeInflightUnaryCallCount()
-                        }
-                        
-                        await self.router.cancel(identifier: .string(subscriptionKey.string))
-                        await self.publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightUnaryCallCount)
-                        await self.removeStoredSubscriptionMethod(for: subscriptionKey)
-                        
-                        if let method = await self.makeUnsubscribeMethod(for: subscriptionKey) {
-                            let request = method.createRequest(with: UUID())
-                            try? await self.send(request: request)
+                        Task {
+                            let removed = await self.cleanUpSubscriptionSetup(
+                                for: subscriptionKey,
+                                requestIdentifier: id
+                            )
+                            
+                            if removed, let method = await self.makeUnsubscribeMethod(for: subscriptionKey) {
+                                let request = method.createRequest(with: UUID())
+                                try? await self.send(request: request)
+                            }
                         }
                     }
-                }
-                
-                let initial: Initial = try await withCheckedThrowingContinuation { continuation in
-                    Task {
-                        do {
-                            let inflightCount = try await router.addUnary(id: id, continuation: continuation)
-                            await publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightCount)
-                        } catch {
-                            continuation.resume(throwing: error)
-                            return
-                        }
-                        
-                        do {
-                            try await send(request: request)
-                        } catch {
-                            let inflightCount = await router.cancel(identifier: .uuid(id), error: error)
-                            
-                            let inflightUnaryCallCount: Int
-                            if let inflightCount {
-                                inflightUnaryCallCount = inflightCount
-                            } else {
-                                inflightUnaryCallCount = await self.router.makeInflightUnaryCallCount()
+                    let initial: Initial = try await withCheckedThrowingContinuation { continuation in
+                        Task {
+                            do {
+                                let inflightCount = try await router.addUnary(id: id, continuation: continuation)
+                                await publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightCount)
+                            } catch {
+                                continuation.resume(throwing: error)
+                                return
                             }
                             
-                            await router.cancel(identifier: .string(subscriptionKey.string), error: error)
-                            await removeStoredSubscriptionMethod(for: subscriptionKey)
-                            await publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightUnaryCallCount)
+                            do {
+                                try await send(request: request)
+                            } catch {
+                                await self.cleanUpSubscriptionSetup(
+                                    for: subscriptionKey,
+                                    requestIdentifier: id,
+                                    error: error
+                                )
+                            }
                         }
-                    }
-                }.decode(
-                    Initial.self,
-                    context: .init(methodPath: method.path)
-                )
-                
-                let typedStream: AsyncThrowingStream<Notification, Swift.Error> = rawStream.decode(Notification.self, context: .init(methodPath: method.path))
-                
-                
-                return (id, initial, typedStream)
-            } onCancel: {
-                Task {
-                    let inflightCount = await self.router.cancel(identifier: .uuid(id))
+                    }.decode(
+                        Initial.self,
+                        context: .init(methodPath: method.path)
+                    )
                     
-                    let inflightUnaryCallCount: Int
-                    if let inflightCount {
-                        inflightUnaryCallCount = inflightCount
-                    } else {
-                        inflightUnaryCallCount = await self.router.makeInflightUnaryCallCount()
-                    }
+                    let typedStream: AsyncThrowingStream<Notification, Swift.Error> = rawStream.decode(Notification.self, context: .init(methodPath: method.path))
                     
-                    await self.router.cancel(identifier: .string(subscriptionKey.string))
-                    await self.publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightUnaryCallCount)
+                    return (id, initial, typedStream)
+                } onCancel: {
+                    Task {
+                        await self.cleanUpSubscriptionSetup(
+                            for: subscriptionKey,
+                            requestIdentifier: id
+                        )
+                    }
                 }
+            } catch {
+                await self.cleanUpSubscriptionSetup(
+                    for: subscriptionKey,
+                    requestIdentifier: id,
+                    error: error
+                )
+                throw error
             }
         }
         
         if let token = options.token {
             let idCopy = id
-            let keyCopy = subscriptionKey.string
             await token.register { [weak self] in
                 Task {
                     guard let self else { return }
-                    let inflightCount = await self.router.cancel(identifier: .uuid(idCopy))
-                    
-                    let inflightUnaryCallCount: Int
-                    if let inflightCount {
-                        inflightUnaryCallCount = inflightCount
-                    } else {
-                        inflightUnaryCallCount = await self.router.makeInflightUnaryCallCount()
-                    }
-                    
-                    await self.router.cancel(identifier: .string(keyCopy))
-                    await self.publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightUnaryCallCount)
+                    let cleanupKey = SubscriptionKey(methodPath: method.path, identifier: subscriptionKey.identifier)
+                    await self.cleanUpSubscriptionSetup(
+                        for: cleanupKey,
+                        requestIdentifier: idCopy,
+                        error: Fulcrum.Error.client(.cancelled)
+                    )
                 }
             }
         }

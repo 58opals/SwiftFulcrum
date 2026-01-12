@@ -26,33 +26,6 @@ extension Client {
 }
 
 extension Client {
-    func resubscribeStoredMethods() async {
-        for method in subscriptionMethods.values {
-            let requestID = UUID()
-            let request = method.createRequest(with: requestID)
-            try? await send(request: request)
-        }
-    }
-}
-
-extension Client {
-    func removeStoredSubscriptionMethod(for key: SubscriptionKey) async {
-        if subscriptionMethods.removeValue(forKey: key) != nil {
-            emitLog(.info,
-                    "subscription_registry.removed",
-                    metadata: [
-                        "identifier": key.identifier ?? "",
-                        "method": key.methodPath,
-                        "subscriptionCount": String(subscriptionMethods.count)
-                    ]
-            )
-            await publishSubscriptionRegistry()
-            await publishDiagnosticsSnapshot()
-        }
-    }
-}
-
-extension Client {
     func deriveSubscriptionIdentifier(for method: Method) -> String? {
         switch method {
         case .blockchain(.scripthash(.subscribe(scripthash: let scripthash))):
@@ -66,5 +39,57 @@ extension Client {
         default:
             return nil
         }
+    }
+}
+
+extension Client {
+    func resubscribeStoredMethods() async {
+        for method in subscriptionMethods.values {
+            let requestID = UUID()
+            let request = method.createRequest(with: requestID)
+            try? await send(request: request)
+        }
+    }
+}
+
+extension Client {
+    @discardableResult
+    func removeStoredSubscriptionMethod(for key: SubscriptionKey) async -> Bool {
+        guard subscriptionMethods.removeValue(forKey: key) != nil else { return false }
+        
+        emitLog(.info,
+                "subscription_registry.removed",
+                metadata: [
+                    "identifier": key.identifier ?? "",
+                    "method": key.methodPath,
+                    "subscriptionCount": String(subscriptionMethods.count)
+                ]
+        )
+        await publishSubscriptionRegistry()
+        await publishDiagnosticsSnapshot()
+        return true
+    }
+    
+    @discardableResult
+    func cleanUpSubscriptionSetup(for subscriptionKey: SubscriptionKey,
+                                  requestIdentifier: UUID,
+                                  error: Swift.Error? = nil) async -> Bool {
+        let inflightCount = await router.cancel(identifier: .uuid(requestIdentifier), error: error)
+        await router.cancel(identifier: .string(subscriptionKey.string), error: error)
+        
+        let didRemove = await removeStoredSubscriptionMethod(for: subscriptionKey)
+        
+        if !didRemove {
+            let inflightUnaryCallCount: Int
+            if let inflightCount {
+                inflightUnaryCallCount = inflightCount
+            } else {
+                inflightUnaryCallCount = await router.makeInflightUnaryCallCount()
+            }
+            
+            await publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightUnaryCallCount)
+        }
+        
+        return didRemove
     }
 }
