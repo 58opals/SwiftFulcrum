@@ -26,30 +26,14 @@ extension Client {
                 Task {
                     guard let self else { return }
                     let inflightCount = await self.router.cancel(identifier: .uuid(id))
-                    
-                    let inflightUnaryCallCount: Int
-                    if let inflightCount {
-                        inflightUnaryCallCount = inflightCount
-                    } else {
-                        inflightUnaryCallCount = await self.router.makeInflightUnaryCallCount()
-                    }
-                    
-                    await self.publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightUnaryCallCount)
+                    await self.publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightCount)
                 }
             }
         }
         
         if let token = options.token, await token.isCancelled {
             let inflightCount = await router.cancel(identifier: .uuid(id))
-            
-            let inflightUnaryCallCount: Int
-            if let inflightCount {
-                inflightUnaryCallCount = inflightCount
-            } else {
-                inflightUnaryCallCount = await self.router.makeInflightUnaryCallCount()
-            }
-            
-            await publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightUnaryCallCount)
+            await publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightCount)
             throw Fulcrum.Error.client(.cancelled)
         }
         
@@ -69,30 +53,14 @@ extension Client {
                             try await send(request: request)
                         } catch {
                             let inflightCount = await router.cancel(identifier: .uuid(id), error: error)
-                            
-                            let inflightUnaryCallCount: Int
-                            if let inflightCount {
-                                inflightUnaryCallCount = inflightCount
-                            } else {
-                                inflightUnaryCallCount = await self.router.makeInflightUnaryCallCount()
-                            }
-                            
-                            await publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightUnaryCallCount)
+                            await publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightCount)
                         }
                     }
                 }
             } onCancel: {
                 Task {
                     let inflightCount = await self.router.cancel(identifier: .uuid(id))
-                    
-                    let inflightUnaryCallCount: Int
-                    if let inflightCount {
-                        inflightUnaryCallCount = inflightCount
-                    } else {
-                        inflightUnaryCallCount = await self.router.makeInflightUnaryCallCount()
-                    }
-                    
-                    await self.publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightUnaryCallCount)
+                    await self.publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightCount)
                 }
             }
         }
@@ -106,15 +74,7 @@ extension Client {
                     try await Task.sleep(for: limit)
                     callTask.cancel()
                     let inflightCount = await self.router.cancel(identifier: .uuid(id))
-                    
-                    let inflightUnaryCallCount: Int
-                    if let inflightCount {
-                        inflightUnaryCallCount = inflightCount
-                    } else {
-                        inflightUnaryCallCount = await self.router.makeInflightUnaryCallCount()
-                    }
-                    
-                    await self.publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightUnaryCallCount)
+                    await self.publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightCount)
                     throw Fulcrum.Error.client(.timeout(limit))
                 }
                 let value = try await group.next()!

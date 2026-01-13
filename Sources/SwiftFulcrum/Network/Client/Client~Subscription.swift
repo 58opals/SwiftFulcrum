@@ -80,14 +80,7 @@ extension Client {
         let didRemove = await removeStoredSubscriptionMethod(for: subscriptionKey)
         
         if !didRemove {
-            let inflightUnaryCallCount: Int
-            if let inflightCount {
-                inflightUnaryCallCount = inflightCount
-            } else {
-                inflightUnaryCallCount = await router.makeInflightUnaryCallCount()
-            }
-            
-            await publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightUnaryCallCount)
+            await publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightCount)
         }
         
         return didRemove
