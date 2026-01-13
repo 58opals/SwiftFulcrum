@@ -214,11 +214,11 @@ extension WebSocket {
         await disconnect(with: "WebSocket.reconnect()")
         await updateConnectionState(.reconnecting)
         do {
-                    try await reconnector.attemptReconnection(for: self, with: url, shouldCancelReceiver: false)
-                } catch {
-                    await updateConnectionState(.disconnected)
-                    throw error
-                }
+            try await reconnector.attemptReconnection(for: self, with: url, shouldCancelReceiver: false)
+        } catch {
+            await updateConnectionState(.disconnected)
+            throw error
+        }
     }
     
     func disconnect(with reason: String? = nil) async {
@@ -319,49 +319,35 @@ extension WebSocket {
 // MARK: - Send
 extension WebSocket {
     func send(data: Data) async throws {
-        guard let task else { throw Fulcrum.Error.transport(.connectionClosed(closeInformation.code, closeInformation.reason)) }
-        
         let message = URLSessionWebSocketTask.Message.data(data)
-        let messageIdentifier = makeOutgoingMessageIdentifier()
-        var metadata = [
-            "messageIdentifier": String(messageIdentifier),
-            "payloadType": "data",
-            "byteCount": String(data.count)
-        ]
-        if let preview = makePayloadPreview(from: data) {
-            metadata["payloadPreview"] = preview
-        }
-        emitLog(.info,
-                "send.begin",
-                metadata: metadata)
-        try await task.send(message)
-        await metrics?.didSend(url: url, message: message)
-        emitLog(.info,
-                "send.succeeded",
-                metadata: metadata)
+        var metadata = ["payloadType": "data",
+                        "byteCount": String(data.count)]
+        if let preview = makePayloadPreview(from: data) { metadata["payloadPreview"] = preview }
+        try await sendMessage(message, metadata: metadata)
     }
     
     func send(string: String) async throws {
+        let message = URLSessionWebSocketTask.Message.string(string)
+        var metadata = ["payloadType": "string",
+                        "characterCount": String(string.count)]
+        if let preview = makePayloadPreview(from: string) { metadata["payloadPreview"] = preview }
+        try await sendMessage(message, metadata: metadata)
+    }
+    
+    private func sendMessage(
+        _ message: URLSessionWebSocketTask.Message,
+        metadata: [String: String]
+    ) async throws {
         guard let task else { throw Fulcrum.Error.transport(.connectionClosed(closeInformation.code, closeInformation.reason)) }
         
-        let message = URLSessionWebSocketTask.Message.string(string)
         let messageIdentifier = makeOutgoingMessageIdentifier()
-        var metadata = [
-            "messageIdentifier": String(messageIdentifier),
-            "payloadType": "string",
-            "characterCount": String(string.count)
-        ]
-        if let preview = makePayloadPreview(from: string) {
-            metadata["payloadPreview"] = preview
-        }
-        emitLog(.info,
-                "send.begin",
-                metadata: metadata)
+        var metadataWithIdentifier = metadata
+        metadataWithIdentifier["messageIdentifier"] = String(messageIdentifier)
+        
+        emitLog(.info, "send.begin", metadata: metadataWithIdentifier)
         try await task.send(message)
         await metrics?.didSend(url: url, message: message)
-        emitLog(.info,
-                "send.succeeded",
-                metadata: metadata)
+        emitLog(.info, "send.succeeded", metadata: metadataWithIdentifier)
     }
     
     private func makePayloadPreview(from data: Data) -> String? {
