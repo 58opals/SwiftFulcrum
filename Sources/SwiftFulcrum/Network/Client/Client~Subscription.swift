@@ -5,22 +5,20 @@ import Foundation
 extension Client {
     func makeUnsubscribeMethod(for key: SubscriptionKey) -> Method? {
         switch key.methodPath {
-        case "blockchain.scripthash.subscribe":
+        case .scriptHash:
             guard let id = key.identifier else { return nil }
             return .blockchain(.scripthash(.unsubscribe(scripthash: id)))
-        case "blockchain.address.subscribe":
+        case .address:
             guard let id = key.identifier else { return nil }
             return .blockchain(.address(.unsubscribe(address: id)))
-        case "blockchain.headers.subscribe":
+        case .headers:
             return .blockchain(.headers(.unsubscribe))
-        case "blockchain.transaction.subscribe":
+        case .transaction:
             guard let id = key.identifier else { return nil }
             return .blockchain(.transaction(.unsubscribe(transactionHash: id)))
-        case "blockchain.transaction.dsproof.subscribe":
+        case .transactionDoubleSpendProof:
             guard let id = key.identifier else { return nil }
             return .blockchain(.transaction(.dsProof(.unsubscribe(transactionHash: id))))
-        default:
-            return nil
         }
     }
 }
@@ -73,7 +71,7 @@ extension Client {
                     "subscription_registry.removed",
                     metadata: [
                         "identifier": subscriptionKey.identifier ?? "",
-                        "method": subscriptionKey.methodPath,
+                        "method": subscriptionKey.methodPath.rawValue,
                         "subscriptionCount": String(subscriptionMethods.count)
                     ]
             )

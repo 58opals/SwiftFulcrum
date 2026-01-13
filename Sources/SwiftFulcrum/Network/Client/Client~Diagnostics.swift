@@ -17,7 +17,7 @@ extension Client {
     
     func listSubscriptions() -> [Fulcrum.Diagnostics.Subscription] {
         subscriptionMethods.map { entry in
-                .init(methodPath: entry.key.methodPath, identifier: entry.key.identifier)
+                .init(methodPath: entry.key.methodPath.rawValue, identifier: entry.key.identifier)
         }
     }
     

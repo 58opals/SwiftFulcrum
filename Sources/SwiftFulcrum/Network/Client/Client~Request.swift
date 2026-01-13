@@ -93,10 +93,14 @@ extension Client {
             )
         }
         
+        guard let subscriptionPath = method.subscriptionPath else {
+            throw Fulcrum.Error.client(.protocolMismatch("subscribe() requires supported subscription methods."))
+        }
+        
         let id = UUID()
         let request = method.createRequest(with: id)
         let subscriptionKey = SubscriptionKey(
-            methodPath: method.path,
+            methodPath: subscriptionPath,
             identifier: deriveSubscriptionIdentifier(for: method)
         )
         
@@ -163,7 +167,10 @@ extension Client {
             await token.register { [weak self] in
                 Task {
                     guard let self else { return }
-                    let cleanupKey = SubscriptionKey(methodPath: method.path, identifier: subscriptionKey.identifier)
+                    let cleanupKey = SubscriptionKey(
+                        methodPath: subscriptionPath,
+                        identifier: subscriptionKey.identifier
+                    )
                     await self.cleanUpSubscriptionSetup(
                         for: cleanupKey,
                         requestIdentifier: idCopy,
