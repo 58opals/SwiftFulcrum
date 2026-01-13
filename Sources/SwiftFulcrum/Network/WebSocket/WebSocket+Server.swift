@@ -22,14 +22,14 @@ extension WebSocket {
             
             if let singleValue = try? decoder.singleValueContainer(),
                let rawURL = try? singleValue.decode(String.self) {
-                self.url = try Self.normalizedURL(from: rawURL, codingPath: codingPath)
+                self.url = try Self.normalizeURL(from: rawURL, codingPath: codingPath)
                 return
             }
             
             let container = try decoder.container(keyedBy: CodingKeys.self)
             
             if let rawURL = try container.decodeIfPresent(String.self, forKey: .url) {
-                self.url = try Self.normalizedURL(from: rawURL, codingPath: container.codingPath)
+                self.url = try Self.normalizeURL(from: rawURL, codingPath: container.codingPath)
                 return
             }
             
@@ -41,10 +41,10 @@ extension WebSocket {
             let port = try container.decodeIfPresent(Int.self, forKey: .port)
             let scheme = try container.decodeIfPresent(String.self, forKey: .scheme)
             
-            self.url = try Self.normalizedURL(host: host, port: port, scheme: scheme, codingPath: container.codingPath)
+            self.url = try Self.normalizeURL(host: host, port: port, scheme: scheme, codingPath: container.codingPath)
         }
         
-        private static func normalizedURL(from rawValue: String, codingPath: [CodingKey]) throws -> URL {
+        private static func normalizeURL(from rawValue: String, codingPath: [CodingKey]) throws -> URL {
             guard let rawComponents = URLComponents(string: rawValue) else {
                 throw DecodingError.dataCorrupted(.init(
                     codingPath: codingPath,
@@ -53,7 +53,7 @@ extension WebSocket {
             }
             
             var components = rawComponents
-            components.scheme = try normalizedScheme(from: rawComponents.scheme, codingPath: codingPath)
+            components.scheme = try normalizeScheme(from: rawComponents.scheme, codingPath: codingPath)
             
             guard let result = components.url else {
                 throw DecodingError.dataCorrupted(.init(
@@ -65,11 +65,11 @@ extension WebSocket {
             return result
         }
         
-        private static func normalizedURL(host: String, port: Int?, scheme: String?, codingPath: [CodingKey]) throws -> URL {
+        private static func normalizeURL(host: String, port: Int?, scheme: String?, codingPath: [CodingKey]) throws -> URL {
             var components = URLComponents()
             components.host = host
             components.port = port
-            components.scheme = try normalizedScheme(from: scheme, codingPath: codingPath)
+            components.scheme = try normalizeScheme(from: scheme, codingPath: codingPath)
             
             guard let url = components.url else {
                 throw DecodingError.dataCorrupted(.init(
@@ -81,7 +81,7 @@ extension WebSocket {
             return url
         }
         
-        private static func normalizedScheme(from rawScheme: String?, codingPath: [CodingKey]) throws -> String {
+        private static func normalizeScheme(from rawScheme: String?, codingPath: [CodingKey]) throws -> String {
             guard let rawScheme, !rawScheme.isEmpty else { return "wss" }
             
             switch rawScheme.lowercased() {

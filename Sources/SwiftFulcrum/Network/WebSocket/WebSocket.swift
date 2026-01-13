@@ -24,6 +24,8 @@ actor WebSocket {
     private var nextOutgoingMessageIdentifier: UInt64 = 0
     private var nextIncomingMessageIdentifier: UInt64 = 0
     
+    private var quietResponseIdentifiers: Set<UUID> = .init()
+    
     private var receivedTask: Task<Void, Never>?
     private var shouldAutomaticallyReceive = false
     
@@ -147,7 +149,7 @@ extension WebSocket {
             if isConnected {
                 await updateConnectionState(.connected)
                 emitLog(.info, "connect.succeeded")
-                await metrics?.didConnect(url: url, network: network)
+                await metrics?.recordConnect(url: url, network: network)
                 if shouldEmitLifecycle { emitLifecycle(.connected(isReconnect: false)) }
                 ensureAutomaticReceiving()
             } else {
@@ -211,7 +213,12 @@ extension WebSocket {
     func reconnect(with url: URL? = nil) async throws {
         await disconnect(with: "WebSocket.reconnect()")
         await updateConnectionState(.reconnecting)
-        try await reconnector.attemptReconnection(for: self, with: url, shouldCancelReceiver: false)
+        do {
+            try await reconnector.attemptReconnection(for: self, with: url, shouldCancelReceiver: false)
+        } catch {
+            await updateConnectionState(.disconnected)
+            throw error
+        }
     }
     
     func disconnect(with reason: String? = nil) async {
@@ -229,7 +236,7 @@ extension WebSocket {
             throwing: Fulcrum.Error.transport(.connectionClosed(information.code, information.reason))
         )
         
-        await metrics?.didDisconnect(url: url, closeCode: information.code, reason: reason)
+        await metrics?.recordDisconnect(url: url, closeCode: information.code, reason: reason)
         await resetMessageStreamAndReader()
         emitLog(.info, "disconnect", metadata: ["reason": reason ?? "nil",
                                                 "code": String(information.code.rawValue)])
@@ -280,7 +287,7 @@ extension WebSocket {
         let metrics = self.metrics
         
         task.sendPing { error in
-            if let metrics { Task { await metrics.didPing(url: currentURL, error: error) } }
+            if let metrics { Task { await metrics.recordPing(url: currentURL, error: error) } }
             if let error {
                 continuation.finish(throwing: Fulcrum.Error.Network.tlsNegotiationFailed(error))
             } else {
@@ -312,49 +319,51 @@ extension WebSocket {
 // MARK: - Send
 extension WebSocket {
     func send(data: Data) async throws {
-        guard let task else { throw Fulcrum.Error.transport(.connectionClosed(closeInformation.code, closeInformation.reason)) }
-        
         let message = URLSessionWebSocketTask.Message.data(data)
-        let messageIdentifier = makeOutgoingMessageIdentifier()
-        emitLog(.info,
-                "send.begin",
-                metadata: [
-                    "messageIdentifier": String(messageIdentifier),
-                    "payloadType": "data",
-                    "byteCount": String(data.count)
-                ])
-        try await task.send(message)
-        await metrics?.didSend(url: url, message: message)
-        emitLog(.info,
-                "send.succeeded",
-                metadata: [
-                    "messageIdentifier": String(messageIdentifier),
-                    "payloadType": "data",
-                    "byteCount": String(data.count)
-                ])
+        var metadata = ["payloadType": "data",
+                        "byteCount": String(data.count)]
+        if let preview = makePayloadPreview(from: data) { metadata["payloadPreview"] = preview }
+        try await sendMessage(message, metadata: metadata)
     }
     
     func send(string: String) async throws {
+        let message = URLSessionWebSocketTask.Message.string(string)
+        var metadata = ["payloadType": "string",
+                        "characterCount": String(string.count)]
+        if let preview = makePayloadPreview(from: string) { metadata["payloadPreview"] = preview }
+        try await sendMessage(message, metadata: metadata)
+    }
+    
+    private func sendMessage(
+        _ message: URLSessionWebSocketTask.Message,
+        metadata: [String: String]
+    ) async throws {
         guard let task else { throw Fulcrum.Error.transport(.connectionClosed(closeInformation.code, closeInformation.reason)) }
         
-        let message = URLSessionWebSocketTask.Message.string(string)
         let messageIdentifier = makeOutgoingMessageIdentifier()
-        emitLog(.info,
-                "send.begin",
-                metadata: [
-                    "messageIdentifier": String(messageIdentifier),
-                    "payloadType": "string",
-                    "characterCount": String(string.count)
-                ])
+        var metadataWithIdentifier = metadata
+        metadataWithIdentifier["messageIdentifier"] = String(messageIdentifier)
+        
+        emitLog(.info, "send.begin", metadata: metadataWithIdentifier)
         try await task.send(message)
-        await metrics?.didSend(url: url, message: message)
-        emitLog(.info,
-                "send.succeeded",
-                metadata: [
-                    "messageIdentifier": String(messageIdentifier),
-                    "payloadType": "string",
-                    "characterCount": String(string.count)
-                ])
+        await metrics?.recordSend(url: url, message: message)
+        emitLog(.info, "send.succeeded", metadata: metadataWithIdentifier)
+    }
+    
+    private func makePayloadPreview(from data: Data) -> String? {
+        guard let decoded = String(data: data, encoding: .utf8) else { return nil }
+        return makePayloadPreview(from: decoded)
+    }
+    
+    private func makePayloadPreview(from string: String) -> String? {
+        let trimmed = string.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        
+        let maximumLength = 120
+        guard trimmed.count > maximumLength else { return trimmed }
+        
+        let endIndex = trimmed.index(trimmed.startIndex, offsetBy: maximumLength)
+        return "\(trimmed[..<endIndex])…"
     }
 }
 
@@ -422,14 +431,31 @@ extension WebSocket {
         return nextIncomingMessageIdentifier
     }
     
-    private func payloadMetadata(for message: URLSessionWebSocketTask.Message) -> (type: String, length: Int) {
+    private func makePayloadMetadata(for message: URLSessionWebSocketTask.Message) -> [String: String] {
         switch message {
         case .data(let data):
-            return ("data", data.count)
+            var metadata = [
+                "payloadType": "data",
+                "length": String(data.count)
+            ]
+            if let preview = makePayloadPreview(from: data) {
+                metadata["payloadPreview"] = preview
+            }
+            return metadata
         case .string(let string):
-            return ("string", string.count)
+            var metadata = [
+                "payloadType": "string",
+                "length": String(string.count)
+            ]
+            if let preview = makePayloadPreview(from: string) {
+                metadata["payloadPreview"] = preview
+            }
+            return metadata
         @unknown default:
-            return ("unknown", 0)
+            return [
+                "payloadType": "unknown",
+                "length": "0"
+            ]
         }
     }
     
@@ -445,14 +471,13 @@ extension WebSocket {
                 } onCancel: {
                     task.cancel(with: .goingAway, reason: nil)
                 }
-                let metadata = payloadMetadata(for: message)
-                emitLog(.info,
-                        "receive.message",
-                        metadata: [
-                            "messageIdentifier": String(makeIncomingMessageIdentifier()),
-                            "payloadType": metadata.type,
-                            "length": String(metadata.length)
-                        ])
+                var metadata = makePayloadMetadata(for: message)
+                metadata["messageIdentifier"] = String(makeIncomingMessageIdentifier())
+                if !consumeQuietResponseIdentifier(for: message) {
+                    emitLog(.info,
+                            "receive.message",
+                            metadata: metadata)
+                }
                 switch messageContinuation?.yield(with: .success(message)) {
                 case .some(.enqueued): break
                 default:
@@ -460,7 +485,7 @@ extension WebSocket {
                     messageContinuation = nil
                     break
                 }
-                await metrics?.didReceive(url: url, message: message)
+                await metrics?.recordReceive(url: url, message: message)
             } catch let urlError as URLError where urlError.code == .cancelled {
                 break
             } catch {
@@ -474,6 +499,7 @@ extension WebSocket {
                     await updateConnectionState(.connected)
                     continue
                 } catch {
+                    await updateConnectionState(.disconnected)
                     messageContinuation?.finish(throwing: error)
                     messageContinuation = nil
                     break
@@ -492,6 +518,10 @@ extension WebSocket {
         metadata: [String: String] = .init(),
         file: String = #fileID, function: String = #function, line: UInt = #line
     ) {
+        if Log.Context.behavior == .quiet && level.priority <= Log.Level.info.priority {
+            return
+        }
+        
         var mergedMetadata = [
             "component": "WebSocket",
             "url": url.absoluteString,
@@ -499,5 +529,30 @@ extension WebSocket {
         ]
         mergedMetadata.merge(metadata, uniquingKeysWith: { _, new in new })
         logger.log(level, message(), metadata: mergedMetadata, file: file, function: function, line: line)
+    }
+    
+    func registerQuietResponse(for identifier: UUID) {
+        quietResponseIdentifiers.insert(identifier)
+    }
+    
+    private func consumeQuietResponseIdentifier(for message: URLSessionWebSocketTask.Message) -> Bool {
+        let data: Data
+        
+        switch message {
+        case .data(let raw):
+            data = raw
+        case .string(let string):
+            guard let converted = string.data(using: .utf8) else { return false }
+            data = converted
+        @unknown default:
+            return false
+        }
+        
+        guard
+            case .uuid(let identifier) = try? Response.JSONRPC.extractIdentifier(from: data),
+            quietResponseIdentifiers.remove(identifier) != nil
+        else { return false }
+        
+        return true
     }
 }

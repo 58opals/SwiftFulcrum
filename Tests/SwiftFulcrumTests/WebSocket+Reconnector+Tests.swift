@@ -3,6 +3,20 @@ import Testing
 @testable import SwiftFulcrum
 
 struct WebSocketReconnectorTests {
+    actor Counter {
+        private var value = 0
+        
+        func increment() {
+            value += 1
+        }
+        
+        func reset() {
+            value = 0
+        }
+        
+        func read() -> Int { value }
+    }
+    
     @Test("Reconnector calculates deterministic backoff", .timeLimit(.minutes(1)))
     func calculateDeterministicBackoff() async throws {
         let configuration = WebSocket.Reconnector.Configuration(
@@ -76,12 +90,15 @@ struct WebSocketReconnectorTests {
         }
         
         let unreachable = URL(string: "wss://127.0.0.1:9") ?? current
+        let networkSession = URLSession(configuration: .ephemeral)
+        defer { networkSession.invalidateAndCancel() }
         
         let webSocket = WebSocket(
             url: unreachable,
+            configuration: .init(session: networkSession),
             reconnectConfiguration: configuration,
             connectionTimeout: 0.2,
-            sleep: { _ in },
+            sleep: { duration in try await Task.sleep(for: duration) },
             jitter: { _ in 1 }
         )
         
@@ -98,6 +115,59 @@ struct WebSocketReconnectorTests {
             let expected = max(configuration.maximumReconnectionAttempts, servers.count + 1)
             #expect(attempts == expected)
         }
+        
+        await webSocket.disconnect(with: "test teardown")
+    }
+    
+    @Test("Reconnector stops after configured attempts with injected catalog", .timeLimit(.minutes(1)))
+    func stopAfterConfiguredAttemptsWithInjectedCatalog() async throws {
+        let configuration = WebSocket.Reconnector.Configuration(
+            maximumReconnectionAttempts: 2,
+            reconnectionDelay: 0.01,
+            maximumDelay: 0.01,
+            jitterRange: 1.0 ... 1.0
+        )
+        
+        let injectedCatalog = [
+            URL(string: "wss://127.0.0.1:9"),
+            URL(string: "wss://127.0.0.1:10"),
+            URL(string: "wss://127.0.0.1:11")
+        ].compactMap { $0 }
+        
+        guard let current = injectedCatalog.first else {
+            Issue.record("Injected catalog is empty")
+            return
+        }
+        
+        let networkSession = URLSession(configuration: .ephemeral)
+        defer { networkSession.invalidateAndCancel() }
+        
+        let webSocket = WebSocket(
+            url: current,
+            configuration: .init(
+                session: networkSession,
+                serverCatalogLoader: .makeConstant(injectedCatalog)
+            ),
+            reconnectConfiguration: configuration,
+            connectionTimeout: 0.05,
+            sleep: { duration in try await Task.sleep(for: duration) },
+            jitter: { _ in 1 }
+        )
+        
+        do {
+            try await webSocket.reconnector.attemptReconnection(
+                for: webSocket,
+                with: nil,
+                shouldCancelReceiver: false,
+                isInitialConnection: false
+            )
+            Issue.record("Reconnection should exhaust attempts")
+        } catch {
+            let attempts = await webSocket.reconnector.attemptCount
+            #expect(attempts == configuration.maximumReconnectionAttempts)
+        }
+        
+        await webSocket.disconnect(with: "test teardown")
     }
     
     @Test("Reconnector rotates through bundled servers", .timeLimit(.minutes(1)))
@@ -116,5 +186,60 @@ struct WebSocketReconnectorTests {
         #expect(rotation.count == servers.count)
         #expect(rotation.last == current)
         #expect(rotation.dropLast().allSatisfy { $0.absoluteString != current.absoluteString })
+    }
+    
+    @Test("Reconnector resets exhausted attempts for new sessions", .timeLimit(.minutes(1)))
+    func resetExhaustedAttemptsForNewSessions() async throws {
+        let counter = Counter()
+        
+        let configuration = WebSocket.Reconnector.Configuration(
+            maximumReconnectionAttempts: 2,
+            reconnectionDelay: 0.01,
+            maximumDelay: 0.01,
+            jitterRange: 1.0 ... 1.0
+        )
+        
+        let unreachable = URL(string: "wss://127.0.0.1:9")!
+        let networkSession = URLSession(configuration: .ephemeral)
+        defer { networkSession.invalidateAndCancel() }
+        
+        let webSocket = WebSocket(
+            url: unreachable,
+            configuration: .init(
+                session: networkSession,
+                serverCatalogLoader: .makeConstant([unreachable])
+            ),
+            reconnectConfiguration: configuration,
+            connectionTimeout: 0.01,
+            sleep: { duration in
+                await counter.increment()
+                try await Task.sleep(for: duration)
+            },
+            jitter: { _ in 1 }
+        )
+        
+        func exhaust() async {
+            do {
+                try await webSocket.reconnector.attemptReconnection(
+                    for: webSocket,
+                    shouldCancelReceiver: false,
+                    isInitialConnection: false
+                )
+                Issue.record("Reconnector should exhaust instead of succeeding")
+            } catch {
+                return
+            }
+        }
+        
+        await exhaust()
+        let firstSleepCount = await counter.read()
+        #expect(firstSleepCount > 0)
+        
+        await counter.reset()
+        await exhaust()
+        let secondSleepCount = await counter.read()
+        #expect(secondSleepCount > 0)
+        
+        await webSocket.disconnect(with: "test teardown")
     }
 }

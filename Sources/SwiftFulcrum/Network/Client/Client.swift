@@ -15,7 +15,7 @@ actor Client {
     
     var subscriptionMethods: [SubscriptionKey: Method]
     
-    private var receiveTask: Task<Void, Never>?
+    var receiveTask: Task<Void, Never>?
     private var lifecycleTask: Task<Void, Never>?
     private var diagnosticsStateTask: Task<Void, Never>?
     
@@ -52,8 +52,53 @@ actor Client {
         guard receiveTask == nil else { return }
         
         try await self.transport.connect()
-        self.receiveTask = Task { await self.startReceiving() }
-        self.lifecycleTask = Task { [weak self] in
+        startReceivingTask()
+        startLifecycleObservationTasks()
+        
+        do {
+            _ = try await ensureNegotiatedProtocol()
+            
+            startRPCHeartbeat()
+            await publishDiagnosticsSnapshot()
+        } catch {
+            await cancelBackgroundTasks()
+            await transport.disconnect(with: "Client.start() negotiation failed")
+            throw error
+        }
+    }
+    
+    func stop() async {
+        let info = await transport.closeInformation
+        let closedError = await Fulcrum.Error.transport(.connectionClosed(info.code, info.reason))
+        let inflightCount = await router.failAll(with: closedError)
+        await publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightCount)
+        
+        await stopRPCHeartbeat()
+        await cancelBackgroundTasks()
+        await transport.disconnect(with: "Client.stop() called")
+        resetNegotiatedSession()
+    }
+    
+    func reconnect(with url: URL? = nil) async throws {
+        await cancelBackgroundTasks()
+        resetNegotiatedSession()
+        try await transport.reconnect(with: url)
+        startReceivingTask()
+        startLifecycleObservationTasks()
+        await publishDiagnosticsSnapshot()
+    }
+    
+    func makeConnectionStateEvents() async -> AsyncStream<Fulcrum.ConnectionState> {
+        await transport.makeConnectionStateEvents()
+    }
+    
+    private func startReceivingTask() {
+        receiveTask = Task { await self.startReceiving() }
+    }
+    
+    private func startLifecycleObservationTasks() {
+        lifecycleTask?.cancel()
+        lifecycleTask = Task { [weak self] in
             guard let self else { return }
             for await event in await self.transport.makeLifecycleEvents() {
                 await self.publishDiagnosticsSnapshot()
@@ -79,56 +124,27 @@ actor Client {
             }
         }
         
-        self.diagnosticsStateTask = Task { [weak self] in
+        diagnosticsStateTask?.cancel()
+        diagnosticsStateTask = Task { [weak self] in
             guard let self else { return }
             let stream = await self.transport.makeConnectionStateEvents()
             for await _ in stream {
                 await self.publishDiagnosticsSnapshot()
             }
         }
-        
-        _ = try await ensureNegotiatedProtocol()
-        
-        startRPCHeartbeat()
-        await publishDiagnosticsSnapshot()
     }
     
-    func stop() async {
-        let info = await transport.closeInformation
-        let closedError = await Fulcrum.Error.transport(.connectionClosed(info.code, info.reason))
-        let inflightCount = await router.failAll(with: closedError)
-        await publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightCount)
-        
-        await stopRPCHeartbeat()
-        
-        receiveTask?.cancel()
-        await receiveTask?.value
-        receiveTask = nil
-        
-        lifecycleTask?.cancel()
-        await lifecycleTask?.value
-        lifecycleTask = nil
-        
-        diagnosticsStateTask?.cancel()
-        await diagnosticsStateTask?.value
-        diagnosticsStateTask = nil
-        
-        await transport.disconnect(with: "Client.stop() called")
-        resetNegotiatedSession()
+    private func cancelAndNil(_ task: Task<Void, Never>?) async -> Task<Void, Never>? {
+        guard let task else { return nil }
+        task.cancel()
+        await task.value
+        return nil
     }
     
-    func reconnect(with url: URL? = nil) async throws {
-        receiveTask?.cancel()
-        await receiveTask?.value
-        receiveTask = nil
-        resetNegotiatedSession()
-        try await transport.reconnect(with: url)
-        receiveTask = Task { await self.startReceiving() }
-        await publishDiagnosticsSnapshot()
-    }
-    
-    func makeConnectionStateEvents() async -> AsyncStream<Fulcrum.ConnectionState> {
-        await transport.makeConnectionStateEvents()
+    private func cancelBackgroundTasks() async {
+        receiveTask = await cancelAndNil(receiveTask)
+        lifecycleTask = await cancelAndNil(lifecycleTask)
+        diagnosticsStateTask = await cancelAndNil(diagnosticsStateTask)
     }
 }
 

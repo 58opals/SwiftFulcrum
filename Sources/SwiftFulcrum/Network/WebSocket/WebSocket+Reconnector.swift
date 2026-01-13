@@ -66,12 +66,21 @@ extension WebSocket {
             shouldCancelReceiver: Bool = true,
             isInitialConnection: Bool = false
         ) async throws {
+            resetReconnectionAttemptCount()
+            
             let currentURL = await webSocket.url
             let overrideURL = url
             var rotation = try await buildCandidateRotation(preferredURL: overrideURL, currentURL: currentURL)
             var rotationCursor = 0
             
-            let maximumAttempts = configuration.isUnlimited ? Int.max : max(configuration.maximumReconnectionAttempts, rotation.count)
+            let maximumAttempts: Int
+            if configuration.isUnlimited {
+                maximumAttempts = Int.max
+            } else if serverCatalogLoader.isBundled, overrideURL == nil {
+                maximumAttempts = max(configuration.maximumReconnectionAttempts, rotation.count)
+            } else {
+                maximumAttempts = configuration.maximumReconnectionAttempts
+            }
             while reconnectionAttempts < maximumAttempts {
                 let candidateURL: URL
                 
@@ -175,6 +184,7 @@ extension WebSocket {
                 function: "",
                 line: 0
             )
+            await webSocket.disconnect(with: "Reconnection attempts exhausted.")
             let closeInformation = await webSocket.closeInformation
             throw Fulcrum.Error.transport(
                 .connectionClosed(closeInformation.code, closeInformation.reason)
@@ -186,25 +196,25 @@ extension WebSocket {
             if let preferredURL { fallbacks.append(preferredURL) }
             
             if serverCatalog.isEmpty {
-                serverCatalog = Self.uniqued(
+                serverCatalog = Self.deduplicate(
                     try await serverCatalogLoader.loadServers(for: network, fallback: fallbacks)
                 )
             } else {
-                serverCatalog = Self.uniqued(serverCatalog + fallbacks)
+                serverCatalog = Self.deduplicate(serverCatalog + fallbacks)
             }
             
             guard !serverCatalog.isEmpty else { return [currentURL] }
             
-            var rotation = Self.rotated(serverCatalog, offset: nextServerIndex)
-            let currentKey = Self.canonical(currentURL)
+            var rotation = Self.rotate(serverCatalog, offset: nextServerIndex)
+            let currentKey = Self.canonicalize(currentURL)
             
             if rotation.count > 1 {
-                rotation.removeAll { Self.canonical($0) == currentKey }
+                rotation.removeAll { Self.canonicalize($0) == currentKey }
             }
             
             if let preferredURL {
-                let preferredKey = Self.canonical(preferredURL)
-                rotation.removeAll { Self.canonical($0) == preferredKey }
+                let preferredKey = Self.canonicalize(preferredURL)
+                rotation.removeAll { Self.canonicalize($0) == preferredKey }
                 rotation.insert(preferredURL, at: 0)
             }
             
@@ -212,7 +222,7 @@ extension WebSocket {
                 return [currentURL]
             }
             
-            if !rotation.contains(where: { Self.canonical($0) == currentKey }) {
+            if !rotation.contains(where: { Self.canonicalize($0) == currentKey }) {
                 rotation.append(currentURL)
             }
             
@@ -238,19 +248,19 @@ extension WebSocket {
         }
         
         private func indexOfServer(_ url: URL) -> Int? {
-            let key = Self.canonical(url)
-            return serverCatalog.firstIndex { Self.canonical($0) == key }
+            let key = Self.canonicalize(url)
+            return serverCatalog.firstIndex { Self.canonicalize($0) == key }
         }
         
-        private static func canonical(_ url: URL) -> String { url.absoluteString }
+        private static func canonicalize(_ url: URL) -> String { url.absoluteString }
         
-        private static func uniqued(_ urls: [URL]) -> [URL] {
+        private static func deduplicate(_ urls: [URL]) -> [URL] {
             var seen = Set<String>()
             var unique: [URL] = .init()
             unique.reserveCapacity(urls.count)
             
             for url in urls {
-                let key = canonical(url)
+                let key = canonicalize(url)
                 if seen.insert(key).inserted {
                     unique.append(url)
                 }
@@ -259,7 +269,7 @@ extension WebSocket {
             return unique
         }
         
-        private static func rotated(_ urls: [URL], offset: Int) -> [URL] {
+        private static func rotate(_ urls: [URL], offset: Int) -> [URL] {
             guard !urls.isEmpty else { return urls }
             let normalizedOffset = ((offset % urls.count) + urls.count) % urls.count
             guard normalizedOffset != 0 else { return urls }

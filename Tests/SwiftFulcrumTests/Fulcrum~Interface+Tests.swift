@@ -113,6 +113,17 @@ struct FulcrumInterfaceTests {
     }
     
     // MARK: - Subscriptions
+    @Test("Cancellation cancels underlying token synchronously")
+    func cancellationMarksTokenImmediately() async {
+        let cancellation = Fulcrum.Call.Cancellation()
+        
+        #expect(await cancellation.isCancelled == false)
+        
+        await cancellation.cancel()
+        
+        #expect(await cancellation.isCancelled)
+    }
+    
     @Test("Subscriptions expose cancellable header streams", .timeLimit(.minutes(1)))
     func subscribeCreatesCancellableHeaderSubscription() async throws {
         let url = try await randomFulcrumURL()
@@ -131,7 +142,7 @@ struct FulcrumInterfaceTests {
             
             await cancel()
             
-            #expect(await cancellation.isCancelled())
+            #expect(await cancellation.isCancelled)
             
             let terminated = await streamTerminates(updates, within: .seconds(10))
             #expect(terminated)
@@ -152,6 +163,47 @@ struct FulcrumInterfaceTests {
             
             // nil is valid for never-seen addresses; if present, it should be non-empty.
             #expect(initial.status?.isEmpty != true)
+            
+            await cancel()
+            
+            let terminated = await streamTerminates(updates, within: .seconds(10))
+            #expect(terminated)
+        }
+    }
+    
+    @Test("Subscribes new header", .timeLimit(.minutes(1)))
+    func subscribeNewHeader() async throws {
+        let url = try await randomFulcrumURL()
+        
+        try await withRunningFulcrum(url) { fulcrum in
+            let (initial, updates, cancel) = try await fulcrum.subscribe(
+                method: .blockchain(.headers(.subscribe)),
+                initialType: Response.Result.Blockchain.Headers.Subscribe.self,
+                notificationType: Response.Result.Blockchain.Headers.SubscribeNotification.self,
+                options: .init(timeout: .seconds(30))
+            )
+            
+            #expect(initial.height > 0)
+            #expect(initial.hex.count == 160)
+            
+            print("Current tip height: \(initial.height)")
+            
+            var updateCount = 0
+            for try await update in updates {
+                if updateCount == 0 {
+                    print("Subscription identifier (method): \(update.subscriptionIdentifier)")
+                    print("Number of blocks: \(update.blocks.count)")
+                    for block in update.blocks {
+                        #expect(block.height > 0)
+                        #expect(block.hex.count == 160)
+                        
+                        print("\(block.height): \(block.hex)")
+                    }
+                    updateCount += 1
+                }
+                
+                break
+            }
             
             await cancel()
             

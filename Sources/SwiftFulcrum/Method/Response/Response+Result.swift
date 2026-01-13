@@ -448,15 +448,28 @@ extension Response.Result {
             
             public struct Headers: JSONRPCConvertible {
                 public let count: UInt
+                public let headers: [String]
                 public let hex: String
                 public let max: UInt
                 public let proof: Block.Header.Proof?
-                private let originalHeaders: [String]?
                 
-                public var headers: [String] {
-                    if let originalHeaders {
-                        return originalHeaders
-                    }
+                public typealias JSONRPC = Response.JSONRPC.Result.Blockchain.Block.Headers
+                public init(fromRPC jsonrpc: JSONRPC) {
+                    self.count = jsonrpc.count
+                    self.hex = jsonrpc.hex
+                    self.headers = jsonrpc.headers ?? Self.splitHeaders(hex: jsonrpc.hex)
+                    self.max = jsonrpc.max
+                    self.proof = {
+                        guard let branch = jsonrpc.branch,
+                              let root = jsonrpc.root else {
+                            return nil
+                        }
+                        
+                        return Block.Header.Proof(branch: branch, root: root)
+                    }()
+                }
+                
+                private static func splitHeaders(hex: String) -> [String] {
                     
                     let headerCharacterLength = 160
                     var headers: [String] = .init()
@@ -478,22 +491,6 @@ extension Response.Result {
                     }
                     
                     return headers
-                }
-                
-                public typealias JSONRPC = Response.JSONRPC.Result.Blockchain.Block.Headers
-                public init(fromRPC jsonrpc: JSONRPC) {
-                    self.count = jsonrpc.count
-                    self.hex = jsonrpc.hex
-                    self.max = jsonrpc.max
-                    self.proof = {
-                        guard let branch = jsonrpc.branch,
-                              let root = jsonrpc.root else {
-                            return nil
-                        }
-                        
-                        return Block.Header.Proof(branch: branch, root: root)
-                    }()
-                    self.originalHeaders = jsonrpc.headers
                 }
             }
         }

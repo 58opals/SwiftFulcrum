@@ -3,12 +3,24 @@
 import Foundation
 
 extension Method {
-    public var isSubscription: Bool {
+    var subscriptionPath: SubscriptionPath? {
         switch self {
-        case .blockchain(.scripthash(.subscribe)), .blockchain(.address(.subscribe)), .blockchain(.headers(.subscribe)), .blockchain(.transaction(.subscribe)), .blockchain(.transaction(.dsProof(.subscribe))):
-            return true
+        case .blockchain(.scripthash(.subscribe)):
+            return .scriptHash
+        case .blockchain(.address(.subscribe)):
+            return .address
+        case .blockchain(.headers(.subscribe)):
+            return .headers
+        case .blockchain(.transaction(.subscribe)):
+            return .transaction
+        case .blockchain(.transaction(.dsProof(.subscribe))):
+            return .transactionDoubleSpendProof
         default:
-            return false
+            return nil
         }
+    }
+    
+    public var isSubscription: Bool {
+        subscriptionPath != nil
     }
 }

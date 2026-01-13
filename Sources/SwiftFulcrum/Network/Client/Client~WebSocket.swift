@@ -14,6 +14,8 @@ extension Client {
 
 extension Client {
     func startReceiving() async {
+        defer { receiveTask = nil }
+        
         do {
             for try await message in await transport.makeMessageStream() {
                 if let inflightCount = await handleMessage(message) { await publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightCount) }

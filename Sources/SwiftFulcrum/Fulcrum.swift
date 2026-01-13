@@ -88,6 +88,10 @@ public actor Fulcrum {
         
         try await self.client.start()
         self.isRunning = true
+        
+        if connectionStateObservationTask == nil {
+            startConnectionStateObservation()
+        }
     }
     
     /// Cancels outstanding requests, closes the WebSocket, and resets subscription state.
@@ -99,6 +103,11 @@ public actor Fulcrum {
         self.isRunning = false
         
         await self.client.stop()
+        
+        connectionStateObservationTask?.cancel()
+        await connectionStateObservationTask?.value
+        connectionStateObservationTask = nil
+        await resetConnectionStateStream()
     }
     
     /// Forces a reconnect to the active or next available server while preserving subscription intents.
