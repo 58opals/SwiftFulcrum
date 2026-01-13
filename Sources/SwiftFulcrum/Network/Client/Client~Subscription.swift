@@ -56,17 +56,6 @@ extension Client {
     @discardableResult
     func removeStoredSubscriptionMethod(for key: SubscriptionKey) async -> Bool {
         guard subscriptionMethods.removeValue(forKey: key) != nil else { return false }
-        
-        emitLog(.info,
-                "subscription_registry.removed",
-                metadata: [
-                    "identifier": key.identifier ?? "",
-                    "method": key.methodPath,
-                    "subscriptionCount": String(subscriptionMethods.count)
-                ]
-        )
-        await publishSubscriptionRegistry()
-        await publishDiagnosticsSnapshot()
         return true
     }
     
@@ -79,10 +68,62 @@ extension Client {
         
         let didRemove = await removeStoredSubscriptionMethod(for: subscriptionKey)
         
-        if !didRemove {
-            await publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightCount)
+        if didRemove {
+            emitLog(.info,
+                    "subscription_registry.removed",
+                    metadata: [
+                        "identifier": subscriptionKey.identifier ?? "",
+                        "method": subscriptionKey.methodPath,
+                        "subscriptionCount": String(subscriptionMethods.count)
+                    ]
+            )
+            await publishSubscriptionRegistry()
         }
         
+        await publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightCount)
+        
         return didRemove
+    }
+}
+
+extension Client {
+    func setUpSubscriptionLifecycle(
+        rawContinuation: AsyncThrowingStream<Data, Swift.Error>.Continuation,
+        subscriptionKey: SubscriptionKey,
+        method: Method,
+        requestIdentifier: UUID
+    ) async throws {
+        try await router.addStream(
+            key: subscriptionKey.string,
+            continuation: rawContinuation
+        )
+        subscriptionMethods[subscriptionKey] = method
+        
+        emitLog(.info,
+                "subscription_registry.added",
+                metadata: [
+                    "identifier": subscriptionKey.identifier ?? "",
+                    "method": method.path,
+                    "subscriptionCount": String(subscriptionMethods.count)
+                ]
+        )
+        await publishSubscriptionRegistry()
+        await publishDiagnosticsSnapshot()
+        
+        rawContinuation.onTermination = { @Sendable [weak self] _ in
+            guard let self else { return }
+            
+            Task {
+                let removed = await self.cleanUpSubscriptionSetup(
+                    for: subscriptionKey,
+                    requestIdentifier: requestIdentifier
+                )
+                
+                if removed, let method = await self.makeUnsubscribeMethod(for: subscriptionKey) {
+                    let request = method.createRequest(with: UUID())
+                    try? await self.send(request: request)
+                }
+            }
+        }
     }
 }

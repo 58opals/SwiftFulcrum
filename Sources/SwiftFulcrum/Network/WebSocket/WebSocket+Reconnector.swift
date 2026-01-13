@@ -184,6 +184,7 @@ extension WebSocket {
                 function: "",
                 line: 0
             )
+            await webSocket.disconnect(with: "Reconnection attempts exhausted.")
             let closeInformation = await webSocket.closeInformation
             throw Fulcrum.Error.transport(
                 .connectionClosed(closeInformation.code, closeInformation.reason)

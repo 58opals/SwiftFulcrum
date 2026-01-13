@@ -90,12 +90,15 @@ struct WebSocketReconnectorTests {
         }
         
         let unreachable = URL(string: "wss://127.0.0.1:9") ?? current
+        let networkSession = URLSession(configuration: .ephemeral)
+        defer { networkSession.invalidateAndCancel() }
         
         let webSocket = WebSocket(
             url: unreachable,
+            configuration: .init(session: networkSession),
             reconnectConfiguration: configuration,
             connectionTimeout: 0.2,
-            sleep: { _ in },
+            sleep: { duration in try await Task.sleep(for: duration) },
             jitter: { _ in 1 }
         )
         
@@ -112,6 +115,8 @@ struct WebSocketReconnectorTests {
             let expected = max(configuration.maximumReconnectionAttempts, servers.count + 1)
             #expect(attempts == expected)
         }
+        
+        await webSocket.disconnect(with: "test teardown")
     }
     
     @Test("Reconnector stops after configured attempts with injected catalog", .timeLimit(.minutes(1)))
@@ -134,12 +139,18 @@ struct WebSocketReconnectorTests {
             return
         }
         
+        let networkSession = URLSession(configuration: .ephemeral)
+        defer { networkSession.invalidateAndCancel() }
+        
         let webSocket = WebSocket(
             url: current,
-            configuration: .init(serverCatalogLoader: .constant(injectedCatalog)),
+            configuration: .init(
+                session: networkSession,
+                serverCatalogLoader: .constant(injectedCatalog)
+            ),
             reconnectConfiguration: configuration,
             connectionTimeout: 0.05,
-            sleep: { _ in },
+            sleep: { duration in try await Task.sleep(for: duration) },
             jitter: { _ in 1 }
         )
         
@@ -155,6 +166,8 @@ struct WebSocketReconnectorTests {
             let attempts = await webSocket.reconnector.attemptCount
             #expect(attempts == configuration.maximumReconnectionAttempts)
         }
+        
+        await webSocket.disconnect(with: "test teardown")
     }
     
     @Test("Reconnector rotates through bundled servers", .timeLimit(.minutes(1)))
@@ -187,13 +200,21 @@ struct WebSocketReconnectorTests {
         )
         
         let unreachable = URL(string: "wss://127.0.0.1:9")!
+        let networkSession = URLSession(configuration: .ephemeral)
+        defer { networkSession.invalidateAndCancel() }
         
         let webSocket = WebSocket(
             url: unreachable,
-            configuration: .init(serverCatalogLoader: .constant([unreachable])),
+            configuration: .init(
+                session: networkSession,
+                serverCatalogLoader: .constant([unreachable])
+            ),
             reconnectConfiguration: configuration,
             connectionTimeout: 0.01,
-            sleep: { _ in await counter.increment() },
+            sleep: { duration in
+                await counter.increment()
+                try await Task.sleep(for: duration)
+            },
             jitter: { _ in 1 }
         )
         
@@ -218,5 +239,7 @@ struct WebSocketReconnectorTests {
         await exhaust()
         let secondSleepCount = await counter.read()
         #expect(secondSleepCount > 0)
+        
+        await webSocket.disconnect(with: "test teardown")
     }
 }

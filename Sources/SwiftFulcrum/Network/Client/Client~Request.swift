@@ -105,38 +105,13 @@ extension Client {
                 return try await withTaskCancellationHandler {
                     let (rawStream, rawContinuation) = AsyncThrowingStream<Data, Swift.Error>.makeStream()
                     
-                    try await router.addStream(
-                        key: subscriptionKey.string,
-                        continuation: rawContinuation
+                    try await setUpSubscriptionLifecycle(
+                        rawContinuation: rawContinuation,
+                        subscriptionKey: subscriptionKey,
+                        method: method,
+                        requestIdentifier: id
                     )
-                    subscriptionMethods[subscriptionKey] = method
                     
-                    emitLog(.info,
-                            "subscription_registry.added",
-                            metadata: [
-                                "identifier": subscriptionKey.identifier ?? "",
-                                "method": method.path,
-                                "subscriptionCount": String(subscriptionMethods.count)
-                            ]
-                    )
-                    await publishSubscriptionRegistry()
-                    await publishDiagnosticsSnapshot()
-                    
-                    rawContinuation.onTermination = { @Sendable [weak self] _ in
-                        guard let self else { return }
-                        
-                        Task {
-                            let removed = await self.cleanUpSubscriptionSetup(
-                                for: subscriptionKey,
-                                requestIdentifier: id
-                            )
-                            
-                            if removed, let method = await self.makeUnsubscribeMethod(for: subscriptionKey) {
-                                let request = method.createRequest(with: UUID())
-                                try? await self.send(request: request)
-                            }
-                        }
-                    }
                     let initial: Initial = try await withCheckedThrowingContinuation { continuation in
                         Task {
                             do {
