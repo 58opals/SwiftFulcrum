@@ -8,14 +8,78 @@ SwiftFulcrum is a **pure Swift**, actor-based client for interacting with [Fulcr
 
 ## Features
 
-- **Typed RPC coverage (for supported endpoints).** Methods are represented by the `Method` enum and decoded into strongly typed `Response.Result` models. Coverage includes `server.*`, `blockchain.*`, `mempool.*`, CashTokens token filtering, and DSProof endpoints.
-- **Automatic protocol negotiation (`server.version`).** Connections negotiate a compatible Fulcrum protocol version (default range `1.4` ... `1.6`) and opportunistically fetch `server.features` to learn server capabilities.
+- **Typed RPC coverage (for supported endpoints).** Methods are represented by the `Method` enum and decoded into strongly typed `Response.Result` models. Coverage includes `server.*`, `blockchain.*`, and `mempool.*` methods implemented by this package, including CashTokens token filtering and DSProof endpoints.
+- **Automatic protocol negotiation (`server.version`).** Connections negotiate a compatible Fulcrum protocol version (default range `1.4` ... `1.6.0`) and opportunistically fetch `server.features` to learn server capabilities.
 - **Automatic bootstrap, failover, and resubscription.** Pass an explicit WebSocket URL, or let SwiftFulcrum select from the bundled mainnet/testnet server catalogs. Reconnects use exponential backoff with jitter, and stored subscriptions are re-issued after reconnect.
 - **RPC heartbeat.** After connecting, SwiftFulcrum periodically issues `server.ping` to detect stalled connections and trigger a reconnect.
 - **Actor-isolated concurrency.** `Fulcrum`, `Client`, and `WebSocket` are actors that encapsulate state, request routing, and stream lifecycles.
 - **First-class observability.** Plug in custom `Log.Handler` implementations and `MetricsCollectable` collectors to observe connect/disconnect, send/receive, pings, diagnostics snapshots, and subscription registry changes.
 - **Connection state + diagnostics.** Consume an `AsyncStream<Fulcrum.ConnectionState>`, query `makeDiagnosticsSnapshot()`, and inspect `listSubscriptions()`.
 - **Configurable server catalogs.** Use the bundled catalogs, inject your own `FulcrumServerCatalogLoader`, or supply a bootstrap fallback list.
+
+---
+
+## Supported RPC methods (implemented by this package)
+
+This is the currently supported surface area exposed by `Method` (grouped by namespace):
+
+### `server.*`
+
+- `server.ping`
+- `server.version`
+- `server.features`
+
+### `blockchain.*`
+
+- Fees
+  - `blockchain.estimatefee`
+  - `blockchain.relayfee`
+
+- Script hash
+  - `blockchain.scripthash.get_balance` (optional CashTokens filtering)
+  - `blockchain.scripthash.get_first_use`
+  - `blockchain.scripthash.get_history`
+  - `blockchain.scripthash.get_mempool`
+  - `blockchain.scripthash.listunspent` (optional CashTokens filtering)
+  - `blockchain.scripthash.subscribe` / `blockchain.scripthash.unsubscribe`
+
+- Address
+  - `blockchain.address.get_balance` (optional CashTokens filtering)
+  - `blockchain.address.get_first_use`
+  - `blockchain.address.get_history`
+  - `blockchain.address.get_mempool`
+  - `blockchain.address.get_scripthash`
+  - `blockchain.address.listunspent` (optional CashTokens filtering)
+  - `blockchain.address.subscribe` / `blockchain.address.unsubscribe`
+
+- Headers / blocks
+  - `blockchain.headers.get_tip`
+  - `blockchain.headers.subscribe` / `blockchain.headers.unsubscribe`
+  - `blockchain.block.header`
+  - `blockchain.block.headers`
+  - `blockchain.header.get`
+
+- Transactions
+  - `blockchain.transaction.broadcast`
+  - `blockchain.transaction.get`
+  - `blockchain.transaction.get_confirmed_blockhash`
+  - `blockchain.transaction.get_height`
+  - `blockchain.transaction.get_merkle`
+  - `blockchain.transaction.id_from_pos`
+  - `blockchain.transaction.subscribe` / `blockchain.transaction.unsubscribe`
+
+- DSProof
+  - `blockchain.transaction.dsproof.get`
+  - `blockchain.transaction.dsproof.list`
+  - `blockchain.transaction.dsproof.subscribe` / `blockchain.transaction.dsproof.unsubscribe`
+
+- UTXO
+  - `blockchain.utxo.get_info`
+
+### `mempool.*`
+
+- `mempool.get_info`
+- `mempool.get_fee_histogram`
 
 ---
 
@@ -125,8 +189,8 @@ let response = try await fulcrum.submit(
 )
 
 guard let features = response.extractRegularResponse() else { return }
-print("CashTokens supported: \(features.hasCashTokens)")
-print("DSProof supported: \(features.hasDoubleSpendProofs)")
+print("CashTokens supported: \(features.hasCashTokens ?? false)")
+print("DSProof supported: \(features.hasDoubleSpendProofs ?? false)")
 ```
 
 ### Connection state
@@ -168,7 +232,9 @@ try await fulcrum.reconnect()
 Pass a `Fulcrum.Configuration` when you want to customize networking behavior. You can tune TLS, reconnection policy, protocol negotiation, metrics/logging hooks, maximum message size, URLSession usage, and server sourcing.
 
 ```swift
-let loader = FulcrumServerCatalogLoader.constant([
+import SwiftFulcrum
+
+let loader = FulcrumServerCatalogLoader.makeConstant([
     URL(string: "wss://my.fulcrum.example")!,
     URL(string: "wss://backup.fulcrum.example")!
 ])
@@ -190,7 +256,7 @@ let configuration = Fulcrum.Configuration(
     logger: MyLogHandler(),
 
     // Used as a fallback if the bundled catalog is unavailable/empty.
-    // Bootstrap URLs are sanitized to ws/wss schemes.
+    // Bootstrap URLs are sanitized to ws/wss schemes by the bundled loader.
     bootstrapServers: [URL(string: "wss://fallback.fulcrum.example")!],
 
     serverCatalogLoader: loader,
@@ -198,9 +264,9 @@ let configuration = Fulcrum.Configuration(
 
     // Optional: override the protocol negotiation range / client name.
     protocolNegotiation: .init(
-        clientName: "MyApp/1.0",
+        clientNameOverride: "MyApp/1.0",
         min: ProtocolVersion(string: "1.4")!,
-        max: ProtocolVersion(string: "1.6")!
+        max: ProtocolVersion(string: "1.6.0")!
     )
 )
 
@@ -210,7 +276,7 @@ let fulcrum = try await Fulcrum(configuration: configuration)
 Notes:
 
 * `FulcrumServerCatalogLoader.bundled` loads from the package’s bundled JSON catalogs (`servers.mainnet.json` / `servers.testnet.json`).
-* `FulcrumServerCatalogLoader.constant(...)` expects you to provide valid `ws://` or `wss://` URLs.
+* `FulcrumServerCatalogLoader.makeConstant(...)` expects you to provide valid `ws://` or `wss://` URLs.
 * SwiftFulcrum throws `Fulcrum.Error.transport(.setupFailed)` when it cannot resolve any valid servers.
 
 ## Timeouts and cancellation
@@ -247,12 +313,14 @@ do {
     print(info)
 } catch let error as Fulcrum.Error {
     switch error {
+    case .transport(.setupFailed):
+        print("Could not resolve any valid Fulcrum servers")
     case .transport(.connectionClosed(let code, let reason)):
         print("Socket closed: \(code) - \(reason ?? "none")")
     case .transport(.heartbeatTimeout):
         print("RPC heartbeat timed out")
-    case .transport(.reconnectFailed):
-        print("Reconnect attempts exhausted")
+    case .transport(.network(let networkError)):
+        print("Network error: \(networkError)")
     case .client(.timeout(let limit)):
         print("Timed out after \(limit)")
     case .rpc(let server):
