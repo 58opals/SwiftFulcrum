@@ -54,9 +54,9 @@ extension Log.Handler {
         log(.debug, message(), metadata: metadata, file: file, function: function, line: line)
     }
     
-    func info(_ message: @autoclosure () -> String,
-              metadata: [String: String]? = nil,
-              file: String = #fileID, function: String = #function, line: UInt = #line) {
+    func logInfo(_ message: @autoclosure () -> String,
+                 metadata: [String: String]? = nil,
+                 file: String = #fileID, function: String = #function, line: UInt = #line) {
         log(.info, message(), metadata: metadata, file: file, function: function, line: line)
     }
     
@@ -66,21 +66,21 @@ extension Log.Handler {
         log(.notice, message(), metadata: metadata, file: file, function: function, line: line)
     }
     
-    func warning(_ message: @autoclosure () -> String,
-                 metadata: [String: String]? = nil,
-                 file: String = #fileID, function: String = #function, line: UInt = #line) {
+    func logWarning(_ message: @autoclosure () -> String,
+                    metadata: [String: String]? = nil,
+                    file: String = #fileID, function: String = #function, line: UInt = #line) {
         log(.warning, message(), metadata: metadata, file: file, function: function, line: line)
     }
     
-    func error(_ message: @autoclosure () -> String,
-               metadata: [String: String]? = nil,
-               file: String = #fileID, function: String = #function, line: UInt = #line) {
+    func logError(_ message: @autoclosure () -> String,
+                  metadata: [String: String]? = nil,
+                  file: String = #fileID, function: String = #function, line: UInt = #line) {
         log(.error, message(), metadata: metadata, file: file, function: function, line: line)
     }
     
-    func critical(_ message: @autoclosure () -> String,
-                  metadata: [String: String]? = nil,
-                  file: String = #fileID, function: String = #function, line: UInt = #line) {
+    func logCritical(_ message: @autoclosure () -> String,
+                     metadata: [String: String]? = nil,
+                     file: String = #fileID, function: String = #function, line: UInt = #line) {
         log(.critical, message(), metadata: metadata, file: file, function: function, line: line)
     }
 }
@@ -121,7 +121,7 @@ extension Log {
                         file: String,
                         function: String,
                         line: UInt) {
-            guard shouldLog(level) else { return }
+            guard allowLogging(for: level) else { return }
             let entry = Entry(
                 level: level,
                 timestamp: Self.dateFormatter.string(from: dateProvider()),
@@ -138,7 +138,7 @@ extension Log {
             Task { await outputSink.enqueue(rendered: composed, signature: signature) }
         }
         
-        private func shouldLog(_ level: Level) -> Bool {
+        private func allowLogging(for level: Level) -> Bool {
             guard let minimumLevel else { return true }
             return level.priority >= minimumLevel.priority
         }
@@ -211,8 +211,8 @@ extension Log {
         @TaskLocal static var behavior: Behavior = .normal
     }
     
-    public static func withBehavior<T>(
-        _ behavior: Behavior,
+    public static func perform<T>(
+        withBehavior behavior: Behavior,
         operation: @Sendable () async throws -> T
     ) async rethrows -> T {
         try await Context.$behavior.withValue(behavior) {

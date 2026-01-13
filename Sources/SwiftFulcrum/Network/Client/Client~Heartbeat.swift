@@ -14,7 +14,7 @@ extension Client {
                     try Task.checkCancellation()
                     
                     let (_, _): (UUID, Response.Result.Server.Ping) =
-                    try await Log.withBehavior(.quiet) {
+                    try await Log.perform(withBehavior: .quiet) {
                         try await self.call(
                             method: .server(.ping),
                             options: .init(timeout: rpcHeartbeatTimeout),

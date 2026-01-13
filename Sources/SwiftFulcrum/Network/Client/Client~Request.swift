@@ -109,7 +109,7 @@ extension Client {
                 return try await withTaskCancellationHandler {
                     let (rawStream, rawContinuation) = AsyncThrowingStream<Data, Swift.Error>.makeStream()
                     
-                    try await setUpSubscriptionLifecycle(
+                    try await configureSubscriptionLifecycle(
                         rawContinuation: rawContinuation,
                         subscriptionKey: subscriptionKey,
                         method: method,

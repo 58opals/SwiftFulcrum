@@ -85,7 +85,7 @@ extension Client {
 }
 
 extension Client {
-    func setUpSubscriptionLifecycle(
+    func configureSubscriptionLifecycle(
         rawContinuation: AsyncThrowingStream<Data, Swift.Error>.Continuation,
         subscriptionKey: SubscriptionKey,
         method: Method,

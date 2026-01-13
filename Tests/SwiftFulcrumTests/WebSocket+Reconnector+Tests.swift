@@ -146,7 +146,7 @@ struct WebSocketReconnectorTests {
             url: current,
             configuration: .init(
                 session: networkSession,
-                serverCatalogLoader: .constant(injectedCatalog)
+                serverCatalogLoader: .makeConstant(injectedCatalog)
             ),
             reconnectConfiguration: configuration,
             connectionTimeout: 0.05,
@@ -207,7 +207,7 @@ struct WebSocketReconnectorTests {
             url: unreachable,
             configuration: .init(
                 session: networkSession,
-                serverCatalogLoader: .constant([unreachable])
+                serverCatalogLoader: .makeConstant([unreachable])
             ),
             reconnectConfiguration: configuration,
             connectionTimeout: 0.01,

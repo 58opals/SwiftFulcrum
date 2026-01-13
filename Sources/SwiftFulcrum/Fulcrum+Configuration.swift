@@ -162,7 +162,7 @@ extension FulcrumServerCatalogLoader {
         }.value
     }, kind: .bundled)
     
-    public static func constant(_ servers: [URL]) -> Self {
+    public static func makeConstant(_ servers: [URL]) -> Self {
         Self(load: { _, _ in servers }, kind: .constant)
     }
     

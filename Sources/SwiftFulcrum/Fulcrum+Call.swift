@@ -28,8 +28,8 @@ extension Fulcrum.Call {
             await token.cancel()
         }
         
-        public func isCancelled() async -> Bool {
-            await token.isCancelled
+        public var isCancelled: Bool {
+            get async { await token.isCancelled }
         }
     }
 }

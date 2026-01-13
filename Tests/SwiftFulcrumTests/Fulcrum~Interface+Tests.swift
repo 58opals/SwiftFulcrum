@@ -117,11 +117,11 @@ struct FulcrumInterfaceTests {
     func cancellationMarksTokenImmediately() async {
         let cancellation = Fulcrum.Call.Cancellation()
         
-        #expect(await cancellation.isCancelled() == false)
+        #expect(await cancellation.isCancelled == false)
         
         await cancellation.cancel()
         
-        #expect(await cancellation.isCancelled())
+        #expect(await cancellation.isCancelled)
     }
     
     @Test("Subscriptions expose cancellable header streams", .timeLimit(.minutes(1)))
@@ -142,7 +142,7 @@ struct FulcrumInterfaceTests {
             
             await cancel()
             
-            #expect(await cancellation.isCancelled())
+            #expect(await cancellation.isCancelled)
             
             let terminated = await streamTerminates(updates, within: .seconds(10))
             #expect(terminated)

@@ -149,7 +149,7 @@ extension WebSocket {
             if isConnected {
                 await updateConnectionState(.connected)
                 emitLog(.info, "connect.succeeded")
-                await metrics?.didConnect(url: url, network: network)
+                await metrics?.recordConnect(url: url, network: network)
                 if shouldEmitLifecycle { emitLifecycle(.connected(isReconnect: false)) }
                 ensureAutomaticReceiving()
             } else {
@@ -236,7 +236,7 @@ extension WebSocket {
             throwing: Fulcrum.Error.transport(.connectionClosed(information.code, information.reason))
         )
         
-        await metrics?.didDisconnect(url: url, closeCode: information.code, reason: reason)
+        await metrics?.recordDisconnect(url: url, closeCode: information.code, reason: reason)
         await resetMessageStreamAndReader()
         emitLog(.info, "disconnect", metadata: ["reason": reason ?? "nil",
                                                 "code": String(information.code.rawValue)])
@@ -287,7 +287,7 @@ extension WebSocket {
         let metrics = self.metrics
         
         task.sendPing { error in
-            if let metrics { Task { await metrics.didPing(url: currentURL, error: error) } }
+            if let metrics { Task { await metrics.recordPing(url: currentURL, error: error) } }
             if let error {
                 continuation.finish(throwing: Fulcrum.Error.Network.tlsNegotiationFailed(error))
             } else {
@@ -346,7 +346,7 @@ extension WebSocket {
         
         emitLog(.info, "send.begin", metadata: metadataWithIdentifier)
         try await task.send(message)
-        await metrics?.didSend(url: url, message: message)
+        await metrics?.recordSend(url: url, message: message)
         emitLog(.info, "send.succeeded", metadata: metadataWithIdentifier)
     }
     
@@ -473,7 +473,7 @@ extension WebSocket {
                 }
                 var metadata = makePayloadMetadata(for: message)
                 metadata["messageIdentifier"] = String(makeIncomingMessageIdentifier())
-                if !shouldSuppressLogging(for: message) {
+                if !consumeQuietResponseIdentifier(for: message) {
                     emitLog(.info,
                             "receive.message",
                             metadata: metadata)
@@ -485,7 +485,7 @@ extension WebSocket {
                     messageContinuation = nil
                     break
                 }
-                await metrics?.didReceive(url: url, message: message)
+                await metrics?.recordReceive(url: url, message: message)
             } catch let urlError as URLError where urlError.code == .cancelled {
                 break
             } catch {
@@ -535,7 +535,7 @@ extension WebSocket {
         quietResponseIdentifiers.insert(identifier)
     }
     
-    private func shouldSuppressLogging(for message: URLSessionWebSocketTask.Message) -> Bool {
+    private func consumeQuietResponseIdentifier(for message: URLSessionWebSocketTask.Message) -> Bool {
         let data: Data
         
         switch message {

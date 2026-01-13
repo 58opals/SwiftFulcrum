@@ -38,13 +38,13 @@ extension Client {
             activeSubscriptionCount: subscriptionMethods.count
         )
         
-        await metrics.didUpdateDiagnostics(url: await transport.endpoint, snapshot: snapshot)
+        await metrics.recordDiagnosticsUpdate(url: await transport.endpoint, snapshot: snapshot)
     }
     
     func publishSubscriptionRegistry() async {
         guard let metrics else { return }
         
         let subscriptions = listSubscriptions()
-        await metrics.didUpdateSubscriptionRegistry(url: await transport.endpoint, subscriptions: subscriptions)
+        await metrics.recordSubscriptionRegistryUpdate(url: await transport.endpoint, subscriptions: subscriptions)
     }
 }
