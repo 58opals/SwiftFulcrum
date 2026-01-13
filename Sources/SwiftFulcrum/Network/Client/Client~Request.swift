@@ -25,15 +25,13 @@ extension Client {
             await token.register { [weak self] in
                 Task {
                     guard let self else { return }
-                    let inflightCount = await self.router.cancel(identifier: .uuid(id))
-                    await self.publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightCount)
+                    await self.cancelUnary(id)
                 }
             }
         }
         
         if let token = options.token, await token.isCancelled {
-            let inflightCount = await router.cancel(identifier: .uuid(id))
-            await publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightCount)
+            await self.cancelUnary(id)
             throw Fulcrum.Error.client(.cancelled)
         }
         
@@ -52,15 +50,13 @@ extension Client {
                         do {
                             try await send(request: request)
                         } catch {
-                            let inflightCount = await router.cancel(identifier: .uuid(id), error: error)
-                            await publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightCount)
+                            await cancelUnary(id, error: error)
                         }
                     }
                 }
             } onCancel: {
                 Task {
-                    let inflightCount = await self.router.cancel(identifier: .uuid(id))
-                    await self.publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightCount)
+                    await self.cancelUnary(id)
                 }
             }
         }
@@ -73,8 +69,7 @@ extension Client {
                 group.addTask {
                     try await Task.sleep(for: limit)
                     callTask.cancel()
-                    let inflightCount = await self.router.cancel(identifier: .uuid(id))
-                    await self.publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightCount)
+                    await self.cancelUnary(id)
                     throw Fulcrum.Error.client(.timeout(limit))
                 }
                 let value = try await group.next()!
@@ -233,5 +228,10 @@ extension Client {
         
         guard let data = request.data else { throw Fulcrum.Error.coding(.encode(nil)) }
         try await self.send(data: data)
+    }
+    
+    private func cancelUnary(_ id: UUID, error: Swift.Error? = nil) async {
+        let inflight = await router.cancel(identifier: .uuid(id), error: error)
+        await publishDiagnosticsSnapshot(inflightUnaryCallCount: inflight)
     }
 }
