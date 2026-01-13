@@ -61,18 +61,7 @@ actor Client {
             startRPCHeartbeat()
             await publishDiagnosticsSnapshot()
         } catch {
-            receiveTask?.cancel()
-            await receiveTask?.value
-            receiveTask = nil
-            
-            lifecycleTask?.cancel()
-            await lifecycleTask?.value
-            lifecycleTask = nil
-            
-            diagnosticsStateTask?.cancel()
-            await diagnosticsStateTask?.value
-            diagnosticsStateTask = nil
-            
+            await cancelBackgroundTasks()
             await transport.disconnect(with: "Client.start() negotiation failed")
             throw error
         }
@@ -85,33 +74,13 @@ actor Client {
         await publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightCount)
         
         await stopRPCHeartbeat()
-        
-        receiveTask?.cancel()
-        await receiveTask?.value
-        receiveTask = nil
-        
-        lifecycleTask?.cancel()
-        await lifecycleTask?.value
-        lifecycleTask = nil
-        
-        diagnosticsStateTask?.cancel()
-        await diagnosticsStateTask?.value
-        diagnosticsStateTask = nil
-        
+        await cancelBackgroundTasks()
         await transport.disconnect(with: "Client.stop() called")
         resetNegotiatedSession()
     }
     
     func reconnect(with url: URL? = nil) async throws {
-        receiveTask?.cancel()
-        await receiveTask?.value
-        receiveTask = nil
-        lifecycleTask?.cancel()
-        await lifecycleTask?.value
-        lifecycleTask = nil
-        diagnosticsStateTask?.cancel()
-        await diagnosticsStateTask?.value
-        diagnosticsStateTask = nil
+        await cancelBackgroundTasks()
         resetNegotiatedSession()
         try await transport.reconnect(with: url)
         startReceivingTask()
@@ -163,6 +132,19 @@ actor Client {
                 await self.publishDiagnosticsSnapshot()
             }
         }
+    }
+    
+    private func cancelAndNil(_ task: Task<Void, Never>?) async -> Task<Void, Never>? {
+        guard let task else { return nil }
+        task.cancel()
+        await task.value
+        return nil
+    }
+    
+    private func cancelBackgroundTasks() async {
+        receiveTask = await cancelAndNil(receiveTask)
+        lifecycleTask = await cancelAndNil(lifecycleTask)
+        diagnosticsStateTask = await cancelAndNil(diagnosticsStateTask)
     }
 }
 
