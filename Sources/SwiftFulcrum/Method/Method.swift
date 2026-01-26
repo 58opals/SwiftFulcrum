@@ -108,7 +108,7 @@ extension Method.Blockchain {
                 public let capability: Capability
                 public let commitment: String
                 
-                public enum Capability: Codable {
+                public enum Capability: String, Codable {
                     case none
                     case mutable
                     case minting
@@ -141,4 +141,3 @@ extension Method.Blockchain.CashTokens.JSON: Sendable {}
 extension Method.Blockchain.CashTokens.JSON.NFT: Sendable {}
 extension Method.Blockchain.CashTokens.JSON.NFT.Capability: Sendable {}
 extension Method.Mempool: Sendable {}
-
