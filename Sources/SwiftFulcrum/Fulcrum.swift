@@ -50,7 +50,7 @@ public actor Fulcrum {
         
         self.client = .init(transport: WebSocketTransport(webSocket: webSocket),
                             metrics: configuration.metrics,
-                            logger: configuration.logger,
+                            logger: configuration.resolvedLogger,
                             protocolNegotiation: configuration.protocolNegotiation)
         startConnectionStateObservation()
     }
@@ -67,7 +67,7 @@ public actor Fulcrum {
                 )
             ),
             metrics: configuration.metrics,
-            logger: configuration.logger,
+            logger: configuration.resolvedLogger,
             protocolNegotiation: configuration.protocolNegotiation
         )
         startConnectionStateObservation()
