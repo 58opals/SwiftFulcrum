@@ -121,6 +121,7 @@ extension Log {
                         file: String,
                         function: String,
                         line: UInt) {
+            guard Log.Context.behavior == .normal else { return }
             guard allowLogging(for: level) else { return }
             let entry = Entry(
                 level: level,

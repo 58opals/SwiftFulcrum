@@ -47,7 +47,6 @@ extension Request {
             let data = try JSONRPC.Coder.encoder.encode(self)
             return data
         } catch {
-            print(error.localizedDescription)
             return nil
         }
     }

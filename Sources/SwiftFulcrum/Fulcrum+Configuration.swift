@@ -59,6 +59,7 @@ extension Fulcrum {
         public var reconnect: Reconnect
         public var metrics: MetricsCollectable?
         public var logger: Log.Handler?
+        public var isLoggingEnabled: Bool
         public var urlSession: URLSession?
         public var connectionTimeout: TimeInterval
         public var maximumMessageSize: Int
@@ -74,6 +75,7 @@ extension Fulcrum {
             reconnect: Reconnect = .basic,
             metrics: MetricsCollectable? = nil,
             logger: Log.Handler? = nil,
+            isLoggingEnabled: Bool = true,
             urlSession: URLSession? = nil,
             connectionTimeout: TimeInterval = 10,
             maximumMessageSize: Int = 64 * 1024 * 1024,
@@ -86,6 +88,7 @@ extension Fulcrum {
             self.reconnect = reconnect
             self.metrics = metrics
             self.logger = logger
+            self.isLoggingEnabled = isLoggingEnabled
             self.urlSession = urlSession
             self.connectionTimeout = connectionTimeout
             self.maximumMessageSize = maximumMessageSize
@@ -105,11 +108,16 @@ extension Fulcrum.Configuration {
             session: urlSession,
             tlsDescriptor: socketTLSDescriptor,
             metrics: metrics,
-            logger: logger,
+            logger: resolvedLogger,
             maximumMessageSize: maximumMessageSize,
             serverCatalogLoader: serverCatalogLoader,
             network: network
         )
+    }
+    
+    var resolvedLogger: Log.Handler? {
+        guard isLoggingEnabled else { return Log.NoOpHandler() }
+        return logger
     }
 }
 
