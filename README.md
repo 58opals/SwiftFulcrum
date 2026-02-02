@@ -4,18 +4,21 @@
 
 # SwiftFulcrum
 
-SwiftFulcrum is a **pure Swift**, actor-based client for interacting with [Fulcrum](https://github.com/cculianu/Fulcrum) WebSocket JSON-RPC servers on the Bitcoin Cash network. It ships with typed RPC models for the endpoints implemented by this package, **automatic protocol negotiation** via `server.version`, resilient WebSocket connectivity (failover + reconnect + heartbeat), and ergonomics tailored to modern Swift Concurrency.
+SwiftFulcrum is a **pure Swift**, actor-based client for interacting with [Fulcrum](https://github.com/cculianu/Fulcrum) WebSocket JSON-RPC servers on the Bitcoin Cash network.
+
+It ships with a strongly-typed RPC surface (`Method` + `Response.Result.*` models), **automatic protocol negotiation** via `server.version`, resilient WebSocket connectivity (failover + reconnect + heartbeat), and ergonomics tailored to modern Swift Concurrency.
 
 ## Features
 
 - **Typed RPC coverage (for supported endpoints).** Methods are represented by the `Method` enum and decoded into strongly typed `Response.Result` models. Coverage includes `server.*`, `blockchain.*`, and `mempool.*` methods implemented by this package, including CashTokens token filtering and DSProof endpoints.
 - **Automatic protocol negotiation (`server.version`).** Connections negotiate a compatible Fulcrum protocol version (default range `1.4` ... `1.6.0`) and opportunistically fetch `server.features` to learn server capabilities.
 - **Automatic bootstrap, failover, and resubscription.** Pass an explicit WebSocket URL, or let SwiftFulcrum select from the bundled mainnet/testnet server catalogs. Reconnects use exponential backoff with jitter, and stored subscriptions are re-issued after reconnect.
-- **RPC heartbeat.** After connecting, SwiftFulcrum periodically issues `server.ping` to detect stalled connections and trigger a reconnect.
+- **RPC heartbeat.** After connecting, SwiftFulcrum periodically issues `server.ping` (defaults: 25 s interval, 10 s timeout) to detect stalled connections and trigger a reconnect.
 - **Actor-isolated concurrency.** `Fulcrum`, `Client`, and `WebSocket` are actors that encapsulate state, request routing, and stream lifecycles.
 - **First-class observability.** Plug in custom `Log.Handler` implementations and `MetricsCollectable` collectors to observe connect/disconnect, send/receive, pings, diagnostics snapshots, and subscription registry changes.
 - **Connection state + diagnostics.** Consume an `AsyncStream<Fulcrum.ConnectionState>`, query `makeDiagnosticsSnapshot()`, and inspect `listSubscriptions()`.
 - **Configurable server catalogs.** Use the bundled catalogs, inject your own `FulcrumServerCatalogLoader`, or supply a bootstrap fallback list.
+- **Opt-in quiet logging for scoped work.** Use `Log.perform(withBehavior: .quiet) { ... }` to suppress normal logs for noisy operations.
 
 ---
 
@@ -38,7 +41,7 @@ This is the currently supported surface area exposed by `Method` (grouped by nam
 - Script hash
   - `blockchain.scripthash.get_balance` (optional CashTokens filtering)
   - `blockchain.scripthash.get_first_use`
-  - `blockchain.scripthash.get_history`
+  - `blockchain.scripthash.get_history` (supports height-range parameters and `includeUnconfirmed`)
   - `blockchain.scripthash.get_mempool`
   - `blockchain.scripthash.listunspent` (optional CashTokens filtering)
   - `blockchain.scripthash.subscribe` / `blockchain.scripthash.unsubscribe`
@@ -46,7 +49,7 @@ This is the currently supported surface area exposed by `Method` (grouped by nam
 - Address
   - `blockchain.address.get_balance` (optional CashTokens filtering)
   - `blockchain.address.get_first_use`
-  - `blockchain.address.get_history`
+  - `blockchain.address.get_history` (supports height-range parameters and `includeUnconfirmed`)
   - `blockchain.address.get_mempool`
   - `blockchain.address.get_scripthash`
   - `blockchain.address.listunspent` (optional CashTokens filtering)
@@ -110,6 +113,8 @@ dependencies: [
 ]
 ```
 
+---
+
 ## Quick Start
 
 ### Connect + unary call
@@ -121,7 +126,7 @@ import SwiftFulcrum
 
 Task {
     do {
-        // Optional: pass a specific server
+        // Optional: pass a specific server endpoint
         // let fulcrum = try await Fulcrum(url: "wss://your-fulcrum.example")
         let fulcrum = try await Fulcrum()
 
@@ -144,7 +149,9 @@ Task {
 
 ### Subscription (streaming updates)
 
-Subscriptions use `subscribe(...)`, which returns the initial payload, an `AsyncThrowingStream` of notifications, and a `cancel` closure. When the stream is terminated (via cancellation or task cancellation), SwiftFulcrum will also issue the matching `...unsubscribe` call.
+`subscribe(...)` returns the initial payload, an `AsyncThrowingStream` of notifications, and a `cancel` closure.
+
+To stop cleanly, **terminate the consumer task** (ending iteration) and then call `cancel()` if you also want to propagate a shared cancellation signal.
 
 ```swift
 import SwiftFulcrum
@@ -171,8 +178,8 @@ Task {
         }
 
         // ... later ...
-        await cancel()
         updatesTask.cancel()
+        await cancel()
         await fulcrum.stop()
     } catch {
         print("Subscription error: \(error)")
@@ -229,7 +236,7 @@ try await fulcrum.reconnect()
 
 ## Configuration and server selection
 
-Pass a `Fulcrum.Configuration` when you want to customize networking behavior. You can tune TLS, reconnection policy, protocol negotiation, metrics/logging hooks, maximum message size, URLSession usage, and server sourcing.
+Pass a `Fulcrum.Configuration` when you want to customise networking behaviour. You can tune TLS, reconnection policy, protocol negotiation, metrics/logging hooks, maximum message size, URLSession usage, and server sourcing.
 
 ```swift
 import SwiftFulcrum
@@ -251,9 +258,11 @@ let configuration = Fulcrum.Configuration(
     // Optional observability hooks
     metrics: MyMetricsCollector(),
 
-    // If omitted, SwiftFulcrum logs to the console by default.
-    // Use Log.NoOpHandler() to silence logging.
+    // Logging:
+    // - If omitted, SwiftFulcrum logs to the console by default.
+    // - Set isLoggingEnabled=false to silence all logs.
     logger: MyLogHandler(),
+    isLoggingEnabled: true,
 
     // Used as a fallback if the bundled catalog is unavailable/empty.
     // Bootstrap URLs are sanitized to ws/wss schemes by the bundled loader.
@@ -264,7 +273,7 @@ let configuration = Fulcrum.Configuration(
 
     // Optional: override the protocol negotiation range / client name.
     protocolNegotiation: .init(
-        clientNameOverride: "MyApp/1.0",
+        clientName: "MyApp/1.0",
         min: ProtocolVersion(string: "1.4")!,
         max: ProtocolVersion(string: "1.6.0")!
     )
@@ -281,7 +290,7 @@ Notes:
 
 ## Timeouts and cancellation
 
-Use `Fulcrum.Call.Options` to control per-call behavior. A `timeout` bounds the RPC operation (including waiting for a server response). A `Cancellation` can be shared across tasks to cancel unary calls or long-lived subscriptions.
+Use `Fulcrum.Call.Options` to control per-call behaviour. A `timeout` bounds the RPC operation (including waiting for a server response). A `Cancellation` can be shared across tasks to cancel unary calls or long-lived subscriptions.
 
 ```swift
 let cancellation = Fulcrum.Call.Cancellation()
@@ -335,4 +344,4 @@ do {
 
 ---
 
-SwiftFulcrum is crafted by © 2025 Opal Wallet • 58 Opals.
+SwiftFulcrum is crafted by © 2026 Opal Wallet • 58 Opals.
