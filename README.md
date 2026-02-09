@@ -342,6 +342,26 @@ do {
 }
 ```
 
+## Development Actions (Worktree mode)
+
+Use the project actions below instead of ad-hoc commands while working in task worktrees:
+
+```bash
+make Setup
+make Doctor
+make Build
+make Test
+```
+
+What these actions do:
+
+* `Setup` is the startup preflight for Codex environments. It validates your selected toolchain/SDK pairing and confirms test targets compile (`swift test list`) without running tests.
+* `Doctor` verifies required tools, confirms you are on an attached branch (not detached `HEAD`), and prepares local cache directories.
+* `Build` runs `swift build` using the project-local `.build` directory.
+* `Test` runs `swift test` using the same project-local build artifacts.
+
+Cache and module-cache paths are routed to `.codex-cache/` so each worktree remains self-contained.
+
 ---
 
 SwiftFulcrum is crafted by © 2026 Opal Wallet • 58 Opals.

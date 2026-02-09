@@ -6,3 +6,4 @@ configuration/registries.json
 .DS_Store
 .swiftpm/
 .netrc
+.codex-cache/
