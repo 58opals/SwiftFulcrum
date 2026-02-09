@@ -8,7 +8,4 @@ source "$SCRIPT_DIRECTORY/common.sh"
 run_preflight_checks
 
 echo "Building SwiftFulcrum"
-swift build \
-  --package-path "$PROJECT_ROOT" \
-  --build-path "$BUILD_ROOT" \
-  --disable-sandbox
+swift build "${SWIFTPM_SHARED_ARGUMENTS[@]}"

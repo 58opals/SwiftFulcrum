@@ -5,16 +5,32 @@ SCRIPT_DIRECTORY="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIRECTORY/../.." && pwd)"
 CACHE_ROOT="$PROJECT_ROOT/.codex-cache"
 BUILD_ROOT="$PROJECT_ROOT/.build"
+SWIFTPM_CACHE_PATH="$CACHE_ROOT/swiftpm-cache"
+SWIFTPM_CONFIG_PATH="$CACHE_ROOT/swiftpm-config"
+SWIFTPM_SECURITY_PATH="$CACHE_ROOT/swiftpm-security"
 
 export CLANG_MODULE_CACHE_PATH="$CACHE_ROOT/clang-module-cache"
 export SWIFTPM_MODULECACHE_OVERRIDE="$CACHE_ROOT/swiftpm-module-cache"
 export TMPDIR="$CACHE_ROOT/tmp"
+
+SWIFTPM_SHARED_ARGUMENTS=(
+  --package-path "$PROJECT_ROOT"
+  --build-path "$BUILD_ROOT"
+  --cache-path "$SWIFTPM_CACHE_PATH"
+  --config-path "$SWIFTPM_CONFIG_PATH"
+  --security-path "$SWIFTPM_SECURITY_PATH"
+  --manifest-cache local
+  --disable-sandbox
+)
 
 prepare_cache_directories() {
   mkdir -p \
     "$CACHE_ROOT" \
     "$CLANG_MODULE_CACHE_PATH" \
     "$SWIFTPM_MODULECACHE_OVERRIDE" \
+    "$SWIFTPM_CACHE_PATH" \
+    "$SWIFTPM_CONFIG_PATH" \
+    "$SWIFTPM_SECURITY_PATH" \
     "$TMPDIR"
 }
 
@@ -64,6 +80,23 @@ is_worktree_checkout() {
 
 swift_version_line() {
   swift --version | head -n 1
+}
+
+run_swift_toolchain_probe() {
+  require_command swiftc
+  local swift_probe_file="$TMPDIR/swift_probe.swift"
+  local swift_probe_error="$TMPDIR/swift_probe.stderr"
+  printf 'import Foundation\n' > "$swift_probe_file"
+
+  if ! swiftc -typecheck \
+    -module-cache-path "$SWIFTPM_MODULECACHE_OVERRIDE" \
+    "$swift_probe_file" \
+    >/dev/null 2>"$swift_probe_error"; then
+    echo "error: Swift compiler preflight failed for the current toolchain and SDK." >&2
+    cat "$swift_probe_error" >&2
+    echo "hint: align your selected developer directory with your installed SDK/toolchain versions." >&2
+    exit 1
+  fi
 }
 
 run_preflight_checks() {

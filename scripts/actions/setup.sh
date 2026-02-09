@@ -7,31 +7,15 @@ source "$SCRIPT_DIRECTORY/common.sh"
 
 run_preflight_checks
 require_command xcode-select
-require_command swiftc
 
 echo "Running setup checks"
 echo "Developer directory: $(xcode-select -p)"
 echo "Swift: $(swift_version_line)"
-
-swift_probe_file="$TMPDIR/swift_probe.swift"
-swift_probe_error="$TMPDIR/swift_probe.stderr"
-printf 'import Foundation\n' > "$swift_probe_file"
-
-if ! swiftc -typecheck \
-  -module-cache-path "$SWIFTPM_MODULECACHE_OVERRIDE" \
-  "$swift_probe_file" \
-  >/dev/null 2>"$swift_probe_error"; then
-  echo "error: Swift compiler preflight failed for the current toolchain and SDK." >&2
-  cat "$swift_probe_error" >&2
-  echo "hint: align your selected developer directory with your installed SDK/toolchain versions." >&2
-  exit 1
-fi
+run_swift_toolchain_probe
 
 test_list_log="$TMPDIR/test-list.stderr"
 if ! swift test list \
-  --package-path "$PROJECT_ROOT" \
-  --build-path "$BUILD_ROOT" \
-  --disable-sandbox \
+  "${SWIFTPM_SHARED_ARGUMENTS[@]}" \
   >/dev/null 2>"$test_list_log"; then
   echo "error: SwiftPM could not compile test targets in this environment." >&2
   if grep -Fq "no such module 'Testing'" "$test_list_log"; then
