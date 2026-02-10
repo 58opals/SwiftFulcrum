@@ -1,6 +1,7 @@
 import Testing
 @testable import SwiftFulcrum
 
+@Suite(.tags(.local))
 struct ProtocolVersionTests {
     @Test("Parses dotted versions")
     func parsesDottedVersions() throws {
@@ -37,6 +38,7 @@ struct ProtocolVersionTests {
     }
 }
 
+@Suite(.tags(.local))
 struct ProtocolVersionRangeTests {
     @Test("Validates supported range")
     func validatesSupportedRange() throws {
@@ -94,6 +96,7 @@ struct ProtocolVersionRangeTests {
     }
 }
 
+@Suite(.tags(.local))
 struct ProtocolNegotiationConfigurationTests {
     @Test("Provides sensible defaults")
     func providesSensibleDefaults() throws {

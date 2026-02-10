@@ -1,20 +1,6 @@
 import Foundation
 @testable import SwiftFulcrum
 
-@discardableResult
-func waitUntil(
-    timeout: Duration = .seconds(5),
-    interval: Duration = .milliseconds(25),
-    _ condition: @Sendable () async -> Bool
-) async -> Bool {
-    let start = ContinuousClock.now
-    while await !condition() {
-        if ContinuousClock.now - start > timeout { return false }
-        try? await Task.sleep(for: interval)
-    }
-    return true
-}
-
 func withRunningFulcrum(
     _ url: URL,
     _ body: @Sendable (Fulcrum) async throws -> Void
@@ -66,25 +52,4 @@ func randomFulcrumURL(network: Fulcrum.Configuration.Network = .mainnet) async t
         throw Fulcrum.Error.transport(.setupFailed)
     }
     return url
-}
-
-func awaitNextValue<Element: Sendable>(
-    in stream: AsyncThrowingStream<Element, Swift.Error>,
-    timeout: Duration
-) async -> Element? {
-    await withTaskGroup(of: Element?.self) { group in
-        group.addTask {
-            var iterator = stream.makeAsyncIterator()
-            return try? await iterator.next()
-        }
-        
-        group.addTask {
-            try? await Task.sleep(for: timeout)
-            return nil
-        }
-        
-        let result = await group.next() ?? nil
-        group.cancelAll()
-        return result
-    }
 }

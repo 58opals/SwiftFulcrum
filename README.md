@@ -362,6 +362,22 @@ What these actions do:
 
 Cache and module-cache paths are routed to `.codex-cache/` so each worktree remains self-contained.
 
+### Test Organization
+
+Tests are split by execution scope:
+
+* `Tests/SwiftFulcrumTests/Local`: deterministic tests that do not require live server connectivity.
+* `Tests/SwiftFulcrumTests/Network`: tests that connect to live Fulcrum endpoints.
+* `Tests/SwiftFulcrumTests/Support/Local`: local-only stubs and payload helpers.
+* `Tests/SwiftFulcrumTests/Support/Network`: live-network test utilities.
+
+Swift Testing tags are required at suite level:
+
+* Local suites use `@Suite(.tags(.local))`
+* Network suites use `@Suite(.tags(.network))`
+
+Shared tag definitions live in `Tests/SwiftFulcrumTests/Support/TestTags.swift`.
+
 ---
 
 SwiftFulcrum is crafted by © 2026 Opal Wallet • 58 Opals.

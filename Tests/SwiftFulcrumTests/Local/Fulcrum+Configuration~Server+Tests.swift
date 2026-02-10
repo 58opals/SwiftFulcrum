@@ -2,6 +2,7 @@ import Foundation
 import Testing
 @testable import SwiftFulcrum
 
+@Suite(.tags(.local))
 struct FulcrumServerCatalogLoaderTests {
     @Test("Loads bundled catalog when available")
     func loadsBundledCatalog() async throws {

@@ -2,6 +2,7 @@ import Foundation
 import Testing
 @testable import SwiftFulcrum
 
+@Suite(.tags(.local))
 struct CashTokensCapabilityTests {
     @Test("Decodes CashTokens capability from a string")
     func decodesCapabilityFromString() throws {

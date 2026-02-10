@@ -2,6 +2,7 @@ import Foundation
 import Testing
 @testable import SwiftFulcrum
 
+@Suite(.tags(.local))
 struct WebSocketReconnectorTests {
     actor Counter {
         private var value = 0

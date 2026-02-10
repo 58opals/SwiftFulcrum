@@ -2,6 +2,7 @@ import Foundation
 import Testing
 @testable import SwiftFulcrum
 
+@Suite(.tags(.local))
 struct ClientProtocolNegotiationTests {
     @Test("Client rejects negotiated protocol outside supported range", .timeLimit(.minutes(1)))
     func rejectUnsupportedNegotiatedProtocol() async throws {

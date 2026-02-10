@@ -2,6 +2,7 @@ import Foundation
 import Testing
 @testable import SwiftFulcrum
 
+@Suite(.tags(.network))
 struct WebSocketTests {
     @Test("WebSocket connects and exchanges a unary request", .timeLimit(.minutes(1)))
     func connectAndExchangeUnaryRequest() async throws {
