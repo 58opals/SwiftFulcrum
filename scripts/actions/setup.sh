@@ -9,7 +9,7 @@ run_preflight_checks
 require_command xcode-select
 
 echo "Running setup checks"
-echo "Developer directory: $(xcode-select -p)"
+echo "Developer directory: $(effective_developer_directory)"
 echo "Swift: $(swift_version_line)"
 run_swift_toolchain_probe
 

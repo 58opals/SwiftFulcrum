@@ -23,6 +23,53 @@ SWIFTPM_SHARED_ARGUMENTS=(
   --disable-sandbox
 )
 
+find_preferred_xcode_developer_directory() {
+  local candidate_directory
+  local -a candidate_directories=(
+    "/Applications/Xcode.app/Contents/Developer"
+    "/Applications/Xcode-beta.app/Contents/Developer"
+    "$HOME/Applications/Xcode.app/Contents/Developer"
+    "$HOME/Applications/Xcode-beta.app/Contents/Developer"
+  )
+
+  for candidate_directory in "${candidate_directories[@]}"; do
+    if [[ -d "$candidate_directory" ]]; then
+      echo "$candidate_directory"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+effective_developer_directory() {
+  if [[ -n "${DEVELOPER_DIR:-}" ]]; then
+    echo "$DEVELOPER_DIR"
+    return 0
+  fi
+
+  xcode-select -p 2>/dev/null || true
+}
+
+use_preferred_xcode_developer_directory() {
+  require_command xcode-select
+
+  if [[ -n "${DEVELOPER_DIR:-}" ]]; then
+    return 0
+  fi
+
+  local selected_developer_directory
+  selected_developer_directory="$(xcode-select -p 2>/dev/null || true)"
+
+  if [[ "$selected_developer_directory" == *"/CommandLineTools"* || -z "$selected_developer_directory" ]]; then
+    local preferred_developer_directory
+    if preferred_developer_directory="$(find_preferred_xcode_developer_directory)"; then
+      export DEVELOPER_DIR="$preferred_developer_directory"
+      echo "Using Xcode developer directory: $DEVELOPER_DIR"
+    fi
+  fi
+}
+
 prepare_cache_directories() {
   mkdir -p \
     "$CACHE_ROOT" \
@@ -100,6 +147,7 @@ run_swift_toolchain_probe() {
 }
 
 run_preflight_checks() {
+  use_preferred_xcode_developer_directory
   require_command swift
   require_command git
   prepare_cache_directories
