@@ -7,5 +7,5 @@ source "$SCRIPT_DIRECTORY/common.sh"
 
 run_preflight_checks
 
-echo "Testing SwiftFulcrum (default lane; skipping LIVE SLOW network tests)"
-swift test "${SWIFTPM_SHARED_ARGUMENTS[@]}" --skip "subscribeAndReceiveNewHeaderFromLiveMining"
+echo "Testing SwiftFulcrum (live slow lane)"
+swift test "${SWIFTPM_SHARED_ARGUMENTS[@]}" --filter "subscribeAndReceiveNewHeaderFromLiveMining"

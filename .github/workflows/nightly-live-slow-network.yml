@@ -1,0 +1,36 @@
+name: Nightly Live Slow Network Test
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+jobs:
+  live-slow-header:
+    name: Live Slow Header Subscription
+    runs-on: macos-14
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Attach CI branch for action preflight
+        run: git switch -c "wip/nightly-live-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+
+      - name: Run live slow header test with one retry (non-gating)
+        run: |
+          set +e
+
+          make TestLiveSlow
+          first_status=$?
+
+          if [ "$first_status" -ne 0 ]; then
+            echo "First attempt failed. Retrying once..."
+            make TestLiveSlow
+            second_status=$?
+
+            if [ "$second_status" -ne 0 ]; then
+              echo "::warning::LIVE SLOW header test failed after one retry."
+            fi
+          fi
+
+          exit 0

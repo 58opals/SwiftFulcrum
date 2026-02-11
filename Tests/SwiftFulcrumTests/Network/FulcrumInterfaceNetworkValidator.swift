@@ -105,8 +105,8 @@ struct FulcrumInterfaceNetworkValidator {
         }
     }
 
-    @Test("Subscribes new header", .timeLimit(.minutes(1)))
-    func subscribeAndReceiveNewHeader() async throws {
+    @Test("LIVE SLOW: Subscribes new header", .timeLimit(.minutes(30)))
+    func subscribeAndReceiveNewHeaderFromLiveMining() async throws {
         let url = try await NetworkTestClient.pickRandomFulcrumURL()
 
         try await NetworkTestClient.runWithFulcrum(url) { fulcrum in

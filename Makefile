@@ -1,6 +1,6 @@
 SHELL := /bin/zsh
 
-.PHONY: Setup Doctor Build Test
+.PHONY: Setup Doctor Build Test TestLiveSlow
 
 Setup:
 	@./scripts/actions/setup.sh
@@ -13,3 +13,6 @@ Build:
 
 Test:
 	@./scripts/actions/test.sh
+
+TestLiveSlow:
+	@./scripts/actions/test-live-slow.sh
