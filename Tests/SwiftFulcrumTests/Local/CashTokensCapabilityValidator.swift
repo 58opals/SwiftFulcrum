@@ -3,9 +3,9 @@ import Testing
 @testable import SwiftFulcrum
 
 @Suite(.tags(.local))
-struct CashTokensCapabilityTests {
+struct CashTokensCapabilityValidator {
     @Test("Decodes CashTokens capability from a string")
-    func decodesCapabilityFromString() throws {
+    func decodeCapabilityFromString() throws {
         let serializedPayload = """
         {
           "amount": "0",
@@ -14,15 +14,15 @@ struct CashTokensCapabilityTests {
         }
         """
         let serializedData = try #require(serializedPayload.data(using: .utf8))
-        
+
         let decoded = try JSONDecoder().decode(Method.Blockchain.CashTokens.JSON.self, from: serializedData)
         let nonFungibleToken = try #require(decoded.nft)
-        
+
         #expect(nonFungibleToken.capability == .none)
     }
-    
+
     @Test("Decodes list unspent items with CashTokens data")
-    func decodesListUnspentResponseWithTokenData() throws {
+    func decodeListUnspentResponseWithTokenData() throws {
         let responseIdentifier = UUID()
         let serializedResponse = """
         {
@@ -44,7 +44,7 @@ struct CashTokensCapabilityTests {
         }
         """
         let serializedData = try #require(serializedResponse.data(using: .utf8))
-        
+
         let decodedResponse = try JSONDecoder().decode(
             Response.JSONRPC.Generic<Response.JSONRPC.Result.Blockchain.Address.ListUnspent>.self,
             from: serializedData
@@ -53,7 +53,7 @@ struct CashTokensCapabilityTests {
         let firstItem = try #require(listUnspentItems.first)
         let tokenData = try #require(firstItem.token_data)
         let nonFungibleToken = try #require(tokenData.nft)
-        
+
         #expect(firstItem.tx_hash == "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef")
         #expect(nonFungibleToken.capability == .none)
     }

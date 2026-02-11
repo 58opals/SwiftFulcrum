@@ -3,20 +3,19 @@ import Testing
 @testable import SwiftFulcrum
 
 @Suite(.tags(.local))
-struct FulcrumInterfaceLocalTests {
-    
+struct FulcrumInterfaceLocalValidator {
     private static let testAddress = "bitcoincash:qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a"
-    
+
     @Test("Unary submit rejects subscription methods", .timeLimit(.minutes(1)))
-    func submitRejectsSubscriptionMethods() async throws {
+    func rejectSubscriptionMethodsOnSubmit() async throws {
         // No network dependency: submit() should reject before attempting to connect.
         let fulcrum = try await Fulcrum(url: "ws://example.com")
-        
+
         let subscriptionMethods: [SwiftFulcrum.Method] = [
             .blockchain(.headers(.subscribe)),
             .blockchain(.address(.subscribe(address: Self.testAddress)))
         ]
-        
+
         for method in subscriptionMethods {
             do {
                 _ = try await fulcrum.submit(
@@ -36,17 +35,17 @@ struct FulcrumInterfaceLocalTests {
             }
         }
     }
-    
+
     @Test("subscribe rejects unary methods", .timeLimit(.minutes(1)))
-    func subscribeRejectsUnaryMethods() async throws {
+    func rejectUnaryMethodsOnSubscribe() async throws {
         // No network dependency: subscribe() should reject before attempting to connect.
         let fulcrum = try await Fulcrum(url: "ws://example.com")
-        
+
         let unaryMethods: [SwiftFulcrum.Method] = [
             .blockchain(.headers(.getTip)),
             .mempool(.getFeeHistogram)
         ]
-        
+
         for method in unaryMethods {
             do {
                 _ = try await fulcrum.subscribe(
@@ -67,15 +66,15 @@ struct FulcrumInterfaceLocalTests {
             }
         }
     }
-    
+
     @Test("Cancellation cancels underlying token synchronously")
-    func cancellationMarksTokenImmediately() async {
+    func markCancellationTokenImmediately() async {
         let cancellation = Fulcrum.Call.Cancellation()
-        
+
         #expect(await cancellation.isCancelled == false)
-        
+
         await cancellation.cancel()
-        
+
         #expect(await cancellation.isCancelled)
     }
 }
