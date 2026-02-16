@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIRECTORY="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIRECTORY/../.." && pwd)"
-CACHE_ROOT="$PROJECT_ROOT/.codex-cache"
+CACHE_ROOT="$PROJECT_ROOT/.workspace-cache"
 BUILD_ROOT="$PROJECT_ROOT/.build"
 SWIFTPM_CACHE_PATH="$CACHE_ROOT/swiftpm-cache"
 SWIFTPM_CONFIG_PATH="$CACHE_ROOT/swiftpm-config"
@@ -109,14 +109,14 @@ require_attached_branch() {
   fi
 }
 
-require_codex_cache_gitignore_entry() {
+require_workspace_cache_gitignore_entry() {
   local gitignore_path="$PROJECT_ROOT/.gitignore"
   if [[ ! -f "$gitignore_path" ]]; then
     echo "error: expected .gitignore at '$gitignore_path'" >&2
     exit 1
   fi
-  if ! grep -Fq ".codex-cache/" "$gitignore_path"; then
-    echo "error: .gitignore must include '.codex-cache/' for local cache hygiene" >&2
+  if ! grep -Fq ".workspace-cache/" "$gitignore_path"; then
+    echo "error: .gitignore must include '.workspace-cache/' for local cache hygiene" >&2
     exit 1
   fi
 }
@@ -153,5 +153,5 @@ run_preflight_checks() {
   prepare_cache_directories
   require_git_worktree
   require_attached_branch
-  require_codex_cache_gitignore_entry
+  require_workspace_cache_gitignore_entry
 }
