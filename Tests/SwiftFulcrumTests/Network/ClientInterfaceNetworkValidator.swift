@@ -3,16 +3,20 @@ import Testing
 @testable import SwiftFulcrum
 
 @Suite(.tags(.network))
-struct FulcrumInterfaceNetworkValidator {
+struct ClientInterfaceNetworkValidator {
     private static let testAddress = "bitcoincash:qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a"
+    private static let runLiveSlowEnvironmentKey = "SWIFTFULCRUM_RUN_LIVE_SLOW"
+    private static var shouldRunLiveSlow: Bool {
+        ProcessInfo.processInfo.environment[runLiveSlowEnvironmentKey] == "1"
+    }
 
     // MARK: - Unary
     @Test("Submit returns current blockchain tip", .timeLimit(.minutes(1)))
     func submitAndReturnBlockchainTip() async throws {
-        let url = try await NetworkTestClient.pickRandomFulcrumURL()
+        let url = try await NetworkTestClient.pickRandomServerURL()
 
-        try await NetworkTestClient.runWithFulcrum(url) { fulcrum in
-            let response = try await fulcrum.submit(
+        try await NetworkTestClient.runWithClient(url) { client in
+            let response = try await client.submit(
                 method: .blockchain(.headers(.getTip)),
                 responseType: Response.ResultModel.BlockchainModel.HeadersModel.GetTipModel.self,
                 options: .init(timeout: .seconds(30))
@@ -29,12 +33,12 @@ struct FulcrumInterfaceNetworkValidator {
     }
 
     @Test("Submit starts FulcrumClient when idle", .timeLimit(.minutes(1)))
-    func submitAndStartFulcrumWhenIdle() async throws {
-        let url = try await NetworkTestClient.pickRandomFulcrumURL()
-        let fulcrum = try await FulcrumClient(url: url.absoluteString)
+    func submitAndStartClientWhenIdle() async throws {
+        let url = try await NetworkTestClient.pickRandomServerURL()
+        let client = try await FulcrumClient(url: url.absoluteString)
 
         // Avoid calling start() directly to exercise prepareClientForRequests.
-        let response = try await fulcrum.submit(
+        let response = try await client.submit(
             method: .blockchain(.headers(.getTip)),
             responseType: Response.ResultModel.BlockchainModel.HeadersModel.GetTipModel.self,
             options: .init(timeout: .seconds(30))
@@ -46,19 +50,19 @@ struct FulcrumInterfaceNetworkValidator {
         }
 
         #expect(tip.height > 0)
-        #expect(await fulcrum.isRunning)
+        #expect(await client.isRunning)
 
-        await fulcrum.stop()
+        await client.stop()
     }
 
     // MARK: - Subscriptions
     @Test("Subscriptions expose cancellable header streams", .timeLimit(.minutes(1)))
     func subscribeAndCreateCancellableHeaderSubscription() async throws {
-        let url = try await NetworkTestClient.pickRandomFulcrumURL()
+        let url = try await NetworkTestClient.pickRandomServerURL()
         let cancellation = FulcrumClient.CallModel.CancellationModel()
 
-        try await NetworkTestClient.runWithFulcrum(url) { fulcrum in
-            let (initial, updates, cancel) = try await fulcrum.subscribe(
+        try await NetworkTestClient.runWithClient(url) { client in
+            let (initial, updates, cancel) = try await client.subscribe(
                 method: .blockchain(.headers(.subscribe)),
                 initialType: Response.ResultModel.BlockchainModel.HeadersModel.SubscribeModel.self,
                 notificationType: Response.ResultModel.BlockchainModel.HeadersModel.SubscribeNotificationModel.self,
@@ -82,10 +86,10 @@ struct FulcrumInterfaceNetworkValidator {
 
     @Test("Subscribes to address status and cancels the stream", .timeLimit(.minutes(1)))
     func subscribeAndStopAddressSubscription() async throws {
-        let url = try await NetworkTestClient.pickRandomFulcrumURL()
+        let url = try await NetworkTestClient.pickRandomServerURL()
 
-        try await NetworkTestClient.runWithFulcrum(url) { fulcrum in
-            let (initial, updates, cancel) = try await fulcrum.subscribe(
+        try await NetworkTestClient.runWithClient(url) { client in
+            let (initial, updates, cancel) = try await client.subscribe(
                 method: .blockchain(.address(.subscribe(address: Self.testAddress))),
                 initialType: Response.ResultModel.BlockchainModel.AddressModel.SubscribeModel.self,
                 notificationType: Response.ResultModel.BlockchainModel.AddressModel.SubscribeNotificationModel.self,
@@ -107,10 +111,12 @@ struct FulcrumInterfaceNetworkValidator {
 
     @Test("LIVE SLOW: Subscribes new header", .timeLimit(.minutes(30)))
     func subscribeAndReceiveNewHeaderFromLiveMining() async throws {
-        let url = try await NetworkTestClient.pickRandomFulcrumURL()
+        guard Self.shouldRunLiveSlow else { return }
 
-        try await NetworkTestClient.runWithFulcrum(url) { fulcrum in
-            let (initial, updates, cancel) = try await fulcrum.subscribe(
+        let url = try await NetworkTestClient.pickRandomServerURL()
+
+        try await NetworkTestClient.runWithClient(url) { client in
+            let (initial, updates, cancel) = try await client.subscribe(
                 method: .blockchain(.headers(.subscribe)),
                 initialType: Response.ResultModel.BlockchainModel.HeadersModel.SubscribeModel.self,
                 notificationType: Response.ResultModel.BlockchainModel.HeadersModel.SubscribeNotificationModel.self,
@@ -152,10 +158,10 @@ struct FulcrumInterfaceNetworkValidator {
     // MARK: - Misc RPC
     @Test("Submit resolves address metadata over live FulcrumClient", .timeLimit(.minutes(1)))
     func submitAndResolveAddressQueries() async throws {
-        let url = try await NetworkTestClient.pickRandomFulcrumURL()
+        let url = try await NetworkTestClient.pickRandomServerURL()
 
-        try await NetworkTestClient.runWithFulcrum(url) { fulcrum in
-            let scriptHashResponse = try await fulcrum.submit(
+        try await NetworkTestClient.runWithClient(url) { client in
+            let scriptHashResponse = try await client.submit(
                 method: .blockchain(.address(.getScriptHash(address: Self.testAddress))),
                 responseType: Response.ResultModel.BlockchainModel.AddressModel.GetScriptHashModel.self,
                 options: .init(timeout: .seconds(15))
@@ -167,7 +173,7 @@ struct FulcrumInterfaceNetworkValidator {
             }
             #expect(scriptHashResult.scriptHash.count == 64)
 
-            let balanceResponse = try await fulcrum.submit(
+            let balanceResponse = try await client.submit(
                 method: .blockchain(.address(.getBalance(address: Self.testAddress, tokenFilter: nil))),
                 responseType: Response.ResultModel.BlockchainModel.AddressModel.GetBalanceModel.self,
                 options: .init(timeout: .seconds(15))
@@ -186,11 +192,11 @@ struct FulcrumInterfaceNetworkValidator {
 
     @Test("Submit surfaces rpc errors for invalid broadcasts", .timeLimit(.minutes(1)))
     func submitAndPropagateBroadcastErrors() async throws {
-        let url = try await NetworkTestClient.pickRandomFulcrumURL()
+        let url = try await NetworkTestClient.pickRandomServerURL()
 
-        try await NetworkTestClient.runWithFulcrum(url) { fulcrum in
+        try await NetworkTestClient.runWithClient(url) { client in
             do {
-                _ = try await fulcrum.submit(
+                _ = try await client.submit(
                     method: .blockchain(.transaction(.broadcast(rawTransaction: "00"))),
                     responseType: Response.ResultModel.BlockchainModel.TransactionModel.BroadcastModel.self,
                     options: .init(timeout: .seconds(15))

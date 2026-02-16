@@ -2,18 +2,18 @@ import Foundation
 @testable import SwiftFulcrum
 
 struct NetworkTestClient {
-    static func runWithFulcrum(
+    static func runWithClient(
         _ url: URL,
-        _ body: @Sendable (Fulcrum) async throws -> Void
+        _ body: @Sendable (FulcrumClient) async throws -> Void
     ) async throws {
-        let fulcrum = try await Fulcrum(url: url.absoluteString)
+        let client = try await FulcrumClient(url: url.absoluteString)
 
         do {
-            try await fulcrum.start()
-            try await body(fulcrum)
-            await fulcrum.stop()
+            try await client.start()
+            try await body(client)
+            await client.stop()
         } catch {
-            await fulcrum.stop()
+            await client.stop()
             throw error
         }
     }
@@ -47,15 +47,15 @@ struct NetworkTestClient {
         }
     }
 
-    static func pickRandomFulcrumURL(
-        network: Fulcrum.Configuration.Network = .mainnet
+    static func pickRandomServerURL(
+        network: FulcrumClient.Configuration.NetworkModel = .mainnet
     ) async throws -> URL {
-        let serverList = try await FulcrumServerCatalogLoader.bundled.loadServers(
+        let serverList = try await FulcrumServerCatalogRepository.bundled.loadServers(
             for: network,
             fallback: .init()
         )
         guard let selectedURL = serverList.randomElement() else {
-            throw Fulcrum.Error.transport(.setupFailed)
+            throw FulcrumClient.Error.transport(.setupFailed)
         }
         return selectedURL
     }

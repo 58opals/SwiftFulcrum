@@ -3,7 +3,7 @@ import Testing
 @testable import SwiftFulcrum
 
 @Suite(.tags(.local))
-struct FulcrumServerCatalogValidator {
+struct ServerCatalogRepositoryValidator {
     @Test("Loads bundled catalog when available")
     func loadBundledCatalog() async throws {
         let servers = try await FulcrumServerCatalogRepository.bundled.loadServers(
@@ -83,8 +83,8 @@ struct FulcrumServerCatalogValidator {
         let loader = FulcrumServerCatalogRepository { _, _ in [expectedServer] }
         let configuration = FulcrumClient.Configuration(serverCatalogLoader: loader)
 
-        let fulcrum = try await FulcrumClient(configuration: configuration)
-        let client = await fulcrum.client
+        let clientInterface = try await FulcrumClient(configuration: configuration)
+        let client = await clientInterface.client
         let transport = await client.transport
         let endpoint = await transport.endpoint
 

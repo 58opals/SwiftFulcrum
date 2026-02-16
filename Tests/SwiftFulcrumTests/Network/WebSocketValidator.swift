@@ -6,7 +6,7 @@ import Testing
 struct WebSocketValidator {
     @Test("WebSocketModel connects and exchanges a unary request", .timeLimit(.minutes(1)))
     func connectAndExchangeUnaryRequest() async throws {
-        let url = try await NetworkTestClient.pickRandomFulcrumURL()
+        let url = try await NetworkTestClient.pickRandomServerURL()
         let webSocket = WebSocketModel(url: url)
         let stream = await webSocket.makeMessageStream()
 

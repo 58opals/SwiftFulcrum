@@ -3,13 +3,13 @@ import Testing
 @testable import SwiftFulcrum
 
 @Suite(.tags(.local))
-struct FulcrumInterfaceLocalValidator {
+struct ClientInterfaceLocalValidator {
     private static let testAddress = "bitcoincash:qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a"
 
     @Test("Unary submit rejects subscription methods", .timeLimit(.minutes(1)))
     func rejectSubscriptionMethodsOnSubmit() async throws {
         // No network dependency: submit() should reject before attempting to connect.
-        let fulcrum = try await FulcrumClient(url: "ws://example.com")
+        let client = try await FulcrumClient(url: "ws://example.com")
 
         let subscriptionMethods: [SwiftFulcrum.FulcrumMethodRequest] = [
             .blockchain(.headers(.subscribe)),
@@ -18,7 +18,7 @@ struct FulcrumInterfaceLocalValidator {
 
         for method in subscriptionMethods {
             do {
-                _ = try await fulcrum.submit(
+                _ = try await client.submit(
                     method: method,
                     responseType: Response.ResultModel.BlockchainModel.HeadersModel.GetTipModel.self
                 )
@@ -39,7 +39,7 @@ struct FulcrumInterfaceLocalValidator {
     @Test("subscribe rejects unary methods", .timeLimit(.minutes(1)))
     func rejectUnaryMethodsOnSubscribe() async throws {
         // No network dependency: subscribe() should reject before attempting to connect.
-        let fulcrum = try await FulcrumClient(url: "ws://example.com")
+        let client = try await FulcrumClient(url: "ws://example.com")
 
         let unaryMethods: [SwiftFulcrum.FulcrumMethodRequest] = [
             .blockchain(.headers(.getTip)),
@@ -48,7 +48,7 @@ struct FulcrumInterfaceLocalValidator {
 
         for method in unaryMethods {
             do {
-                _ = try await fulcrum.subscribe(
+                _ = try await client.subscribe(
                     method: method,
                     initialType: Response.ResultModel.BlockchainModel.HeadersModel.SubscribeModel.self,
                     notificationType: Response.ResultModel.BlockchainModel.HeadersModel.SubscribeNotificationModel.self

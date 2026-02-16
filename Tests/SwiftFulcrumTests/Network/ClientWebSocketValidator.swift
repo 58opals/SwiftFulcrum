@@ -6,7 +6,7 @@ import Testing
 struct ClientWebSocketValidator {
     @Test("Client.start() relays unary responses over WebSocketModel", .timeLimit(.minutes(1)))
     func startClientAndReceiveUnaryResponses() async throws {
-        let url = try await NetworkTestClient.pickRandomFulcrumURL()
+        let url = try await NetworkTestClient.pickRandomServerURL()
         let webSocket = WebSocketModel(url: url)
         let client = Client(
             transport: WebSocketTransportModel(webSocket: webSocket),
@@ -29,7 +29,7 @@ struct ClientWebSocketValidator {
 
     @Test("Client.stop() cancels active subscription streams", .timeLimit(.minutes(1)))
     func stopClientAndTerminateSubscriptions() async throws {
-        let url = try await NetworkTestClient.pickRandomFulcrumURL()
+        let url = try await NetworkTestClient.pickRandomServerURL()
         let webSocket = WebSocketModel(url: url)
         let client = Client(
             transport: WebSocketTransportModel(webSocket: webSocket),
