@@ -365,7 +365,7 @@ Swift Testing tags are required at suite level:
 * Local suites use `@Suite(.tags(.local))`
 * Network suites use `@Suite(.tags(.network))`
 
-Shared tag definitions live in `Tests/SwiftFulcrumTests/Support/TestTags.swift`.
+Shared tag definitions live in `Tests/SwiftFulcrumTests/Support/Tag+.swift`.
 
 ---
 
