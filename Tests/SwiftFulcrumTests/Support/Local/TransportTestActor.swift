@@ -1,8 +1,8 @@
 import Foundation
 @testable import SwiftFulcrum
 
-actor TransportTestActor: Transportable {
-    private var connectionStateValue: Fulcrum.ConnectionState = .idle
+actor TransportTestActor: TransportableModel {
+    private var connectionStateValue: FulcrumClient.ConnectionState = .idle
     private var closeInformationValue: CloseInformation = (.invalid, nil)
     private var currentEndpoint: URL
 
@@ -10,13 +10,13 @@ actor TransportTestActor: Transportable {
     private var incomingStream: AsyncThrowingStream<URLSessionWebSocketTask.Message, Swift.Error>?
     private var incomingContinuation: AsyncThrowingStream<URLSessionWebSocketTask.Message, Swift.Error>.Continuation?
 
-    private var lifecycleBuffer: [FulcrumTransportLifecycle.Event] = .init()
-    private var lifecycleStream: AsyncStream<FulcrumTransportLifecycle.Event>?
-    private var lifecycleContinuation: AsyncStream<FulcrumTransportLifecycle.Event>.Continuation?
+    private var lifecycleBuffer: [FulcrumTransportState.EventModel] = .init()
+    private var lifecycleStream: AsyncStream<FulcrumTransportState.EventModel>?
+    private var lifecycleContinuation: AsyncStream<FulcrumTransportState.EventModel>.Continuation?
 
-    private var connectionStateBuffer: [Fulcrum.ConnectionState] = .init()
-    private var connectionStateStream: AsyncStream<Fulcrum.ConnectionState>?
-    private var connectionStateContinuation: AsyncStream<Fulcrum.ConnectionState>.Continuation?
+    private var connectionStateBuffer: [FulcrumClient.ConnectionState] = .init()
+    private var connectionStateStream: AsyncStream<FulcrumClient.ConnectionState>?
+    private var connectionStateContinuation: AsyncStream<FulcrumClient.ConnectionState>.Continuation?
 
     private var outgoingQueue: [URLSessionWebSocketTask.Message] = .init()
     private var pendingOutgoingContinuations: [CheckedContinuation<URLSessionWebSocketTask.Message, Never>] = .init()
@@ -26,7 +26,7 @@ actor TransportTestActor: Transportable {
         self.currentEndpoint = endpoint
     }
 
-    var connectionState: Fulcrum.ConnectionState { connectionStateValue }
+    var connectionState: FulcrumClient.ConnectionState { connectionStateValue }
     var closeInformation: CloseInformation { closeInformationValue }
     var endpoint: URL { currentEndpoint }
 
@@ -69,10 +69,10 @@ actor TransportTestActor: Transportable {
         return stream
     }
 
-    func makeLifecycleEvents() async -> AsyncStream<FulcrumTransportLifecycle.Event> {
+    func makeLifecycleEvents() async -> AsyncStream<FulcrumTransportState.EventModel> {
         if let lifecycleStream { return lifecycleStream }
-        var continuation: AsyncStream<FulcrumTransportLifecycle.Event>.Continuation!
-        let stream = AsyncStream<FulcrumTransportLifecycle.Event> { innerContinuation in
+        var continuation: AsyncStream<FulcrumTransportState.EventModel>.Continuation!
+        let stream = AsyncStream<FulcrumTransportState.EventModel> { innerContinuation in
             continuation = innerContinuation
             innerContinuation.onTermination = { @Sendable [weak self] _ in
                 Task { await self?.resetLifecycleStream() }
@@ -84,10 +84,10 @@ actor TransportTestActor: Transportable {
         return stream
     }
 
-    func makeConnectionStateEvents() async -> AsyncStream<Fulcrum.ConnectionState> {
+    func makeConnectionStateEvents() async -> AsyncStream<FulcrumClient.ConnectionState> {
         if let connectionStateStream { return connectionStateStream }
-        var continuation: AsyncStream<Fulcrum.ConnectionState>.Continuation!
-        let stream = AsyncStream<Fulcrum.ConnectionState> { innerContinuation in
+        var continuation: AsyncStream<FulcrumClient.ConnectionState>.Continuation!
+        let stream = AsyncStream<FulcrumClient.ConnectionState> { innerContinuation in
             continuation = innerContinuation
             innerContinuation.yield(connectionStateValue)
             innerContinuation.onTermination = { @Sendable [weak self] _ in
@@ -100,13 +100,13 @@ actor TransportTestActor: Transportable {
         return stream
     }
 
-    func makeDiagnosticsSnapshot() async -> Fulcrum.Diagnostics.TransportSnapshot {
+    func makeDiagnosticsSnapshot() async -> FulcrumClient.DiagnosticsModel.TransportSnapshotModel {
         .init(reconnectAttempts: 0, reconnectSuccesses: 0)
     }
 
-    func updateMetrics(_ collector: MetricsCollectable?) async { _ = collector }
+    func updateMetrics(_ collector: MetricsClient?) async { _ = collector }
 
-    func updateLogger(_ handler: Log.Handler?) async { _ = handler }
+    func updateLogger(_ handler: LogModel.HandlerModel?) async { _ = handler }
 
     func registerQuietResponse(for identifier: UUID) async { _ = identifier }
 
@@ -115,7 +115,7 @@ actor TransportTestActor: Transportable {
         flushIncomingBuffer()
     }
 
-    func enqueueLifecycleEvent(_ event: FulcrumTransportLifecycle.Event) {
+    func enqueueLifecycleEvent(_ event: FulcrumTransportState.EventModel) {
         lifecycleBuffer.append(event)
         apply(event)
         flushLifecycleBuffer()
@@ -144,14 +144,14 @@ actor TransportTestActor: Transportable {
         }
     }
 
-    private func updateConnectionState(to newState: Fulcrum.ConnectionState) {
+    private func updateConnectionState(to newState: FulcrumClient.ConnectionState) {
         guard connectionStateValue != newState else { return }
         connectionStateValue = newState
         connectionStateBuffer.append(newState)
         flushConnectionStateBuffer()
     }
 
-    private func apply(_ event: FulcrumTransportLifecycle.Event) {
+    private func apply(_ event: FulcrumTransportState.EventModel) {
         switch event {
         case .connected(let isReconnect):
             if isReconnect { updateConnectionState(to: .reconnecting) }

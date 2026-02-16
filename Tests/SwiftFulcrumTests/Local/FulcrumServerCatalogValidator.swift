@@ -6,7 +6,7 @@ import Testing
 struct FulcrumServerCatalogValidator {
     @Test("Loads bundled catalog when available")
     func loadBundledCatalog() async throws {
-        let servers = try await FulcrumServerCatalogLoader.bundled.loadServers(
+        let servers = try await FulcrumServerCatalogRepository.bundled.loadServers(
             for: .mainnet,
             fallback: .init()
         )
@@ -18,10 +18,10 @@ struct FulcrumServerCatalogValidator {
     @Test("Falls back when bundled catalog is unavailable")
     func loadFallbackBootstrapList() async throws {
         let fallbackServers = [URL(string: "wss://fallback.fulcrum.example")!]
-        let loader = FulcrumServerCatalogLoader { _, fallback in
+        let loader = FulcrumServerCatalogRepository { _, fallback in
             try await Task.detached(priority: .utility) {
-                let sanitized = FulcrumServerCatalogLoader.sanitizeServers(fallback)
-                guard !sanitized.isEmpty else { throw Fulcrum.Error.transport(.setupFailed) }
+                let sanitized = FulcrumServerCatalogRepository.sanitizeServers(fallback)
+                guard !sanitized.isEmpty else { throw FulcrumClient.Error.transport(.setupFailed) }
                 return sanitized
             }.value
         }
@@ -37,10 +37,10 @@ struct FulcrumServerCatalogValidator {
             URL(string: "http://invalid.fulcrum.example")!,
             URL(string: "wss://valid.fulcrum.example")!
         ]
-        let loader = FulcrumServerCatalogLoader { _, fallback in
+        let loader = FulcrumServerCatalogRepository { _, fallback in
             try await Task.detached(priority: .utility) {
-                let sanitized = FulcrumServerCatalogLoader.sanitizeServers(fallback)
-                guard !sanitized.isEmpty else { throw Fulcrum.Error.transport(.setupFailed) }
+                let sanitized = FulcrumServerCatalogRepository.sanitizeServers(fallback)
+                guard !sanitized.isEmpty else { throw FulcrumClient.Error.transport(.setupFailed) }
                 return sanitized
             }.value
         }
@@ -53,11 +53,11 @@ struct FulcrumServerCatalogValidator {
 
     @Test("Throws when both bundled and fallback catalogs are empty")
     func throwWhenCatalogCannotBeBuilt() async {
-        let loader = FulcrumServerCatalogLoader { _, _ in
+        let loader = FulcrumServerCatalogRepository { _, _ in
             try await Task.detached(priority: .utility) { () -> [URL] in
                 let fallback: [URL] = .init()
-                let sanitized = FulcrumServerCatalogLoader.sanitizeServers(fallback)
-                guard !sanitized.isEmpty else { throw Fulcrum.Error.transport(.setupFailed) }
+                let sanitized = FulcrumServerCatalogRepository.sanitizeServers(fallback)
+                guard !sanitized.isEmpty else { throw FulcrumClient.Error.transport(.setupFailed) }
                 return sanitized
             }.value
         }
@@ -65,25 +65,25 @@ struct FulcrumServerCatalogValidator {
         do {
             _ = try await loader.loadServers(for: .mainnet, fallback: .init())
             Issue.record("Expected loader to throw when no servers are available")
-        } catch let error as Fulcrum.Error {
+        } catch let error as FulcrumClient.Error {
             switch error {
             case .transport(.setupFailed):
                 break
             default:
-                Issue.record("Unexpected Fulcrum.Error: \(error)")
+                Issue.record("Unexpected FulcrumClient.Error: \(error)")
             }
         } catch {
             Issue.record("Unexpected error type: \(error)")
         }
     }
 
-    @Test("Uses injected catalog loader during Fulcrum initialization")
+    @Test("Uses injected catalog loader during FulcrumClient initialization")
     func useInjectedCatalogLoader() async throws {
         let expectedServer = URL(string: "wss://injected.fulcrum.example")!
-        let loader = FulcrumServerCatalogLoader { _, _ in [expectedServer] }
-        let configuration = Fulcrum.Configuration(serverCatalogLoader: loader)
+        let loader = FulcrumServerCatalogRepository { _, _ in [expectedServer] }
+        let configuration = FulcrumClient.Configuration(serverCatalogLoader: loader)
 
-        let fulcrum = try await Fulcrum(configuration: configuration)
+        let fulcrum = try await FulcrumClient(configuration: configuration)
         let client = await fulcrum.client
         let transport = await client.transport
         let endpoint = await transport.endpoint

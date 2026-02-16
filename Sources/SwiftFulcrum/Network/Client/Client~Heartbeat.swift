@@ -13,8 +13,8 @@ extension Client {
                     try await Task.sleep(for: rpcHeartbeatInterval)
                     try Task.checkCancellation()
                     
-                    let (_, _): (UUID, Response.Result.Server.Ping) =
-                    try await Log.perform(withBehavior: .quiet) {
+                    let (_, _): (UUID, Response.ResultModel.ServerModel.PingModel) =
+                    try await LogModel.perform(withBehavior: .quiet) {
                         try await self.call(
                             method: .server(.ping),
                             options: .init(timeout: rpcHeartbeatTimeout),
@@ -37,7 +37,7 @@ extension Client {
                     } catch is CancellationError {
                         break
                     } catch {
-                        let inflightCount = await self.router.failUnaries(with: Fulcrum.Error.transport(.heartbeatTimeout))
+                        let inflightCount = await self.router.failUnaries(with: FulcrumClient.Error.transport(.heartbeatTimeout))
                         await self.publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightCount)
                         break
                     }

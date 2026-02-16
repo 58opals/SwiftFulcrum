@@ -3,16 +3,16 @@ import Testing
 @testable import SwiftFulcrum
 
 extension WebSocketReconnectorValidator {
-    @Test("Reconnector exhausts after maximum attempts", .timeLimit(.minutes(1)))
+    @Test("ReconnectorModel exhausts after maximum attempts", .timeLimit(.minutes(1)))
     func exhaustAfterMaximumAttempts() async throws {
-        let configuration = WebSocket.Reconnector.Configuration(
+        let configuration = WebSocketModel.ReconnectorModel.Configuration(
             maximumReconnectionAttempts: 2,
             reconnectionDelay: 0.05,
             maximumDelay: 0.05,
             jitterRange: 1.0 ... 1.0
         )
 
-        let servers = try WebSocket.Server.decodeBundledServers(for: .mainnet)
+        let servers = try WebSocketModel.ServerModel.decodeBundledServers(for: .mainnet)
         guard let current = servers.first else {
             Issue.record("Missing bundled servers for reconnection test")
             return
@@ -22,7 +22,7 @@ extension WebSocketReconnectorValidator {
         let networkSession = URLSession(configuration: .ephemeral)
         defer { networkSession.invalidateAndCancel() }
 
-        let webSocket = WebSocket(
+        let webSocket = WebSocketModel(
             url: unreachable,
             configuration: .init(session: networkSession),
             reconnectConfiguration: configuration,
@@ -48,9 +48,9 @@ extension WebSocketReconnectorValidator {
         await webSocket.disconnect(with: "test teardown")
     }
 
-    @Test("Reconnector stops after configured attempts with injected catalog", .timeLimit(.minutes(1)))
+    @Test("ReconnectorModel stops after configured attempts with injected catalog", .timeLimit(.minutes(1)))
     func stopAfterConfiguredAttemptsWithInjectedCatalog() async throws {
-        let configuration = WebSocket.Reconnector.Configuration(
+        let configuration = WebSocketModel.ReconnectorModel.Configuration(
             maximumReconnectionAttempts: 2,
             reconnectionDelay: 0.01,
             maximumDelay: 0.01,
@@ -71,7 +71,7 @@ extension WebSocketReconnectorValidator {
         let networkSession = URLSession(configuration: .ephemeral)
         defer { networkSession.invalidateAndCancel() }
 
-        let webSocket = WebSocket(
+        let webSocket = WebSocketModel(
             url: current,
             configuration: .init(
                 session: networkSession,
@@ -99,11 +99,11 @@ extension WebSocketReconnectorValidator {
         await webSocket.disconnect(with: "test teardown")
     }
 
-    @Test("Reconnector resets exhausted attempts for new sessions", .timeLimit(.minutes(1)))
+    @Test("ReconnectorModel resets exhausted attempts for new sessions", .timeLimit(.minutes(1)))
     func resetExhaustedAttemptsForNewSessions() async throws {
         let counter = SleepCountActor()
 
-        let configuration = WebSocket.Reconnector.Configuration(
+        let configuration = WebSocketModel.ReconnectorModel.Configuration(
             maximumReconnectionAttempts: 2,
             reconnectionDelay: 0.01,
             maximumDelay: 0.01,
@@ -114,7 +114,7 @@ extension WebSocketReconnectorValidator {
         let networkSession = URLSession(configuration: .ephemeral)
         defer { networkSession.invalidateAndCancel() }
 
-        let webSocket = WebSocket(
+        let webSocket = WebSocketModel(
             url: unreachable,
             configuration: .init(
                 session: networkSession,
@@ -136,7 +136,7 @@ extension WebSocketReconnectorValidator {
                     shouldCancelReceiver: false,
                     isInitialConnection: false
                 )
-                Issue.record("Reconnector should exhaust instead of succeeding")
+                Issue.record("ReconnectorModel should exhaust instead of succeeding")
             } catch {
                 return
             }

@@ -3,16 +3,16 @@ import Testing
 @testable import SwiftFulcrum
 
 extension WebSocketReconnectorValidator {
-    @Test("Reconnector calculates deterministic backoff", .timeLimit(.minutes(1)))
+    @Test("ReconnectorModel calculates deterministic backoff", .timeLimit(.minutes(1)))
     func calculateDeterministicBackoff() async throws {
-        let configuration = WebSocket.Reconnector.Configuration(
+        let configuration = WebSocketModel.ReconnectorModel.Configuration(
             maximumReconnectionAttempts: 5,
             reconnectionDelay: 1.5,
             maximumDelay: 30,
             jitterRange: 0.8 ... 1.3
         )
 
-        let reconnector = WebSocket.Reconnector(
+        let reconnector = WebSocketModel.ReconnectorModel(
             configuration,
             network: .mainnet,
             jitter: { _ in 1 }
@@ -32,22 +32,22 @@ extension WebSocketReconnectorValidator {
         #expect(cappedDelay == .seconds(30))
     }
 
-    @Test("Reconnector applies jitter bounds", .timeLimit(.minutes(1)))
+    @Test("ReconnectorModel applies jitter bounds", .timeLimit(.minutes(1)))
     func applyJitterBounds() async throws {
-        let configuration = WebSocket.Reconnector.Configuration(
+        let configuration = WebSocketModel.ReconnectorModel.Configuration(
             maximumReconnectionAttempts: 3,
             reconnectionDelay: 1.5,
             maximumDelay: 30,
             jitterRange: 0.8 ... 1.3
         )
 
-        let minimumJitterReconnector = WebSocket.Reconnector(
+        let minimumJitterReconnector = WebSocketModel.ReconnectorModel(
             configuration,
             network: .mainnet,
             jitter: { _ in configuration.jitterRange.lowerBound }
         )
 
-        let maximumJitterReconnector = WebSocket.Reconnector(
+        let maximumJitterReconnector = WebSocketModel.ReconnectorModel(
             configuration,
             network: .mainnet,
             jitter: { _ in configuration.jitterRange.upperBound }

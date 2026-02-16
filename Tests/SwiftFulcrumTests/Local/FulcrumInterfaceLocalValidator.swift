@@ -9,9 +9,9 @@ struct FulcrumInterfaceLocalValidator {
     @Test("Unary submit rejects subscription methods", .timeLimit(.minutes(1)))
     func rejectSubscriptionMethodsOnSubmit() async throws {
         // No network dependency: submit() should reject before attempting to connect.
-        let fulcrum = try await Fulcrum(url: "ws://example.com")
+        let fulcrum = try await FulcrumClient(url: "ws://example.com")
 
-        let subscriptionMethods: [SwiftFulcrum.Method] = [
+        let subscriptionMethods: [SwiftFulcrum.FulcrumMethodRequest] = [
             .blockchain(.headers(.subscribe)),
             .blockchain(.address(.subscribe(address: Self.testAddress)))
         ]
@@ -20,18 +20,18 @@ struct FulcrumInterfaceLocalValidator {
             do {
                 _ = try await fulcrum.submit(
                     method: method,
-                    responseType: Response.Result.Blockchain.Headers.GetTip.self
+                    responseType: Response.ResultModel.BlockchainModel.HeadersModel.GetTipModel.self
                 )
                 Issue.record("submit should reject subscription methods (method: \(method))")
-            } catch let error as Fulcrum.Error {
+            } catch let error as FulcrumClient.Error {
                 switch error {
                 case .client(.protocolMismatch(let message)):
                     #expect(message?.contains("submit() cannot be used with subscription methods") == true)
                 default:
-                    Issue.record("Unexpected Fulcrum.Error: \(error)")
+                    Issue.record("Unexpected FulcrumClient.Error: \(error)")
                 }
             } catch {
-                Issue.record("Unexpected non-Fulcrum error: \(error)")
+                Issue.record("Unexpected non-FulcrumClient error: \(error)")
             }
         }
     }
@@ -39,9 +39,9 @@ struct FulcrumInterfaceLocalValidator {
     @Test("subscribe rejects unary methods", .timeLimit(.minutes(1)))
     func rejectUnaryMethodsOnSubscribe() async throws {
         // No network dependency: subscribe() should reject before attempting to connect.
-        let fulcrum = try await Fulcrum(url: "ws://example.com")
+        let fulcrum = try await FulcrumClient(url: "ws://example.com")
 
-        let unaryMethods: [SwiftFulcrum.Method] = [
+        let unaryMethods: [SwiftFulcrum.FulcrumMethodRequest] = [
             .blockchain(.headers(.getTip)),
             .mempool(.getFeeHistogram)
         ]
@@ -50,26 +50,26 @@ struct FulcrumInterfaceLocalValidator {
             do {
                 _ = try await fulcrum.subscribe(
                     method: method,
-                    initialType: Response.Result.Blockchain.Headers.Subscribe.self,
-                    notificationType: Response.Result.Blockchain.Headers.SubscribeNotification.self
+                    initialType: Response.ResultModel.BlockchainModel.HeadersModel.SubscribeModel.self,
+                    notificationType: Response.ResultModel.BlockchainModel.HeadersModel.SubscribeNotificationModel.self
                 )
                 Issue.record("subscribe() should reject unary methods (method: \(method))")
-            } catch let error as Fulcrum.Error {
+            } catch let error as FulcrumClient.Error {
                 switch error {
                 case .client(.protocolMismatch(let message)):
                     #expect(message?.contains("subscribe() requires subscription methods") == true)
                 default:
-                    Issue.record("Unexpected Fulcrum.Error: \(error)")
+                    Issue.record("Unexpected FulcrumClient.Error: \(error)")
                 }
             } catch {
-                Issue.record("Unexpected non-Fulcrum error: \(error)")
+                Issue.record("Unexpected non-FulcrumClient error: \(error)")
             }
         }
     }
 
-    @Test("Cancellation cancels underlying token synchronously")
+    @Test("CancellationModel cancels underlying token synchronously")
     func markCancellationTokenImmediately() async {
-        let cancellation = Fulcrum.Call.Cancellation()
+        let cancellation = FulcrumClient.CallModel.CancellationModel()
 
         #expect(await cancellation.isCancelled == false)
 

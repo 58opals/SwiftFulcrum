@@ -19,7 +19,7 @@ struct ClientSubscriptionValidator {
         let versionRequest = await transport.dequeueOutgoing()
         let versionRequestObject = try TransportTestActor.decodeJSONObject(from: versionRequest)
         guard let versionIdentifier = versionRequestObject["id"] as? String else {
-            Issue.record("Version request is missing an identifier")
+            Issue.record("VersionModel request is missing an identifier")
             startTask.cancel()
             await client.stop()
             return
@@ -28,14 +28,14 @@ struct ClientSubscriptionValidator {
 
         let versionPayload = try TransportTestActor.encodeResponsePayload(
             identifier: versionIdentifier,
-            result: ["Fulcrum 2.0", "1.5.3"]
+            result: ["FulcrumClient 2.0", "1.5.3"]
         )
         await transport.enqueueIncoming(.data(versionPayload))
 
         let featuresRequest = await transport.dequeueOutgoing()
         let featuresRequestObject = try TransportTestActor.decodeJSONObject(from: featuresRequest)
         guard let featuresIdentifier = featuresRequestObject["id"] as? String else {
-            Issue.record("Features request is missing an identifier")
+            Issue.record("FeaturesModel request is missing an identifier")
             startTask.cancel()
             await client.stop()
             return
@@ -47,7 +47,7 @@ struct ClientSubscriptionValidator {
             result: [
                 "genesis_hash": "0000000000000000000000000000000000000000000000000000000000000000",
                 "hash_function": "sha256",
-                "server_version": "Fulcrum 2.0",
+                "server_version": "FulcrumClient 2.0",
                 "protocol_max": "1.6.0",
                 "protocol_min": "1.4.0"
             ]
@@ -57,28 +57,28 @@ struct ClientSubscriptionValidator {
         try await startTask.value
         #expect(await client.connectionState == .connected)
 
-        let cancellationToken = Client.Call.Token()
+        let cancellationToken = Client.CallModel.TokenModel()
         let subscribeTask = Task {
             try await client.subscribe(
                 method: .blockchain(.headers(.subscribe)),
                 options: .init(timeout: .seconds(30), token: cancellationToken)
             ) as (
                 UUID,
-                Response.Result.Blockchain.Headers.Subscribe,
-                AsyncThrowingStream<Response.Result.Blockchain.Headers.SubscribeNotification, Swift.Error>
+                Response.ResultModel.BlockchainModel.HeadersModel.SubscribeModel,
+                AsyncThrowingStream<Response.ResultModel.BlockchainModel.HeadersModel.SubscribeNotificationModel, Swift.Error>
             )
         }
 
         let subscribeRequest = await transport.dequeueOutgoing()
         let subscribeRequestObject = try TransportTestActor.decodeJSONObject(from: subscribeRequest)
         guard let subscribeIdentifier = subscribeRequestObject["id"] as? String else {
-            Issue.record("Subscribe request is missing an identifier")
+            Issue.record("SubscribeModel request is missing an identifier")
             subscribeTask.cancel()
             await cancellationToken.cancel()
             await client.stop()
             return
         }
-        #expect(subscribeRequestObject["method"] as? String == Method.blockchain(.headers(.subscribe)).path)
+        #expect(subscribeRequestObject["method"] as? String == FulcrumMethodRequest.blockchain(.headers(.subscribe)).path)
 
         let initialPayload = try TransportTestActor.encodeResponsePayload(
             identifier: subscribeIdentifier,
@@ -94,7 +94,7 @@ struct ClientSubscriptionValidator {
         #expect(initial.hex == Self.initialHeaderHex)
 
         let notificationPayload = try TransportTestActor.encodeSubscriptionNotification(
-            method: Method.blockchain(.headers(.subscribe)).path,
+            method: FulcrumMethodRequest.blockchain(.headers(.subscribe)).path,
             parameters: [[
                 "height": Self.nextHeight,
                 "hex": Self.nextHeaderHex
@@ -104,7 +104,7 @@ struct ClientSubscriptionValidator {
 
         var observedUpdateCount = 0
         for try await update in updates {
-            #expect(update.subscriptionIdentifier == Method.blockchain(.headers(.subscribe)).path)
+            #expect(update.subscriptionIdentifier == FulcrumMethodRequest.blockchain(.headers(.subscribe)).path)
             #expect(update.blocks.count == 1)
             guard let block = update.blocks.first else {
                 Issue.record("Expected exactly one block in header notification")

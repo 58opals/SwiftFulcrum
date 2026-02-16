@@ -7,15 +7,15 @@ struct ClientProtocolNegotiationValidator {
     @Test("Client rejects negotiated protocol outside supported range", .timeLimit(.minutes(1)))
     func rejectNegotiatedProtocolOutsideSupportedRange() async throws {
         guard
-            let minimum = ProtocolVersion(string: "1.6"),
-            let maximum = ProtocolVersion(string: "1.6")
+            let minimum = ProtocolVersionModel(string: "1.6"),
+            let maximum = ProtocolVersionModel(string: "1.6")
         else {
             Issue.record("Failed to build protocol versions for negotiation test")
             return
         }
 
         let transport = TransportTestActor()
-        let negotiation = Fulcrum.Configuration.ProtocolNegotiation(min: minimum, max: maximum)
+        let negotiation = FulcrumClient.Configuration.ProtocolNegotiationModel(min: minimum, max: maximum)
         let client = Client(transport: transport, protocolNegotiation: negotiation)
 
         let startTask = Task { try await client.start() }
@@ -23,7 +23,7 @@ struct ClientProtocolNegotiationValidator {
         let versionRequest = await transport.dequeueOutgoing()
         let requestObject = try TransportTestActor.decodeJSONObject(from: versionRequest)
         guard let identifier = requestObject["id"] as? String else {
-            Issue.record("Version request is missing an identifier")
+            Issue.record("VersionModel request is missing an identifier")
             startTask.cancel()
             return
         }
@@ -38,7 +38,7 @@ struct ClientProtocolNegotiationValidator {
         do {
             try await startTask.value
             Issue.record("Client.start() should fail for unsupported negotiated protocol")
-        } catch let error as ProtocolVersion.Range.Error {
+        } catch let error as ProtocolVersionModel.RangeModel.Error {
             #expect(error == .unsupportedVersionRange)
             #expect(await transport.connectionState == .disconnected)
         } catch {

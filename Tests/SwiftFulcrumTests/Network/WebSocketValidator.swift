@@ -4,16 +4,16 @@ import Testing
 
 @Suite(.tags(.network))
 struct WebSocketValidator {
-    @Test("WebSocket connects and exchanges a unary request", .timeLimit(.minutes(1)))
+    @Test("WebSocketModel connects and exchanges a unary request", .timeLimit(.minutes(1)))
     func connectAndExchangeUnaryRequest() async throws {
         let url = try await NetworkTestClient.pickRandomFulcrumURL()
-        let webSocket = WebSocket(url: url)
+        let webSocket = WebSocketModel(url: url)
         let stream = await webSocket.makeMessageStream()
 
         try await webSocket.connect()
         #expect(await webSocket.connectionState == .connected)
 
-        let method: SwiftFulcrum.Method = .blockchain(.headers(.getTip))
+        let method: SwiftFulcrum.FulcrumMethodRequest = .blockchain(.headers(.getTip))
         let request = method.createRequest(with: UUID())
         guard let data = request.data else {
             Issue.record("Failed to encode blockchain.headers.get_tip request")
@@ -23,7 +23,7 @@ struct WebSocketValidator {
         try await webSocket.send(data: data)
 
         var iterator = stream.makeAsyncIterator()
-        var receivedTip: Response.Result.Blockchain.Headers.GetTip?
+        var receivedTip: Response.ResultModel.BlockchainModel.HeadersModel.GetTipModel?
         while let message = try await iterator.next() {
             let payload: Data?
             switch message {
@@ -35,7 +35,7 @@ struct WebSocketValidator {
                 payload = nil
             }
 
-            if let payload, let decoded = try? payload.decode(Response.Result.Blockchain.Headers.GetTip.self) {
+            if let payload, let decoded = try? payload.decode(Response.ResultModel.BlockchainModel.HeadersModel.GetTipModel.self) {
                 receivedTip = decoded
                 break
             }
@@ -53,10 +53,10 @@ struct WebSocketValidator {
         #expect(await webSocket.connectionState == .disconnected)
     }
 
-    @Test("WebSocket message stream ends after disconnect", .timeLimit(.minutes(1)))
+    @Test("WebSocketModel message stream ends after disconnect", .timeLimit(.minutes(1)))
     func terminateMessageStreamAfterDisconnect() async throws {
         let url = URL(string: "wss://fulcrum-w7qr.onrender.com/ws")!
-        let webSocket = WebSocket(url: url)
+        let webSocket = WebSocketModel(url: url)
         let stream = await webSocket.makeMessageStream()
 
         try await webSocket.connect()

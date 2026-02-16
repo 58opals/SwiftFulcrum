@@ -14,7 +14,7 @@ struct FulcrumInterfaceNetworkValidator {
         try await NetworkTestClient.runWithFulcrum(url) { fulcrum in
             let response = try await fulcrum.submit(
                 method: .blockchain(.headers(.getTip)),
-                responseType: Response.Result.Blockchain.Headers.GetTip.self,
+                responseType: Response.ResultModel.BlockchainModel.HeadersModel.GetTipModel.self,
                 options: .init(timeout: .seconds(30))
             )
 
@@ -28,15 +28,15 @@ struct FulcrumInterfaceNetworkValidator {
         }
     }
 
-    @Test("Submit starts Fulcrum when idle", .timeLimit(.minutes(1)))
+    @Test("Submit starts FulcrumClient when idle", .timeLimit(.minutes(1)))
     func submitAndStartFulcrumWhenIdle() async throws {
         let url = try await NetworkTestClient.pickRandomFulcrumURL()
-        let fulcrum = try await Fulcrum(url: url.absoluteString)
+        let fulcrum = try await FulcrumClient(url: url.absoluteString)
 
         // Avoid calling start() directly to exercise prepareClientForRequests.
         let response = try await fulcrum.submit(
             method: .blockchain(.headers(.getTip)),
-            responseType: Response.Result.Blockchain.Headers.GetTip.self,
+            responseType: Response.ResultModel.BlockchainModel.HeadersModel.GetTipModel.self,
             options: .init(timeout: .seconds(30))
         )
 
@@ -55,13 +55,13 @@ struct FulcrumInterfaceNetworkValidator {
     @Test("Subscriptions expose cancellable header streams", .timeLimit(.minutes(1)))
     func subscribeAndCreateCancellableHeaderSubscription() async throws {
         let url = try await NetworkTestClient.pickRandomFulcrumURL()
-        let cancellation = Fulcrum.Call.Cancellation()
+        let cancellation = FulcrumClient.CallModel.CancellationModel()
 
         try await NetworkTestClient.runWithFulcrum(url) { fulcrum in
             let (initial, updates, cancel) = try await fulcrum.subscribe(
                 method: .blockchain(.headers(.subscribe)),
-                initialType: Response.Result.Blockchain.Headers.Subscribe.self,
-                notificationType: Response.Result.Blockchain.Headers.SubscribeNotification.self,
+                initialType: Response.ResultModel.BlockchainModel.HeadersModel.SubscribeModel.self,
+                notificationType: Response.ResultModel.BlockchainModel.HeadersModel.SubscribeNotificationModel.self,
                 options: .init(timeout: .seconds(30), cancellation: cancellation)
             )
 
@@ -87,8 +87,8 @@ struct FulcrumInterfaceNetworkValidator {
         try await NetworkTestClient.runWithFulcrum(url) { fulcrum in
             let (initial, updates, cancel) = try await fulcrum.subscribe(
                 method: .blockchain(.address(.subscribe(address: Self.testAddress))),
-                initialType: Response.Result.Blockchain.Address.Subscribe.self,
-                notificationType: Response.Result.Blockchain.Address.SubscribeNotification.self,
+                initialType: Response.ResultModel.BlockchainModel.AddressModel.SubscribeModel.self,
+                notificationType: Response.ResultModel.BlockchainModel.AddressModel.SubscribeNotificationModel.self,
                 options: .init(timeout: .seconds(30))
             )
 
@@ -112,8 +112,8 @@ struct FulcrumInterfaceNetworkValidator {
         try await NetworkTestClient.runWithFulcrum(url) { fulcrum in
             let (initial, updates, cancel) = try await fulcrum.subscribe(
                 method: .blockchain(.headers(.subscribe)),
-                initialType: Response.Result.Blockchain.Headers.Subscribe.self,
-                notificationType: Response.Result.Blockchain.Headers.SubscribeNotification.self,
+                initialType: Response.ResultModel.BlockchainModel.HeadersModel.SubscribeModel.self,
+                notificationType: Response.ResultModel.BlockchainModel.HeadersModel.SubscribeNotificationModel.self,
                 options: .init(timeout: .seconds(30))
             )
 
@@ -125,7 +125,7 @@ struct FulcrumInterfaceNetworkValidator {
             var updateCount = 0
             for try await update in updates {
                 if updateCount == 0 {
-                    print("Subscription identifier (method): \(update.subscriptionIdentifier)")
+                    print("SubscriptionModel identifier (method): \(update.subscriptionIdentifier)")
                     print("Number of blocks: \(update.blocks.count)")
                     for block in update.blocks {
                         #expect(block.height > 0)
@@ -150,14 +150,14 @@ struct FulcrumInterfaceNetworkValidator {
     }
 
     // MARK: - Misc RPC
-    @Test("Submit resolves address metadata over live Fulcrum", .timeLimit(.minutes(1)))
+    @Test("Submit resolves address metadata over live FulcrumClient", .timeLimit(.minutes(1)))
     func submitAndResolveAddressQueries() async throws {
         let url = try await NetworkTestClient.pickRandomFulcrumURL()
 
         try await NetworkTestClient.runWithFulcrum(url) { fulcrum in
             let scriptHashResponse = try await fulcrum.submit(
                 method: .blockchain(.address(.getScriptHash(address: Self.testAddress))),
-                responseType: Response.Result.Blockchain.Address.GetScriptHash.self,
+                responseType: Response.ResultModel.BlockchainModel.AddressModel.GetScriptHashModel.self,
                 options: .init(timeout: .seconds(15))
             )
 
@@ -169,7 +169,7 @@ struct FulcrumInterfaceNetworkValidator {
 
             let balanceResponse = try await fulcrum.submit(
                 method: .blockchain(.address(.getBalance(address: Self.testAddress, tokenFilter: nil))),
-                responseType: Response.Result.Blockchain.Address.GetBalance.self,
+                responseType: Response.ResultModel.BlockchainModel.AddressModel.GetBalanceModel.self,
                 options: .init(timeout: .seconds(15))
             )
 
@@ -192,11 +192,11 @@ struct FulcrumInterfaceNetworkValidator {
             do {
                 _ = try await fulcrum.submit(
                     method: .blockchain(.transaction(.broadcast(rawTransaction: "00"))),
-                    responseType: Response.Result.Blockchain.Transaction.Broadcast.self,
+                    responseType: Response.ResultModel.BlockchainModel.TransactionModel.BroadcastModel.self,
                     options: .init(timeout: .seconds(15))
                 )
                 Issue.record("Expected broadcast to fail for invalid raw transaction")
-            } catch let error as Fulcrum.Error {
+            } catch let error as FulcrumClient.Error {
                 switch error {
                 case .rpc(let rpcError):
                     #expect(!rpcError.message.isEmpty)

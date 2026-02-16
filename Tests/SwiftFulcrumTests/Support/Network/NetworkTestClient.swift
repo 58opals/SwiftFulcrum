@@ -4,9 +4,9 @@ import Foundation
 struct NetworkTestClient {
     static func runWithFulcrum(
         _ url: URL,
-        _ body: @Sendable (Fulcrum) async throws -> Void
+        _ body: @Sendable (FulcrumClient) async throws -> Void
     ) async throws {
-        let fulcrum = try await Fulcrum(url: url.absoluteString)
+        let fulcrum = try await FulcrumClient(url: url.absoluteString)
 
         do {
             try await fulcrum.start()
@@ -48,14 +48,14 @@ struct NetworkTestClient {
     }
 
     static func pickRandomFulcrumURL(
-        network: Fulcrum.Configuration.Network = .mainnet
+        network: FulcrumClient.Configuration.NetworkModel = .mainnet
     ) async throws -> URL {
-        let serverList = try await FulcrumServerCatalogLoader.bundled.loadServers(
+        let serverList = try await FulcrumServerCatalogRepository.bundled.loadServers(
             for: network,
             fallback: .init()
         )
         guard let selectedURL = serverList.randomElement() else {
-            throw Fulcrum.Error.transport(.setupFailed)
+            throw FulcrumClient.Error.transport(.setupFailed)
         }
         return selectedURL
     }

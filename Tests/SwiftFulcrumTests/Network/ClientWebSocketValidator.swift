@@ -4,18 +4,18 @@ import Testing
 
 @Suite(.tags(.network))
 struct ClientWebSocketValidator {
-    @Test("Client.start() relays unary responses over WebSocket", .timeLimit(.minutes(1)))
+    @Test("Client.start() relays unary responses over WebSocketModel", .timeLimit(.minutes(1)))
     func startClientAndReceiveUnaryResponses() async throws {
         let url = try await NetworkTestClient.pickRandomFulcrumURL()
-        let webSocket = WebSocket(url: url)
+        let webSocket = WebSocketModel(url: url)
         let client = Client(
-            transport: WebSocketTransport(webSocket: webSocket),
+            transport: WebSocketTransportModel(webSocket: webSocket),
             protocolNegotiation: .init()
         )
 
         try await client.start()
 
-        let (_, tip): (UUID, Response.Result.Blockchain.Headers.GetTip) = try await client.call(
+        let (_, tip): (UUID, Response.ResultModel.BlockchainModel.HeadersModel.GetTipModel) = try await client.call(
             method: .blockchain(.headers(.getTip)),
             options: .init(timeout: .seconds(30))
         )
@@ -30,9 +30,9 @@ struct ClientWebSocketValidator {
     @Test("Client.stop() cancels active subscription streams", .timeLimit(.minutes(1)))
     func stopClientAndTerminateSubscriptions() async throws {
         let url = try await NetworkTestClient.pickRandomFulcrumURL()
-        let webSocket = WebSocket(url: url)
+        let webSocket = WebSocketModel(url: url)
         let client = Client(
-            transport: WebSocketTransport(webSocket: webSocket),
+            transport: WebSocketTransportModel(webSocket: webSocket),
             protocolNegotiation: .init()
         )
 
@@ -40,8 +40,8 @@ struct ClientWebSocketValidator {
 
         let (_, initial, updates): (
             UUID,
-            Response.Result.Blockchain.Headers.Subscribe,
-            AsyncThrowingStream<Response.Result.Blockchain.Headers.SubscribeNotification, Swift.Error>
+            Response.ResultModel.BlockchainModel.HeadersModel.SubscribeModel,
+            AsyncThrowingStream<Response.ResultModel.BlockchainModel.HeadersModel.SubscribeNotificationModel, Swift.Error>
         ) = try await client.subscribe(
             method: .blockchain(.headers(.subscribe)),
             options: .init(timeout: .seconds(30))
