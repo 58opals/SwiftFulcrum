@@ -7,3 +7,4 @@ configuration/registries.json
 .swiftpm/
 /.swiftpm-cache/
 .netrc
+.codex/
