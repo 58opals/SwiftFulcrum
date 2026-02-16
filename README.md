@@ -357,15 +357,30 @@ Tests are split by execution scope:
 
 * `Tests/SwiftFulcrumTests/Local`: deterministic tests that do not require live server connectivity.
 * `Tests/SwiftFulcrumTests/Network`: tests that connect to live Fulcrum endpoints.
-* `Tests/SwiftFulcrumTests/Support/Local`: local-only stubs and payload helpers.
-* `Tests/SwiftFulcrumTests/Support/Network`: live-network test utilities.
+* `Tests/SwiftFulcrumTests/Local/Support`: local-only stubs and payload helpers.
+* `Tests/SwiftFulcrumTests/Network/Support`: live-network test helpers.
 
-Swift Testing tags are required at suite level:
+SwiftPM exposes these folders through two test targets:
+
+* `SwiftFulcrumLocalTests` includes `Tests/SwiftFulcrumTests` while excluding `Network`.
+* `SwiftFulcrumNetworkTests` includes `Tests/SwiftFulcrumTests` while excluding `Local`.
+
+Run scoped suites with:
+
+```bash
+swift test --filter '^SwiftFulcrumLocalTests\.'
+swift test --filter '^SwiftFulcrumNetworkTests\.'
+```
+
+Swift Testing tags remain available for additional grouping:
 
 * Local suites use `@Suite(.tags(.local))`
 * Network suites use `@Suite(.tags(.network))`
 
-Shared tag definitions live in `Tests/SwiftFulcrumTests/Support/Tag+.swift`.
+Target-scoped tag definitions live in:
+
+* `Tests/SwiftFulcrumTests/Local/Support/Tag+.swift` for local tests.
+* `Tests/SwiftFulcrumTests/Network/Support/Tag+.swift` for network tests.
 
 ---
 
