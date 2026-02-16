@@ -25,8 +25,16 @@ let package = Package(
             ]
         ),
         .testTarget(
-            name: "SwiftFulcrumTests",
-            dependencies: ["SwiftFulcrum"]
+            name: "SwiftFulcrumLocalTests",
+            dependencies: ["SwiftFulcrum"],
+            path: "Tests/SwiftFulcrumTests",
+            exclude: ["Network"]
+        ),
+        .testTarget(
+            name: "SwiftFulcrumNetworkTests",
+            dependencies: ["SwiftFulcrum"],
+            path: "Tests/SwiftFulcrumTests",
+            exclude: ["Local"]
         )
     ]
 )
