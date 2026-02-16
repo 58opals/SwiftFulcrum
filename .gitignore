@@ -6,4 +6,3 @@ configuration/registries.json
 .DS_Store
 .swiftpm/
 .netrc
-.workspace-cache/

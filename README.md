@@ -344,23 +344,12 @@ do {
 
 ## Development Commands
 
-Use the project actions below instead of ad-hoc commands during local development:
+Use standard SwiftPM commands during local development:
 
 ```bash
-make Setup
-make Doctor
-make Build
-make Test
+swift build
+swift test
 ```
-
-What these actions do:
-
-* `Setup` validates your selected toolchain/SDK pairing and confirms test targets compile (`swift test list`) without running tests.
-* `Doctor` verifies required tools and prepares local cache directories.
-* `Build` runs `swift build` using the project-local `.build` directory.
-* `Test` runs `swift test` using the same project-local build artifacts.
-
-Build and module caches are scoped to this repository checkout.
 
 ### Test Organization
 
