@@ -6,10 +6,10 @@ struct Request {
     let jsonrpc: String = "2.0"
     let id: UUID
     let method: String
-    let requestedMethod: Method
+    let requestedMethod: FulcrumMethodRequest
     let params: Encodable
     
-    init(id: UUID, method: Method, params: Encodable) {
+    init(id: UUID, method: FulcrumMethodRequest, params: Encodable) {
         self.id = id
         self.method = method.path
         self.requestedMethod = method
@@ -18,12 +18,12 @@ struct Request {
 }
 
 extension Request: Encodable {
-    private enum CodingKeys: String, CodingKey {
+    private enum CodingKeysModel: String, CodingKey {
         case jsonrpc, id, method, params
     }
     
     func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
+        var container = encoder.container(keyedBy: CodingKeysModel.self)
         try container.encode(jsonrpc, forKey: .jsonrpc)
         try container.encode(id, forKey: .id)
         try container.encode(method, forKey: .method)
@@ -44,7 +44,7 @@ extension Request: Hashable {
 extension Request {
     var data: Data? {
         do {
-            let data = try JSONRPC.Coder.encoder.encode(self)
+            let data = try JSONRPCModel.CoderModel.encoder.encode(self)
             return data
         } catch {
             return nil

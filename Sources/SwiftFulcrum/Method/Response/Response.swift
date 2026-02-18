@@ -3,42 +3,42 @@
 import Foundation
 
 public struct Response {
-    public struct Regular<Result: Decodable> {
+    public struct RegularModel<ResultModel: Decodable> {
         let id: UUID
-        let result: Result
+        let result: ResultModel
     }
     
-    public struct Subscription<Result: Decodable> {
+    public struct SubscriptionModel<ResultModel: Decodable> {
         let methodPath: String
-        let result: Result
+        let result: ResultModel
     }
     
     public struct Error: Decodable, Sendable {
-        public struct Result: Decodable, Sendable {
+        public struct ResultModel: Decodable, Sendable {
             let code: Int
             let message: String
         }
         
         let id: UUID
-        let error: Result
+        let error: ResultModel
     }
 }
 
 extension Response {
-    public enum Kind<Result: Decodable> {
+    public enum KindModel<ResultModel: Decodable> {
         case empty(UUID)
-        case regular(Response.Regular<Result>)
-        case subscription(Response.Subscription<Result>)
+        case regular(Response.RegularModel<ResultModel>)
+        case subscription(Response.SubscriptionModel<ResultModel>)
         case error(Response.Error)
     }
     
-    public enum Identifier {
+    public enum IdentifierModel {
         case uuid(UUID)
         case string(String)
     }
 }
 
-extension Response.Identifier: Hashable, Sendable {}
-extension Response.Regular: Sendable where Result: Sendable {}
-extension Response.Subscription: Sendable where Result: Sendable {}
-extension Response.Kind: Sendable where Result: Sendable {}
+extension Response.IdentifierModel: Hashable, Sendable {}
+extension Response.RegularModel: Sendable where ResultModel: Sendable {}
+extension Response.SubscriptionModel: Sendable where ResultModel: Sendable {}
+extension Response.KindModel: Sendable where ResultModel: Sendable {}

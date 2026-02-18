@@ -4,12 +4,12 @@ import Foundation
 
 extension Client {
     actor Router {
-        private enum Pending {
+        private enum PendingModel {
             case unary(CheckedContinuation<Data, Swift.Error>)
             case stream(AsyncThrowingStream<Data, Swift.Error>.Continuation)
         }
         
-        private var table: [Response.Identifier: Pending] = .init()
+        private var table: [Response.IdentifierModel: PendingModel] = .init()
         
         
         private var inflightUnaryCallCount = 0
@@ -17,21 +17,21 @@ extension Client {
         
         @discardableResult
         func addUnary(id: UUID, continuation: CheckedContinuation<Data, Swift.Error>) throws -> Int {
-            let key: Response.Identifier = .uuid(id)
-            guard table[key] == nil else { throw Fulcrum.Error.client(.duplicateHandler) }
+            let key: Response.IdentifierModel = .uuid(id)
+            guard table[key] == nil else { throw FulcrumClient.Error.client(.duplicateHandler) }
             table[key] = .unary(continuation)
             inflightUnaryCallCount += 1
             return inflightUnaryCallCount
         }
         
         func addStream(key: String, continuation: AsyncThrowingStream<Data, Swift.Error>.Continuation) throws {
-            let identifier: Response.Identifier = .string(key)
-            guard table[identifier] == nil else { throw Fulcrum.Error.client(.duplicateHandler) }
+            let identifier: Response.IdentifierModel = .string(key)
+            guard table[identifier] == nil else { throw FulcrumClient.Error.client(.duplicateHandler) }
             table[identifier] = .stream(continuation)
         }
         
         func handle(raw: Data) -> Int? {
-            guard let id = try? Response.JSONRPC.extractIdentifier(from: raw) else { return nil }
+            guard let id = try? Response.JSONRPCModel.extractIdentifier(from: raw) else { return nil }
             switch id {
             case .uuid:
                 return resolve(identifier: id, with: raw)
@@ -43,11 +43,11 @@ extension Client {
         }
         
         @discardableResult
-        func cancel(identifier: Response.Identifier, error: Swift.Error? = nil) -> Int? {
+        func cancel(identifier: Response.IdentifierModel, error: Swift.Error? = nil) -> Int? {
             guard let entry = table.removeValue(forKey: identifier) else { return nil }
             switch entry {
             case .unary(let continuation):
-                continuation.resume(throwing: error ?? Fulcrum.Error.client(.cancelled))
+                continuation.resume(throwing: error ?? FulcrumClient.Error.client(.cancelled))
                 inflightUnaryCallCount = max(inflightUnaryCallCount - 1, 0)
                 return inflightUnaryCallCount
             case .stream(let continuation):
@@ -93,7 +93,7 @@ extension Client {
             return inflightUnaryCallCount
         }
         
-        private func resolve(identifier: Response.Identifier, with raw: Data) -> Int? {
+        private func resolve(identifier: Response.IdentifierModel, with raw: Data) -> Int? {
             guard let entry = table[identifier] else { return nil }
             switch entry {
             case .unary(let continuation):

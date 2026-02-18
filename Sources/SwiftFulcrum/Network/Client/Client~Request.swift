@@ -3,13 +3,13 @@
 import Foundation
 
 extension Client {
-    func call<Result: JSONRPCConvertible>(
-        method: Method,
-        options: Call.Options = .init(),
+    func call<ResultModel: JSONRPCResponse>(
+        method: FulcrumMethodRequest,
+        options: CallModel.OptionsModel = .init(),
         suppressTransportLogging: Bool = false
-    ) async throws -> (UUID, Result) {
+    ) async throws -> (UUID, ResultModel) {
         if method.isSubscription {
-            throw Fulcrum.Error.client(
+            throw FulcrumClient.Error.client(
                 .protocolMismatch("call() cannot be used with subscription methods. Use subscribe(...) instead.")
             )
         }
@@ -32,7 +32,7 @@ extension Client {
         
         if let token = options.token, await token.isCancelled {
             await self.cancelUnary(id)
-            throw Fulcrum.Error.client(.cancelled)
+            throw FulcrumClient.Error.client(.cancelled)
         }
         
         let callTask = Task<Data, Swift.Error> {
@@ -70,7 +70,7 @@ extension Client {
                     try await Task.sleep(for: limit)
                     callTask.cancel()
                     await self.cancelUnary(id)
-                    throw Fulcrum.Error.client(.timeout(limit))
+                    throw FulcrumClient.Error.client(.timeout(limit))
                 }
                 let value = try await group.next()!
                 group.cancelAll()
@@ -80,26 +80,26 @@ extension Client {
             raw = try await callTask.value
         }
         
-        return try (id, raw.decode(Result.self, context: .init(methodPath: method.path)))
+        return try (id, raw.decode(ResultModel.self, context: .init(methodPath: method.path)))
     }
     
-    func subscribe<Initial: JSONRPCConvertible, Notification: JSONRPCConvertible>(
-        method: Method,
-        options: Call.Options = .init()
+    func subscribe<Initial: JSONRPCResponse, Notification: JSONRPCResponse>(
+        method: FulcrumMethodRequest,
+        options: CallModel.OptionsModel = .init()
     ) async throws -> (UUID, Initial, AsyncThrowingStream<Notification, Swift.Error>) {
         if !method.isSubscription {
-            throw Fulcrum.Error.client(
+            throw FulcrumClient.Error.client(
                 .protocolMismatch("subscribe() requires subscription methods. Use submit(...) for unary calls.")
             )
         }
         
         guard let subscriptionPath = method.subscriptionPath else {
-            throw Fulcrum.Error.client(.protocolMismatch("subscribe() requires supported subscription methods."))
+            throw FulcrumClient.Error.client(.protocolMismatch("subscribe() requires supported subscription methods."))
         }
         
         let id = UUID()
         let request = method.createRequest(with: id)
-        let subscriptionKey = SubscriptionKey(
+        let subscriptionKey = SubscriptionKeyModel(
             methodPath: subscriptionPath,
             identifier: deriveSubscriptionIdentifier(for: method)
         )
@@ -167,14 +167,14 @@ extension Client {
             await token.register { [weak self] in
                 Task {
                     guard let self else { return }
-                    let cleanupKey = SubscriptionKey(
+                    let cleanupKey = SubscriptionKeyModel(
                         methodPath: subscriptionPath,
                         identifier: subscriptionKey.identifier
                     )
                     await self.cleanUpSubscriptionSetup(
                         for: cleanupKey,
                         requestIdentifier: idCopy,
-                        error: Fulcrum.Error.client(.cancelled)
+                        error: FulcrumClient.Error.client(.cancelled)
                     )
                 }
             }
@@ -186,7 +186,7 @@ extension Client {
                 group.addTask {
                     try await Task.sleep(for: limit)
                     subscriptionTask.cancel()
-                    throw Fulcrum.Error.client(.timeout(limit))
+                    throw FulcrumClient.Error.client(.timeout(limit))
                 }
                 let value = try await group.next()!
                 group.cancelAll()
@@ -201,14 +201,14 @@ extension Client {
 extension Client {
     func send(request: Request) async throws {
         if case .server(.version) = request.requestedMethod {
-            guard let data = request.data else { throw Fulcrum.Error.coding(.encode(nil)) }
+            guard let data = request.data else { throw FulcrumClient.Error.coding(.encode(nil)) }
             try await self.send(data: data)
             return
         }
         
         _ = try await ensureNegotiatedProtocol()
         
-        guard let data = request.data else { throw Fulcrum.Error.coding(.encode(nil)) }
+        guard let data = request.data else { throw FulcrumClient.Error.coding(.encode(nil)) }
         try await self.send(data: data)
     }
     

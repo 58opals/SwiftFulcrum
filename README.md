@@ -342,6 +342,46 @@ do {
 }
 ```
 
+## Development Commands
+
+Use standard SwiftPM commands during local development:
+
+```bash
+swift build
+swift test
+```
+
+### Test Organization
+
+Tests are split by execution scope:
+
+* `Tests/SwiftFulcrumTests/Local`: deterministic tests that do not require live server connectivity.
+* `Tests/SwiftFulcrumTests/Network`: tests that connect to live Fulcrum endpoints.
+* `Tests/SwiftFulcrumTests/Local/Support`: local-only stubs and payload helpers.
+* `Tests/SwiftFulcrumTests/Network/Support`: live-network test helpers.
+
+SwiftPM exposes these folders through two test targets:
+
+* `SwiftFulcrumLocalTests` includes `Tests/SwiftFulcrumTests` while excluding `Network`.
+* `SwiftFulcrumNetworkTests` includes `Tests/SwiftFulcrumTests` while excluding `Local`.
+
+Run scoped suites with:
+
+```bash
+swift test --filter '^SwiftFulcrumLocalTests\.'
+swift test --filter '^SwiftFulcrumNetworkTests\.'
+```
+
+Swift Testing tags remain available for additional grouping:
+
+* Local suites use `@Suite(.tags(.local))`
+* Network suites use `@Suite(.tags(.network))`
+
+Target-scoped tag definitions live in:
+
+* `Tests/SwiftFulcrumTests/Local/Support/Tag+.swift` for local tests.
+* `Tests/SwiftFulcrumTests/Network/Support/Tag+.swift` for network tests.
+
 ---
 
 SwiftFulcrum is crafted by © 2026 Opal Wallet • 58 Opals.
