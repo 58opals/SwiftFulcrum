@@ -1,12 +1,17 @@
 import Foundation
 import Testing
+import SwiftFulcrumTestSupport
 @testable import SwiftFulcrum
 
 @Suite(.tags(.network))
 struct ClientWebSocketValidator {
-    @Test("Client.start() relays unary responses over WebSocketModel", .timeLimit(.minutes(1)))
+    @Test(
+        "Client.start() relays unary responses over WebSocketModel",
+        .timeLimit(.minutes(1)),
+        .enabled(if: TestExecutionPolicy.shouldRunNetwork, "Network tests are opt-in. Set SWIFTFULCRUM_RUN_NETWORK=1 to enable them.")
+    )
     func startClientAndReceiveUnaryResponses() async throws {
-        let url = try await NetworkTestClient.pickRandomServerURL()
+        let url = try await NetworkTestClient.pickServerURL()
         let webSocket = WebSocketModel(url: url)
         let client = Client(
             transport: WebSocketTransportModel(webSocket: webSocket),
@@ -27,9 +32,13 @@ struct ClientWebSocketValidator {
         #expect(await client.connectionState == .disconnected)
     }
 
-    @Test("Client.stop() cancels active subscription streams", .timeLimit(.minutes(1)))
+    @Test(
+        "Client.stop() cancels active subscription streams",
+        .timeLimit(.minutes(1)),
+        .enabled(if: TestExecutionPolicy.shouldRunNetwork, "Network tests are opt-in. Set SWIFTFULCRUM_RUN_NETWORK=1 to enable them.")
+    )
     func stopClientAndTerminateSubscriptions() async throws {
-        let url = try await NetworkTestClient.pickRandomServerURL()
+        let url = try await NetworkTestClient.pickServerURL()
         let webSocket = WebSocketModel(url: url)
         let client = Client(
             transport: WebSocketTransportModel(webSocket: webSocket),

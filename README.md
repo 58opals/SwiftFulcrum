@@ -357,8 +357,8 @@ Tests are split by execution scope:
 
 * `Tests/SwiftFulcrumTests/Local`: deterministic tests that do not require live server connectivity.
 * `Tests/SwiftFulcrumTests/Network`: tests that connect to live Fulcrum endpoints.
+* `Tests/SwiftFulcrumTests/Support`: shared helpers used by both local and network targets.
 * `Tests/SwiftFulcrumTests/Local/Support`: local-only stubs and payload helpers.
-* `Tests/SwiftFulcrumTests/Network/Support`: live-network test helpers.
 
 SwiftPM exposes these folders through two test targets:
 
@@ -369,8 +369,15 @@ Run scoped suites with:
 
 ```bash
 swift test --filter '^SwiftFulcrumLocalTests\.'
-swift test --filter '^SwiftFulcrumNetworkTests\.'
+SWIFTFULCRUM_RUN_NETWORK=1 swift test --filter '^SwiftFulcrumNetworkTests\.'
 ```
+
+Network tests are opt-in by default. Configure execution with:
+
+* `SWIFTFULCRUM_RUN_NETWORK=1`: enables all network-tagged tests.
+* `SWIFTFULCRUM_RUN_NETWORK_SLOW=1`: enables long-running network tests.
+* `SWIFTFULCRUM_RUN_LIVE_SLOW=1`: legacy alias for slow-network opt-in.
+* `SWIFTFULCRUM_TEST_SERVER_URL=wss://...`: optional fixed endpoint override.
 
 Swift Testing tags remain available for additional grouping:
 
@@ -379,8 +386,7 @@ Swift Testing tags remain available for additional grouping:
 
 Target-scoped tag definitions live in:
 
-* `Tests/SwiftFulcrumTests/Local/Support/Tag+.swift` for local tests.
-* `Tests/SwiftFulcrumTests/Network/Support/Tag+.swift` for network tests.
+* `Tests/SwiftFulcrumTests/Support/Tag+.swift`.
 
 ---
 

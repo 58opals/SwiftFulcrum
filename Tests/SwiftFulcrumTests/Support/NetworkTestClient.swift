@@ -1,8 +1,8 @@
 import Foundation
-@testable import SwiftFulcrum
+import SwiftFulcrum
 
-struct NetworkTestClient {
-    static func runWithClient(
+public struct NetworkTestClient {
+    public static func runWithClient(
         _ url: URL,
         _ body: @Sendable (FulcrumClient) async throws -> Void
     ) async throws {
@@ -18,7 +18,7 @@ struct NetworkTestClient {
         }
     }
 
-    static func detectStreamTermination<Element: Sendable>(
+    public static func detectStreamTermination<Element: Sendable>(
         _ stream: AsyncThrowingStream<Element, Swift.Error>,
         within timeout: Duration
     ) async -> Bool {
@@ -47,16 +47,9 @@ struct NetworkTestClient {
         }
     }
 
-    static func pickRandomServerURL(
+    public static func pickServerURL(
         network: FulcrumClient.Configuration.NetworkModel = .mainnet
     ) async throws -> URL {
-        let serverList = try await FulcrumServerCatalogRepository.bundled.loadServers(
-            for: network,
-            fallback: .init()
-        )
-        guard let selectedURL = serverList.randomElement() else {
-            throw FulcrumClient.Error.transport(.setupFailed)
-        }
-        return selectedURL
+        try await TestEndpointResolver.resolveServerURL(network: network)
     }
 }

@@ -22,6 +22,9 @@ actor TransportTestActor: TransportableModel {
     private var pendingOutgoingContinuations: [CheckedContinuation<URLSessionWebSocketTask.Message, Never>] = .init()
     private(set) var sentMessages: [URLSessionWebSocketTask.Message] = .init()
 
+    private var reconnectFailure: Swift.Error?
+    private var reconnectAttempts = 0
+
     init(endpoint: URL = URL(string: "wss://example.invalid")!) {
         self.currentEndpoint = endpoint
     }
@@ -42,6 +45,10 @@ actor TransportTestActor: TransportableModel {
     }
 
     func reconnect(with url: URL?) async throws {
+        reconnectAttempts += 1
+        if let reconnectFailure {
+            throw reconnectFailure
+        }
         if let url { currentEndpoint = url }
         updateConnectionState(to: .reconnecting)
     }
@@ -109,6 +116,14 @@ actor TransportTestActor: TransportableModel {
     func updateLogger(_ handler: LogModel.HandlerModel?) async { _ = handler }
 
     func registerQuietResponse(for identifier: UUID) async { _ = identifier }
+
+    func setReconnectFailure(_ error: Swift.Error?) {
+        reconnectFailure = error
+    }
+
+    func makeReconnectAttempts() -> Int {
+        reconnectAttempts
+    }
 
     func enqueueIncoming(_ message: URLSessionWebSocketTask.Message) {
         incomingBuffer.append(.success(message))
