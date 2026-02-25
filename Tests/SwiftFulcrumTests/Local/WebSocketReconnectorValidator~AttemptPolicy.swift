@@ -12,19 +12,25 @@ extension WebSocketReconnectorValidator {
             jitterRange: 1.0 ... 1.0
         )
 
-        let servers = try WebSocketModel.ServerModel.decodeBundledServers(for: .mainnet)
-        guard let current = servers.first else {
-            Issue.record("Missing bundled servers for reconnection test")
+        let injectedCatalog = [
+            URL(string: "wss://127.0.0.1:9"),
+            URL(string: "wss://127.0.0.1:10"),
+            URL(string: "wss://127.0.0.1:11")
+        ].compactMap { $0 }
+        guard let current = injectedCatalog.first else {
+            Issue.record("Injected catalog is empty")
             return
         }
 
-        let unreachable = URL(string: "wss://127.0.0.1:9") ?? current
         let networkSession = URLSession(configuration: .ephemeral)
         defer { networkSession.invalidateAndCancel() }
 
         let webSocket = WebSocketModel(
-            url: unreachable,
-            configuration: .init(session: networkSession),
+            url: current,
+            configuration: .init(
+                session: networkSession,
+                serverCatalogLoader: .makeConstant(injectedCatalog)
+            ),
             reconnectConfiguration: configuration,
             connectionTimeout: 0.2,
             sleep: { duration in try await Task.sleep(for: duration) },
@@ -41,8 +47,7 @@ extension WebSocketReconnectorValidator {
             Issue.record("Reconnection should exhaust attempts")
         } catch {
             let attempts = await webSocket.reconnector.attemptCount
-            let expected = max(configuration.maximumReconnectionAttempts, servers.count + 1)
-            #expect(attempts == expected)
+            #expect(attempts == configuration.maximumReconnectionAttempts)
         }
 
         await webSocket.disconnect(with: "test teardown")

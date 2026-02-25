@@ -1,12 +1,17 @@
 import Foundation
 import Testing
+import SwiftFulcrumTestSupport
 @testable import SwiftFulcrum
 
 @Suite(.tags(.network))
 struct WebSocketValidator {
-    @Test("WebSocketModel connects and exchanges a unary request", .timeLimit(.minutes(1)))
+    @Test(
+        "WebSocketModel connects and exchanges a unary request",
+        .timeLimit(.minutes(1)),
+        .enabled(if: TestExecutionPolicy.shouldRunNetwork, "Network tests are opt-in. Set SWIFTFULCRUM_RUN_NETWORK=1 to enable them.")
+    )
     func connectAndExchangeUnaryRequest() async throws {
-        let url = try await NetworkTestClient.pickRandomServerURL()
+        let url = try await NetworkTestClient.pickServerURL()
         let webSocket = WebSocketModel(url: url)
         let stream = await webSocket.makeMessageStream()
 
@@ -53,9 +58,13 @@ struct WebSocketValidator {
         #expect(await webSocket.connectionState == .disconnected)
     }
 
-    @Test("WebSocketModel message stream ends after disconnect", .timeLimit(.minutes(1)))
+    @Test(
+        "WebSocketModel message stream ends after disconnect",
+        .timeLimit(.minutes(1)),
+        .enabled(if: TestExecutionPolicy.shouldRunNetwork, "Network tests are opt-in. Set SWIFTFULCRUM_RUN_NETWORK=1 to enable them.")
+    )
     func terminateMessageStreamAfterDisconnect() async throws {
-        let url = URL(string: "wss://fulcrum-w7qr.onrender.com/ws")!
+        let url = try await NetworkTestClient.pickServerURL()
         let webSocket = WebSocketModel(url: url)
         let stream = await webSocket.makeMessageStream()
 

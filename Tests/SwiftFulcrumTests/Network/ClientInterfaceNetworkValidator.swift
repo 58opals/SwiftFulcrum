@@ -1,19 +1,20 @@
 import Foundation
 import Testing
+import SwiftFulcrumTestSupport
 @testable import SwiftFulcrum
 
 @Suite(.tags(.network))
 struct ClientInterfaceNetworkValidator {
     private static let testAddress = "bitcoincash:qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a"
-    private static let runLiveSlowEnvironmentKey = "SWIFTFULCRUM_RUN_LIVE_SLOW"
-    private static var shouldRunLiveSlow: Bool {
-        ProcessInfo.processInfo.environment[runLiveSlowEnvironmentKey] == "1"
-    }
 
     // MARK: - Unary
-    @Test("Submit returns current blockchain tip", .timeLimit(.minutes(1)))
+    @Test(
+        "Submit returns current blockchain tip",
+        .timeLimit(.minutes(1)),
+        .enabled(if: TestExecutionPolicy.shouldRunNetwork, "Network tests are opt-in. Set SWIFTFULCRUM_RUN_NETWORK=1 to enable them.")
+    )
     func submitAndReturnBlockchainTip() async throws {
-        let url = try await NetworkTestClient.pickRandomServerURL()
+        let url = try await NetworkTestClient.pickServerURL()
 
         try await NetworkTestClient.runWithClient(url) { client in
             let response = try await client.submit(
@@ -32,9 +33,13 @@ struct ClientInterfaceNetworkValidator {
         }
     }
 
-    @Test("Submit starts FulcrumClient when idle", .timeLimit(.minutes(1)))
+    @Test(
+        "Submit starts FulcrumClient when idle",
+        .timeLimit(.minutes(1)),
+        .enabled(if: TestExecutionPolicy.shouldRunNetwork, "Network tests are opt-in. Set SWIFTFULCRUM_RUN_NETWORK=1 to enable them.")
+    )
     func submitAndStartClientWhenIdle() async throws {
-        let url = try await NetworkTestClient.pickRandomServerURL()
+        let url = try await NetworkTestClient.pickServerURL()
         let client = try await FulcrumClient(url: url.absoluteString)
 
         // Avoid calling start() directly to exercise prepareClientForRequests.
@@ -56,9 +61,13 @@ struct ClientInterfaceNetworkValidator {
     }
 
     // MARK: - Subscriptions
-    @Test("Subscriptions expose cancellable header streams", .timeLimit(.minutes(1)))
+    @Test(
+        "Subscriptions expose cancellable header streams",
+        .timeLimit(.minutes(1)),
+        .enabled(if: TestExecutionPolicy.shouldRunNetwork, "Network tests are opt-in. Set SWIFTFULCRUM_RUN_NETWORK=1 to enable them.")
+    )
     func subscribeAndCreateCancellableHeaderSubscription() async throws {
-        let url = try await NetworkTestClient.pickRandomServerURL()
+        let url = try await NetworkTestClient.pickServerURL()
         let cancellation = FulcrumClient.CallModel.CancellationModel()
 
         try await NetworkTestClient.runWithClient(url) { client in
@@ -84,9 +93,13 @@ struct ClientInterfaceNetworkValidator {
         }
     }
 
-    @Test("Subscribes to address status and cancels the stream", .timeLimit(.minutes(1)))
+    @Test(
+        "Subscribes to address status and cancels the stream",
+        .timeLimit(.minutes(1)),
+        .enabled(if: TestExecutionPolicy.shouldRunNetwork, "Network tests are opt-in. Set SWIFTFULCRUM_RUN_NETWORK=1 to enable them.")
+    )
     func subscribeAndStopAddressSubscription() async throws {
-        let url = try await NetworkTestClient.pickRandomServerURL()
+        let url = try await NetworkTestClient.pickServerURL()
 
         try await NetworkTestClient.runWithClient(url) { client in
             let (initial, updates, cancel) = try await client.subscribe(
@@ -109,11 +122,13 @@ struct ClientInterfaceNetworkValidator {
         }
     }
 
-    @Test("LIVE SLOW: Subscribes new header", .timeLimit(.minutes(30)))
+    @Test(
+        "LIVE SLOW: Subscribes new header",
+        .timeLimit(.minutes(30)),
+        .enabled(if: TestExecutionPolicy.shouldRunNetworkSlow, "Slow network tests are disabled. Set SWIFTFULCRUM_RUN_NETWORK=1 and SWIFTFULCRUM_RUN_NETWORK_SLOW=1 (or SWIFTFULCRUM_RUN_LIVE_SLOW=1).")
+    )
     func subscribeAndReceiveNewHeaderFromLiveMining() async throws {
-        guard Self.shouldRunLiveSlow else { return }
-
-        let url = try await NetworkTestClient.pickRandomServerURL()
+        let url = try await NetworkTestClient.pickServerURL()
 
         try await NetworkTestClient.runWithClient(url) { client in
             let (initial, updates, cancel) = try await client.subscribe(
@@ -156,9 +171,13 @@ struct ClientInterfaceNetworkValidator {
     }
 
     // MARK: - Misc RPC
-    @Test("Submit resolves address metadata over live FulcrumClient", .timeLimit(.minutes(1)))
+    @Test(
+        "Submit resolves address metadata over live FulcrumClient",
+        .timeLimit(.minutes(1)),
+        .enabled(if: TestExecutionPolicy.shouldRunNetwork, "Network tests are opt-in. Set SWIFTFULCRUM_RUN_NETWORK=1 to enable them.")
+    )
     func submitAndResolveAddressQueries() async throws {
-        let url = try await NetworkTestClient.pickRandomServerURL()
+        let url = try await NetworkTestClient.pickServerURL()
 
         try await NetworkTestClient.runWithClient(url) { client in
             let scriptHashResponse = try await client.submit(
@@ -190,9 +209,13 @@ struct ClientInterfaceNetworkValidator {
         }
     }
 
-    @Test("Submit surfaces rpc errors for invalid broadcasts", .timeLimit(.minutes(1)))
+    @Test(
+        "Submit surfaces rpc errors for invalid broadcasts",
+        .timeLimit(.minutes(1)),
+        .enabled(if: TestExecutionPolicy.shouldRunNetwork, "Network tests are opt-in. Set SWIFTFULCRUM_RUN_NETWORK=1 to enable them.")
+    )
     func submitAndPropagateBroadcastErrors() async throws {
-        let url = try await NetworkTestClient.pickRandomServerURL()
+        let url = try await NetworkTestClient.pickServerURL()
 
         try await NetworkTestClient.runWithClient(url) { client in
             do {

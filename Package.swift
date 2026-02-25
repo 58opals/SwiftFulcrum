@@ -24,17 +24,22 @@ let package = Package(
                 .process("Network/WebSocket/servers.testnet.json")
             ]
         ),
+        .target(
+            name: "SwiftFulcrumTestSupport",
+            dependencies: ["SwiftFulcrum"],
+            path: "Tests/SwiftFulcrumTests/Support"
+        ),
         .testTarget(
             name: "SwiftFulcrumLocalTests",
-            dependencies: ["SwiftFulcrum"],
+            dependencies: ["SwiftFulcrum", "SwiftFulcrumTestSupport"],
             path: "Tests/SwiftFulcrumTests",
-            exclude: ["Network"]
+            exclude: ["Network", "Support"]
         ),
         .testTarget(
             name: "SwiftFulcrumNetworkTests",
-            dependencies: ["SwiftFulcrum"],
+            dependencies: ["SwiftFulcrum", "SwiftFulcrumTestSupport"],
             path: "Tests/SwiftFulcrumTests",
-            exclude: ["Local"]
+            exclude: ["Local", "Support"]
         )
     ]
 )
