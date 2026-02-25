@@ -8,7 +8,7 @@ struct ClientHeartbeatValidator {
     @Test("Heartbeat timeout triggers reconnect attempt", .timeLimit(.minutes(1)))
     func heartbeatTimeoutTriggersReconnectAttempt() async throws {
         let transport = TransportTestActor()
-        let client = Client(
+        let client = FulcrumNetworkClient(
             transport: transport,
             heartbeatInterval: .milliseconds(20),
             heartbeatTimeout: .milliseconds(20),
@@ -27,9 +27,9 @@ struct ClientHeartbeatValidator {
     @Test("Heartbeat reconnect failure fails inflight unary calls with heartbeat timeout", .timeLimit(.minutes(1)))
     func failInflightUnaryCallsWhenHeartbeatReconnectFails() async throws {
         let transport = TransportTestActor()
-        await transport.setReconnectFailure(FulcrumClient.Error.transport(.reconnectFailed))
+        await transport.configureReconnectFailure(FulcrumClient.Error.transport(.reconnectFailed))
 
-        let client = Client(
+        let client = FulcrumNetworkClient(
             transport: transport,
             heartbeatInterval: .milliseconds(20),
             heartbeatTimeout: .milliseconds(20),
@@ -39,7 +39,7 @@ struct ClientHeartbeatValidator {
 
         let callTask = Task {
             do {
-                let _: (UUID, Response.ResultModel.BlockchainModel.HeadersModel.GetTipModel) =
+                let _: (UUID, FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.GetTipModel) =
                     try await client.call(method: .blockchain(.headers(.getTip)))
                 Issue.record("Expected inflight unary to fail when heartbeat reconnect fails")
             } catch let error as FulcrumClient.Error {
@@ -63,7 +63,7 @@ struct ClientHeartbeatValidator {
 }
 
 private extension ClientHeartbeatValidator {
-    func startAndNegotiate(client: Client, transport: TransportTestActor) async throws {
+    func startAndNegotiate(client: FulcrumNetworkClient, transport: TransportTestActor) async throws {
         let startTask = Task { try await client.start() }
 
         let versionObject = try TransportTestActor.decodeJSONObject(from: await transport.dequeueOutgoing())

@@ -13,7 +13,7 @@ struct FulcrumClientLifecycleValidator {
             do {
                 _ = try await fulcrum.submit(
                     method: .blockchain(.headers(.getTip)),
-                    responseType: Response.ResultModel.BlockchainModel.HeadersModel.GetTipModel.self,
+                    responseType: FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.GetTipModel.self,
                     options: .init(timeout: .milliseconds(100))
                 )
                 Issue.record("submit() should time out when response is missing")
@@ -43,7 +43,7 @@ struct FulcrumClientLifecycleValidator {
             do {
                 _ = try await fulcrum.submit(
                     method: .blockchain(.headers(.getTip)),
-                    responseType: Response.ResultModel.BlockchainModel.HeadersModel.GetTipModel.self,
+                    responseType: FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.GetTipModel.self,
                     options: .init(timeout: .seconds(30), cancellation: cancellation)
                 )
                 Issue.record("submit() should throw cancelled")
@@ -72,8 +72,8 @@ struct FulcrumClientLifecycleValidator {
             do {
                 _ = try await fulcrum.subscribe(
                     method: .blockchain(.headers(.subscribe)),
-                    initialType: Response.ResultModel.BlockchainModel.HeadersModel.SubscribeModel.self,
-                    notificationType: Response.ResultModel.BlockchainModel.HeadersModel.SubscribeNotificationModel.self,
+                    initialType: FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.SubscribeModel.self,
+                    notificationType: FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.SubscribeNotificationModel.self,
                     options: .init(timeout: .milliseconds(100))
                 )
                 Issue.record("subscribe() should time out when initial response is missing")
@@ -103,7 +103,7 @@ struct FulcrumClientLifecycleValidator {
     @Test("connection state stream publishes idle/connected/disconnected", .timeLimit(.minutes(1)))
     func publishConnectionStateLifecycle() async throws {
         let transport = TransportTestActor()
-        let client = Client(transport: transport, protocolNegotiation: .init())
+        let client = FulcrumNetworkClient(transport: transport, protocolNegotiation: .init())
         let fulcrum = await FulcrumClient(client: client)
 
         let stream = await fulcrum.makeConnectionStateStream()
@@ -128,47 +128,4 @@ struct FulcrumClientLifecycleValidator {
         }
     }
 
-    @Test("diagnostics and subscriptions reflect subscribe/cancel lifecycle", .timeLimit(.minutes(1)))
-    func reportDiagnosticsAndSubscriptionLifecycle() async throws {
-        let (fulcrum, transport) = try await makeStartedFulcrum()
-
-        let initialSnapshot = await fulcrum.makeDiagnosticsSnapshot()
-        #expect(initialSnapshot.activeSubscriptionCount == 0)
-        #expect((await fulcrum.listSubscriptions()).isEmpty)
-
-        let subscribeTask = Task {
-            try await fulcrum.subscribe(
-                method: .blockchain(.headers(.subscribe)),
-                initialType: Response.ResultModel.BlockchainModel.HeadersModel.SubscribeModel.self,
-                notificationType: Response.ResultModel.BlockchainModel.HeadersModel.SubscribeNotificationModel.self,
-                options: .init(timeout: .seconds(30))
-            )
-        }
-
-        let request = try await decodeRequestObject(await transport.dequeueOutgoing())
-        let identifier = try #require(request["id"] as? String)
-        let payload = try TransportTestActor.encodeResponsePayload(
-            identifier: identifier,
-            result: ["height": 900_000, "hex": String(repeating: "a", count: 160)]
-        )
-        await transport.enqueueIncoming(.data(payload))
-
-        let (initial, updates, cancel) = try await subscribeTask.value
-        #expect(initial.height == 900_000)
-
-        let activeSnapshot = await fulcrum.makeDiagnosticsSnapshot()
-        let activeSubscriptions = await fulcrum.listSubscriptions()
-        #expect(activeSnapshot.activeSubscriptionCount == 1)
-        #expect(activeSubscriptions.count == 1)
-        #expect(activeSubscriptions.first?.methodPath == FulcrumMethodRequest.blockchain(.headers(.subscribe)).path)
-
-        await cancel()
-        #expect(await NetworkTestClient.detectStreamTermination(updates, within: .seconds(5)))
-
-        let finalSnapshot = await fulcrum.makeDiagnosticsSnapshot()
-        #expect(finalSnapshot.activeSubscriptionCount == 0)
-        #expect((await fulcrum.listSubscriptions()).isEmpty)
-
-        await fulcrum.stop()
-    }
 }

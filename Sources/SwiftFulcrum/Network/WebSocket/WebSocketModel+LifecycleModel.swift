@@ -15,24 +15,34 @@ extension WebSocketModel.LifecycleModel {
 
 extension WebSocketModel {
     func makeLifecycleEvents() -> AsyncStream<LifecycleModel.EventModel> {
-        if let stream = sharedLifecycleStream { return stream }
+        let subscriberIdentifier = UUID()
         let stream = AsyncStream<LifecycleModel.EventModel> { continuation in
-            self.lifecycleContinuation = continuation
-            continuation.onTermination = { @Sendable _ in
-                Task { await self.resetLifecycleStream() }
-            }
+            self.storeLifecycleContinuation(
+                continuation,
+                forSubscriberIdentifier: subscriberIdentifier
+            )
         }
-        
-        sharedLifecycleStream = stream
+
         return stream
     }
     
     func emitLifecycle(_ event: LifecycleModel.EventModel) {
-        lifecycleContinuation?.yield(event)
+        for continuation in lifecycleContinuationsBySubscriberIdentifier.values {
+            continuation.yield(event)
+        }
     }
     
-    private func resetLifecycleStream() async {
-        sharedLifecycleStream = nil
-        lifecycleContinuation = nil
+    private func storeLifecycleContinuation(
+        _ continuation: AsyncStream<LifecycleModel.EventModel>.Continuation,
+        forSubscriberIdentifier subscriberIdentifier: UUID
+    ) {
+        lifecycleContinuationsBySubscriberIdentifier[subscriberIdentifier] = continuation
+        continuation.onTermination = { @Sendable [weak self] _ in
+            Task { await self?.removeLifecycleContinuation(forSubscriberIdentifier: subscriberIdentifier) }
+        }
+    }
+    
+    private func removeLifecycleContinuation(forSubscriberIdentifier subscriberIdentifier: UUID) {
+        lifecycleContinuationsBySubscriberIdentifier.removeValue(forKey: subscriberIdentifier)
     }
 }

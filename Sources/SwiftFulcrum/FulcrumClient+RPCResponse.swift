@@ -3,11 +3,6 @@
 import Foundation
 
 extension FulcrumClient {
-    public struct RPCSingleResponse {}
-    public struct RPCStreamResponse {}
-}
-
-extension FulcrumClient {
     public enum RPCResponse<Single: Sendable, Stream: Sendable>: Sendable {
         case single(id: UUID,
                     result: Single)

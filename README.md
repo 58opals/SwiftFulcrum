@@ -6,25 +6,25 @@
 
 SwiftFulcrum is a **pure Swift**, actor-based client for interacting with [Fulcrum](https://github.com/cculianu/Fulcrum) WebSocket JSON-RPC servers on the Bitcoin Cash network.
 
-It ships with a strongly-typed RPC surface (`Method` + `Response.Result.*` models), **automatic protocol negotiation** via `server.version`, resilient WebSocket connectivity (failover + reconnect + heartbeat), and ergonomics tailored to modern Swift Concurrency.
+It ships with a strongly-typed RPC surface (`FulcrumMethodRequest` + `FulcrumResponse.ResultModel.*` models), **automatic protocol negotiation** via `server.version`, resilient WebSocket connectivity (failover + reconnect + heartbeat), and ergonomics tailored to modern Swift Concurrency.
 
 ## Features
 
-- **Typed RPC coverage (for supported endpoints).** Methods are represented by the `Method` enum and decoded into strongly typed `Response.Result` models. Coverage includes `server.*`, `blockchain.*`, and `mempool.*` methods implemented by this package, including CashTokens token filtering and DSProof endpoints.
+- **Typed RPC coverage (for supported endpoints).** Methods are represented by the `FulcrumMethodRequest` enum and decoded into strongly typed `FulcrumResponse.ResultModel` models. Coverage includes `server.*`, `blockchain.*`, and `mempool.*` methods implemented by this package, including CashTokens token filtering and DSProof endpoints.
 - **Automatic protocol negotiation (`server.version`).** Connections negotiate a compatible Fulcrum protocol version (default range `1.4` ... `1.6.0`) and opportunistically fetch `server.features` to learn server capabilities.
 - **Automatic bootstrap, failover, and resubscription.** Pass an explicit WebSocket URL, or let SwiftFulcrum select from the bundled mainnet/testnet server catalogs. Reconnects use exponential backoff with jitter, and stored subscriptions are re-issued after reconnect.
 - **RPC heartbeat.** After connecting, SwiftFulcrum periodically issues `server.ping` (defaults: 25 s interval, 10 s timeout) to detect stalled connections and trigger a reconnect.
-- **Actor-isolated concurrency.** `Fulcrum`, `Client`, and `WebSocket` are actors that encapsulate state, request routing, and stream lifecycles.
-- **First-class observability.** Plug in custom `Log.Handler` implementations and `MetricsCollectable` collectors to observe connect/disconnect, send/receive, pings, diagnostics snapshots, and subscription registry changes.
-- **Connection state + diagnostics.** Consume an `AsyncStream<Fulcrum.ConnectionState>`, query `makeDiagnosticsSnapshot()`, and inspect `listSubscriptions()`.
-- **Configurable server catalogs.** Use the bundled catalogs, inject your own `FulcrumServerCatalogLoader`, or supply a bootstrap fallback list.
-- **Opt-in quiet logging for scoped work.** Use `Log.perform(withBehavior: .quiet) { ... }` to suppress normal logs for noisy operations.
+- **Actor-isolated concurrency.** `FulcrumClient`, `FulcrumNetworkClient`, and `WebSocketModel` are actors that encapsulate state, request routing, and stream lifecycles.
+- **First-class observability.** Plug in custom `LogModel.HandlerModel` implementations and `MetricsClient` collectors to observe connect/disconnect, send/receive, pings, diagnostics snapshots, and subscription registry changes.
+- **Connection state + diagnostics.** Consume an `AsyncStream<FulcrumClient.ConnectionState>`, query `makeDiagnosticsSnapshot()`, and inspect `listSubscriptions()`.
+- **Configurable server catalogs.** Use the bundled catalogs, inject your own `FulcrumServerCatalogRepository`, or supply a bootstrap fallback list.
+- **Opt-in quiet logging for scoped work.** Use `LogModel.perform(withBehavior: .quiet) { ... }` to suppress normal logs for noisy operations.
 
 ---
 
 ## Supported RPC methods (implemented by this package)
 
-This is the currently supported surface area exposed by `Method` (grouped by namespace):
+This is the currently supported surface area exposed by `FulcrumMethodRequest` (grouped by namespace):
 
 ### `server.*`
 
@@ -127,14 +127,14 @@ import SwiftFulcrum
 Task {
     do {
         // Optional: pass a specific server endpoint
-        // let fulcrum = try await Fulcrum(url: "wss://your-fulcrum.example")
-        let fulcrum = try await Fulcrum()
+        // let fulcrum = try await FulcrumClient(url: "wss://your-fulcrum.example")
+        let fulcrum = try await FulcrumClient()
 
         try await fulcrum.start()
 
         let response = try await fulcrum.submit(
             method: .blockchain(.headers(.getTip)),
-            responseType: Response.Result.Blockchain.Headers.GetTip.self
+            responseType: FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.GetTipModel.self
         )
 
         guard let tip = response.extractRegularResponse() else { return }
@@ -158,13 +158,13 @@ import SwiftFulcrum
 
 Task {
     do {
-        let fulcrum = try await Fulcrum()
+        let fulcrum = try await FulcrumClient()
         try await fulcrum.start()
 
         let (initial, updates, cancel) = try await fulcrum.subscribe(
             method: .blockchain(.headers(.subscribe)),
-            initialType: Response.Result.Blockchain.Headers.Subscribe.self,
-            notificationType: Response.Result.Blockchain.Headers.SubscribeNotification.self
+            initialType: FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.SubscribeModel.self,
+            notificationType: FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.SubscribeNotificationModel.self
         )
 
         print("Initial best height: \(initial.height)")
@@ -192,7 +192,7 @@ Task {
 ```swift
 let response = try await fulcrum.submit(
     method: .server(.features),
-    responseType: Response.Result.Server.Features.self
+    responseType: FulcrumResponse.ResultModel.ServerModel.FeaturesModel.self
 )
 
 guard let features = response.extractRegularResponse() else { return }
@@ -236,17 +236,17 @@ try await fulcrum.reconnect()
 
 ## Configuration and server selection
 
-Pass a `Fulcrum.Configuration` when you want to customise networking behaviour. You can tune TLS, reconnection policy, protocol negotiation, metrics/logging hooks, maximum message size, URLSession usage, and server sourcing.
+Pass a `FulcrumClient.Configuration` when you want to customise networking behaviour. You can tune TLS, reconnection policy, protocol negotiation, metrics/logging hooks, maximum message size, URLSession usage, and server sourcing.
 
 ```swift
 import SwiftFulcrum
 
-let loader = FulcrumServerCatalogLoader.makeConstant([
+let loader = FulcrumServerCatalogRepository.makeConstant([
     URL(string: "wss://my.fulcrum.example")!,
     URL(string: "wss://backup.fulcrum.example")!
 ])
 
-let configuration = Fulcrum.Configuration(
+let configuration = FulcrumClient.Configuration(
     reconnect: .init(
         // <= 0 means "unlimited" (the reconnector will still rotate servers)
         maximumReconnectionAttempts: 5,
@@ -274,30 +274,30 @@ let configuration = Fulcrum.Configuration(
     // Optional: override the protocol negotiation range / client name.
     protocolNegotiation: .init(
         clientName: "MyApp/1.0",
-        min: ProtocolVersion(string: "1.4")!,
-        max: ProtocolVersion(string: "1.6.0")!
+        min: ProtocolVersionModel(string: "1.4")!,
+        max: ProtocolVersionModel(string: "1.6.0")!
     )
 )
 
-let fulcrum = try await Fulcrum(configuration: configuration)
+let fulcrum = try await FulcrumClient(configuration: configuration)
 ```
 
 Notes:
 
-* `FulcrumServerCatalogLoader.bundled` loads from the package’s bundled JSON catalogs (`servers.mainnet.json` / `servers.testnet.json`).
-* `FulcrumServerCatalogLoader.makeConstant(...)` expects you to provide valid `ws://` or `wss://` URLs.
-* SwiftFulcrum throws `Fulcrum.Error.transport(.setupFailed)` when it cannot resolve any valid servers.
+* `FulcrumServerCatalogRepository.bundled` loads from the package’s bundled JSON catalogs (`servers.mainnet.json` / `servers.testnet.json`).
+* `FulcrumServerCatalogRepository.makeConstant(...)` expects you to provide valid `ws://` or `wss://` URLs.
+* SwiftFulcrum throws `FulcrumClient.Error.transport(.setupFailed)` when it cannot resolve any valid servers.
 
 ## Timeouts and cancellation
 
-Use `Fulcrum.Call.Options` to control per-call behaviour. A `timeout` bounds the RPC operation (including waiting for a server response). A `Cancellation` can be shared across tasks to cancel unary calls or long-lived subscriptions.
+Use `FulcrumClient.CallModel.OptionsModel` to control per-call behaviour. A `timeout` bounds the RPC operation (including waiting for a server response). A `CancellationModel` can be shared across tasks to cancel unary calls or long-lived subscriptions.
 
 ```swift
-let cancellation = Fulcrum.Call.Cancellation()
+let cancellation = FulcrumClient.CallModel.CancellationModel()
 
 let response = try await fulcrum.submit(
     method: .mempool(.getFeeHistogram),
-    responseType: Response.Result.Mempool.GetFeeHistogram.self,
+    responseType: FulcrumResponse.ResultModel.MempoolModel.GetFeeHistogramModel.self,
     options: .init(timeout: .seconds(10), cancellation: cancellation)
 )
 
@@ -305,22 +305,22 @@ let response = try await fulcrum.submit(
 await cancellation.cancel()
 ```
 
-`submit(...)` will throw `Fulcrum.Error.client(.timeout(...))` if the timeout elapses.
+`submit(...)` will throw `FulcrumClient.Error.client(.timeout(...))` if the timeout elapses.
 
 ## Error Handling
 
-All failures funnel through `Fulcrum.Error` with transport, RPC, coding, and client-specific cases.
+All failures funnel through `FulcrumClient.Error` with transport, RPC, coding, and client-specific cases.
 
 ```swift
 do {
     let response = try await fulcrum.submit(
         method: .mempool(.getInfo),
-        responseType: Response.Result.Mempool.GetInfo.self
+        responseType: FulcrumResponse.ResultModel.MempoolModel.GetInfoModel.self
     )
 
     guard let info = response.extractRegularResponse() else { return }
     print(info)
-} catch let error as Fulcrum.Error {
+} catch let error as FulcrumClient.Error {
     switch error {
     case .transport(.setupFailed):
         print("Could not resolve any valid Fulcrum servers")

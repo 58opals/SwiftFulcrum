@@ -21,7 +21,7 @@ struct ClientInterfaceLocalValidator {
             do {
                 _ = try await client.submit(
                     method: method,
-                    responseType: Response.ResultModel.BlockchainModel.HeadersModel.GetTipModel.self
+                    responseType: FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.GetTipModel.self
                 )
                 Issue.record("submit should reject subscription methods (method: \(method))")
             } catch let error as FulcrumClient.Error {
@@ -51,8 +51,8 @@ struct ClientInterfaceLocalValidator {
             do {
                 _ = try await client.subscribe(
                     method: method,
-                    initialType: Response.ResultModel.BlockchainModel.HeadersModel.SubscribeModel.self,
-                    notificationType: Response.ResultModel.BlockchainModel.HeadersModel.SubscribeNotificationModel.self
+                    initialType: FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.SubscribeModel.self,
+                    notificationType: FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.SubscribeNotificationModel.self
                 )
                 Issue.record("subscribe() should reject unary methods (method: \(method))")
             } catch let error as FulcrumClient.Error {

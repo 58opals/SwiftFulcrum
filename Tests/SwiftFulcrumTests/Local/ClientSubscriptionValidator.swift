@@ -10,10 +10,10 @@ struct ClientSubscriptionValidator {
     private static let initialHeaderHex = String(repeating: "a", count: 160)
     private static let nextHeaderHex = String(repeating: "b", count: 160)
 
-    @Test("Client decodes header subscription notifications without live mining", .timeLimit(.minutes(1)))
+    @Test("FulcrumNetworkClient decodes header subscription notifications without live mining", .timeLimit(.minutes(1)))
     func subscribeAndDecodeHeaderNotificationsWithoutLiveMining() async throws {
         let transport = TransportTestActor()
-        let client = Client(transport: transport, protocolNegotiation: .init())
+        let client = FulcrumNetworkClient(transport: transport, protocolNegotiation: .init())
 
         let startTask = Task { try await client.start() }
 
@@ -58,15 +58,15 @@ struct ClientSubscriptionValidator {
         try await startTask.value
         #expect(await client.connectionState == .connected)
 
-        let cancellationToken = Client.CallModel.TokenModel()
+        let cancellationToken = FulcrumNetworkClient.CallModel.TokenModel()
         let subscribeTask = Task {
             try await client.subscribe(
                 method: .blockchain(.headers(.subscribe)),
                 options: .init(timeout: .seconds(30), token: cancellationToken)
             ) as (
                 UUID,
-                Response.ResultModel.BlockchainModel.HeadersModel.SubscribeModel,
-                AsyncThrowingStream<Response.ResultModel.BlockchainModel.HeadersModel.SubscribeNotificationModel, Swift.Error>
+                FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.SubscribeModel,
+                AsyncThrowingStream<FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.SubscribeNotificationModel, Swift.Error>
             )
         }
 

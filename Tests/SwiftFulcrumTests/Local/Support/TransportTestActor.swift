@@ -21,9 +21,11 @@ actor TransportTestActor: TransportableModel {
     private var outgoingQueue: [URLSessionWebSocketTask.Message] = .init()
     private var pendingOutgoingContinuations: [CheckedContinuation<URLSessionWebSocketTask.Message, Never>] = .init()
     private(set) var sentMessages: [URLSessionWebSocketTask.Message] = .init()
+    var connectDelay: Duration?
+    var outgoingSendDelay: Duration?
 
-    private var reconnectFailure: Swift.Error?
-    private var reconnectAttempts = 0
+    var reconnectFailure: Swift.Error?
+    var reconnectAttempts = 0
 
     init(endpoint: URL = URL(string: "wss://example.invalid")!) {
         self.currentEndpoint = endpoint
@@ -34,6 +36,7 @@ actor TransportTestActor: TransportableModel {
     var endpoint: URL { currentEndpoint }
 
     func connect() async throws {
+        try await applyConnectDelayIfNeeded()
         updateConnectionState(to: .connected)
         enqueueLifecycleEvent(.connected(isReconnect: false))
     }
@@ -54,10 +57,12 @@ actor TransportTestActor: TransportableModel {
     }
 
     func send(data: Data) async throws {
+        try await applyOutgoingSendDelayIfNeeded()
         recordOutgoing(.data(data))
     }
 
     func send(string: String) async throws {
+        try await applyOutgoingSendDelayIfNeeded()
         recordOutgoing(.string(string))
     }
 
@@ -117,14 +122,6 @@ actor TransportTestActor: TransportableModel {
 
     func registerQuietResponse(for identifier: UUID) async { _ = identifier }
 
-    func setReconnectFailure(_ error: Swift.Error?) {
-        reconnectFailure = error
-    }
-
-    func makeReconnectAttempts() -> Int {
-        reconnectAttempts
-    }
-
     func enqueueIncoming(_ message: URLSessionWebSocketTask.Message) {
         incomingBuffer.append(.success(message))
         flushIncomingBuffer()
@@ -149,6 +146,16 @@ actor TransportTestActor: TransportableModel {
         sentMessages.append(message)
         outgoingQueue.append(message)
         resolvePendingOutgoingContinuations()
+    }
+    
+    private func applyOutgoingSendDelayIfNeeded() async throws {
+        guard let outgoingSendDelay else { return }
+        try await Task.sleep(for: outgoingSendDelay)
+    }
+    
+    private func applyConnectDelayIfNeeded() async throws {
+        guard let connectDelay else { return }
+        try await Task.sleep(for: connectDelay)
     }
 
     private func resolvePendingOutgoingContinuations() {
