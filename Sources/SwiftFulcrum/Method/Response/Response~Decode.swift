@@ -53,49 +53,46 @@ extension Data {
     }
 }
 
-extension AsyncThrowingStream where Element == Data {
+extension AsyncThrowingStream where Element == Data, Failure == Swift.Error {
     func decode<ResultModel: Decodable & Sendable>(_ type: ResultModel.Type) -> AsyncThrowingStream<ResultModel, Swift.Error> {
-        AsyncThrowingStream<ResultModel, Swift.Error> { continuation in
-            Task {
-                do {
-                    for try await chunk in self {
-                        continuation.yield(try chunk.decode(ResultModel.self))
-                    }
-                    continuation.finish()
-                } catch {
-                    continuation.finish(throwing: error)
-                }
+        let iteratorModel = DataStreamIteratorModel(stream: self)
+        return AsyncThrowingStream<ResultModel, Swift.Error> {
+            guard let chunk = try await iteratorModel.next() else {
+                return nil
             }
+            return try chunk.decode(ResultModel.self)
         }
     }
     
     func decode<ResultModel: JSONRPCResponse>(_ type: ResultModel.Type) -> AsyncThrowingStream<ResultModel, Swift.Error> {
-        AsyncThrowingStream<ResultModel, Swift.Error> { continuation in
-            Task {
-                do {
-                    for try await chunk in self {
-                        continuation.yield(try chunk.decode(ResultModel.self))
-                    }
-                    continuation.finish()
-                } catch {
-                    continuation.finish(throwing: error)
-                }
+        let iteratorModel = DataStreamIteratorModel(stream: self)
+        return AsyncThrowingStream<ResultModel, Swift.Error> {
+            guard let chunk = try await iteratorModel.next() else {
+                return nil
             }
+            return try chunk.decode(ResultModel.self)
         }
     }
     
     func decode<ResultModel: JSONRPCResponse>(_ type: ResultModel.Type, context: JSONRPCModel.DecodeContextModel?) -> AsyncThrowingStream<ResultModel, Swift.Error> {
-        AsyncThrowingStream<ResultModel, Swift.Error> { continuation in
-            Task {
-                do {
-                    for try await chunk in self {
-                        continuation.yield(try chunk.decode(ResultModel.self, context: context))
-                    }
-                    continuation.finish()
-                } catch {
-                    continuation.finish(throwing: error)
-                }
+        let iteratorModel = DataStreamIteratorModel(stream: self)
+        return AsyncThrowingStream<ResultModel, Swift.Error> {
+            guard let chunk = try await iteratorModel.next() else {
+                return nil
             }
+            return try chunk.decode(ResultModel.self, context: context)
         }
+    }
+}
+
+private final class DataStreamIteratorModel<Failure: Swift.Error>: @unchecked Sendable {
+    private var iterator: AsyncThrowingStream<Data, Failure>.AsyncIterator
+    
+    init(stream: AsyncThrowingStream<Data, Failure>) {
+        self.iterator = stream.makeAsyncIterator()
+    }
+    
+    func next() async throws -> Data? {
+        try await iterator.next()
     }
 }

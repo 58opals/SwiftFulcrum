@@ -40,6 +40,10 @@ extension FulcrumClient {
             case timeout(Duration)
             case emptyResponse(UUID?)
             case protocolMismatch(String?)
+            case invalidProtocolNegotiationRange(
+                minimumVersion: ProtocolVersionModel,
+                maximumVersion: ProtocolVersionModel
+            )
             case unknown(Swift.Error?)
         }
     }
@@ -98,6 +102,17 @@ extension FulcrumClient.Error.Client: Swift.Error, Equatable, Sendable {
             return leftUUID == rightUUID
         case (.protocolMismatch(let leftMessage), .protocolMismatch(let rightMessage)):
             return leftMessage == rightMessage
+        case (
+            .invalidProtocolNegotiationRange(
+                minimumVersion: let leftMinimum,
+                maximumVersion: let leftMaximum
+            ),
+            .invalidProtocolNegotiationRange(
+                minimumVersion: let rightMinimum,
+                maximumVersion: let rightMaximum
+            )
+        ):
+            return leftMinimum == rightMinimum && leftMaximum == rightMaximum
         case (.unknown(let leftError), .unknown(let rightError)):
             return (leftError == nil && rightError == nil) || (leftError?.localizedDescription == rightError?.localizedDescription)
         default:

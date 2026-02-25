@@ -29,8 +29,7 @@ actor WebSocketModel {
     private var receivedTask: Task<Void, Never>?
     private var shouldAutomaticallyReceive = false
     
-    var sharedLifecycleStream: AsyncStream<LifecycleModel.EventModel>?
-    var lifecycleContinuation: AsyncStream<LifecycleModel.EventModel>.Continuation?
+    var lifecycleContinuationsBySubscriberIdentifier: [UUID: AsyncStream<LifecycleModel.EventModel>.Continuation] = .init()
     
     let session: URLSession
     private let connectionTimeout: TimeInterval

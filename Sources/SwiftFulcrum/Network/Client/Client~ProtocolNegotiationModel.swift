@@ -32,16 +32,19 @@ extension Client {
     }
     
     private func performProtocolNegotiation() async throws -> NegotiatedSessionModel {
+        let negotiationArgument = try protocolNegotiation.argument
+        let supportedRange = try protocolNegotiation.supportedRange
+        
         let (_, version): (UUID, Response.ResultModel.ServerModel.VersionModel) = try await call(
             method: .server(
                 .version(
                     clientName: protocolNegotiation.clientName,
-                    protocolNegotiation: protocolNegotiation.argument
+                    protocolNegotiation: negotiationArgument
                 )
             )
         )
         
-        let negotiatedProtocol = try protocolNegotiation.supportedRange.validateNegotiatedVersion(
+        let negotiatedProtocol = try supportedRange.validateNegotiatedVersion(
             version.negotiatedProtocolVersion
         )
         

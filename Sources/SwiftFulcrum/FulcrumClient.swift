@@ -11,10 +11,11 @@ public actor FulcrumClient {
     let client: Client
     
     private(set) var isRunning = false
+    var desiredRunning = false
+    var startTask: Task<Void, Swift.Error>?
     var currentConnectionState: ConnectionState = .idle
     var connectionStateObservationTask: Task<Void, Never>?
-    var sharedConnectionStateStream: AsyncStream<ConnectionState>?
-    var connectionStateContinuation: AsyncStream<ConnectionState>.Continuation?
+    var connectionStateContinuationsBySubscriberIdentifier: [UUID: AsyncStream<ConnectionState>.Continuation] = .init()
     
     /// Creates a FulcrumClient client.
     /// - ParametersModel:
@@ -81,12 +82,27 @@ public actor FulcrumClient {
     /// Establishes the WebSocketModel connection and prepares stream resubscription.
     ///
     /// This call is idempotent and safe to invoke from concurrent tasks. It suspends until the
-    /// underlying socket is connected or fails. CancellationModel of the calling task propagates to
-    /// the connection attempt.
+    /// underlying socket is connected or fails. If ``stop()`` is called while ``start()`` is in
+    /// flight, stop takes precedence and this method returns without leaving the client running.
     public func start() async throws {
+        desiredRunning = true
         guard !self.isRunning else { return }
         
-        try await self.client.start()
+        let startTask = makeOrReuseStartTask()
+        defer {
+            self.startTask = nil
+        }
+        
+        do {
+            try await startTask.value
+        } catch {
+            if !desiredRunning, error is CancellationError {
+                return
+            }
+            throw error
+        }
+        
+        guard desiredRunning else { return }
         self.isRunning = true
         
         if connectionStateObservationTask == nil {
@@ -96,13 +112,20 @@ public actor FulcrumClient {
     
     /// Cancels outstanding requests, closes the WebSocketModel, and resets subscription state.
     ///
-    /// The shutdown is best-effort when the calling task is cancelled. Invoke ``stop()`` from
-    /// a separate task if you need teardown to complete after a caller is cancelled.
+    /// This call is idempotent and deterministic. It cancels any in-flight ``start()`` and always
+    /// performs teardown so the client is not left running.
     public func stop() async {
-        guard self.isRunning else { return }
+        desiredRunning = false
         self.isRunning = false
         
+        if let startTask {
+            startTask.cancel()
+            _ = try? await startTask.value
+            self.startTask = nil
+        }
+        
         await self.client.stop()
+        desiredRunning = false
         
         connectionStateObservationTask?.cancel()
         await connectionStateObservationTask?.value
@@ -117,5 +140,19 @@ public actor FulcrumClient {
     public func reconnect() async throws {
         guard self.isRunning else { return }
         try await self.client.reconnect()
+    }
+}
+
+private extension FulcrumClient {
+    func makeOrReuseStartTask() -> Task<Void, Swift.Error> {
+        if let startTask {
+            return startTask
+        }
+        
+        let startTask = Task<Void, Swift.Error> { [client] in
+            try await client.start()
+        }
+        self.startTask = startTask
+        return startTask
     }
 }

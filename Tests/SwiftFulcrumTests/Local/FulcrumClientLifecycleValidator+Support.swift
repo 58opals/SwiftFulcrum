@@ -47,6 +47,38 @@ extension FulcrumClientLifecycleValidator {
         }
         return identifier
     }
+    
+    func countSentMethodOccurrences(
+        _ methodPath: String,
+        transport: TransportTestActor
+    ) async throws -> Int {
+        let messages = await transport.sentMessages
+        return try messages.reduce(into: 0) { count, message in
+            guard let data = message.dataPayload else { return }
+            guard let object = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { return }
+            if object["method"] as? String == methodPath {
+                count += 1
+            }
+        }
+    }
+    
+    func waitUntil(
+        timeout: Duration,
+        pollingInterval: Duration = .milliseconds(25),
+        _ condition: @Sendable @escaping () async -> Bool
+    ) async -> Bool {
+        let clock = ContinuousClock()
+        let deadline = clock.now + timeout
+        
+        while clock.now < deadline {
+            if await condition() {
+                return true
+            }
+            try? await Task.sleep(for: pollingInterval)
+        }
+        
+        return await condition()
+    }
 
     func collectConnectionStates(
         from stream: AsyncStream<FulcrumClient.ConnectionState>,

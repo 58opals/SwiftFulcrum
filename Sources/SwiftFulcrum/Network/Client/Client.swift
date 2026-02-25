@@ -84,8 +84,21 @@ actor Client {
         resetNegotiatedSession()
         try await transport.reconnect(with: url)
         startReceivingTask()
-        startLifecycleObservationTasks()
-        await publishDiagnosticsSnapshot()
+        
+        do {
+            _ = try await ensureNegotiatedProtocol()
+            emitLog(.info, "client.reconnect_resubscribe.begin")
+            await resubscribeStoredMethods()
+            emitLog(.info,
+                    "client.reconnect_resubscribe.end",
+                    metadata: ["count": String(subscriptionMethods.count)])
+            startLifecycleObservationTasks()
+            await publishDiagnosticsSnapshot()
+        } catch {
+            await cancelBackgroundTasks()
+            await transport.disconnect(with: "Client.reconnect() negotiation failed")
+            throw error
+        }
     }
     
     func makeConnectionStateEvents() async -> AsyncStream<FulcrumClient.ConnectionState> {

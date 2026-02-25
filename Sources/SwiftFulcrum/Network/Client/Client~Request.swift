@@ -105,10 +105,28 @@ extension Client {
                         context: .init(methodPath: method.path)
                     )
                     
-                    let typedStream = rawStream.decode(
+                    let decodedStream = rawStream.decode(
                         Notification.self,
                         context: .init(methodPath: method.path)
                     )
+                    let typedStream = AsyncThrowingStream<Notification, Swift.Error> { continuation in
+                        Task {
+                            do {
+                                for try await value in decodedStream {
+                                    if case .terminated = continuation.yield(value) {
+                                        break
+                                    }
+                                }
+                                continuation.finish()
+                            } catch {
+                                continuation.finish(throwing: error)
+                            }
+                        }
+                        
+                        continuation.onTermination = { @Sendable _ in
+                            rawContinuation.finish()
+                        }
+                    }
                     
                     return (id, initial, typedStream)
                 } onCancel: {

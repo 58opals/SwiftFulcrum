@@ -157,7 +157,8 @@ struct MethodAssortmentModel {
 extension MethodAssortmentModel {
     static var sampleMethods: [FulcrumMethodRequest] {
         guard let minimumVersion = ProtocolVersionModel(string: "1.4"),
-              let maximumVersion = ProtocolVersionModel(string: "1.6.0") else {
+              let maximumVersion = ProtocolVersionModel(string: "1.6.0"),
+              let versionRange = ProtocolVersionModel.RangeModel(min: minimumVersion, max: maximumVersion) else {
             preconditionFailure("Sample protocol versions must be valid")
         }
         
@@ -165,8 +166,7 @@ extension MethodAssortmentModel {
             // ServerModel
             .server(.ping),
             .server(.version(clientName: "Sample Client",
-                             protocolNegotiation: .init(minimumVersion: minimumVersion,
-                                                        maximumVersion: maximumVersion))),
+                             protocolNegotiation: .init(range: versionRange))),
             .server(.features),
             
             // BlockchainModel

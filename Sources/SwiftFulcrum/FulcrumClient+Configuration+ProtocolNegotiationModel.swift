@@ -7,14 +7,25 @@ extension FulcrumClient.Configuration {
         public var clientName: String
         public var min: ProtocolVersionModel
         public var max: ProtocolVersionModel
-        public var argument: ArgumentModel { .init(range: supportedRange) }
+        public var argument: ArgumentModel {
+            get throws {
+                try .init(range: supportedRange)
+            }
+        }
         
         public var supportedRange: ProtocolVersionModel.RangeModel {
-            guard let range = ProtocolVersionModel.RangeModel(min: min, max: max) else {
-                preconditionFailure("Protocol negotiation range must define a valid minimum and maximum")
+            get throws {
+                guard let range = ProtocolVersionModel.RangeModel(min: min, max: max) else {
+                    throw FulcrumClient.Error.client(
+                        .invalidProtocolNegotiationRange(
+                            minimumVersion: min,
+                            maximumVersion: max
+                        )
+                    )
+                }
+                
+                return range
             }
-            
-            return range
         }
         
         public init(
@@ -34,8 +45,15 @@ extension FulcrumClient.Configuration.ProtocolNegotiationModel {
         public let minimumVersion: ProtocolVersionModel
         public let maximumVersion: ProtocolVersionModel
         
-        public init(minimumVersion: ProtocolVersionModel, maximumVersion: ProtocolVersionModel) {
-            precondition(minimumVersion <= maximumVersion, "Minimum protocol version cannot exceed maximum protocol version")
+        public init(minimumVersion: ProtocolVersionModel, maximumVersion: ProtocolVersionModel) throws {
+            guard minimumVersion <= maximumVersion else {
+                throw FulcrumClient.Error.client(
+                    .invalidProtocolNegotiationRange(
+                        minimumVersion: minimumVersion,
+                        maximumVersion: maximumVersion
+                    )
+                )
+            }
             self.minimumVersion = minimumVersion
             self.maximumVersion = maximumVersion
         }

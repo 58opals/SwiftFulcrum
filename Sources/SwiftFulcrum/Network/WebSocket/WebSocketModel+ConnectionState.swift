@@ -15,38 +15,39 @@ extension WebSocketModel {
 extension WebSocketModel {
     actor ConnectionStateTrackerModel {
         private(set) var state: ConnectionState = .idle
-        
-        private var sharedStream: AsyncStream<ConnectionState>?
-        private var continuation: AsyncStream<ConnectionState>.Continuation?
+        private var continuationsBySubscriberIdentifier: [UUID: AsyncStream<ConnectionState>.Continuation] = .init()
         
         func makeStream() -> AsyncStream<ConnectionState> {
-            if let sharedStream { return sharedStream }
-            
+            let subscriberIdentifier = UUID()
             let stream = AsyncStream<ConnectionState> { continuation in
-                storeContinuation(continuation)
+                self.storeContinuation(continuation, forSubscriberIdentifier: subscriberIdentifier)
             }
             
-            sharedStream = stream
             return stream
         }
         
         func update(to newState: ConnectionState) {
             guard state != newState else { return }
             state = newState
-            continuation?.yield(newState)
-        }
-        
-        private func storeContinuation(_ continuation: AsyncStream<ConnectionState>.Continuation) {
-            self.continuation = continuation
-            continuation.yield(state)
-            continuation.onTermination = { @Sendable [weak self] _ in
-                Task { await self?.reset() }
+            
+            for continuation in continuationsBySubscriberIdentifier.values {
+                continuation.yield(newState)
             }
         }
         
-        private func reset() {
-            sharedStream = nil
-            continuation = nil
+        private func storeContinuation(
+            _ continuation: AsyncStream<ConnectionState>.Continuation,
+            forSubscriberIdentifier subscriberIdentifier: UUID
+        ) {
+            continuationsBySubscriberIdentifier[subscriberIdentifier] = continuation
+            continuation.yield(state)
+            continuation.onTermination = { @Sendable [weak self] _ in
+                Task { await self?.removeContinuation(forSubscriberIdentifier: subscriberIdentifier) }
+            }
+        }
+        
+        private func removeContinuation(forSubscriberIdentifier subscriberIdentifier: UUID) {
+            continuationsBySubscriberIdentifier.removeValue(forKey: subscriberIdentifier)
         }
     }
 }

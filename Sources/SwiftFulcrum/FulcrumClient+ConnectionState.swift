@@ -16,18 +16,16 @@ extension FulcrumClient {
     public var connectionState: ConnectionState { currentConnectionState }
     
     public func makeConnectionStateStream() -> AsyncStream<ConnectionState> {
-        if let sharedConnectionStateStream { return sharedConnectionStateStream }
-        
+        let subscriberIdentifier = UUID()
         let stream = AsyncStream<ConnectionState> { continuation in
-            self.connectionStateContinuation = continuation
+            self.connectionStateContinuationsBySubscriberIdentifier[subscriberIdentifier] = continuation
             continuation.yield(currentConnectionState)
             continuation.onTermination = { @Sendable [weak self] _ in
                 guard let self else { return }
-                Task { await self.resetConnectionStateStream() }
+                Task { await self.removeConnectionStateContinuation(forSubscriberIdentifier: subscriberIdentifier) }
             }
         }
         
-        sharedConnectionStateStream = stream
         return stream
     }
 }
@@ -47,11 +45,17 @@ extension FulcrumClient {
     func updateConnectionState(_ state: ConnectionState) async {
         guard currentConnectionState != state else { return }
         currentConnectionState = state
-        connectionStateContinuation?.yield(state)
+        
+        for continuation in connectionStateContinuationsBySubscriberIdentifier.values {
+            continuation.yield(state)
+        }
     }
     
     func resetConnectionStateStream() async {
-        sharedConnectionStateStream = nil
-        connectionStateContinuation = nil
+        connectionStateContinuationsBySubscriberIdentifier.removeAll(keepingCapacity: false)
+    }
+    
+    func removeConnectionStateContinuation(forSubscriberIdentifier subscriberIdentifier: UUID) async {
+        connectionStateContinuationsBySubscriberIdentifier.removeValue(forKey: subscriberIdentifier)
     }
 }
