@@ -10,7 +10,7 @@ struct ResponseDecodingValidator {
         let identifier = UUID().uuidString
 
         let regularData = try jsonData(["jsonrpc": "2.0", "id": identifier, "result": "ok"])
-        let regularEnvelope = try JSONDecoder().decode(Response.JSONRPCModel.GenericModel<String>.self, from: regularData)
+        let regularEnvelope = try JSONDecoder().decode(FulcrumResponse.JSONRPCModel.GenericModel<String>.self, from: regularData)
         if case .regular(let regular) = try regularEnvelope.determineResponseType() {
             #expect(regular.result == "ok")
         } else {
@@ -20,7 +20,7 @@ struct ResponseDecodingValidator {
         let subscriptionData = try jsonData(
             ["jsonrpc": "2.0", "method": "blockchain.headers.subscribe", "params": "update"]
         )
-        let subscriptionEnvelope = try JSONDecoder().decode(Response.JSONRPCModel.GenericModel<String>.self, from: subscriptionData)
+        let subscriptionEnvelope = try JSONDecoder().decode(FulcrumResponse.JSONRPCModel.GenericModel<String>.self, from: subscriptionData)
         if case .subscription(let subscription) = try subscriptionEnvelope.determineResponseType() {
             #expect(subscription.methodPath == "blockchain.headers.subscribe")
             #expect(subscription.result == "update")
@@ -31,7 +31,7 @@ struct ResponseDecodingValidator {
         let errorData = try jsonData(
             ["jsonrpc": "2.0", "id": identifier, "error": ["code": -1, "message": "boom"]]
         )
-        let errorEnvelope = try JSONDecoder().decode(Response.JSONRPCModel.GenericModel<String>.self, from: errorData)
+        let errorEnvelope = try JSONDecoder().decode(FulcrumResponse.JSONRPCModel.GenericModel<String>.self, from: errorData)
         if case .error(let rpcError) = try errorEnvelope.determineResponseType() {
             #expect(rpcError.error.code == -1)
             #expect(rpcError.error.message == "boom")
@@ -40,7 +40,7 @@ struct ResponseDecodingValidator {
         }
 
         let emptyData = try jsonData(["jsonrpc": "2.0", "id": identifier])
-        let emptyEnvelope = try JSONDecoder().decode(Response.JSONRPCModel.GenericModel<String?>.self, from: emptyData)
+        let emptyEnvelope = try JSONDecoder().decode(FulcrumResponse.JSONRPCModel.GenericModel<String?>.self, from: emptyData)
         if case .empty(let id) = try emptyEnvelope.determineResponseType() {
             #expect(id.uuidString == identifier)
         } else {
@@ -54,7 +54,7 @@ struct ResponseDecodingValidator {
             ["jsonrpc": "2.0", "id": UUID().uuidString, "result": ["Fulcrum 2.0", "1.5.3"]]
         )
         let version = try versionPayload.decode(
-            Response.ResultModel.ServerModel.VersionModel.self,
+            FulcrumResponse.ResultModel.ServerModel.VersionModel.self,
             context: .init(methodPath: "server.version")
         )
         #expect(version.serverVersion == "Fulcrum 2.0")
@@ -76,7 +76,7 @@ struct ResponseDecodingValidator {
             ]
         )
         let features = try featuresPayload.decode(
-            Response.ResultModel.ServerModel.FeaturesModel.self,
+            FulcrumResponse.ResultModel.ServerModel.FeaturesModel.self,
             context: .init(methodPath: "server.features")
         )
         #expect(features.maximumProtocolVersion == ProtocolVersionModel(string: "1.6.0"))
@@ -91,7 +91,7 @@ struct ResponseDecodingValidator {
             ["jsonrpc": "2.0", "method": "blockchain.headers.subscribe", "params": [["height": 1, "hex": String(repeating: "a", count: 160)]]]
         )
         let headerUpdate = try headerPayload.decode(
-            Response.ResultModel.BlockchainModel.HeadersModel.SubscribeNotificationModel.self,
+            FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.SubscribeNotificationModel.self,
             context: .init(methodPath: "blockchain.headers.subscribe")
         )
         #expect(headerUpdate.subscriptionIdentifier == "blockchain.headers.subscribe")
@@ -101,7 +101,7 @@ struct ResponseDecodingValidator {
             ["jsonrpc": "2.0", "method": "blockchain.address.subscribe", "params": ["bitcoincash:qtest", "status"]]
         )
         let addressUpdate = try addressPayload.decode(
-            Response.ResultModel.BlockchainModel.AddressModel.SubscribeNotificationModel.self,
+            FulcrumResponse.ResultModel.BlockchainModel.AddressModel.SubscribeNotificationModel.self,
             context: .init(methodPath: "blockchain.address.subscribe")
         )
         #expect(addressUpdate.subscriptionIdentifier == "bitcoincash:qtest")
@@ -111,7 +111,7 @@ struct ResponseDecodingValidator {
             ["jsonrpc": "2.0", "method": "blockchain.transaction.subscribe", "params": ["abc123", 42]]
         )
         let transactionUpdate = try transactionPayload.decode(
-            Response.ResultModel.BlockchainModel.TransactionModel.SubscribeNotificationModel.self,
+            FulcrumResponse.ResultModel.BlockchainModel.TransactionModel.SubscribeNotificationModel.self,
             context: .init(methodPath: "blockchain.transaction.subscribe")
         )
         #expect(transactionUpdate.subscriptionIdentifier == "abc123")
@@ -134,7 +134,7 @@ struct ResponseDecodingValidator {
             ]
         )
         let dsProofUpdate = try dsProofPayload.decode(
-            Response.ResultModel.BlockchainModel.TransactionModel.DSProofModel.SubscribeNotificationModel.self,
+            FulcrumResponse.ResultModel.BlockchainModel.TransactionModel.DSProofModel.SubscribeNotificationModel.self,
             context: .init(methodPath: "blockchain.transaction.dsproof.subscribe")
         )
         #expect(dsProofUpdate.subscriptionIdentifier == "abc123")
@@ -147,7 +147,7 @@ struct ResponseDecodingValidator {
             ["jsonrpc": "2.0", "id": UUID().uuidString, "result": [[2.5, 2000], [1, 1000]]]
         )
         let histogram = try payload.decode(
-            Response.ResultModel.MempoolModel.GetFeeHistogramModel.self,
+            FulcrumResponse.ResultModel.MempoolModel.GetFeeHistogramModel.self,
             context: .init(methodPath: "mempool.get_fee_histogram")
         )
         #expect(histogram.histogram.count == 2)
@@ -165,11 +165,11 @@ struct ResponseDecodingValidator {
 
         do {
             _ = try payload.decode(
-                Response.ResultModel.ServerModel.VersionModel.self,
+                FulcrumResponse.ResultModel.ServerModel.VersionModel.self,
                 context: .init(methodPath: "server.version")
             )
             Issue.record("Expected decode to fail with unexpected format")
-        } catch let error as Response.ResultModel.Error {
+        } catch let error as FulcrumResponse.ResultModel.Error {
             guard case .unexpectedFormat(let message) = error else {
                 Issue.record("Expected unexpected format, got \(error)")
                 return

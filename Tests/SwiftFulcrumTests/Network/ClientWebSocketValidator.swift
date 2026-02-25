@@ -6,21 +6,21 @@ import SwiftFulcrumTestSupport
 @Suite(.tags(.network))
 struct ClientWebSocketValidator {
     @Test(
-        "Client.start() relays unary responses over WebSocketModel",
+        "FulcrumNetworkClient.start() relays unary responses over WebSocketModel",
         .timeLimit(.minutes(1)),
         .enabled(if: TestExecutionPolicy.shouldRunNetwork, "Network tests are opt-in. Set SWIFTFULCRUM_RUN_NETWORK=1 to enable them.")
     )
     func startClientAndReceiveUnaryResponses() async throws {
         let url = try await NetworkTestClient.pickServerURL()
         let webSocket = WebSocketModel(url: url)
-        let client = Client(
+        let client = FulcrumNetworkClient(
             transport: WebSocketTransportModel(webSocket: webSocket),
             protocolNegotiation: .init()
         )
 
         try await client.start()
 
-        let (_, tip): (UUID, Response.ResultModel.BlockchainModel.HeadersModel.GetTipModel) = try await client.call(
+        let (_, tip): (UUID, FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.GetTipModel) = try await client.call(
             method: .blockchain(.headers(.getTip)),
             options: .init(timeout: .seconds(30))
         )
@@ -33,14 +33,14 @@ struct ClientWebSocketValidator {
     }
 
     @Test(
-        "Client.stop() cancels active subscription streams",
+        "FulcrumNetworkClient.stop() cancels active subscription streams",
         .timeLimit(.minutes(1)),
         .enabled(if: TestExecutionPolicy.shouldRunNetwork, "Network tests are opt-in. Set SWIFTFULCRUM_RUN_NETWORK=1 to enable them.")
     )
     func stopClientAndTerminateSubscriptions() async throws {
         let url = try await NetworkTestClient.pickServerURL()
         let webSocket = WebSocketModel(url: url)
-        let client = Client(
+        let client = FulcrumNetworkClient(
             transport: WebSocketTransportModel(webSocket: webSocket),
             protocolNegotiation: .init()
         )
@@ -49,8 +49,8 @@ struct ClientWebSocketValidator {
 
         let (_, initial, updates): (
             UUID,
-            Response.ResultModel.BlockchainModel.HeadersModel.SubscribeModel,
-            AsyncThrowingStream<Response.ResultModel.BlockchainModel.HeadersModel.SubscribeNotificationModel, Swift.Error>
+            FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.SubscribeModel,
+            AsyncThrowingStream<FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.SubscribeNotificationModel, Swift.Error>
         ) = try await client.subscribe(
             method: .blockchain(.headers(.subscribe)),
             options: .init(timeout: .seconds(30))

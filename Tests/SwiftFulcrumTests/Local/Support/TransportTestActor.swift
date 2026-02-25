@@ -21,11 +21,11 @@ actor TransportTestActor: TransportableModel {
     private var outgoingQueue: [URLSessionWebSocketTask.Message] = .init()
     private var pendingOutgoingContinuations: [CheckedContinuation<URLSessionWebSocketTask.Message, Never>] = .init()
     private(set) var sentMessages: [URLSessionWebSocketTask.Message] = .init()
-    private var connectDelay: Duration?
-    private var outgoingSendDelay: Duration?
+    var connectDelay: Duration?
+    var outgoingSendDelay: Duration?
 
-    private var reconnectFailure: Swift.Error?
-    private var reconnectAttempts = 0
+    var reconnectFailure: Swift.Error?
+    var reconnectAttempts = 0
 
     init(endpoint: URL = URL(string: "wss://example.invalid")!) {
         self.currentEndpoint = endpoint
@@ -121,22 +121,6 @@ actor TransportTestActor: TransportableModel {
     func updateLogger(_ handler: LogModel.HandlerModel?) async { _ = handler }
 
     func registerQuietResponse(for identifier: UUID) async { _ = identifier }
-
-    func setReconnectFailure(_ error: Swift.Error?) {
-        reconnectFailure = error
-    }
-    
-    func setOutgoingSendDelay(_ delay: Duration?) {
-        outgoingSendDelay = delay
-    }
-    
-    func setConnectDelay(_ delay: Duration?) {
-        connectDelay = delay
-    }
-
-    func makeReconnectAttempts() -> Int {
-        reconnectAttempts
-    }
 
     func enqueueIncoming(_ message: URLSessionWebSocketTask.Message) {
         incomingBuffer.append(.success(message))

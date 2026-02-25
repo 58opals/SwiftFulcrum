@@ -103,8 +103,8 @@ extension FulcrumClient {
         
         try await ensureClientIsReadyForRequests(within: options.timeout)
         
-        let token = options.cancellation?.token ?? Client.CallModel.TokenModel()
-        let effectiveOptions = Client.CallModel.OptionsModel(timeout: options.timeout, token: token)
+        let token = options.cancellation?.token ?? FulcrumNetworkClient.CallModel.TokenModel()
+        let effectiveOptions = FulcrumNetworkClient.CallModel.OptionsModel(timeout: options.timeout, token: token)
         do {
             let (identifier, initial, updates): (UUID, Initial, AsyncThrowingStream<Notification, Swift.Error>) =
             try await client.subscribe(method: method, options: effectiveOptions)

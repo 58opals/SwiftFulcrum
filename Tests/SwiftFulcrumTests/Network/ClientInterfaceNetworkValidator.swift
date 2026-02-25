@@ -19,7 +19,7 @@ struct ClientInterfaceNetworkValidator {
         try await NetworkTestClient.runWithClient(url) { client in
             let response = try await client.submit(
                 method: .blockchain(.headers(.getTip)),
-                responseType: Response.ResultModel.BlockchainModel.HeadersModel.GetTipModel.self,
+                responseType: FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.GetTipModel.self,
                 options: .init(timeout: .seconds(30))
             )
 
@@ -45,7 +45,7 @@ struct ClientInterfaceNetworkValidator {
         // Avoid calling start() directly to exercise prepareClientForRequests.
         let response = try await client.submit(
             method: .blockchain(.headers(.getTip)),
-            responseType: Response.ResultModel.BlockchainModel.HeadersModel.GetTipModel.self,
+            responseType: FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.GetTipModel.self,
             options: .init(timeout: .seconds(30))
         )
 
@@ -73,8 +73,8 @@ struct ClientInterfaceNetworkValidator {
         try await NetworkTestClient.runWithClient(url) { client in
             let (initial, updates, cancel) = try await client.subscribe(
                 method: .blockchain(.headers(.subscribe)),
-                initialType: Response.ResultModel.BlockchainModel.HeadersModel.SubscribeModel.self,
-                notificationType: Response.ResultModel.BlockchainModel.HeadersModel.SubscribeNotificationModel.self,
+                initialType: FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.SubscribeModel.self,
+                notificationType: FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.SubscribeNotificationModel.self,
                 options: .init(timeout: .seconds(30), cancellation: cancellation)
             )
 
@@ -104,8 +104,8 @@ struct ClientInterfaceNetworkValidator {
         try await NetworkTestClient.runWithClient(url) { client in
             let (initial, updates, cancel) = try await client.subscribe(
                 method: .blockchain(.address(.subscribe(address: Self.testAddress))),
-                initialType: Response.ResultModel.BlockchainModel.AddressModel.SubscribeModel.self,
-                notificationType: Response.ResultModel.BlockchainModel.AddressModel.SubscribeNotificationModel.self,
+                initialType: FulcrumResponse.ResultModel.BlockchainModel.AddressModel.SubscribeModel.self,
+                notificationType: FulcrumResponse.ResultModel.BlockchainModel.AddressModel.SubscribeNotificationModel.self,
                 options: .init(timeout: .seconds(30))
             )
 
@@ -133,8 +133,8 @@ struct ClientInterfaceNetworkValidator {
         try await NetworkTestClient.runWithClient(url) { client in
             let (initial, updates, cancel) = try await client.subscribe(
                 method: .blockchain(.headers(.subscribe)),
-                initialType: Response.ResultModel.BlockchainModel.HeadersModel.SubscribeModel.self,
-                notificationType: Response.ResultModel.BlockchainModel.HeadersModel.SubscribeNotificationModel.self,
+                initialType: FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.SubscribeModel.self,
+                notificationType: FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.SubscribeNotificationModel.self,
                 options: .init(timeout: .seconds(30))
             )
 
@@ -182,7 +182,7 @@ struct ClientInterfaceNetworkValidator {
         try await NetworkTestClient.runWithClient(url) { client in
             let scriptHashResponse = try await client.submit(
                 method: .blockchain(.address(.getScriptHash(address: Self.testAddress))),
-                responseType: Response.ResultModel.BlockchainModel.AddressModel.GetScriptHashModel.self,
+                responseType: FulcrumResponse.ResultModel.BlockchainModel.AddressModel.GetScriptHashModel.self,
                 options: .init(timeout: .seconds(15))
             )
 
@@ -194,7 +194,7 @@ struct ClientInterfaceNetworkValidator {
 
             let balanceResponse = try await client.submit(
                 method: .blockchain(.address(.getBalance(address: Self.testAddress, tokenFilter: nil))),
-                responseType: Response.ResultModel.BlockchainModel.AddressModel.GetBalanceModel.self,
+                responseType: FulcrumResponse.ResultModel.BlockchainModel.AddressModel.GetBalanceModel.self,
                 options: .init(timeout: .seconds(15))
             )
 
@@ -221,7 +221,7 @@ struct ClientInterfaceNetworkValidator {
             do {
                 _ = try await client.submit(
                     method: .blockchain(.transaction(.broadcast(rawTransaction: "00"))),
-                    responseType: Response.ResultModel.BlockchainModel.TransactionModel.BroadcastModel.self,
+                    responseType: FulcrumResponse.ResultModel.BlockchainModel.TransactionModel.BroadcastModel.self,
                     options: .init(timeout: .seconds(15))
                 )
                 Issue.record("Expected broadcast to fail for invalid raw transaction")

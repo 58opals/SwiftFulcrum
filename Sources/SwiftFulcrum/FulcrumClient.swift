@@ -8,7 +8,7 @@ import Foundation
 /// requests or ``subscribe(...)`` for streaming updates, and finish by invoking ``stop()`` to
 /// release resources.
 public actor FulcrumClient {
-    let client: Client
+    let client: FulcrumNetworkClient
     
     private(set) var isRunning = false
     var desiredRunning = false
@@ -74,7 +74,7 @@ public actor FulcrumClient {
         startConnectionStateObservation()
     }
     
-    init(client: Client) async {
+    init(client: FulcrumNetworkClient) async {
         self.client = client
         startConnectionStateObservation()
     }

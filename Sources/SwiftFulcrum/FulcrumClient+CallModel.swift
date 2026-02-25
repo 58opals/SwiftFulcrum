@@ -18,7 +18,7 @@ extension FulcrumClient.CallModel {
     }
     
     public actor CancellationModel: Sendable {
-        let token: Client.CallModel.TokenModel
+        let token: FulcrumNetworkClient.CallModel.TokenModel
         
         public init() {
             self.token = .init()
@@ -35,7 +35,7 @@ extension FulcrumClient.CallModel {
 }
 
 extension FulcrumClient.CallModel.OptionsModel {
-    var clientOptions: Client.CallModel.OptionsModel {
+    var clientOptions: FulcrumNetworkClient.CallModel.OptionsModel {
         .init(timeout: timeout, token: cancellation?.token)
     }
 }

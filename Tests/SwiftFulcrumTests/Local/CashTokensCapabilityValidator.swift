@@ -47,7 +47,7 @@ struct CashTokensCapabilityValidator {
         let serializedData = try #require(serializedResponse.data(using: .utf8))
 
         let decodedResponse = try JSONDecoder().decode(
-            Response.JSONRPCModel.GenericModel<Response.JSONRPCModel.ResultModel.BlockchainModel.AddressModel.ListUnspentModel>.self,
+            FulcrumResponse.JSONRPCModel.GenericModel<FulcrumResponse.JSONRPCModel.ResultModel.BlockchainModel.AddressModel.ListUnspentModel>.self,
             from: serializedData
         )
         let listUnspentItems = try #require(decodedResponse.result)

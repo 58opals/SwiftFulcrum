@@ -18,7 +18,7 @@ struct ClientCancellationValidator {
             do {
                 _ = try await fulcrum.submit(
                     method: .blockchain(.headers(.getTip)),
-                    responseType: Response.ResultModel.BlockchainModel.HeadersModel.GetTipModel.self,
+                    responseType: FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.GetTipModel.self,
                     options: options
                 )
                 Issue.record("First submit should throw cancelled.")
@@ -34,7 +34,7 @@ struct ClientCancellationValidator {
             do {
                 _ = try await fulcrum.submit(
                     method: .mempool(.getInfo),
-                    responseType: Response.ResultModel.MempoolModel.GetInfoModel.self,
+                    responseType: FulcrumResponse.ResultModel.MempoolModel.GetInfoModel.self,
                     options: options
                 )
                 Issue.record("Second submit should throw cancelled.")
@@ -62,7 +62,7 @@ struct ClientCancellationValidator {
     @Test("submit(timeout:) does not emit a late request after timeout", .timeLimit(.minutes(1)))
     func submitTimeoutDoesNotEmitLateRequest() async throws {
         let (fulcrum, transport) = try await makeStartedFulcrum()
-        await transport.setOutgoingSendDelay(.seconds(1))
+        await transport.configureOutgoingSendDelay(.seconds(1))
         
         let baselineOutgoingCount = await transport.sentMessages.count
         
@@ -70,7 +70,7 @@ struct ClientCancellationValidator {
             do {
                 _ = try await fulcrum.submit(
                     method: .blockchain(.headers(.getTip)),
-                    responseType: Response.ResultModel.BlockchainModel.HeadersModel.GetTipModel.self,
+                    responseType: FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.GetTipModel.self,
                     options: .init(timeout: .milliseconds(100))
                 )
                 Issue.record("submit() should time out when send is delayed.")
@@ -95,7 +95,7 @@ struct ClientCancellationValidator {
     @Test("subscribe(timeout:) does not emit a late request after timeout", .timeLimit(.minutes(1)))
     func subscribeTimeoutDoesNotEmitLateRequest() async throws {
         let (fulcrum, transport) = try await makeStartedFulcrum()
-        await transport.setOutgoingSendDelay(.seconds(1))
+        await transport.configureOutgoingSendDelay(.seconds(1))
         
         let baselineOutgoingCount = await transport.sentMessages.count
         
@@ -103,8 +103,8 @@ struct ClientCancellationValidator {
             do {
                 _ = try await fulcrum.subscribe(
                     method: .blockchain(.headers(.subscribe)),
-                    initialType: Response.ResultModel.BlockchainModel.HeadersModel.SubscribeModel.self,
-                    notificationType: Response.ResultModel.BlockchainModel.HeadersModel.SubscribeNotificationModel.self,
+                    initialType: FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.SubscribeModel.self,
+                    notificationType: FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.SubscribeNotificationModel.self,
                     options: .init(timeout: .milliseconds(100))
                 )
                 Issue.record("subscribe() should time out when send is delayed.")
@@ -149,7 +149,7 @@ extension ClientCancellationValidator {
     
     func makeStartedFulcrum() async throws -> (FulcrumClient, TransportTestActor) {
         let transport = TransportTestActor()
-        let client = Client(transport: transport, protocolNegotiation: .init())
+        let client = FulcrumNetworkClient(transport: transport, protocolNegotiation: .init())
         let fulcrum = await FulcrumClient(client: client)
         try await startAndNegotiate(fulcrum, transport: transport)
         return (fulcrum, transport)
