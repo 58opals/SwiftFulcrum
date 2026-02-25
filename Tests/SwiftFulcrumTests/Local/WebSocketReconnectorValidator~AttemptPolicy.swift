@@ -3,6 +3,51 @@ import Testing
 @testable import SwiftFulcrum
 
 extension WebSocketReconnectorValidator {
+    @Test("ReconnectorModel cycles through full rotation before repeating candidates", .timeLimit(.minutes(1)))
+    func cycleThroughFullRotationBeforeRepeat() async throws {
+        let configuration = WebSocketModel.ReconnectorModel.Configuration(
+            maximumReconnectionAttempts: 2,
+            reconnectionDelay: 0.01,
+            maximumDelay: 0.01,
+            jitterRange: 1.0 ... 1.0
+        )
+
+        let current = URL(string: "wss://127.0.0.1:9")!
+        let alternate = URL(string: "wss://127.0.0.1:10")!
+        let injectedCatalog = [current, alternate]
+
+        let networkSession = URLSession(configuration: .ephemeral)
+        defer { networkSession.invalidateAndCancel() }
+
+        let webSocket = WebSocketModel(
+            url: current,
+            configuration: .init(
+                session: networkSession,
+                serverCatalogLoader: .makeConstant(injectedCatalog)
+            ),
+            reconnectConfiguration: configuration,
+            connectionTimeout: 0.05,
+            sleep: { duration in try await Task.sleep(for: duration) },
+            jitter: { _ in 1 }
+        )
+
+        do {
+            try await webSocket.reconnector.attemptReconnection(
+                for: webSocket,
+                with: nil,
+                shouldCancelReceiver: false,
+                isInitialConnection: false
+            )
+            Issue.record("Reconnection should exhaust attempts")
+        } catch {
+            let attempts = await webSocket.reconnector.attemptCount
+            #expect(attempts == configuration.maximumReconnectionAttempts)
+            #expect(await webSocket.url == current)
+        }
+
+        await webSocket.disconnect(with: "test teardown")
+    }
+
     @Test("ReconnectorModel exhausts after maximum attempts", .timeLimit(.minutes(1)))
     func exhaustAfterMaximumAttempts() async throws {
         let configuration = WebSocketModel.ReconnectorModel.Configuration(

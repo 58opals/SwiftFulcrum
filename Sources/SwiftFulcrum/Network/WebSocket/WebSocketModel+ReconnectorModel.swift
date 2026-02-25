@@ -166,10 +166,6 @@ extension WebSocketModel {
                     )
                 }
                 
-                if overrideURL == nil {
-                    rotation = try await buildCandidateRotation(preferredURL: nil, currentURL: currentURL)
-                    rotationCursor = 0
-                }
             }
             
             await webSocket.emitLog(

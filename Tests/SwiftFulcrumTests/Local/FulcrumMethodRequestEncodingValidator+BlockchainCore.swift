@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import SwiftFulcrum
 
@@ -24,6 +25,17 @@ extension FulcrumMethodRequestEncodingValidator {
             expectedPath: FulcrumMethodRequest.blockchain(.block(.header(height: 0, checkpointHeight: nil))).path,
             expectedParameters: [100, 500]
         )
+        let overflowHeaderObject = try requestObject(
+            for: .blockchain(.block(.header(height: UInt.max, checkpointHeight: nil)))
+        )
+        #expect(
+            overflowHeaderObject["method"] as? String
+            == FulcrumMethodRequest.blockchain(.block(.header(height: 0, checkpointHeight: nil))).path
+        )
+        let overflowHeaderParameters = try #require(overflowHeaderObject["params"] as? [Any])
+        #expect(overflowHeaderParameters.count == 2)
+        #expect((overflowHeaderParameters[0] as? NSNumber)?.uint64Value == UInt64.max)
+        #expect((overflowHeaderParameters[1] as? NSNumber)?.uint64Value == UInt64.max)
         try assertRequest(
             .blockchain(.block(.headers(startHeight: 200, count: 10, checkpointHeight: nil))),
             expectedPath: FulcrumMethodRequest.blockchain(.block(.headers(startHeight: 0, count: 0, checkpointHeight: nil))).path,

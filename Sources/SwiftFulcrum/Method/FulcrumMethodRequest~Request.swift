@@ -330,10 +330,17 @@ extension FulcrumMethodRequest {
                             try container.encode(checkpointHeight)
                         }
                     }
+                    let resolvedCheckpointHeight: UInt
+                    if let checkpointHeight {
+                        resolvedCheckpointHeight = checkpointHeight
+                    } else {
+                        let (incrementedHeight, didOverflow) = height.addingReportingOverflow(1)
+                        resolvedCheckpointHeight = didOverflow ? height : incrementedHeight
+                    }
                     return Request(id: uuid,
                                    method: self,
                                    params: ParametersModel(height: height,
-                                                      checkpointHeight: checkpointHeight ?? height + 1))
+                                                      checkpointHeight: resolvedCheckpointHeight))
                     
                     // MARK: BlockchainModel.BlockModel.headers
                 case .headers(let startHeight, let count, let checkpointHeight):
