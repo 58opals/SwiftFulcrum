@@ -18,16 +18,31 @@ extension Client.CallModel {
     }
     
     actor TokenModel {
-        private var handler: (@Sendable () -> Void)?
+        private var handlers: [@Sendable () -> Void] = .init()
         private var isCancellationRequested = false
         
         init() {}
         
         func register(_ handler: @escaping @Sendable () -> Void) {
-            if isCancellationRequested { handler() } else { self.handler = handler }
+            if isCancellationRequested {
+                handler()
+            } else {
+                handlers.append(handler)
+            }
         }
         
-        public func cancel() { isCancellationRequested = true; handler?() }
+        public func cancel() {
+            guard !isCancellationRequested else { return }
+            
+            isCancellationRequested = true
+            let registeredHandlers = handlers
+            handlers.removeAll(keepingCapacity: false)
+            
+            for handler in registeredHandlers {
+                handler()
+            }
+        }
+        
         public var isCancelled: Bool { isCancellationRequested }
     }
 }

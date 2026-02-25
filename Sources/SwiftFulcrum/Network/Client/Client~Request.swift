@@ -21,46 +21,23 @@ extension Client {
             await transport.registerQuietResponse(for: id)
         }
         
+        let callTask = Task<Data, Swift.Error> { try await executeUnaryRequest(id: id, request: request) }
+        
         if let token = options.token {
             await token.register { [weak self] in
                 Task {
+                    callTask.cancel()
                     guard let self else { return }
-                    await self.cancelUnary(id)
+                    await self.cancelUnary(id, error: FulcrumClient.Error.client(.cancelled))
                 }
             }
         }
         
         if let token = options.token, await token.isCancelled {
-            await self.cancelUnary(id)
+            callTask.cancel()
+            await self.cancelUnary(id, error: FulcrumClient.Error.client(.cancelled))
             throw FulcrumClient.Error.client(.cancelled)
         }
-        
-        let callTask = Task<Data, Swift.Error> {
-            try await withTaskCancellationHandler {
-                try await withCheckedThrowingContinuation { continuation in
-                    Task {
-                        do {
-                            let inflightCount = try await router.addUnary(id: id, continuation: continuation)
-                            await publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightCount)
-                        } catch {
-                            continuation.resume(throwing: error)
-                            return
-                        }
-                        
-                        do {
-                            try await send(request: request)
-                        } catch {
-                            await cancelUnary(id, error: error)
-                        }
-                    }
-                }
-            } onCancel: {
-                Task {
-                    await self.cancelUnary(id)
-                }
-            }
-        }
-        
         
         let raw: Data
         if let limit = options.timeout {
@@ -72,6 +49,7 @@ extension Client {
                     await self.cancelUnary(id)
                     throw FulcrumClient.Error.client(.timeout(limit))
                 }
+                
                 let value = try await group.next()!
                 group.cancelAll()
                 return value
@@ -116,39 +94,29 @@ extension Client {
                         requestIdentifier: id
                     )
                     
-                    let initial: Initial = try await withCheckedThrowingContinuation { continuation in
-                        Task {
-                            do {
-                                let inflightCount = try await router.addUnary(id: id, continuation: continuation)
-                                await publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightCount)
-                            } catch {
-                                continuation.resume(throwing: error)
-                                return
-                            }
-                            
-                            do {
-                                try await send(request: request)
-                            } catch {
-                                await self.cleanUpSubscriptionSetup(
-                                    for: subscriptionKey,
-                                    requestIdentifier: id,
-                                    error: error
-                                )
-                            }
-                        }
-                    }.decode(
+                    let initialRawStream = try await registerUnaryResponse(for: id)
+                    
+                    try Task.checkCancellation()
+                    try await send(request: request)
+                    
+                    let initialRaw = try await awaitUnaryResponse(from: initialRawStream)
+                    let initial = try initialRaw.decode(
                         Initial.self,
                         context: .init(methodPath: method.path)
                     )
                     
-                    let typedStream: AsyncThrowingStream<Notification, Swift.Error> = rawStream.decode(Notification.self, context: .init(methodPath: method.path))
+                    let typedStream = rawStream.decode(
+                        Notification.self,
+                        context: .init(methodPath: method.path)
+                    )
                     
                     return (id, initial, typedStream)
                 } onCancel: {
                     Task {
                         await self.cleanUpSubscriptionSetup(
                             for: subscriptionKey,
-                            requestIdentifier: id
+                            requestIdentifier: id,
+                            error: FulcrumClient.Error.client(.cancelled)
                         )
                     }
                 }
@@ -166,6 +134,7 @@ extension Client {
             let idCopy = id
             await token.register { [weak self] in
                 Task {
+                    subscriptionTask.cancel()
                     guard let self else { return }
                     let cleanupKey = SubscriptionKeyModel(
                         methodPath: subscriptionPath,
@@ -180,14 +149,32 @@ extension Client {
             }
         }
         
+        if let token = options.token, await token.isCancelled {
+            subscriptionTask.cancel()
+            await self.cleanUpSubscriptionSetup(
+                for: subscriptionKey,
+                requestIdentifier: id,
+                error: FulcrumClient.Error.client(.cancelled)
+            )
+            throw FulcrumClient.Error.client(.cancelled)
+        }
+        
         if let limit = options.timeout {
-            return try await withThrowingTaskGroup(of: (UUID, Initial, AsyncThrowingStream<Notification, Swift.Error>).self) { group in
+            return try await withThrowingTaskGroup(
+                of: (UUID, Initial, AsyncThrowingStream<Notification, Swift.Error>).self
+            ) { group in
                 group.addTask { try await subscriptionTask.value }
                 group.addTask {
                     try await Task.sleep(for: limit)
                     subscriptionTask.cancel()
+                    await self.cleanUpSubscriptionSetup(
+                        for: subscriptionKey,
+                        requestIdentifier: id,
+                        error: FulcrumClient.Error.client(.timeout(limit))
+                    )
                     throw FulcrumClient.Error.client(.timeout(limit))
                 }
+                
                 let value = try await group.next()!
                 group.cancelAll()
                 return value
@@ -199,9 +186,56 @@ extension Client {
 }
 
 extension Client {
+    private func executeUnaryRequest(id: UUID, request: Request) async throws -> Data {
+        try await withTaskCancellationHandler {
+            let responseStream = try await registerUnaryResponse(for: id)
+            
+            do {
+                try Task.checkCancellation()
+                try await send(request: request)
+                return try await awaitUnaryResponse(from: responseStream)
+            } catch {
+                if error is CancellationError {
+                    await cancelUnary(id, error: FulcrumClient.Error.client(.cancelled))
+                    throw FulcrumClient.Error.client(.cancelled)
+                }
+                await cancelUnary(id, error: error)
+                throw error
+            }
+        } onCancel: {
+            Task {
+                await self.cancelUnary(id, error: FulcrumClient.Error.client(.cancelled))
+            }
+        }
+    }
+    
+    private func registerUnaryResponse(for id: UUID) async throws -> AsyncThrowingStream<Data, Swift.Error> {
+        let (responseStream, responseContinuation) = AsyncThrowingStream<Data, Swift.Error>.makeStream()
+        let inflightCount = try await router.addUnary(id: id, continuation: responseContinuation)
+        await publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightCount)
+        return responseStream
+    }
+    
+    private func awaitUnaryResponse(
+        from responseStream: AsyncThrowingStream<Data, Swift.Error>
+    ) async throws -> Data {
+        var iterator = responseStream.makeAsyncIterator()
+        
+        guard let payload = try await iterator.next() else {
+            throw FulcrumClient.Error.client(.cancelled)
+        }
+        
+        return payload
+    }
+}
+
+extension Client {
     func send(request: Request) async throws {
+        try Task.checkCancellation()
+        
         if case .server(.version) = request.requestedMethod {
             guard let data = request.data else { throw FulcrumClient.Error.coding(.encode(nil)) }
+            try Task.checkCancellation()
             try await self.send(data: data)
             return
         }
@@ -209,6 +243,7 @@ extension Client {
         _ = try await ensureNegotiatedProtocol()
         
         guard let data = request.data else { throw FulcrumClient.Error.coding(.encode(nil)) }
+        try Task.checkCancellation()
         try await self.send(data: data)
     }
     

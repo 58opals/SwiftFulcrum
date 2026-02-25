@@ -21,6 +21,7 @@ actor TransportTestActor: TransportableModel {
     private var outgoingQueue: [URLSessionWebSocketTask.Message] = .init()
     private var pendingOutgoingContinuations: [CheckedContinuation<URLSessionWebSocketTask.Message, Never>] = .init()
     private(set) var sentMessages: [URLSessionWebSocketTask.Message] = .init()
+    private var outgoingSendDelay: Duration?
 
     private var reconnectFailure: Swift.Error?
     private var reconnectAttempts = 0
@@ -54,10 +55,12 @@ actor TransportTestActor: TransportableModel {
     }
 
     func send(data: Data) async throws {
+        try await applyOutgoingSendDelayIfNeeded()
         recordOutgoing(.data(data))
     }
 
     func send(string: String) async throws {
+        try await applyOutgoingSendDelayIfNeeded()
         recordOutgoing(.string(string))
     }
 
@@ -120,6 +123,10 @@ actor TransportTestActor: TransportableModel {
     func setReconnectFailure(_ error: Swift.Error?) {
         reconnectFailure = error
     }
+    
+    func setOutgoingSendDelay(_ delay: Duration?) {
+        outgoingSendDelay = delay
+    }
 
     func makeReconnectAttempts() -> Int {
         reconnectAttempts
@@ -149,6 +156,11 @@ actor TransportTestActor: TransportableModel {
         sentMessages.append(message)
         outgoingQueue.append(message)
         resolvePendingOutgoingContinuations()
+    }
+    
+    private func applyOutgoingSendDelayIfNeeded() async throws {
+        guard let outgoingSendDelay else { return }
+        try await Task.sleep(for: outgoingSendDelay)
     }
 
     private func resolvePendingOutgoingContinuations() {

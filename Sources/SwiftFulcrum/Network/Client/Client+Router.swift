@@ -5,7 +5,7 @@ import Foundation
 extension Client {
     actor Router {
         private enum PendingModel {
-            case unary(CheckedContinuation<Data, Swift.Error>)
+            case unary(AsyncThrowingStream<Data, Swift.Error>.Continuation)
             case stream(AsyncThrowingStream<Data, Swift.Error>.Continuation)
         }
         
@@ -16,7 +16,7 @@ extension Client {
         func makeInflightUnaryCallCount() -> Int { inflightUnaryCallCount }
         
         @discardableResult
-        func addUnary(id: UUID, continuation: CheckedContinuation<Data, Swift.Error>) throws -> Int {
+        func addUnary(id: UUID, continuation: AsyncThrowingStream<Data, Swift.Error>.Continuation) throws -> Int {
             let key: Response.IdentifierModel = .uuid(id)
             guard table[key] == nil else { throw FulcrumClient.Error.client(.duplicateHandler) }
             table[key] = .unary(continuation)
@@ -47,7 +47,7 @@ extension Client {
             guard let entry = table.removeValue(forKey: identifier) else { return nil }
             switch entry {
             case .unary(let continuation):
-                continuation.resume(throwing: error ?? FulcrumClient.Error.client(.cancelled))
+                continuation.finish(throwing: error ?? FulcrumClient.Error.client(.cancelled))
                 inflightUnaryCallCount = max(inflightUnaryCallCount - 1, 0)
                 return inflightUnaryCallCount
             case .stream(let continuation):
@@ -68,7 +68,7 @@ extension Client {
             for pending in entries.values {
                 switch pending {
                 case .unary(let continuation):
-                    continuation.resume(throwing: error)
+                    continuation.finish(throwing: error)
                 case .stream(let continuation):
                     continuation.finish(throwing: error)
                 }
@@ -83,7 +83,7 @@ extension Client {
                 switch pending {
                 case .unary(let checkedContinuation):
                     table.removeValue(forKey: identifier)
-                    checkedContinuation.resume(throwing: error)
+                    checkedContinuation.finish(throwing: error)
                     inflightUnaryCallCount = max(inflightUnaryCallCount - 1, 0)
                 case .stream:
                     continue
@@ -97,7 +97,8 @@ extension Client {
             guard let entry = table[identifier] else { return nil }
             switch entry {
             case .unary(let continuation):
-                continuation.resume(returning: raw)
+                continuation.yield(raw)
+                continuation.finish()
                 table.removeValue(forKey: identifier)
                 inflightUnaryCallCount = max(inflightUnaryCallCount - 1, 0)
                 return inflightUnaryCallCount
