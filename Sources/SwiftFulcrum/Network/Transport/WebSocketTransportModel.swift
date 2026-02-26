@@ -64,7 +64,7 @@ actor WebSocketTransportModel: TransportableModel {
     
     func updateMetrics(_ collector: MetricsClient?) async { await webSocket.updateMetrics(collector) }
     
-    func updateLogger(_ handler: LogModel.HandlerModel?) async { await webSocket.updateLogger(handler) }
+    func updateLogger(_ handler: LogModel.AdapterModel?) async { await webSocket.updateLogger(handler) }
     
     func registerQuietResponse(for identifier: UUID) async { await webSocket.registerQuietResponse(for: identifier) }
     

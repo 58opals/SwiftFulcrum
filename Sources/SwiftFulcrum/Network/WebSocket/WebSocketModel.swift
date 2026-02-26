@@ -12,7 +12,7 @@ actor WebSocketModel {
     var messageContinuation: AsyncThrowingStream<URLSessionWebSocketTask.Message, Swift.Error>.Continuation?
     
     let reconnector: ReconnectorModel
-    var logger: LogModel.HandlerModel
+    var logger: LogModel.AdapterModel
     
     var reconnectAttemptCount = 0
     var reconnectSuccessCount = 0
@@ -58,7 +58,7 @@ actor WebSocketModel {
         self.network = configuration.network
         
         self.metrics = configuration.metrics
-        self.logger = configuration.logger ?? LogModel.ConsoleHandlerModel()
+        self.logger = configuration.logger ?? LogModel.ConsoleAdapterModel()
         self.tlsDescriptor = configuration.tlsDescriptor
         self.maximumMessageSize = configuration.maximumMessageSize
         

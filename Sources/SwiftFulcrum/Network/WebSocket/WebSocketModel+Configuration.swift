@@ -10,7 +10,7 @@ extension WebSocketModel {
         let session: URLSession?
         let tlsDescriptor: TLSDescriptorModel?
         let metrics: MetricsClient?
-        let logger: LogModel.HandlerModel?
+        let logger: LogModel.AdapterModel?
         let maximumMessageSize: Int
         let serverCatalogLoader: FulcrumServerCatalogRepository
         let network: FulcrumClient.Configuration.NetworkModel
@@ -18,7 +18,7 @@ extension WebSocketModel {
         init(session: URLSession? = nil,
              tlsDescriptor: TLSDescriptorModel? = nil,
              metrics: MetricsClient? = nil,
-             logger: LogModel.HandlerModel? = nil,
+             logger: LogModel.AdapterModel? = nil,
              maximumMessageSize: Int = defaultMaximumMessageSize,
              serverCatalogLoader: FulcrumServerCatalogRepository = .bundled,
              network: FulcrumClient.Configuration.NetworkModel = .mainnet) {
@@ -36,7 +36,7 @@ extension WebSocketModel {
         self.metrics = collector
     }
     
-    func updateLogger(_ handler: LogModel.HandlerModel?) {
-        self.logger = handler ?? LogModel.NoOpHandlerModel()
+    func updateLogger(_ handler: LogModel.AdapterModel?) {
+        self.logger = handler ?? LogModel.NoOperationAdapterModel()
     }
 }

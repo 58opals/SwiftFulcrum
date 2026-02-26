@@ -50,6 +50,6 @@ public struct NetworkTestClient {
     public static func pickServerURL(
         network: FulcrumClient.Configuration.NetworkModel = .mainnet
     ) async throws -> URL {
-        try await TestEndpointResolver.resolveServerURL(network: network)
+        try await TestEndpointPolicy.resolveServerURL(network: network)
     }
 }
