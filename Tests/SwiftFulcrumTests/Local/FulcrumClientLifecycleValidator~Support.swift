@@ -105,5 +105,29 @@ extension FulcrumClientLifecycleValidator {
 
         return await collector.snapshot()
     }
+    
+    func detectConnectionStateStreamTermination(
+        _ stream: AsyncStream<FulcrumClient.ConnectionState>,
+        within timeout: Duration
+    ) async -> Bool {
+        await withTaskGroup(of: Bool.self) { group in
+            group.addTask {
+                var iterator = stream.makeAsyncIterator()
+                while let _ = await iterator.next() {
+                    // Keep draining until the stream terminates.
+                }
+                return true
+            }
+            
+            group.addTask {
+                try? await Task.sleep(for: timeout)
+                return false
+            }
+            
+            let result = await group.next() ?? false
+            group.cancelAll()
+            return result
+        }
+    }
 
 }
