@@ -171,7 +171,13 @@ extension FulcrumServerCatalogRepository {
     }, kind: .bundled)
     
     public static func makeConstant(_ servers: [URL]) -> Self {
-        Self(load: { _, _ in servers }, kind: .constant)
+        Self(load: { _, _ in
+            let sanitizedServers = sanitizeServers(servers)
+            guard !sanitizedServers.isEmpty else {
+                throw FulcrumClient.Error.transport(.setupFailed)
+            }
+            return sanitizedServers
+        }, kind: .constant)
     }
     
     static func sanitizeServers(_ servers: [URL]) -> [URL] {
