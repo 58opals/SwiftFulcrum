@@ -3,10 +3,10 @@
 import Foundation
 
 extension FulcrumClient {
-    /// Issues a unary JSONModel-RPC request and waits for its decoded response.
+    /// Issues a unary JSON-RPC request and waits for its decoded response.
     ///
-    /// - ParametersModel:
-    ///   - method: RPC method to invoke. SubscriptionModel methods are rejected.
+    /// - Parameters:
+    ///   - method: RPC method to invoke. Subscription methods are rejected.
     ///   - responseType: Expected result model for decoding.
     ///   - options: Optional timeout and cancellation controls. Cancelling the calling task cancels the request.
     public func submit<RegularResponseResult: JSONRPCResponse>(
@@ -32,8 +32,8 @@ extension FulcrumClient {
     
     /// Starts a subscription and returns the initial response plus an update stream.
     ///
-    /// - ParametersModel:
-    ///   - method: SubscriptionModel RPC method to invoke.
+    /// - Parameters:
+    ///   - method: Subscription RPC method to invoke.
     ///   - initialType: Expected model for decoding the initial response.
     ///   - notificationType: Expected model for decoding subscription updates.
     ///   - options: Optional timeout and cancellation controls. Cancelling the calling task cancels the subscription setup.

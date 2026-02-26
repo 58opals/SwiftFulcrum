@@ -2,7 +2,7 @@
 
 import Foundation
 
-/// Actor-based entry point for interacting with FulcrumClient servers over WebSocketModel RPC.
+/// Actor-based entry point for interacting with Fulcrum servers over WebSocket JSON-RPC.
 ///
 /// Create an instance, call ``start()`` to establish connectivity, use ``submit(...)`` for unary
 /// requests or ``subscribe(...)`` for streaming updates, and finish by invoking ``stop()`` to
@@ -17,9 +17,10 @@ public actor FulcrumClient {
     var connectionStateObservationTask: Task<Void, Never>?
     var connectionStateContinuationsBySubscriberIdentifier: [UUID: AsyncStream<ConnectionState>.Continuation] = .init()
     
-    /// Creates a FulcrumClient client.
-    /// - ParametersModel:
-    ///   - url: Optional WebSocketModel endpoint. When omitted, the client downloads bundled server catalogs for the configured network.
+    /// Creates a Fulcrum client.
+    /// - Parameters:
+    ///   - url: Optional WebSocket endpoint. When omitted, the client loads servers using
+    ///     `configuration.serverCatalogLoader` for the configured network.
     ///   - configuration: Custom connection behavior including TLS, reconnection, metrics, and logging hooks.
     /// - Throws: ``FulcrumClient.Error`` when the transport cannot be prepared.
     public init(url: String? = nil, configuration: Configuration = .init()) async throws {

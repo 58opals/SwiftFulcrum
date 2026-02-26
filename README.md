@@ -285,7 +285,7 @@ let fulcrum = try await FulcrumClient(configuration: configuration)
 Notes:
 
 * `FulcrumServerCatalogRepository.bundled` loads from the package’s bundled JSON catalogs (`servers.mainnet.json` / `servers.testnet.json`).
-* `FulcrumServerCatalogRepository.makeConstant(...)` expects you to provide valid `ws://` or `wss://` URLs.
+* `FulcrumServerCatalogRepository.makeConstant(...)` filters out invalid URL schemes and throws `FulcrumClient.Error.transport(.setupFailed)` when no valid `ws://` or `wss://` URLs remain.
 * SwiftFulcrum throws `FulcrumClient.Error.transport(.setupFailed)` when it cannot resolve any valid servers.
 
 ## Timeouts and cancellation
