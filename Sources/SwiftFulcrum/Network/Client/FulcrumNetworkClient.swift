@@ -8,7 +8,7 @@ actor FulcrumNetworkClient {
     var jsonRPC: JSONRPCModel
     let router: Router
     let metrics: MetricsClient?
-    let logger: LogModel.HandlerModel
+    let logger: LogModel.AdapterModel
     let protocolNegotiation: FulcrumClient.Configuration.ProtocolNegotiationModel
     
     var state: State
@@ -27,7 +27,7 @@ actor FulcrumNetworkClient {
     
     init(transport: TransportableModel,
          metrics: MetricsClient? = nil,
-         logger: LogModel.HandlerModel? = nil,
+         logger: LogModel.AdapterModel? = nil,
          heartbeatInterval: Duration = .seconds(25),
          heartbeatTimeout: Duration = .seconds(10),
          protocolNegotiation: FulcrumClient.Configuration.ProtocolNegotiationModel) {
@@ -37,7 +37,7 @@ actor FulcrumNetworkClient {
         self.router = .init()
         self.metrics = metrics
         self.subscriptionMethods = .init()
-        self.logger = logger ?? LogModel.ConsoleHandlerModel()
+        self.logger = logger ?? LogModel.ConsoleAdapterModel()
         self.protocolNegotiation = protocolNegotiation
         self.state = .init()
         self.rpcHeartbeatInterval = heartbeatInterval

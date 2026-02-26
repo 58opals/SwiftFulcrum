@@ -1,9 +1,9 @@
-// LogModel~ConsoleHandler.swift
+// LogModel~ConsoleAdapter.swift
 
 import Foundation
 
 extension LogModel {
-    public struct ConsoleHandlerModel: LogModel.HandlerModel {
+    public struct ConsoleAdapterModel: LogModel.AdapterModel {
         private let dateProvider: @Sendable () -> Date
         private let minimumLevel: LevelModel?
         
@@ -132,7 +132,7 @@ extension LogModel {
     }
 }
 
-extension LogModel.ConsoleHandlerModel {
+extension LogModel.ConsoleAdapterModel {
     struct EntryModel: Sendable {
         let level: LogModel.LevelModel
         let timestamp: String
@@ -144,7 +144,7 @@ extension LogModel.ConsoleHandlerModel {
     }
 }
 
-extension LogModel.ConsoleHandlerModel {
+extension LogModel.ConsoleAdapterModel {
     public actor OutputSinkModel: Sendable {
         public static let shared = OutputSinkModel()
         

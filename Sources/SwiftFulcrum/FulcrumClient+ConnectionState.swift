@@ -52,6 +52,9 @@ extension FulcrumClient {
     }
     
     func resetConnectionStateStream() async {
+        for continuation in connectionStateContinuationsBySubscriberIdentifier.values {
+            continuation.finish()
+        }
         connectionStateContinuationsBySubscriberIdentifier.removeAll(keepingCapacity: false)
     }
     

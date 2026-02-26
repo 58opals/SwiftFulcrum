@@ -118,7 +118,7 @@ actor TransportTestActor: TransportableModel {
 
     func updateMetrics(_ collector: MetricsClient?) async { _ = collector }
 
-    func updateLogger(_ handler: LogModel.HandlerModel?) async { _ = handler }
+    func updateLogger(_ handler: LogModel.AdapterModel?) async { _ = handler }
 
     func registerQuietResponse(for identifier: UUID) async { _ = identifier }
 

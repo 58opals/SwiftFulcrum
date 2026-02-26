@@ -33,7 +33,7 @@ extension LogModel {
         }
     }
     
-    public protocol HandlerModel: Sendable {
+    public protocol AdapterModel: Sendable {
         func log(_ level: LevelModel,
                  _ message: @autoclosure () -> String,
                  metadata: [String: String]?,
@@ -41,7 +41,7 @@ extension LogModel {
     }
 }
 
-extension LogModel.HandlerModel {
+extension LogModel.AdapterModel {
     func trace(_ message: @autoclosure () -> String,
                metadata: [String: String]? = nil,
                file: String = #fileID, function: String = #function, line: UInt = #line) {
@@ -86,7 +86,7 @@ extension LogModel.HandlerModel {
 }
 
 extension LogModel {
-    public struct NoOpHandlerModel: LogModel.HandlerModel {
+    public struct NoOperationAdapterModel: LogModel.AdapterModel {
         public init() {}
         public func log(_ level: LogModel.LevelModel, _ message: @autoclosure () -> String, metadata: [String : String]?, file: String, function: String, line: UInt) {}
     }

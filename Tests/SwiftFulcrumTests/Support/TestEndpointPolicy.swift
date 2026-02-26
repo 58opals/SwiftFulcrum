@@ -1,7 +1,7 @@
 import Foundation
 import SwiftFulcrum
 
-enum TestEndpointResolver {
+enum TestEndpointPolicy {
     private static let fixedServerURLKey = "SWIFTFULCRUM_TEST_SERVER_URL"
 
     static func resolveServerURL(

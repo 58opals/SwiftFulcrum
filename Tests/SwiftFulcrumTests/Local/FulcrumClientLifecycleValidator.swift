@@ -127,5 +127,19 @@ struct FulcrumClientLifecycleValidator {
             #expect(connectedIndex <= disconnectedIndex)
         }
     }
+    
+    @Test("connection state stream terminates on stop()", .timeLimit(.minutes(1)))
+    func connectionStateStreamTerminatesWhenStopped() async throws {
+        let (fulcrum, _) = try await makeStartedFulcrum()
+        let stream = await fulcrum.makeConnectionStateStream()
+        
+        await fulcrum.stop()
+        
+        let terminated = await detectConnectionStateStreamTermination(
+            stream,
+            within: .seconds(1)
+        )
+        #expect(terminated)
+    }
 
 }

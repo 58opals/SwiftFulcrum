@@ -58,7 +58,7 @@ extension FulcrumClient {
         public var tlsDescriptor: TLSDescriptorModel?
         public var reconnect: ReconnectModel
         public var metrics: MetricsClient?
-        public var logger: LogModel.HandlerModel?
+        public var logger: LogModel.AdapterModel?
         public var isLoggingEnabled: Bool
         public var urlSession: URLSession?
         public var connectionTimeout: TimeInterval
@@ -74,7 +74,7 @@ extension FulcrumClient {
             tlsDescriptor: TLSDescriptorModel? = nil,
             reconnect: ReconnectModel = .basic,
             metrics: MetricsClient? = nil,
-            logger: LogModel.HandlerModel? = nil,
+            logger: LogModel.AdapterModel? = nil,
             isLoggingEnabled: Bool = true,
             urlSession: URLSession? = nil,
             connectionTimeout: TimeInterval = 10,
@@ -115,8 +115,8 @@ extension FulcrumClient.Configuration {
         )
     }
     
-    var resolvedLogger: LogModel.HandlerModel? {
-        guard isLoggingEnabled else { return LogModel.NoOpHandlerModel() }
+    var resolvedLogger: LogModel.AdapterModel? {
+        guard isLoggingEnabled else { return LogModel.NoOperationAdapterModel() }
         return logger
     }
 }
@@ -171,7 +171,13 @@ extension FulcrumServerCatalogRepository {
     }, kind: .bundled)
     
     public static func makeConstant(_ servers: [URL]) -> Self {
-        Self(load: { _, _ in servers }, kind: .constant)
+        Self(load: { _, _ in
+            let sanitizedServers = sanitizeServers(servers)
+            guard !sanitizedServers.isEmpty else {
+                throw FulcrumClient.Error.transport(.setupFailed)
+            }
+            return sanitizedServers
+        }, kind: .constant)
     }
     
     static func sanitizeServers(_ servers: [URL]) -> [URL] {

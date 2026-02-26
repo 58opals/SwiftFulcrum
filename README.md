@@ -15,7 +15,7 @@ It ships with a strongly-typed RPC surface (`FulcrumMethodRequest` + `FulcrumRes
 - **Automatic bootstrap, failover, and resubscription.** Pass an explicit WebSocket URL, or let SwiftFulcrum select from the bundled mainnet/testnet server catalogs. Reconnects use exponential backoff with jitter, and stored subscriptions are re-issued after reconnect.
 - **RPC heartbeat.** After connecting, SwiftFulcrum periodically issues `server.ping` (defaults: 25 s interval, 10 s timeout) to detect stalled connections and trigger a reconnect.
 - **Actor-isolated concurrency.** `FulcrumClient`, `FulcrumNetworkClient`, and `WebSocketModel` are actors that encapsulate state, request routing, and stream lifecycles.
-- **First-class observability.** Plug in custom `LogModel.HandlerModel` implementations and `MetricsClient` collectors to observe connect/disconnect, send/receive, pings, diagnostics snapshots, and subscription registry changes.
+- **First-class observability.** Plug in custom `LogModel.AdapterModel` implementations and `MetricsClient` collectors to observe connect/disconnect, send/receive, pings, diagnostics snapshots, and subscription registry changes.
 - **Connection state + diagnostics.** Consume an `AsyncStream<FulcrumClient.ConnectionState>`, query `makeDiagnosticsSnapshot()`, and inspect `listSubscriptions()`.
 - **Configurable server catalogs.** Use the bundled catalogs, inject your own `FulcrumServerCatalogRepository`, or supply a bootstrap fallback list.
 - **Opt-in quiet logging for scoped work.** Use `LogModel.perform(withBehavior: .quiet) { ... }` to suppress normal logs for noisy operations.
@@ -285,7 +285,7 @@ let fulcrum = try await FulcrumClient(configuration: configuration)
 Notes:
 
 * `FulcrumServerCatalogRepository.bundled` loads from the package’s bundled JSON catalogs (`servers.mainnet.json` / `servers.testnet.json`).
-* `FulcrumServerCatalogRepository.makeConstant(...)` expects you to provide valid `ws://` or `wss://` URLs.
+* `FulcrumServerCatalogRepository.makeConstant(...)` filters out invalid URL schemes and throws `FulcrumClient.Error.transport(.setupFailed)` when no valid `ws://` or `wss://` URLs remain.
 * SwiftFulcrum throws `FulcrumClient.Error.transport(.setupFailed)` when it cannot resolve any valid servers.
 
 ## Timeouts and cancellation

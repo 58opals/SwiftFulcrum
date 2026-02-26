@@ -22,7 +22,7 @@ protocol TransportableModel: Sendable {
     func makeDiagnosticsSnapshot() async -> FulcrumClient.DiagnosticsModel.TransportSnapshotModel
     
     func updateMetrics(_ collector: MetricsClient?) async
-    func updateLogger(_ handler: LogModel.HandlerModel?) async
+    func updateLogger(_ handler: LogModel.AdapterModel?) async
     
     func registerQuietResponse(for identifier: UUID) async
 }
