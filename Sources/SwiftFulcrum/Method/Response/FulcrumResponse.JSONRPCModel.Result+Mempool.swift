@@ -26,7 +26,7 @@ extension FulcrumResponse.JSONRPCModel.Result {
             public let unbroadcastcount: Int?
             public let isFullReplaceByFeeEnabled: Bool?
 
-            enum CodingKeysModel: String, CodingKey {
+            enum CodingKeys: String, CodingKey {
                 case mempoolminfee
                 case minrelaytxfee
                 case incrementalrelayfee
@@ -35,7 +35,7 @@ extension FulcrumResponse.JSONRPCModel.Result {
             }
 
             public init(from decoder: Decoder) throws {
-                let container = try decoder.container(keyedBy: CodingKeysModel.self)
+                let container = try decoder.container(keyedBy: CodingKeys.self)
                 self.mempoolminfee = try container.decodeIfPresent(FlexibleNumber.self, forKey: .mempoolminfee)
                 self.minrelaytxfee = try container.decodeIfPresent(FlexibleNumber.self, forKey: .minrelaytxfee)
                 self.incrementalrelayfee = try container.decodeIfPresent(FlexibleNumber.self, forKey: .incrementalrelayfee)

@@ -156,9 +156,9 @@ extension FulcrumResponse.JSONRPCModel.Result.Blockchain {
                     public typealias Subscribe = SubscribeParameters
                     public enum SubscribeParameters: Decodable, Sendable {
                         case dsProof(Get?)
-                        case transactionHashAndDSProof([TransactionHashAndDSProof])
+                        case transactionHashAndDSProof([TransactionHashAndDS])
                         
-                        public enum TransactionHashAndDSProof: Decodable, Sendable {
+                        public enum TransactionHashAndDS: Decodable, Sendable {
                             case transactionHash(String)
                             case dsProof(Get)
                             
@@ -175,7 +175,7 @@ extension FulcrumResponse.JSONRPCModel.Result.Blockchain {
                                     return
                                 }
                                 
-                                throw DecodingError.typeMismatch(TransactionHashAndDSProof.self,
+                                throw DecodingError.typeMismatch(TransactionHashAndDS.self,
                                                                  .init(codingPath: decoder.codingPath,
                                                                        debugDescription: "Expected transaction hash or double-spending proof"))
                             }
@@ -194,7 +194,7 @@ extension FulcrumResponse.JSONRPCModel.Result.Blockchain {
                                 return
                             }
                             
-                            if let stringAndUGetResult = try? container.decode([TransactionHashAndDSProof].self) {
+                            if let stringAndUGetResult = try? container.decode([TransactionHashAndDS].self) {
                                 self = .transactionHashAndDSProof(stringAndUGetResult)
                                 return
                             }

@@ -37,7 +37,7 @@ extension FulcrumResponse.JSONRPCModel.Result {
                 public let rpa: ReusablePaymentAddress?
                 public let hasBroadcastPackageSupport: Bool?
 
-                enum CodingKeysModel: String, CodingKey {
+                enum CodingKeys: String, CodingKey {
                     case genesis_hash
                     case hash_function
                     case server_version
@@ -52,7 +52,7 @@ extension FulcrumResponse.JSONRPCModel.Result {
                 }
 
                 public init(from decoder: Decoder) throws {
-                    let container = try decoder.container(keyedBy: CodingKeysModel.self)
+                    let container = try decoder.container(keyedBy: CodingKeys.self)
 
                     self.genesis_hash = try container.decode(String.self, forKey: .genesis_hash)
                     self.hash_function = try container.decode(String.self, forKey: .hash_function)
