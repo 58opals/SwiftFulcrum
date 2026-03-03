@@ -28,7 +28,7 @@ struct WebSocketValidator {
         try await webSocket.send(data: data)
 
         var iterator = stream.makeAsyncIterator()
-        var receivedTip: FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.GetTipModel?
+        var receivedTip: FulcrumResponse.ResultModel.Blockchain.Headers.GetTip?
         while let message = try await iterator.next() {
             let payload: Data?
             switch message {
@@ -40,7 +40,7 @@ struct WebSocketValidator {
                 payload = nil
             }
 
-            if let payload, let decoded = try? payload.decode(FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.GetTipModel.self) {
+            if let payload, let decoded = try? payload.decode(FulcrumResponse.ResultModel.Blockchain.Headers.GetTip.self) {
                 receivedTip = decoded
                 break
             }

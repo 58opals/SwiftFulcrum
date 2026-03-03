@@ -58,7 +58,7 @@ extension FulcrumClient {
         public var tlsDescriptor: TLSDescriptorModel?
         public var reconnect: ReconnectModel
         public var metrics: MetricsClient?
-        public var logger: LogModel.AdapterModel?
+        public var logger: LogModel.Adapter?
         public var isLoggingEnabled: Bool
         public var urlSession: URLSession?
         public var connectionTimeout: TimeInterval
@@ -74,7 +74,7 @@ extension FulcrumClient {
             tlsDescriptor: TLSDescriptorModel? = nil,
             reconnect: ReconnectModel = .basic,
             metrics: MetricsClient? = nil,
-            logger: LogModel.AdapterModel? = nil,
+            logger: LogModel.Adapter? = nil,
             isLoggingEnabled: Bool = true,
             urlSession: URLSession? = nil,
             connectionTimeout: TimeInterval = 10,
@@ -102,7 +102,7 @@ extension FulcrumClient {
 
 extension FulcrumClient.Configuration {
     func convertToWebSocketConfiguration() -> WebSocketModel.Configuration {
-        let socketTLSDescriptor = tlsDescriptor.map { WebSocketModel.TLSDescriptorModel($0) }
+        let socketTLSDescriptor = tlsDescriptor.map { WebSocketModel.TLSDescriptor($0) }
         
         return WebSocketModel.Configuration(
             session: urlSession,
@@ -115,14 +115,14 @@ extension FulcrumClient.Configuration {
         )
     }
     
-    var resolvedLogger: LogModel.AdapterModel? {
-        guard isLoggingEnabled else { return LogModel.NoOperationAdapterModel() }
+    var resolvedLogger: LogModel.Adapter? {
+        guard isLoggingEnabled else { return LogModel.NoOperationAdapter() }
         return logger
     }
 }
 
 extension FulcrumClient.Configuration.ReconnectModel {
-    var reconnectorConfiguration: WebSocketModel.ReconnectorModel.Configuration {
+    var reconnectorConfiguration: WebSocketModel.Reconnector.Configuration {
         .init(
             maximumReconnectionAttempts: maximumReconnectionAttempts,
             reconnectionDelay: reconnectionDelay,
@@ -160,7 +160,7 @@ public struct FulcrumServerCatalogRepository: Sendable {
 extension FulcrumServerCatalogRepository {
     public static let bundled = Self(load: { network, fallback in
         try await Task.detached(priority: .utility) {
-            if let bundled = try? WebSocketModel.ServerModel.decodeBundledServers(for: network), !bundled.isEmpty {
+            if let bundled = try? WebSocketModel.Server.decodeBundledServers(for: network), !bundled.isEmpty {
                 return bundled
             }
             

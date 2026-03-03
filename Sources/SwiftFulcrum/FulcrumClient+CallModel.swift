@@ -7,18 +7,18 @@ extension FulcrumClient {
 }
 
 extension FulcrumClient.CallModel {
-    public struct OptionsModel: Sendable {
+    public struct Options: Sendable {
         public var timeout: Duration?
-        public var cancellation: CancellationModel?
+        public var cancellation: Cancellation?
         
-        public init(timeout: Duration? = nil, cancellation: CancellationModel? = nil) {
+        public init(timeout: Duration? = nil, cancellation: Cancellation? = nil) {
             self.timeout = timeout
             self.cancellation = cancellation
         }
     }
     
-    public actor CancellationModel: Sendable {
-        let token: FulcrumNetworkClient.CallModel.TokenModel
+    public actor Cancellation: Sendable {
+        let token: FulcrumNetworkClient.CallModel.Token
         
         public init() {
             self.token = .init()
@@ -34,8 +34,8 @@ extension FulcrumClient.CallModel {
     }
 }
 
-extension FulcrumClient.CallModel.OptionsModel {
-    var clientOptions: FulcrumNetworkClient.CallModel.OptionsModel {
+extension FulcrumClient.CallModel.Options {
+    var clientOptions: FulcrumNetworkClient.CallModel.Options {
         .init(timeout: timeout, token: cancellation?.token)
     }
 }

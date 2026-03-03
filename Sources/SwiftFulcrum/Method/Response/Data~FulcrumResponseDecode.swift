@@ -4,7 +4,7 @@ import Foundation
 
 extension Data {
     func decode<ResultModel: Decodable>(_ type: ResultModel.Type) throws -> ResultModel {
-        let rpcResult = try JSONRPCModel.CoderModel.decoder.decode(FulcrumResponse.JSONRPCModel.GenericModel<ResultModel>.self, from: self)
+        let rpcResult = try JSONRPCModel.Coder.decoder.decode(FulcrumResponse.JSONRPCModel.Generic<ResultModel>.self, from: self)
         let resultType = try rpcResult.determineResponseType()
         
         switch resultType {
@@ -19,9 +19,9 @@ extension Data {
         }
     }
     
-    func decode<ResultModel: JSONRPCResponse>(_ type: ResultModel.Type, context: JSONRPCModel.DecodeContextModel? = nil) throws -> ResultModel {
-        let rpcContainer = try JSONRPCModel.CoderModel.decoder.decode(
-            FulcrumResponse.JSONRPCModel.GenericModel<ResultModel.JSONRPCModel>.self,
+    func decode<ResultModel: JSONRPCResponse>(_ type: ResultModel.Type, context: JSONRPCModel.DecodeContext? = nil) throws -> ResultModel {
+        let rpcContainer = try JSONRPCModel.Coder.decoder.decode(
+            FulcrumResponse.JSONRPCModel.Generic<ResultModel.JSONRPCModel>.self,
             from: self
         )
         let responseKind = try rpcContainer.determineResponseType()

@@ -3,7 +3,7 @@
 import Foundation
 
 extension FulcrumMethodRequest {
-    func createHeaderRequest(_ header: BlockchainModel.HeaderModel, uuid: UUID) -> FulcrumRequest {
+    func createHeaderRequest(_ header: BlockchainModel.Header, uuid: UUID) -> FulcrumRequest {
         switch header {
         case .get(let blockHash):
             struct ParametersModel: Encodable {
@@ -19,7 +19,7 @@ extension FulcrumMethodRequest {
         }
     }
 
-    func createHeadersRequest(_ headers: BlockchainModel.HeadersModel, uuid: UUID) -> FulcrumRequest {
+    func createHeadersRequest(_ headers: BlockchainModel.Headers, uuid: UUID) -> FulcrumRequest {
         switch headers {
         case .getTip:
             struct ParametersModel: Encodable {

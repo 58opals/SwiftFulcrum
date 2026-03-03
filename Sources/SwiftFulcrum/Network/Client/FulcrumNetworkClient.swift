@@ -8,7 +8,7 @@ actor FulcrumNetworkClient {
     var jsonRPC: JSONRPCModel
     let router: Router
     let metrics: MetricsClient?
-    let logger: LogModel.AdapterModel
+    let logger: LogModel.Adapter
     let protocolNegotiation: FulcrumClient.Configuration.ProtocolNegotiationModel
     
     var state: State
@@ -27,7 +27,7 @@ actor FulcrumNetworkClient {
     
     init(transport: TransportableModel,
          metrics: MetricsClient? = nil,
-         logger: LogModel.AdapterModel? = nil,
+         logger: LogModel.Adapter? = nil,
          heartbeatInterval: Duration = .seconds(25),
          heartbeatTimeout: Duration = .seconds(10),
          protocolNegotiation: FulcrumClient.Configuration.ProtocolNegotiationModel) {
@@ -37,7 +37,7 @@ actor FulcrumNetworkClient {
         self.router = .init()
         self.metrics = metrics
         self.subscriptionMethods = .init()
-        self.logger = logger ?? LogModel.ConsoleAdapterModel()
+        self.logger = logger ?? LogModel.ConsoleAdapter()
         self.protocolNegotiation = protocolNegotiation
         self.state = .init()
         self.rpcHeartbeatInterval = heartbeatInterval
@@ -163,7 +163,7 @@ actor FulcrumNetworkClient {
 
 extension FulcrumNetworkClient {
     func emitLog(
-        _ level: LogModel.LevelModel,
+        _ level: LogModel.Level,
         _ message: @autoclosure () -> String,
         metadata: [String: String] = .init(),
         file: String = #fileID, function: String = #function, line: UInt = #line

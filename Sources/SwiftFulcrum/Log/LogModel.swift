@@ -5,7 +5,7 @@ import Foundation
 public enum LogModel {}
 
 extension LogModel {
-    public enum LevelModel: Sendable {
+    public enum Level: Sendable {
         case trace, debug, info, notice, warning, error, critical
         
         var name: String {
@@ -33,15 +33,15 @@ extension LogModel {
         }
     }
     
-    public protocol AdapterModel: Sendable {
-        func log(_ level: LevelModel,
+    public protocol Adapter: Sendable {
+        func log(_ level: Level,
                  _ message: @autoclosure () -> String,
                  metadata: [String: String]?,
                  file: String, function: String, line: UInt)
     }
 }
 
-extension LogModel.AdapterModel {
+extension LogModel.Adapter {
     func trace(_ message: @autoclosure () -> String,
                metadata: [String: String]? = nil,
                file: String = #fileID, function: String = #function, line: UInt = #line) {
@@ -86,9 +86,9 @@ extension LogModel.AdapterModel {
 }
 
 extension LogModel {
-    public struct NoOperationAdapterModel: LogModel.AdapterModel {
+    public struct NoOperationAdapter: LogModel.Adapter {
         public init() {}
-        public func log(_ level: LogModel.LevelModel, _ message: @autoclosure () -> String, metadata: [String : String]?, file: String, function: String, line: UInt) {}
+        public func log(_ level: LogModel.Level, _ message: @autoclosure () -> String, metadata: [String : String]?, file: String, function: String, line: UInt) {}
     }
 }
 

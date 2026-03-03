@@ -8,9 +8,9 @@ struct ProtocolVersionRangeValidator {
     func validateSupportedRange() throws {
         let minimum = try #require(ProtocolVersionModel(string: "1.4"))
         let maximum = try #require(ProtocolVersionModel(string: "1.6"))
-        #expect(ProtocolVersionModel.RangeModel(min: maximum, max: minimum) == nil)
+        #expect(ProtocolVersionModel.Range(min: maximum, max: minimum) == nil)
 
-        let range = try #require(ProtocolVersionModel.RangeModel(min: minimum, max: maximum))
+        let range = try #require(ProtocolVersionModel.Range(min: minimum, max: maximum))
         #expect(range.contains(try #require(ProtocolVersionModel(string: "1.5"))))
         #expect(!range.contains(try #require(ProtocolVersionModel(string: "1.7"))))
     }
@@ -22,11 +22,11 @@ struct ProtocolVersionRangeValidator {
         let versionOnePointFivePointThree = try #require(ProtocolVersionModel(string: "1.5.3"))
         let versionOnePointSix = try #require(ProtocolVersionModel(string: "1.6"))
 
-        let clientRange = try #require(ProtocolVersionModel.RangeModel(
+        let clientRange = try #require(ProtocolVersionModel.Range(
             min: versionOnePointFour,
             max: versionOnePointSix
         ))
-        let serverRange = try #require(ProtocolVersionModel.RangeModel(
+        let serverRange = try #require(ProtocolVersionModel.Range(
             min: versionOnePointFive,
             max: versionOnePointFivePointThree
         ))
@@ -42,11 +42,11 @@ struct ProtocolVersionRangeValidator {
         let versionOnePointFour = try #require(ProtocolVersionModel(string: "1.4"))
         let versionOnePointFive = try #require(ProtocolVersionModel(string: "1.5"))
 
-        let clientRange = try #require(ProtocolVersionModel.RangeModel(
+        let clientRange = try #require(ProtocolVersionModel.Range(
             min: versionOnePointTwo,
             max: versionOnePointThree
         ))
-        let serverRange = try #require(ProtocolVersionModel.RangeModel(
+        let serverRange = try #require(ProtocolVersionModel.Range(
             min: versionOnePointFour,
             max: versionOnePointFive
         ))
@@ -54,7 +54,7 @@ struct ProtocolVersionRangeValidator {
         do {
             _ = try clientRange.chooseNegotiatedVersion(with: serverRange)
             Issue.record("Expected negotiation to fail when no overlap exists")
-        } catch let error as ProtocolVersionModel.RangeModel.Error {
+        } catch let error as ProtocolVersionModel.Range.Error {
             #expect(error == .unsupportedVersionRange)
         }
     }

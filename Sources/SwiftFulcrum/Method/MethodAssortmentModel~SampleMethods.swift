@@ -4,7 +4,7 @@ extension MethodAssortmentModel {
     static var sampleMethods: [FulcrumMethodRequest] {
         guard let minimumVersion = ProtocolVersionModel(string: "1.4"),
               let maximumVersion = ProtocolVersionModel(string: "1.6.0"),
-              let versionRange = ProtocolVersionModel.RangeModel(min: minimumVersion, max: maximumVersion) else {
+              let versionRange = ProtocolVersionModel.Range(min: minimumVersion, max: maximumVersion) else {
             preconditionFailure("Sample protocol versions must be valid")
         }
 
@@ -21,7 +21,7 @@ extension MethodAssortmentModel {
             .blockchain(
                 .relayFee),
 
-            // BlockchainModel.ScriptHashModel
+            // BlockchainModel.ScriptHash
             .blockchain(
                 .scripthash(
                     .getBalance(scripthash: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
@@ -50,7 +50,7 @@ extension MethodAssortmentModel {
                     .unsubscribe(scripthash: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"))),
 
 
-            // BlockchainModel.AddressModel
+            // BlockchainModel.Address
             .blockchain(
                 .address(
                     .getBalance(address: "qrmydkpmlgvxrafjv7rpdm4unlcdfnljmqss98ytuq",
@@ -81,7 +81,7 @@ extension MethodAssortmentModel {
                 .address(
                     .unsubscribe(address: "qrmydkpmlgvxrafjv7rpdm4unlcdfnljmqss98ytuq"))),
 
-            // BlockchainModel.BlockModel
+            // BlockchainModel.Block
             .blockchain(
                 .block(
                     .header(height: 1,
@@ -97,7 +97,7 @@ extension MethodAssortmentModel {
                 .header(
                     .get(blockHash: "0000000000000000029c2784e7453617ea6d8e73cbc91b293d06cf41cf3a5286"))),
 
-            // BlockchainModel.HeadersModel
+            // BlockchainModel.Headers
             .blockchain(
                 .headers(
                     .getTip)),
@@ -108,7 +108,7 @@ extension MethodAssortmentModel {
                 .headers(
                     .unsubscribe)),
 
-            // BlockchainModel.TransactionModel
+            // BlockchainModel.Transaction
             .blockchain(
                 .transaction(
                     .broadcast(rawTransaction: "rawTx"))),
@@ -138,7 +138,7 @@ extension MethodAssortmentModel {
                 .transaction(
                     .unsubscribe(transactionHash: "1452186edb3b7f8a0e64fefaf3c3879272e52bdccdbc329de8987e44f3f5bfd1"))),
 
-            // BlockchainModel.TransactionModel.DSProofModel
+            // BlockchainModel.Transaction.DSProof
             .blockchain(
                 .transaction(
                     .dsProof(
@@ -156,7 +156,7 @@ extension MethodAssortmentModel {
                     .dsProof(
                         .unsubscribe(transactionHash: "1452186edb3b7f8a0e64fefaf3c3879272e52bdccdbc329de8987e44f3f5bfd1")))),
 
-            // BlockchainModel.UTXOModel
+            // BlockchainModel.UTXO
             .blockchain(
                 .utxo(
                     .getInfo(transactionHash: "1452186edb3b7f8a0e64fefaf3c3879272e52bdccdbc329de8987e44f3f5bfd1",

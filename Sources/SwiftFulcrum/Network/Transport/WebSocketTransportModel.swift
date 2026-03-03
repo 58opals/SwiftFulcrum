@@ -60,11 +60,11 @@ actor WebSocketTransportModel: TransportableModel {
         }
     }
     
-    func makeDiagnosticsSnapshot() async -> FulcrumClient.DiagnosticsModel.TransportSnapshotModel { await webSocket.makeDiagnosticsSnapshot() }
+    func makeDiagnosticsSnapshot() async -> FulcrumClient.DiagnosticsModel.TransportSnapshot { await webSocket.makeDiagnosticsSnapshot() }
     
     func updateMetrics(_ collector: MetricsClient?) async { await webSocket.updateMetrics(collector) }
     
-    func updateLogger(_ handler: LogModel.AdapterModel?) async { await webSocket.updateLogger(handler) }
+    func updateLogger(_ handler: LogModel.Adapter?) async { await webSocket.updateLogger(handler) }
     
     func registerQuietResponse(for identifier: UUID) async { await webSocket.registerQuietResponse(for: identifier) }
     

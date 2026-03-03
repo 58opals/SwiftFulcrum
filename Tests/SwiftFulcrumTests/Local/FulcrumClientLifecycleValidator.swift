@@ -13,7 +13,7 @@ struct FulcrumClientLifecycleValidator {
             do {
                 _ = try await fulcrum.submit(
                     method: .blockchain(.headers(.getTip)),
-                    responseType: FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.GetTipModel.self,
+                    responseType: FulcrumResponse.ResultModel.Blockchain.Headers.GetTip.self,
                     options: .init(timeout: .milliseconds(100))
                 )
                 Issue.record("submit() should time out when response is missing")
@@ -37,13 +37,13 @@ struct FulcrumClientLifecycleValidator {
     @Test("submit(cancellation:) throws cancelled", .timeLimit(.minutes(1)))
     func submitCancellationPropagatesCancelledError() async throws {
         let (fulcrum, transport) = try await makeStartedFulcrum()
-        let cancellation = FulcrumClient.CallModel.CancellationModel()
+        let cancellation = FulcrumClient.CallModel.Cancellation()
 
         let submitTask = Task {
             do {
                 _ = try await fulcrum.submit(
                     method: .blockchain(.headers(.getTip)),
-                    responseType: FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.GetTipModel.self,
+                    responseType: FulcrumResponse.ResultModel.Blockchain.Headers.GetTip.self,
                     options: .init(timeout: .seconds(30), cancellation: cancellation)
                 )
                 Issue.record("submit() should throw cancelled")
@@ -72,8 +72,8 @@ struct FulcrumClientLifecycleValidator {
             do {
                 _ = try await fulcrum.subscribe(
                     method: .blockchain(.headers(.subscribe)),
-                    initialType: FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.SubscribeModel.self,
-                    notificationType: FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.SubscribeNotificationModel.self,
+                    initialType: FulcrumResponse.ResultModel.Blockchain.Headers.Subscribe.self,
+                    notificationType: FulcrumResponse.ResultModel.Blockchain.Headers.SubscribeNotification.self,
                     options: .init(timeout: .milliseconds(100))
                 )
                 Issue.record("subscribe() should time out when initial response is missing")

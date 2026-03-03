@@ -24,7 +24,7 @@ struct ClientProtocolNegotiationValidator {
         let versionRequest = await transport.dequeueOutgoing()
         let requestObject = try TransportTestActor.decodeJSONObject(from: versionRequest)
         guard let identifier = requestObject["id"] as? String else {
-            Issue.record("VersionModel request is missing an identifier")
+            Issue.record("Version request is missing an identifier")
             startTask.cancel()
             return
         }
@@ -39,7 +39,7 @@ struct ClientProtocolNegotiationValidator {
         do {
             try await startTask.value
             Issue.record("FulcrumNetworkClient.start() should fail for unsupported negotiated protocol")
-        } catch let error as ProtocolVersionModel.RangeModel.Error {
+        } catch let error as ProtocolVersionModel.Range.Error {
             #expect(error == .unsupportedVersionRange)
             #expect(await transport.connectionState == .disconnected)
         } catch {

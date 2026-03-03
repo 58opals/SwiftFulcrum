@@ -5,7 +5,7 @@ import SwiftFulcrumTestSupport
 
 @Suite(.tags(.local))
 struct CashTokensCapabilityValidator {
-    @Test("Decodes CashTokensModel capability from a string")
+    @Test("Decodes CashTokens capability from a string")
     func decodeCapabilityFromString() throws {
         let serializedPayload = """
         {
@@ -16,13 +16,13 @@ struct CashTokensCapabilityValidator {
         """
         let serializedData = try #require(serializedPayload.data(using: .utf8))
 
-        let decoded = try JSONDecoder().decode(FulcrumMethodRequest.BlockchainModel.CashTokensModel.JSONModel.self, from: serializedData)
+        let decoded = try JSONDecoder().decode(FulcrumMethodRequest.BlockchainModel.CashTokens.JSON.self, from: serializedData)
         let nonFungibleToken = try #require(decoded.nft)
 
         #expect(nonFungibleToken.capability == .none)
     }
 
-    @Test("Decodes list unspent items with CashTokensModel data")
+    @Test("Decodes list unspent items with CashTokens data")
     func decodeListUnspentResponseWithTokenData() throws {
         let responseIdentifier = UUID()
         let serializedResponse = """
@@ -47,7 +47,7 @@ struct CashTokensCapabilityValidator {
         let serializedData = try #require(serializedResponse.data(using: .utf8))
 
         let decodedResponse = try JSONDecoder().decode(
-            FulcrumResponse.JSONRPCModel.GenericModel<FulcrumResponse.JSONRPCModel.ResultModel.BlockchainModel.AddressModel.ListUnspentModel>.self,
+            FulcrumResponse.JSONRPCModel.Generic<FulcrumResponse.JSONRPCModel.Result.Blockchain.Address.ListUnspent>.self,
             from: serializedData
         )
         let listUnspentItems = try #require(decodedResponse.result)

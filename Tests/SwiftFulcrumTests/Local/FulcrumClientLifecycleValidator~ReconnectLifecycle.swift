@@ -10,16 +10,16 @@ extension FulcrumClientLifecycleValidator {
         
         var subscribeTask: Task<
             (
-                FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.SubscribeModel,
-                AsyncThrowingStream<FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.SubscribeNotificationModel, Swift.Error>,
+                FulcrumResponse.ResultModel.Blockchain.Headers.Subscribe,
+                AsyncThrowingStream<FulcrumResponse.ResultModel.Blockchain.Headers.SubscribeNotification, Swift.Error>,
                 @Sendable () async -> Void
             ),
             Swift.Error
         >? = Task {
             try await fulcrum.subscribe(
                 method: .blockchain(.headers(.subscribe)),
-                initialType: FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.SubscribeModel.self,
-                notificationType: FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.SubscribeNotificationModel.self,
+                initialType: FulcrumResponse.ResultModel.Blockchain.Headers.Subscribe.self,
+                notificationType: FulcrumResponse.ResultModel.Blockchain.Headers.SubscribeNotification.self,
                 options: .init(timeout: .seconds(30))
             )
         }
@@ -32,8 +32,8 @@ extension FulcrumClientLifecycleValidator {
         )
         await transport.enqueueIncoming(.data(subscribePayload))
         let initialSubscription: (
-            FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.SubscribeModel,
-            AsyncThrowingStream<FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.SubscribeNotificationModel, Swift.Error>,
+            FulcrumResponse.ResultModel.Blockchain.Headers.Subscribe,
+            AsyncThrowingStream<FulcrumResponse.ResultModel.Blockchain.Headers.SubscribeNotification, Swift.Error>,
             @Sendable () async -> Void
         )
         do {

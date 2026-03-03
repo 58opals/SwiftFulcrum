@@ -5,7 +5,7 @@ import Foundation
 extension FulcrumNetworkClient {
     func call<ResultModel: JSONRPCResponse>(
         method: FulcrumMethodRequest,
-        options: CallModel.OptionsModel = .init(),
+        options: CallModel.Options = .init(),
         suppressTransportLogging: Bool = false
     ) async throws -> (UUID, ResultModel) {
         if method.isSubscription {
@@ -63,7 +63,7 @@ extension FulcrumNetworkClient {
     
     func subscribe<Initial: JSONRPCResponse, Notification: JSONRPCResponse>(
         method: FulcrumMethodRequest,
-        options: CallModel.OptionsModel = .init()
+        options: CallModel.Options = .init()
     ) async throws -> (UUID, Initial, AsyncThrowingStream<Notification, Swift.Error>) {
         if !method.isSubscription {
             throw FulcrumClient.Error.client(

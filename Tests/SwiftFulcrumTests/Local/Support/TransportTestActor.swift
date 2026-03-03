@@ -112,13 +112,13 @@ actor TransportTestActor: TransportableModel {
         return stream
     }
 
-    func makeDiagnosticsSnapshot() async -> FulcrumClient.DiagnosticsModel.TransportSnapshotModel {
+    func makeDiagnosticsSnapshot() async -> FulcrumClient.DiagnosticsModel.TransportSnapshot {
         .init(reconnectAttempts: 0, reconnectSuccesses: 0)
     }
 
     func updateMetrics(_ collector: MetricsClient?) async { _ = collector }
 
-    func updateLogger(_ handler: LogModel.AdapterModel?) async { _ = handler }
+    func updateLogger(_ handler: LogModel.Adapter?) async { _ = handler }
 
     func registerQuietResponse(for identifier: UUID) async { _ = identifier }
 

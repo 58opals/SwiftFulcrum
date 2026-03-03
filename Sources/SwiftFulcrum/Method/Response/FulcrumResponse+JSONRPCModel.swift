@@ -4,12 +4,12 @@ import Foundation
 
 extension FulcrumResponse {
     public struct JSONRPCModel {
-        struct IdentifierExtractableModel: Decodable, Sendable {
+        struct IdentifierExtractable: Decodable, Sendable {
             let id: UUID?
             let method: String?
         }
         
-        public struct GenericModel<ResultModel: Decodable>: Decodable {
+        public struct Generic<ResultModel: Decodable>: Decodable {
             let jsonrpc: String
             
             // MARK: RegularModel
@@ -26,12 +26,12 @@ extension FulcrumResponse {
             var hasResult: Bool { hasResultKey }
             var hasParams: Bool { hasParamsKey }
             
-            enum CodingKeysModel: String, CodingKey {
+            enum CodingKeys: String, CodingKey {
                 case jsonrpc, id, result, error, method, params
             }
             
             public init(from decoder: Decoder) throws {
-                let container = try decoder.container(keyedBy: CodingKeysModel.self)
+                let container = try decoder.container(keyedBy: CodingKeys.self)
                 self.jsonrpc = try container.decode(String.self, forKey: .jsonrpc)
                 self.id = try container.decodeIfPresent(UUID.self, forKey: .id)
                 self.result = try container.decodeIfPresent(ResultModel.self, forKey: .result)
@@ -46,11 +46,11 @@ extension FulcrumResponse {
 }
 
 extension FulcrumResponse.JSONRPCModel: Sendable {}
-extension FulcrumResponse.JSONRPCModel.GenericModel: Sendable where ResultModel: Sendable {}
+extension FulcrumResponse.JSONRPCModel.Generic: Sendable where ResultModel: Sendable {}
 
 extension FulcrumResponse.JSONRPCModel {
     static func extractIdentifier(from data: Data) throws -> FulcrumResponse.IdentifierModel {
-        let response = try JSONRPCModel.CoderModel.decoder.decode(FulcrumResponse.JSONRPCModel.IdentifierExtractableModel.self, from: data)
+        let response = try JSONRPCModel.Coder.decoder.decode(FulcrumResponse.JSONRPCModel.IdentifierExtractable.self, from: data)
         switch (response.id, response.method) {
         case let (id?, nil):
             return .uuid(id)
@@ -62,14 +62,14 @@ extension FulcrumResponse.JSONRPCModel {
     }
 }
 
-extension FulcrumResponse.JSONRPCModel.GenericModel {
+extension FulcrumResponse.JSONRPCModel.Generic {
     func determineResponseType() throws -> FulcrumResponse.KindModel<ResultModel> {
         if let id,
            error == nil,
            method == nil,
            result == nil,
            hasResult {
-            if let nilProducer = FulcrumResponse.JSONRPCModel.ResultNilProducerModel.produceNilIfOptional(ResultModel.self) {
+            if let nilProducer = FulcrumResponse.JSONRPCModel.ResultNilProducer.produceNilIfOptional(ResultModel.self) {
                 return .regular(FulcrumResponse.RegularModel(id: id, result: nilProducer))
             }
         }
@@ -91,15 +91,15 @@ extension FulcrumResponse.JSONRPCModel.GenericModel {
 }
 
 extension FulcrumResponse.JSONRPCModel {
-    fileprivate protocol NilConstructibleModel { static var nilValue: Self { get } }
-    private enum ResultNilProducerModel {
+    fileprivate protocol NilConstructible { static var nilValue: Self { get } }
+    private enum ResultNilProducer {
         static func produceNilIfOptional<T>(_ type: T.Type) -> T? {
-            guard let optionalType = T.self as? NilConstructibleModel.Type else { return nil }
+            guard let optionalType = T.self as? NilConstructible.Type else { return nil }
             return optionalType.nilValue as? T
         }
     }
 }
 
-extension Optional: FulcrumResponse.JSONRPCModel.NilConstructibleModel {
+extension Optional: FulcrumResponse.JSONRPCModel.NilConstructible {
     static var nilValue: Self { nil }
 }

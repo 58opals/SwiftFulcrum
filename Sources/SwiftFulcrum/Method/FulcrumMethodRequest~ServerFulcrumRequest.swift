@@ -19,7 +19,7 @@ extension FulcrumMethodRequest {
         case .version(let clientName, let negotiationArgument):
             struct ParametersModel: Encodable {
                 let clientName: String
-                let negotiationArgument: FulcrumClient.Configuration.ProtocolNegotiationModel.ArgumentModel
+                let negotiationArgument: FulcrumClient.Configuration.ProtocolNegotiationModel.Argument
 
                 func encode(to encoder: Encoder) throws {
                     var container = encoder.unkeyedContainer()

@@ -8,6 +8,6 @@ public protocol MetricsClient: Sendable {
     func recordSend(url: URL, message: URLSessionWebSocketTask.Message) async
     func recordReceive(url: URL, message: URLSessionWebSocketTask.Message) async
     func recordPing(url: URL, error: Swift.Error?) async
-    func recordDiagnosticsUpdate(url: URL, snapshot: FulcrumClient.DiagnosticsModel.SnapshotModel) async
-    func recordSubscriptionRegistryUpdate(url: URL, subscriptions: [FulcrumClient.DiagnosticsModel.SubscriptionModel]) async
+    func recordDiagnosticsUpdate(url: URL, snapshot: FulcrumClient.DiagnosticsModel.Snapshot) async
+    func recordSubscriptionRegistryUpdate(url: URL, subscriptions: [FulcrumClient.DiagnosticsModel.Subscription]) async
 }

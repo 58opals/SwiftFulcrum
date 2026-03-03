@@ -57,7 +57,7 @@ struct ProtocolNegotiationConfigurationValidator {
         }
         
         do {
-            _ = try FulcrumClient.Configuration.ProtocolNegotiationModel.ArgumentModel(
+            _ = try FulcrumClient.Configuration.ProtocolNegotiationModel.Argument(
                 minimumVersion: minimumVersion,
                 maximumVersion: maximumVersion
             )
@@ -79,14 +79,14 @@ struct ProtocolNegotiationConfigurationValidator {
         let minimumVersion = try #require(ProtocolVersionModel(string: "1.4"))
         let maximumVersion = try #require(ProtocolVersionModel(string: "1.6.0"))
         
-        let rangeArgument = try FulcrumClient.Configuration.ProtocolNegotiationModel.ArgumentModel(
+        let rangeArgument = try FulcrumClient.Configuration.ProtocolNegotiationModel.Argument(
             minimumVersion: minimumVersion,
             maximumVersion: maximumVersion
         )
         let rangeObject = try JSONDecoder().decode([String].self, from: JSONEncoder().encode(rangeArgument))
         #expect(rangeObject == ["1.4", "1.6.0"])
         
-        let singleArgument = try FulcrumClient.Configuration.ProtocolNegotiationModel.ArgumentModel(
+        let singleArgument = try FulcrumClient.Configuration.ProtocolNegotiationModel.Argument(
             minimumVersion: minimumVersion,
             maximumVersion: minimumVersion
         )

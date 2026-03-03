@@ -7,17 +7,17 @@ extension FulcrumNetworkClient {
 }
 
 extension FulcrumNetworkClient.CallModel {
-    struct OptionsModel: Sendable {
+    struct Options: Sendable {
         public var timeout: Duration?
-        public var token: FulcrumNetworkClient.CallModel.TokenModel?
+        public var token: FulcrumNetworkClient.CallModel.Token?
         
-        init(timeout: Duration? = nil, token: FulcrumNetworkClient.CallModel.TokenModel? = nil) {
+        init(timeout: Duration? = nil, token: FulcrumNetworkClient.CallModel.Token? = nil) {
             self.timeout = timeout
             self.token = token
         }
     }
     
-    actor TokenModel {
+    actor Token {
         private var handlers: [@Sendable () -> Void] = .init()
         private var isCancellationRequested = false
         

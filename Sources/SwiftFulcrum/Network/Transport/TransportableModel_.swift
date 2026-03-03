@@ -19,10 +19,10 @@ protocol TransportableModel: Sendable {
     func makeMessageStream() async -> AsyncThrowingStream<URLSessionWebSocketTask.Message, Swift.Error>
     func makeLifecycleEvents() async -> AsyncStream<FulcrumTransportState.EventModel>
     func makeConnectionStateEvents() async -> AsyncStream<FulcrumClient.ConnectionState>
-    func makeDiagnosticsSnapshot() async -> FulcrumClient.DiagnosticsModel.TransportSnapshotModel
+    func makeDiagnosticsSnapshot() async -> FulcrumClient.DiagnosticsModel.TransportSnapshot
     
     func updateMetrics(_ collector: MetricsClient?) async
-    func updateLogger(_ handler: LogModel.AdapterModel?) async
+    func updateLogger(_ handler: LogModel.Adapter?) async
     
     func registerQuietResponse(for identifier: UUID) async
 }

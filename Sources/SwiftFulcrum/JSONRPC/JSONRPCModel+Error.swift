@@ -5,14 +5,14 @@ import Foundation
 extension JSONRPCModel {
     enum Error: Swift.Error {
         case rpc(FulcrumResponse.Error, methodPath: MethodPath, description: String)
-        case storage(StorageIssueModel, description: String)
-        case decodingFailure(reason: DecodingFailureReasonModel, data: Data?, description: String)
+        case storage(StorageIssue, description: String)
+        case decodingFailure(reason: DecodingFailureReason, data: Data?, description: String)
         
-        enum StorageIssueModel {
+        enum StorageIssue {
             case unknownMethodPath(String)
         }
         
-        enum DecodingFailureReasonModel {
+        enum DecodingFailureReason {
             case generic
             case idMissing
             case methodMissing

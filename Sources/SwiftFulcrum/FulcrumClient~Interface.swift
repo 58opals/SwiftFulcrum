@@ -12,7 +12,7 @@ extension FulcrumClient {
     public func submit<RegularResponseResult: JSONRPCResponse>(
         method: FulcrumMethodRequest,
         responseType: RegularResponseResult.Type = RegularResponseResult.self,
-        options: FulcrumClient.CallModel.OptionsModel = .init()
+        options: FulcrumClient.CallModel.Options = .init()
     ) async throws -> RPCResponse<RegularResponseResult, Never> {
         if method.isSubscription {
             throw FulcrumClient.Error.client(.protocolMismatch("submit() cannot be used with subscription methods. Use subscribe(...)."))
@@ -42,7 +42,7 @@ extension FulcrumClient {
         method: FulcrumMethodRequest,
         initialType: Initial.Type = Initial.self,
         notificationType: Notification.Type = Notification.self,
-        options: FulcrumClient.CallModel.OptionsModel = .init()
+        options: FulcrumClient.CallModel.Options = .init()
     ) async throws -> (Initial, AsyncThrowingStream<Notification, Swift.Error>, @Sendable () async -> Void) {
         let subscription = try await makeSubscription(
             method: method,
@@ -88,7 +88,7 @@ extension FulcrumClient {
         method: FulcrumMethodRequest,
         initialType: Initial.Type,
         notificationType: Notification.Type,
-        options: FulcrumClient.CallModel.OptionsModel
+        options: FulcrumClient.CallModel.Options
     ) async throws -> (
         identifier: UUID,
         initialResponse: Initial,
@@ -103,8 +103,8 @@ extension FulcrumClient {
         
         try await ensureClientIsReadyForRequests(within: options.timeout)
         
-        let token = options.cancellation?.token ?? FulcrumNetworkClient.CallModel.TokenModel()
-        let effectiveOptions = FulcrumNetworkClient.CallModel.OptionsModel(timeout: options.timeout, token: token)
+        let token = options.cancellation?.token ?? FulcrumNetworkClient.CallModel.Token()
+        let effectiveOptions = FulcrumNetworkClient.CallModel.Options(timeout: options.timeout, token: token)
         do {
             let (identifier, initial, updates): (UUID, Initial, AsyncThrowingStream<Notification, Swift.Error>) =
             try await client.subscribe(method: method, options: effectiveOptions)

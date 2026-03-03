@@ -3,7 +3,7 @@
 import Foundation
 
 extension FulcrumMethodRequest {
-    func createTransactionRequest(_ transaction: BlockchainModel.TransactionModel, uuid: UUID) -> FulcrumRequest {
+    func createTransactionRequest(_ transaction: BlockchainModel.Transaction, uuid: UUID) -> FulcrumRequest {
         switch transaction {
         case .broadcast(let rawTransaction):
             struct ParametersModel: Encodable {

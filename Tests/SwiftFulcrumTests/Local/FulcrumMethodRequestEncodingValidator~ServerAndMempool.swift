@@ -12,7 +12,7 @@ extension FulcrumMethodRequestEncodingValidator {
 
         let minimum = try #require(ProtocolVersionModel(string: "1.4"))
         let maximum = try #require(ProtocolVersionModel(string: "1.6.0"))
-        let negotiationRange = try #require(ProtocolVersionModel.RangeModel(min: minimum, max: maximum))
+        let negotiationRange = try #require(ProtocolVersionModel.Range(min: minimum, max: maximum))
         try assertRequest(
             .server(.version(clientName: "SwiftFulcrum/Test", protocolNegotiation: .init(range: negotiationRange))),
             expectedPath: FulcrumMethodRequest.server(.version(clientName: "", protocolNegotiation: .init(range: negotiationRange))).path,

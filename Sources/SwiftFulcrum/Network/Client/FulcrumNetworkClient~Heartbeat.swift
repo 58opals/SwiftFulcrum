@@ -13,7 +13,7 @@ extension FulcrumNetworkClient {
                     try await Task.sleep(for: rpcHeartbeatInterval)
                     try Task.checkCancellation()
                     
-                    let (_, _): (UUID, FulcrumResponse.ResultModel.ServerModel.PingModel) =
+                    let (_, _): (UUID, FulcrumResponse.ResultModel.Server.Ping) =
                     try await LogModel.perform(withBehavior: .quiet) {
                         try await self.call(
                             method: .server(.ping),

@@ -5,14 +5,14 @@ import Foundation
 actor WebSocketModel {
     var url: URL
     var task: URLSessionWebSocketTask?
-    var connectionStateTracker: ConnectionStateTrackerModel
+    var connectionStateTracker: ConnectionStateTracker
     let network: FulcrumClient.Configuration.NetworkModel
     
     var sharedMessagesStream: AsyncThrowingStream<URLSessionWebSocketTask.Message, Swift.Error>?
     var messageContinuation: AsyncThrowingStream<URLSessionWebSocketTask.Message, Swift.Error>.Continuation?
     
-    let reconnector: ReconnectorModel
-    var logger: LogModel.AdapterModel
+    let reconnector: Reconnector
+    var logger: LogModel.Adapter
     
     var reconnectAttemptCount = 0
     var reconnectSuccessCount = 0
@@ -29,25 +29,25 @@ actor WebSocketModel {
     var receivedTask: Task<Void, Never>?
     var shouldAutomaticallyReceive = false
     
-    var lifecycleContinuationsBySubscriberIdentifier: [UUID: AsyncStream<LifecycleModel.EventModel>.Continuation] = .init()
+    var lifecycleContinuationsBySubscriberIdentifier: [UUID: AsyncStream<Lifecycle.Event>.Continuation] = .init()
     
     let session: URLSession
     let connectionTimeout: TimeInterval
     let maximumMessageSize: Int
     
-    private let tlsDescriptor: TLSDescriptorModel?
+    private let tlsDescriptor: TLSDescriptor?
     var metrics: MetricsClient?
     
     init(url: URL,
          configuration: Configuration = .init(),
-         reconnectConfiguration: ReconnectorModel.Configuration = .basic,
+         reconnectConfiguration: Reconnector.Configuration = .basic,
          connectionTimeout: TimeInterval = 10,
          sleep: @escaping @Sendable (Duration) async throws -> Void = { duration in try await Task.sleep(for: duration) },
          jitter: @escaping @Sendable (ClosedRange<Double>) -> Double = { range in .random(in: range) }) {
         self.url = url
         self.task = nil
         self.connectionStateTracker = .init()
-        self.reconnector = ReconnectorModel(
+        self.reconnector = Reconnector(
             reconnectConfiguration,
             network: configuration.network,
             serverCatalogLoader: configuration.serverCatalogLoader,
@@ -58,7 +58,7 @@ actor WebSocketModel {
         self.network = configuration.network
         
         self.metrics = configuration.metrics
-        self.logger = configuration.logger ?? LogModel.ConsoleAdapterModel()
+        self.logger = configuration.logger ?? LogModel.ConsoleAdapter()
         self.tlsDescriptor = configuration.tlsDescriptor
         self.maximumMessageSize = configuration.maximumMessageSize
         

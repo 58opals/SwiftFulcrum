@@ -7,7 +7,7 @@ extension FulcrumClient {
 }
 
 extension FulcrumClient.DiagnosticsModel {
-    public struct SnapshotModel: Sendable {
+    public struct Snapshot: Sendable {
         public let reconnectAttempts: Int
         public let reconnectSuccesses: Int
         public let inflightUnaryCallCount: Int
@@ -26,7 +26,7 @@ extension FulcrumClient.DiagnosticsModel {
         }
     }
     
-    public struct SubscriptionModel: Sendable {
+    public struct Subscription: Sendable {
         public let methodPath: String
         public let identifier: String?
         
@@ -36,18 +36,18 @@ extension FulcrumClient.DiagnosticsModel {
         }
     }
     
-    struct TransportSnapshotModel: Sendable {
+    struct TransportSnapshot: Sendable {
         let reconnectAttempts: Int
         let reconnectSuccesses: Int
     }
 }
 
 extension FulcrumClient {
-    public func makeDiagnosticsSnapshot() async -> DiagnosticsModel.SnapshotModel {
+    public func makeDiagnosticsSnapshot() async -> DiagnosticsModel.Snapshot {
         await client.makeDiagnosticsSnapshot()
     }
     
-    public func listSubscriptions() async -> [DiagnosticsModel.SubscriptionModel] {
+    public func listSubscriptions() async -> [DiagnosticsModel.Subscription] {
         await client.listSubscriptions()
     }
 }

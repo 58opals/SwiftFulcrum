@@ -23,7 +23,7 @@ extension AsyncThrowingStream where Element == Data, Failure == Swift.Error {
         }
     }
 
-    func decode<ResultModel: JSONRPCResponse>(_ type: ResultModel.Type, context: JSONRPCModel.DecodeContextModel?) -> AsyncThrowingStream<ResultModel, Swift.Error> {
+    func decode<ResultModel: JSONRPCResponse>(_ type: ResultModel.Type, context: JSONRPCModel.DecodeContext?) -> AsyncThrowingStream<ResultModel, Swift.Error> {
         let iteratorModel = DataStreamIteratorModel(stream: self)
         return AsyncThrowingStream<ResultModel, Swift.Error> {
             guard let chunk = try await iteratorModel.next() else {

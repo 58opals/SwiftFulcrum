@@ -4,7 +4,7 @@ import Foundation
 
 extension FulcrumMethodRequest {
     func createDSProofRequest(
-        _ dSProof: BlockchainModel.TransactionModel.DSProofModel,
+        _ dSProof: BlockchainModel.Transaction.DSProof,
         uuid: UUID
     ) -> FulcrumRequest {
         switch dSProof {

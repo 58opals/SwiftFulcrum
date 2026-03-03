@@ -20,7 +20,7 @@ struct ClientSubscriptionValidator {
         let versionRequest = await transport.dequeueOutgoing()
         let versionRequestObject = try TransportTestActor.decodeJSONObject(from: versionRequest)
         guard let versionIdentifier = versionRequestObject["id"] as? String else {
-            Issue.record("VersionModel request is missing an identifier")
+            Issue.record("Version request is missing an identifier")
             startTask.cancel()
             await client.stop()
             return
@@ -36,7 +36,7 @@ struct ClientSubscriptionValidator {
         let featuresRequest = await transport.dequeueOutgoing()
         let featuresRequestObject = try TransportTestActor.decodeJSONObject(from: featuresRequest)
         guard let featuresIdentifier = featuresRequestObject["id"] as? String else {
-            Issue.record("FeaturesModel request is missing an identifier")
+            Issue.record("Features request is missing an identifier")
             startTask.cancel()
             await client.stop()
             return
@@ -58,15 +58,15 @@ struct ClientSubscriptionValidator {
         try await startTask.value
         #expect(await client.connectionState == .connected)
 
-        let cancellationToken = FulcrumNetworkClient.CallModel.TokenModel()
+        let cancellationToken = FulcrumNetworkClient.CallModel.Token()
         let subscribeTask = Task {
             try await client.subscribe(
                 method: .blockchain(.headers(.subscribe)),
                 options: .init(timeout: .seconds(30), token: cancellationToken)
             ) as (
                 UUID,
-                FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.SubscribeModel,
-                AsyncThrowingStream<FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.SubscribeNotificationModel, Swift.Error>
+                FulcrumResponse.ResultModel.Blockchain.Headers.Subscribe,
+                AsyncThrowingStream<FulcrumResponse.ResultModel.Blockchain.Headers.SubscribeNotification, Swift.Error>
             )
         }
 

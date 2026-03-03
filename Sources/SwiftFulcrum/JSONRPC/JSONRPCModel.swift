@@ -6,11 +6,11 @@ struct JSONRPCModel {
     typealias MethodPath = String
     typealias SubscriptionIdentifier = String
     
-    let decoder = JSONRPCModel.CoderModel.decoder
+    let decoder = JSONRPCModel.Coder.decoder
 }
 
 extension JSONRPCModel {
-    enum CoderModel {
+    enum Coder {
         static var encoder: JSONEncoder {
             let encoder = JSONEncoder()
             return encoder
@@ -24,7 +24,7 @@ extension JSONRPCModel {
 }
 
 extension JSONRPCModel {
-    struct DecodeContextModel {
+    struct DecodeContext {
         let methodPath: String?
         init(methodPath: String?) { self.methodPath = methodPath }
     }

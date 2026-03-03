@@ -29,22 +29,22 @@ extension FulcrumNetworkClient {
                     self.string = try? container.decode(String.self)
                 }
             }
-            return try? JSONRPCModel.CoderModel.decoder
+            return try? JSONRPCModel.Coder.decoder
                 .decode(EnvelopeModel.self, from: data).params.first?.string
             
         case .transactionDoubleSpendProof:
             struct EnvelopeModel: Decodable { let params: [DecodableValueModel] }
             struct DecodableValueModel: Decodable {
                 let string: String?
-                let dsProof: DSProofModel?
-                struct DSProofModel: Decodable { let txid: String }
+                let dsProof: DSProof?
+                struct DSProof: Decodable { let txid: String }
                 init(from decoder: Decoder) throws {
                     let container = try decoder.singleValueContainer()
                     self.string = try? container.decode(String.self)
-                    self.dsProof = try? container.decode(DSProofModel.self)
+                    self.dsProof = try? container.decode(DSProof.self)
                 }
             }
-            if let first = try? JSONRPCModel.CoderModel.decoder.decode(EnvelopeModel.self, from: data).params.first {
+            if let first = try? JSONRPCModel.Coder.decoder.decode(EnvelopeModel.self, from: data).params.first {
                 if let string = first.string { return string }
                 if let proof = first.dsProof { return proof.txid }
             }

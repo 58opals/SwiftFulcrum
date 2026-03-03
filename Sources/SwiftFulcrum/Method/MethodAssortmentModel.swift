@@ -18,7 +18,7 @@ struct MethodAssortmentModel {
             switch blockchain {
             case .estimateFee(_): return
             case .relayFee: return
-                // MARK: - BlockchainModel.ScriptHashModel
+                // MARK: - BlockchainModel.ScriptHash
             case .scripthash(let scripthash):
                 switch scripthash {
                 case .getBalance(_, _): return
@@ -29,7 +29,7 @@ struct MethodAssortmentModel {
                 case .subscribe(_): return
                 case .unsubscribe(_): return
                 }
-                // MARK: - BlockchainModel.AddressModel
+                // MARK: - BlockchainModel.Address
             case .address(let address):
                 switch address {
                 case .getBalance(_, _): return
@@ -41,7 +41,7 @@ struct MethodAssortmentModel {
                 case .subscribe(_): return
                 case .unsubscribe(_): return
                 }
-                // MARK: - BlockchainModel.BlockModel
+                // MARK: - BlockchainModel.Block
             case .block(let block):
                 switch block {
                 case .header(_, _): return
@@ -52,14 +52,14 @@ struct MethodAssortmentModel {
                 switch header {
                 case .get(_): return
                 }
-                // MARK: - BlockchainModel.HeadersModel
+                // MARK: - BlockchainModel.Headers
             case .headers(let headers):
                 switch headers {
                 case .getTip: return
                 case .subscribe: return
                 case .unsubscribe: return
                 }
-                // MARK: - BlockchainModel.TransactionModel
+                // MARK: - BlockchainModel.Transaction
             case .transaction(let transaction):
                 switch transaction {
                 case .broadcast(_): return
@@ -70,7 +70,7 @@ struct MethodAssortmentModel {
                 case .idFromPos(_, _, _): return
                 case .subscribe(_): return
                 case .unsubscribe(_): return
-                    // MARK: - BlockchainModel.TransactionModel.DSProofModel
+                    // MARK: - BlockchainModel.Transaction.DSProof
                 case .dsProof(let dSProof):
                     switch dSProof {
                     case .get(_): return
@@ -79,7 +79,7 @@ struct MethodAssortmentModel {
                     case .unsubscribe(_): return
                     }
                 }
-                // MARK: - BlockchainModel.UTXOModel
+                // MARK: - BlockchainModel.UTXO
             case .utxo(let utxo):
                 switch utxo {
                 case .getInfo(_, _): return
@@ -103,7 +103,7 @@ struct MethodAssortmentModel {
             // MARK: - BlockchainModel
         case "blockchain.estimatefee": return
         case "blockchain.relayfee": return
-            // MARK: - BlockchainModel.ScriptHashModel
+            // MARK: - BlockchainModel.ScriptHash
         case "blockchain.scripthash.get_balance": return
         case "blockchain.scripthash.get_first_use": return
         case "blockchain.scripthash.get_history": return
@@ -111,7 +111,7 @@ struct MethodAssortmentModel {
         case "blockchain.scripthash.listunspent": return
         case "blockchain.scripthash.subscribe": return
         case "blockchain.scripthash.unsubscribe": return
-            // MARK: - BlockchainModel.AddressModel
+            // MARK: - BlockchainModel.Address
         case "blockchain.address.get_balance": return
         case "blockchain.address.get_first_use": return
         case "blockchain.address.get_history": return
@@ -120,16 +120,16 @@ struct MethodAssortmentModel {
         case "blockchain.address.listunspent": return
         case "blockchain.address.subscribe": return
         case "blockchain.address.unsubscribe": return
-            // MARK: - BlockchainModel.BlockModel
+            // MARK: - BlockchainModel.Block
         case "blockchain.block.header": return
         case "blockchain.block.headers": return
             // MARK: - BlockchainModel.HeaderModel
         case "blockchain.header.get": return
-            // MARK: - BlockchainModel.HeadersModel
+            // MARK: - BlockchainModel.Headers
         case "blockchain.headers.get_tip": return
         case "blockchain.headers.subscribe": return
         case "blockchain.headers.unsubscribe": return
-            // MARK: - BlockchainModel.TransactionModel
+            // MARK: - BlockchainModel.Transaction
         case "blockchain.transaction.broadcast": return
         case "blockchain.transaction.get": return
         case "blockchain.transaction.get_confirmed_blockhash": return
@@ -138,12 +138,12 @@ struct MethodAssortmentModel {
         case "blockchain.transaction.id_from_pos": return
         case "blockchain.transaction.subscribe": return
         case "blockchain.transaction.unsubscribe": return
-            // MARK: - BlockchainModel.TransactionModel.DSProofModel
+            // MARK: - BlockchainModel.Transaction.DSProof
         case "blockchain.transaction.dsproof.get": return
         case "blockchain.transaction.dsproof.list": return
         case "blockchain.transaction.dsproof.subscribe": return
         case "blockchain.transaction.dsproof.unsubscribe": return
-            // MARK: - BlockchainModel.UTXOModel
+            // MARK: - BlockchainModel.UTXO
         case "blockchain.utxo.get_info": return
             // MARK: - MempoolModel
         case "mempool.get_info": return

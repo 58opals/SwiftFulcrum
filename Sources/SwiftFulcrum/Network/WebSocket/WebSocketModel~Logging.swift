@@ -4,12 +4,12 @@ import Foundation
 
 extension WebSocketModel {
     func emitLog(
-        _ level: LogModel.LevelModel,
+        _ level: LogModel.Level,
         _ message: @autoclosure () -> String,
         metadata: [String: String] = .init(),
         file: String = #fileID, function: String = #function, line: UInt = #line
     ) {
-        if LogModel.ContextModel.behavior == .quiet && level.priority <= LogModel.LevelModel.info.priority {
+        if LogModel.Context.behavior == .quiet && level.priority <= LogModel.Level.info.priority {
             return
         }
         

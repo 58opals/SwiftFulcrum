@@ -31,7 +31,7 @@ struct WebSocketLifecycleValidator {
 
 extension WebSocketLifecycleValidator {
     private func collectLifecycleEventSignatures(
-        from stream: AsyncStream<WebSocketModel.LifecycleModel.EventModel>,
+        from stream: AsyncStream<WebSocketModel.Lifecycle.Event>,
         count: Int,
         timeout: Duration
     ) async -> [String] {
@@ -65,7 +65,7 @@ private actor LifecycleEventSignatureCollectorModel {
         self.targetCount = targetCount
     }
     
-    func record(_ event: WebSocketModel.LifecycleModel.EventModel) -> Bool {
+    func record(_ event: WebSocketModel.Lifecycle.Event) -> Bool {
         values.append(signature(for: event))
         return values.count >= targetCount
     }
@@ -74,7 +74,7 @@ private actor LifecycleEventSignatureCollectorModel {
         values
     }
     
-    private func signature(for event: WebSocketModel.LifecycleModel.EventModel) -> String {
+    private func signature(for event: WebSocketModel.Lifecycle.Event) -> String {
         switch event {
         case .connected(let isReconnect):
             return "connected:\(isReconnect)"

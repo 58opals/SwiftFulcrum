@@ -5,65 +5,65 @@ import Foundation
 extension FulcrumMethodRequest {
     enum ResponseTypeModel {
         // ServerModel
-        case ServerPing(FulcrumResponse.ResultModel.ServerModel.PingModel)
-        case ServerVersion(FulcrumResponse.ResultModel.ServerModel.VersionModel)
-        case ServerFeatures(FulcrumResponse.ResultModel.ServerModel.FeaturesModel)
+        case ServerPing(FulcrumResponse.ResultModel.Server.Ping)
+        case ServerVersion(FulcrumResponse.ResultModel.Server.Version)
+        case ServerFeatures(FulcrumResponse.ResultModel.Server.Features)
         
         // BlockchainModel
-        case BlockchainEstimateFee(FulcrumResponse.ResultModel.BlockchainModel.EstimateFeeModel)
-        case BlockchainRelayFee(FulcrumResponse.ResultModel.BlockchainModel.RelayFeeModel)
+        case BlockchainEstimateFee(FulcrumResponse.ResultModel.Blockchain.EstimateFee)
+        case BlockchainRelayFee(FulcrumResponse.ResultModel.Blockchain.RelayFee)
         
-        // BlockchainModel.ScriptHashModel
-        case BlockchainScriptHashGetBalance(FulcrumResponse.ResultModel.BlockchainModel.ScriptHashModel.GetBalanceModel)
-        case BlockchainScriptHashGetFirstUse(FulcrumResponse.ResultModel.BlockchainModel.ScriptHashModel.GetFirstUseModel)
-        case BlockchainScriptHashGetHistory(FulcrumResponse.ResultModel.BlockchainModel.ScriptHashModel.GetHistoryModel)
-        case BlockchainScriptHashGetMempool(FulcrumResponse.ResultModel.BlockchainModel.ScriptHashModel.GetMempoolModel)
-        case BlockchainScriptHashListUnspent(FulcrumResponse.ResultModel.BlockchainModel.ScriptHashModel.ListUnspentModel)
-        case BlockchainScriptHashSubscribe(FulcrumResponse.ResultModel.BlockchainModel.ScriptHashModel.SubscribeModel)
-        case BlockchainScriptHashUnsubscribe(FulcrumResponse.ResultModel.BlockchainModel.ScriptHashModel.UnsubscribeModel)
+        // BlockchainModel.ScriptHash
+        case BlockchainScriptHashGetBalance(FulcrumResponse.ResultModel.Blockchain.ScriptHash.GetBalance)
+        case BlockchainScriptHashGetFirstUse(FulcrumResponse.ResultModel.Blockchain.ScriptHash.GetFirstUse)
+        case BlockchainScriptHashGetHistory(FulcrumResponse.ResultModel.Blockchain.ScriptHash.GetHistory)
+        case BlockchainScriptHashGetMempool(FulcrumResponse.ResultModel.Blockchain.ScriptHash.GetMempool)
+        case BlockchainScriptHashListUnspent(FulcrumResponse.ResultModel.Blockchain.ScriptHash.ListUnspent)
+        case BlockchainScriptHashSubscribe(FulcrumResponse.ResultModel.Blockchain.ScriptHash.Subscribe)
+        case BlockchainScriptHashUnsubscribe(FulcrumResponse.ResultModel.Blockchain.ScriptHash.Unsubscribe)
         
-        // BlockchainModel.AddressModel
-        case BlockchainAddressGetBalance(FulcrumResponse.ResultModel.BlockchainModel.AddressModel.GetBalanceModel)
-        case BlockchainAddressGetFirstUse(FulcrumResponse.ResultModel.BlockchainModel.AddressModel.GetFirstUseModel)
-        case BlockchainAddressGetHistory(FulcrumResponse.ResultModel.BlockchainModel.AddressModel.GetHistoryModel)
-        case BlockchainAddressGetMempool(FulcrumResponse.ResultModel.BlockchainModel.AddressModel.GetMempoolModel)
-        case BlockchainAddressGetScriptHash(FulcrumResponse.ResultModel.BlockchainModel.AddressModel.GetScriptHashModel)
-        case BlockchainAddressListUnspent(FulcrumResponse.ResultModel.BlockchainModel.AddressModel.ListUnspentModel)
-        case BlockchainAddressSubscribe(FulcrumResponse.ResultModel.BlockchainModel.AddressModel.SubscribeModel)
-        case BlockchainAddressUnsubscribe(FulcrumResponse.ResultModel.BlockchainModel.AddressModel.UnsubscribeModel)
+        // BlockchainModel.Address
+        case BlockchainAddressGetBalance(FulcrumResponse.ResultModel.Blockchain.Address.GetBalance)
+        case BlockchainAddressGetFirstUse(FulcrumResponse.ResultModel.Blockchain.Address.GetFirstUse)
+        case BlockchainAddressGetHistory(FulcrumResponse.ResultModel.Blockchain.Address.GetHistory)
+        case BlockchainAddressGetMempool(FulcrumResponse.ResultModel.Blockchain.Address.GetMempool)
+        case BlockchainAddressGetScriptHash(FulcrumResponse.ResultModel.Blockchain.Address.GetScriptHash)
+        case BlockchainAddressListUnspent(FulcrumResponse.ResultModel.Blockchain.Address.ListUnspent)
+        case BlockchainAddressSubscribe(FulcrumResponse.ResultModel.Blockchain.Address.Subscribe)
+        case BlockchainAddressUnsubscribe(FulcrumResponse.ResultModel.Blockchain.Address.Unsubscribe)
         
-        // BlockchainModel.BlockModel
-        case BlockchainBlockHeader(FulcrumResponse.ResultModel.BlockchainModel.BlockModel.HeaderModel)
-        case BlockchainBlockHeaders(FulcrumResponse.ResultModel.BlockchainModel.BlockModel.HeadersModel)
+        // BlockchainModel.Block
+        case BlockchainBlockHeader(FulcrumResponse.ResultModel.Blockchain.Block.Header)
+        case BlockchainBlockHeaders(FulcrumResponse.ResultModel.Blockchain.Block.Headers)
         
         // BlockchainModel.HeaderModel
-        case BlockchainHeaderGet(FulcrumResponse.ResultModel.BlockchainModel.HeaderModel.GetModel)
+        case BlockchainHeaderGet(FulcrumResponse.ResultModel.Blockchain.Header.Get)
         
-        // BlockchainModel.HeadersModel
-        case BlockchainHeadersGetTip(FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.GetTipModel)
-        case BlockchainHeadersSubscribe(FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.SubscribeModel)
-        case BlockchainHeadersUnsubscribe(FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.UnsubscribeModel)
+        // BlockchainModel.Headers
+        case BlockchainHeadersGetTip(FulcrumResponse.ResultModel.Blockchain.Headers.GetTip)
+        case BlockchainHeadersSubscribe(FulcrumResponse.ResultModel.Blockchain.Headers.Subscribe)
+        case BlockchainHeadersUnsubscribe(FulcrumResponse.ResultModel.Blockchain.Headers.Unsubscribe)
         
-        // BlockchainModel.TransactionModel
-        case BlockchainTransactionBroadcast(FulcrumResponse.ResultModel.BlockchainModel.TransactionModel.BroadcastModel)
-        case BlockchainTransactionGet(FulcrumResponse.ResultModel.BlockchainModel.TransactionModel.GetModel)
-        case BlockchainTransactionGetConfirmedBlockHash(FulcrumResponse.ResultModel.BlockchainModel.TransactionModel.GetConfirmedBlockHashModel)
-        case BlockchainTransactionGetHeight(FulcrumResponse.ResultModel.BlockchainModel.TransactionModel.GetHeightModel)
-        case BlockchainTransactionGetMerkle(FulcrumResponse.ResultModel.BlockchainModel.TransactionModel.GetMerkleModel)
-        case BlockchainTransactionIDFromPos(FulcrumResponse.ResultModel.BlockchainModel.TransactionModel.IDFromPosModel)
-        case BlockchainTransactionSubscribe(FulcrumResponse.ResultModel.BlockchainModel.TransactionModel.SubscribeModel)
-        case BlockchainTransactionUnsubscribe(FulcrumResponse.ResultModel.BlockchainModel.TransactionModel.UnsubscribeModel)
+        // BlockchainModel.Transaction
+        case BlockchainTransactionBroadcast(FulcrumResponse.ResultModel.Blockchain.Transaction.Broadcast)
+        case BlockchainTransactionGet(FulcrumResponse.ResultModel.Blockchain.Transaction.Get)
+        case BlockchainTransactionGetConfirmedBlockHash(FulcrumResponse.ResultModel.Blockchain.Transaction.GetConfirmedBlockHash)
+        case BlockchainTransactionGetHeight(FulcrumResponse.ResultModel.Blockchain.Transaction.GetHeight)
+        case BlockchainTransactionGetMerkle(FulcrumResponse.ResultModel.Blockchain.Transaction.GetMerkle)
+        case BlockchainTransactionIDFromPos(FulcrumResponse.ResultModel.Blockchain.Transaction.IDFromPos)
+        case BlockchainTransactionSubscribe(FulcrumResponse.ResultModel.Blockchain.Transaction.Subscribe)
+        case BlockchainTransactionUnsubscribe(FulcrumResponse.ResultModel.Blockchain.Transaction.Unsubscribe)
         
-        // BlockchainModel.TransactionModel.DSProofModel
-        case BlockchainTransactionDSProofGet(FulcrumResponse.ResultModel.BlockchainModel.TransactionModel.DSProofModel.GetModel)
-        case BlockchainTransactionDSProofList(FulcrumResponse.ResultModel.BlockchainModel.TransactionModel.DSProofModel.ListModel)
-        case BlockchainTransactionDSProofSubscribe(FulcrumResponse.ResultModel.BlockchainModel.TransactionModel.DSProofModel.SubscribeModel)
-        case BlockchainTransactionDSProofUnsubscribe(FulcrumResponse.ResultModel.BlockchainModel.TransactionModel.DSProofModel.UnsubscribeModel)
+        // BlockchainModel.Transaction.DSProof
+        case BlockchainTransactionDSProofGet(FulcrumResponse.ResultModel.Blockchain.Transaction.DSProof.Get)
+        case BlockchainTransactionDSProofList(FulcrumResponse.ResultModel.Blockchain.Transaction.DSProof.List)
+        case BlockchainTransactionDSProofSubscribe(FulcrumResponse.ResultModel.Blockchain.Transaction.DSProof.Subscribe)
+        case BlockchainTransactionDSProofUnsubscribe(FulcrumResponse.ResultModel.Blockchain.Transaction.DSProof.Unsubscribe)
         
-        // BlockchainModel.UTXOModel
-        case BlockchainUTXOGet(FulcrumResponse.ResultModel.BlockchainModel.UTXOModel.GetInfoModel)
+        // BlockchainModel.UTXO
+        case BlockchainUTXOGet(FulcrumResponse.ResultModel.Blockchain.UTXO.GetInfo)
         
         // MempoolModel
-        case MempoolGetFeeHistogram(FulcrumResponse.ResultModel.MempoolModel.GetFeeHistogramModel)
+        case MempoolGetFeeHistogram(FulcrumResponse.ResultModel.Mempool.GetFeeHistogram)
     }
 }

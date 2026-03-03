@@ -7,7 +7,7 @@ extension FulcrumClient {
         case transport(TransportModel)
         case rpc(ServerModel)
         case coding(CodingModel)
-        case client(Client)
+        case client(ClientIssue)
         
         public enum NetworkModel {
             case tlsNegotiationFailed(Swift.Error?)
@@ -32,7 +32,7 @@ extension FulcrumClient {
             case decode(Swift.Error?)
         }
         
-        public enum Client {
+        public enum ClientIssue {
             case urlNotFound
             case invalidURL(String)
             case duplicateHandler
@@ -87,8 +87,8 @@ extension FulcrumClient.Error.CodingModel: Swift.Error, Equatable, Sendable {
         }
     }
 }
-extension FulcrumClient.Error.Client: Swift.Error, Equatable, Sendable {
-    public static func == (lhs: FulcrumClient.Error.Client, rhs: FulcrumClient.Error.Client) -> Bool {
+extension FulcrumClient.Error.ClientIssue: Swift.Error, Equatable, Sendable {
+    public static func == (lhs: FulcrumClient.Error.ClientIssue, rhs: FulcrumClient.Error.ClientIssue) -> Bool {
         switch (lhs, rhs) {
         case (.urlNotFound, .urlNotFound),
             (.duplicateHandler, .duplicateHandler),
@@ -119,8 +119,4 @@ extension FulcrumClient.Error.Client: Swift.Error, Equatable, Sendable {
             return false
         }
     }
-}
-
-protocol FulcrumErrorConvertibleModel: Swift.Error {
-    var asFulcrumError: FulcrumClient.Error { get }
 }

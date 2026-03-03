@@ -30,7 +30,7 @@ extension FulcrumMethodRequest.BlockchainModel { var path: String {
     case .relayFee: return "relayfee"
     }}}
 
-extension FulcrumMethodRequest.BlockchainModel.ScriptHashModel { var path: String {
+extension FulcrumMethodRequest.BlockchainModel.ScriptHash { var path: String {
     switch self {
     case .getBalance: return "get_balance"
     case .getFirstUse: return "get_first_use"
@@ -41,7 +41,7 @@ extension FulcrumMethodRequest.BlockchainModel.ScriptHashModel { var path: Strin
     case .unsubscribe: return "unsubscribe"
     }}}
 
-extension FulcrumMethodRequest.BlockchainModel.AddressModel { var path: String {
+extension FulcrumMethodRequest.BlockchainModel.Address { var path: String {
     switch self {
     case .getBalance: return "get_balance"
     case .getFirstUse: return "get_first_use"
@@ -53,25 +53,25 @@ extension FulcrumMethodRequest.BlockchainModel.AddressModel { var path: String {
     case .unsubscribe: return "unsubscribe"
     }}}
 
-extension FulcrumMethodRequest.BlockchainModel.BlockModel { var path: String {
+extension FulcrumMethodRequest.BlockchainModel.Block { var path: String {
     switch self {
     case .header: return "header"
     case .headers: return "headers"
     }}}
 
-extension FulcrumMethodRequest.BlockchainModel.HeaderModel { var path: String {
+extension FulcrumMethodRequest.BlockchainModel.Header { var path: String {
     switch self {
     case .get: return "get"
     }}}
 
-extension FulcrumMethodRequest.BlockchainModel.HeadersModel { var path: String {
+extension FulcrumMethodRequest.BlockchainModel.Headers { var path: String {
     switch self {
     case .getTip: return "get_tip"
     case .subscribe: return "subscribe"
     case .unsubscribe: return "unsubscribe"
     }}}
 
-extension FulcrumMethodRequest.BlockchainModel.TransactionModel { var path: String {
+extension FulcrumMethodRequest.BlockchainModel.Transaction { var path: String {
     switch self {
     case .dsProof(let dsProofPath): return "dsproof.\(dsProofPath.path)"
         
@@ -85,7 +85,7 @@ extension FulcrumMethodRequest.BlockchainModel.TransactionModel { var path: Stri
     case .unsubscribe: return "unsubscribe"
     }}}
 
-extension FulcrumMethodRequest.BlockchainModel.TransactionModel.DSProofModel { var path: String {
+extension FulcrumMethodRequest.BlockchainModel.Transaction.DSProof { var path: String {
     switch self {
     case .get: return "get"
     case .list: return "list"
@@ -93,7 +93,7 @@ extension FulcrumMethodRequest.BlockchainModel.TransactionModel.DSProofModel { v
     case .unsubscribe: return "unsubscribe"
     }}}
 
-extension FulcrumMethodRequest.BlockchainModel.UTXOModel { var path: String {
+extension FulcrumMethodRequest.BlockchainModel.UTXO { var path: String {
     switch self {
     case .getInfo: return "get_info"
     }}}

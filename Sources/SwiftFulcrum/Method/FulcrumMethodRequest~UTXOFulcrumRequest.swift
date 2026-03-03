@@ -3,7 +3,7 @@
 import Foundation
 
 extension FulcrumMethodRequest {
-    func createUTXORequest(_ utxo: BlockchainModel.UTXOModel, uuid: UUID) -> FulcrumRequest {
+    func createUTXORequest(_ utxo: BlockchainModel.UTXO, uuid: UUID) -> FulcrumRequest {
         switch utxo {
         case .getInfo(let transactionHash, let outputIndex):
             struct ParametersModel: Encodable {

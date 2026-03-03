@@ -3,12 +3,12 @@
 import Foundation
 
 extension FulcrumMethodRequest {
-    func createAddressRequest(_ address: BlockchainModel.AddressModel, uuid: UUID) -> FulcrumRequest {
+    func createAddressRequest(_ address: BlockchainModel.Address, uuid: UUID) -> FulcrumRequest {
         switch address {
         case .getBalance(let address, let tokenFilter):
             struct ParametersModel: Encodable {
                 let address: String
-                let tokenFilter: FulcrumMethodRequest.BlockchainModel.CashTokensModel.TokenFilterModel?
+                let tokenFilter: FulcrumMethodRequest.BlockchainModel.CashTokens.TokenFilter?
                 func encode(to encoder: Encoder) throws {
                     var container = encoder.unkeyedContainer()
                     try container.encode(address)
@@ -82,7 +82,7 @@ extension FulcrumMethodRequest {
         case .listUnspent(let address, let tokenFilter):
             struct ParametersModel: Encodable {
                 let address: String
-                let tokenFilter: FulcrumMethodRequest.BlockchainModel.CashTokensModel.TokenFilterModel?
+                let tokenFilter: FulcrumMethodRequest.BlockchainModel.CashTokens.TokenFilter?
                 func encode(to encoder: Encoder) throws {
                     var container = encoder.unkeyedContainer()
                     try container.encode(address)

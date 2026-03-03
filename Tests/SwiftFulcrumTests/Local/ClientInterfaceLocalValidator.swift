@@ -21,7 +21,7 @@ struct ClientInterfaceLocalValidator {
             do {
                 _ = try await client.submit(
                     method: method,
-                    responseType: FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.GetTipModel.self
+                    responseType: FulcrumResponse.ResultModel.Blockchain.Headers.GetTip.self
                 )
                 Issue.record("submit should reject subscription methods (method: \(method))")
             } catch let error as FulcrumClient.Error {
@@ -51,8 +51,8 @@ struct ClientInterfaceLocalValidator {
             do {
                 _ = try await client.subscribe(
                     method: method,
-                    initialType: FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.SubscribeModel.self,
-                    notificationType: FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.SubscribeNotificationModel.self
+                    initialType: FulcrumResponse.ResultModel.Blockchain.Headers.Subscribe.self,
+                    notificationType: FulcrumResponse.ResultModel.Blockchain.Headers.SubscribeNotification.self
                 )
                 Issue.record("subscribe() should reject unary methods (method: \(method))")
             } catch let error as FulcrumClient.Error {
@@ -68,9 +68,9 @@ struct ClientInterfaceLocalValidator {
         }
     }
 
-    @Test("CancellationModel cancels underlying token synchronously")
+    @Test("Cancellation cancels underlying token synchronously")
     func markCancellationTokenImmediately() async {
-        let cancellation = FulcrumClient.CallModel.CancellationModel()
+        let cancellation = FulcrumClient.CallModel.Cancellation()
 
         #expect(await cancellation.isCancelled == false)
 

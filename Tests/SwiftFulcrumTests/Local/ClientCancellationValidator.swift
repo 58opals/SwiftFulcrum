@@ -8,8 +8,8 @@ struct ClientCancellationValidator {
     @Test("Shared cancellation cancels every in-flight unary call", .timeLimit(.minutes(1)))
     func sharedCancellationCancelsAllInflightUnaryCalls() async throws {
         let (fulcrum, transport) = try await makeStartedFulcrum()
-        let cancellation = FulcrumClient.CallModel.CancellationModel()
-        let options = FulcrumClient.CallModel.OptionsModel(
+        let cancellation = FulcrumClient.CallModel.Cancellation()
+        let options = FulcrumClient.CallModel.Options(
             timeout: .milliseconds(250),
             cancellation: cancellation
         )
@@ -18,7 +18,7 @@ struct ClientCancellationValidator {
             do {
                 _ = try await fulcrum.submit(
                     method: .blockchain(.headers(.getTip)),
-                    responseType: FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.GetTipModel.self,
+                    responseType: FulcrumResponse.ResultModel.Blockchain.Headers.GetTip.self,
                     options: options
                 )
                 Issue.record("First submit should throw cancelled.")
@@ -34,7 +34,7 @@ struct ClientCancellationValidator {
             do {
                 _ = try await fulcrum.submit(
                     method: .mempool(.getInfo),
-                    responseType: FulcrumResponse.ResultModel.MempoolModel.GetInfoModel.self,
+                    responseType: FulcrumResponse.ResultModel.Mempool.GetInfo.self,
                     options: options
                 )
                 Issue.record("Second submit should throw cancelled.")
@@ -70,7 +70,7 @@ struct ClientCancellationValidator {
             do {
                 _ = try await fulcrum.submit(
                     method: .blockchain(.headers(.getTip)),
-                    responseType: FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.GetTipModel.self,
+                    responseType: FulcrumResponse.ResultModel.Blockchain.Headers.GetTip.self,
                     options: .init(timeout: .milliseconds(100))
                 )
                 Issue.record("submit() should time out when send is delayed.")
@@ -103,8 +103,8 @@ struct ClientCancellationValidator {
             do {
                 _ = try await fulcrum.subscribe(
                     method: .blockchain(.headers(.subscribe)),
-                    initialType: FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.SubscribeModel.self,
-                    notificationType: FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.SubscribeNotificationModel.self,
+                    initialType: FulcrumResponse.ResultModel.Blockchain.Headers.Subscribe.self,
+                    notificationType: FulcrumResponse.ResultModel.Blockchain.Headers.SubscribeNotification.self,
                     options: .init(timeout: .milliseconds(100))
                 )
                 Issue.record("subscribe() should time out when send is delayed.")

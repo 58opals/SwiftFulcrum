@@ -9,7 +9,7 @@ public enum FulcrumMethodRequest {
     
     public enum ServerModel {
         case ping
-        case version(clientName: String, protocolNegotiation: FulcrumClient.Configuration.ProtocolNegotiationModel.ArgumentModel)
+        case version(clientName: String, protocolNegotiation: FulcrumClient.Configuration.ProtocolNegotiationModel.Argument)
         case features
     }
     
@@ -17,55 +17,55 @@ public enum FulcrumMethodRequest {
         case estimateFee(numberOfBlocks: Int)
         case relayFee
         
-        case scripthash(ScriptHashModel)
-        case address(AddressModel)
-        case block(BlockModel)
-        case header(HeaderModel)
-        case headers(HeadersModel)
-        case transaction(TransactionModel)
-        case utxo(UTXOModel)
+        case scripthash(ScriptHash)
+        case address(Address)
+        case block(Block)
+        case header(Header)
+        case headers(Headers)
+        case transaction(Transaction)
+        case utxo(UTXO)
         
-        public enum ScriptHashModel {
-            case getBalance(scripthash: String, tokenFilter: CashTokensModel.TokenFilterModel?)
+        public enum ScriptHash {
+            case getBalance(scripthash: String, tokenFilter: CashTokens.TokenFilter?)
             case getFirstUse(scripthash: String)
             case getHistory(scripthash: String, fromHeight: UInt?, toHeight: UInt?, shouldIncludeUnconfirmed: Bool)
             case getMempool(scripthash: String)
-            case listUnspent(scripthash: String, tokenFilter: CashTokensModel.TokenFilterModel?)
+            case listUnspent(scripthash: String, tokenFilter: CashTokens.TokenFilter?)
             case subscribe(scripthash: String)
             case unsubscribe(scripthash: String)
         }
         
-        public enum AddressModel {
+        public enum Address {
             public typealias fromHeight = UInt
             public typealias toHeight = UInt
             public typealias shouldIncludeUnconfirmed = Bool
             
-            case getBalance(address: String, tokenFilter: CashTokensModel.TokenFilterModel?)
+            case getBalance(address: String, tokenFilter: CashTokens.TokenFilter?)
             case getFirstUse(address: String)
             case getHistory(address: String, fromHeight: UInt?, toHeight: UInt?, shouldIncludeUnconfirmed: Bool)
             case getMempool(address: String)
             case getScriptHash(address: String)
-            case listUnspent(address: String, tokenFilter: CashTokensModel.TokenFilterModel?)
+            case listUnspent(address: String, tokenFilter: CashTokens.TokenFilter?)
             case subscribe(address: String)
             case unsubscribe(address: String)
         }
         
-        public enum BlockModel {
+        public enum Block {
             case header(height: UInt, checkpointHeight: UInt? = nil)
             case headers(startHeight: UInt, count: UInt, checkpointHeight: UInt? = nil)
         }
         
-        public enum HeaderModel {
+        public enum Header {
             case get(blockHash: String)
         }
         
-        public enum HeadersModel {
+        public enum Headers {
             case getTip
             case subscribe
             case unsubscribe
         }
         
-        public enum TransactionModel {
+        public enum Transaction {
             case broadcast(rawTransaction: String)
             case get(transactionHash: String, isVerbose: Bool)
             case getConfirmedBlockHash(transactionHash: String, shouldIncludeHeader: Bool)
@@ -75,9 +75,9 @@ public enum FulcrumMethodRequest {
             case subscribe(transactionHash: String)
             case unsubscribe(transactionHash: String)
             
-            case dsProof(DSProofModel)
+            case dsProof(DSProof)
             
-            public enum DSProofModel {
+            public enum DSProof {
                 case get(transactionHash: String)
                 case list
                 case subscribe(transactionHash: String)
@@ -85,7 +85,7 @@ public enum FulcrumMethodRequest {
             }
         }
         
-        public enum UTXOModel {
+        public enum UTXO {
             case getInfo(transactionHash: String, outputIndex: UInt16)
         }
     }
@@ -96,19 +96,19 @@ public enum FulcrumMethodRequest {
     }
 }
 
-// MARK: - CashTokensModel
+// MARK: - CashTokens
 extension FulcrumMethodRequest.BlockchainModel {
-    public struct CashTokensModel {
-        public struct JSONModel: Codable {
+    public struct CashTokens {
+        public struct JSON: Codable {
             public let amount: String
             public let category: String
-            public let nft: NFTModel?
+            public let nft: NFT?
             
-            public struct NFTModel: Codable {
-                public let capability: CapabilityModel
+            public struct NFT: Codable {
+                public let capability: Capability
                 public let commitment: String
                 
-                public enum CapabilityModel: String, Codable {
+                public enum Capability: String, Codable {
                     case none
                     case mutable
                     case minting
@@ -116,7 +116,7 @@ extension FulcrumMethodRequest.BlockchainModel {
             }
         }
         
-        public enum TokenFilterModel: String, Codable {
+        public enum TokenFilter: String, Codable {
             case include = "include_tokens"
             case exclude = "exclude_tokens"
             case only = "tokens_only"
@@ -127,17 +127,17 @@ extension FulcrumMethodRequest.BlockchainModel {
 extension FulcrumMethodRequest: Sendable {}
 extension FulcrumMethodRequest.ServerModel: Sendable {}
 extension FulcrumMethodRequest.BlockchainModel: Sendable {}
-extension FulcrumMethodRequest.BlockchainModel.ScriptHashModel: Sendable {}
-extension FulcrumMethodRequest.BlockchainModel.AddressModel: Sendable {}
-extension FulcrumMethodRequest.BlockchainModel.BlockModel: Sendable {}
-extension FulcrumMethodRequest.BlockchainModel.HeaderModel: Sendable {}
-extension FulcrumMethodRequest.BlockchainModel.HeadersModel: Sendable {}
-extension FulcrumMethodRequest.BlockchainModel.TransactionModel: Sendable {}
-extension FulcrumMethodRequest.BlockchainModel.TransactionModel.DSProofModel: Sendable {}
-extension FulcrumMethodRequest.BlockchainModel.UTXOModel: Sendable {}
-extension FulcrumMethodRequest.BlockchainModel.CashTokensModel: Sendable {}
-extension FulcrumMethodRequest.BlockchainModel.CashTokensModel.TokenFilterModel: Sendable {}
-extension FulcrumMethodRequest.BlockchainModel.CashTokensModel.JSONModel: Sendable {}
-extension FulcrumMethodRequest.BlockchainModel.CashTokensModel.JSONModel.NFTModel: Sendable {}
-extension FulcrumMethodRequest.BlockchainModel.CashTokensModel.JSONModel.NFTModel.CapabilityModel: Sendable {}
+extension FulcrumMethodRequest.BlockchainModel.ScriptHash: Sendable {}
+extension FulcrumMethodRequest.BlockchainModel.Address: Sendable {}
+extension FulcrumMethodRequest.BlockchainModel.Block: Sendable {}
+extension FulcrumMethodRequest.BlockchainModel.Header: Sendable {}
+extension FulcrumMethodRequest.BlockchainModel.Headers: Sendable {}
+extension FulcrumMethodRequest.BlockchainModel.Transaction: Sendable {}
+extension FulcrumMethodRequest.BlockchainModel.Transaction.DSProof: Sendable {}
+extension FulcrumMethodRequest.BlockchainModel.UTXO: Sendable {}
+extension FulcrumMethodRequest.BlockchainModel.CashTokens: Sendable {}
+extension FulcrumMethodRequest.BlockchainModel.CashTokens.TokenFilter: Sendable {}
+extension FulcrumMethodRequest.BlockchainModel.CashTokens.JSON: Sendable {}
+extension FulcrumMethodRequest.BlockchainModel.CashTokens.JSON.NFT: Sendable {}
+extension FulcrumMethodRequest.BlockchainModel.CashTokens.JSON.NFT.Capability: Sendable {}
 extension FulcrumMethodRequest.MempoolModel: Sendable {}

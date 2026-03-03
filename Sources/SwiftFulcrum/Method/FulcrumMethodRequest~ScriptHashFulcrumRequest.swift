@@ -4,14 +4,14 @@ import Foundation
 
 extension FulcrumMethodRequest {
     func createScriptHashRequest(
-        _ scripthash: BlockchainModel.ScriptHashModel,
+        _ scripthash: BlockchainModel.ScriptHash,
         uuid: UUID
     ) -> FulcrumRequest {
         switch scripthash {
         case .getBalance(let scripthash, let tokenFilter):
             struct ParametersModel: Encodable {
                 let scripthash: String
-                let tokenFilter: FulcrumMethodRequest.BlockchainModel.CashTokensModel.TokenFilterModel?
+                let tokenFilter: FulcrumMethodRequest.BlockchainModel.CashTokens.TokenFilter?
                 func encode(to encoder: Encoder) throws {
                     var container = encoder.unkeyedContainer()
                     try container.encode(scripthash)
@@ -73,7 +73,7 @@ extension FulcrumMethodRequest {
         case .listUnspent(let scripthash, let tokenFilter):
             struct ParametersModel: Encodable {
                 let scripthash: String
-                let tokenFilter: FulcrumMethodRequest.BlockchainModel.CashTokensModel.TokenFilterModel?
+                let tokenFilter: FulcrumMethodRequest.BlockchainModel.CashTokens.TokenFilter?
                 func encode(to encoder: Encoder) throws {
                     var container = encoder.unkeyedContainer()
                     try container.encode(scripthash)

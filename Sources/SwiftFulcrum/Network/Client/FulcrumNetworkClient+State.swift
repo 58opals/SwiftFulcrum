@@ -15,7 +15,7 @@ extension FulcrumNetworkClient {
 extension FulcrumNetworkClient.State: Sendable {}
 
 extension FulcrumNetworkClient {
-    typealias ServerFeatures = FulcrumResponse.ResultModel.ServerModel.FeaturesModel
+    typealias ServerFeatures = FulcrumResponse.ResultModel.Server.Features
     
     func resetNegotiatedSession() {
         state.negotiatedSession.negotiationTask?.cancel()

@@ -3,7 +3,7 @@
 import Foundation
 
 extension FulcrumMethodRequest {
-    func createBlockRequest(_ block: BlockchainModel.BlockModel, uuid: UUID) -> FulcrumRequest {
+    func createBlockRequest(_ block: BlockchainModel.Block, uuid: UUID) -> FulcrumRequest {
         switch block {
         case .header(let height, let checkpointHeight):
             struct ParametersModel: Encodable {

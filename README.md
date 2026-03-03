@@ -15,7 +15,7 @@ It ships with a strongly-typed RPC surface (`FulcrumMethodRequest` + `FulcrumRes
 - **Automatic bootstrap, failover, and resubscription.** Pass an explicit WebSocket URL, or let SwiftFulcrum select from the bundled mainnet/testnet server catalogs. Reconnects use exponential backoff with jitter, and stored subscriptions are re-issued after reconnect.
 - **RPC heartbeat.** After connecting, SwiftFulcrum periodically issues `server.ping` (defaults: 25 s interval, 10 s timeout) to detect stalled connections and trigger a reconnect.
 - **Actor-isolated concurrency.** `FulcrumClient`, `FulcrumNetworkClient`, and `WebSocketModel` are actors that encapsulate state, request routing, and stream lifecycles.
-- **First-class observability.** Plug in custom `LogModel.AdapterModel` implementations and `MetricsClient` collectors to observe connect/disconnect, send/receive, pings, diagnostics snapshots, and subscription registry changes.
+- **First-class observability.** Plug in custom `LogModel.Adapter` implementations and `MetricsClient` collectors to observe connect/disconnect, send/receive, pings, diagnostics snapshots, and subscription registry changes.
 - **Connection state + diagnostics.** Consume an `AsyncStream<FulcrumClient.ConnectionState>`, query `makeDiagnosticsSnapshot()`, and inspect `listSubscriptions()`.
 - **Configurable server catalogs.** Use the bundled catalogs, inject your own `FulcrumServerCatalogRepository`, or supply a bootstrap fallback list.
 - **Opt-in quiet logging for scoped work.** Use `LogModel.perform(withBehavior: .quiet) { ... }` to suppress normal logs for noisy operations.
@@ -134,7 +134,7 @@ Task {
 
         let response = try await fulcrum.submit(
             method: .blockchain(.headers(.getTip)),
-            responseType: FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.GetTipModel.self
+            responseType: FulcrumResponse.ResultModel.Blockchain.Headers.GetTip.self
         )
 
         guard let tip = response.extractRegularResponse() else { return }
@@ -163,8 +163,8 @@ Task {
 
         let (initial, updates, cancel) = try await fulcrum.subscribe(
             method: .blockchain(.headers(.subscribe)),
-            initialType: FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.SubscribeModel.self,
-            notificationType: FulcrumResponse.ResultModel.BlockchainModel.HeadersModel.SubscribeNotificationModel.self
+            initialType: FulcrumResponse.ResultModel.Blockchain.Headers.Subscribe.self,
+            notificationType: FulcrumResponse.ResultModel.Blockchain.Headers.SubscribeNotification.self
         )
 
         print("Initial best height: \(initial.height)")
@@ -192,7 +192,7 @@ Task {
 ```swift
 let response = try await fulcrum.submit(
     method: .server(.features),
-    responseType: FulcrumResponse.ResultModel.ServerModel.FeaturesModel.self
+    responseType: FulcrumResponse.ResultModel.Server.Features.self
 )
 
 guard let features = response.extractRegularResponse() else { return }
@@ -290,14 +290,14 @@ Notes:
 
 ## Timeouts and cancellation
 
-Use `FulcrumClient.CallModel.OptionsModel` to control per-call behaviour. A `timeout` bounds the RPC operation (including waiting for a server response). A `CancellationModel` can be shared across tasks to cancel unary calls or long-lived subscriptions.
+Use `FulcrumClient.CallModel.Options` to control per-call behaviour. A `timeout` bounds the RPC operation (including waiting for a server response). A `Cancellation` can be shared across tasks to cancel unary calls or long-lived subscriptions.
 
 ```swift
-let cancellation = FulcrumClient.CallModel.CancellationModel()
+let cancellation = FulcrumClient.CallModel.Cancellation()
 
 let response = try await fulcrum.submit(
     method: .mempool(.getFeeHistogram),
-    responseType: FulcrumResponse.ResultModel.MempoolModel.GetFeeHistogramModel.self,
+    responseType: FulcrumResponse.ResultModel.Mempool.GetFeeHistogram.self,
     options: .init(timeout: .seconds(10), cancellation: cancellation)
 )
 
@@ -315,7 +315,7 @@ All failures funnel through `FulcrumClient.Error` with transport, RPC, coding, a
 do {
     let response = try await fulcrum.submit(
         method: .mempool(.getInfo),
-        responseType: FulcrumResponse.ResultModel.MempoolModel.GetInfoModel.self
+        responseType: FulcrumResponse.ResultModel.Mempool.GetInfo.self
     )
 
     guard let info = response.extractRegularResponse() else { return }

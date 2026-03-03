@@ -44,7 +44,7 @@ extension FulcrumRequest: Hashable {
 extension FulcrumRequest {
     var data: Data? {
         do {
-            let data = try JSONRPCModel.CoderModel.encoder.encode(self)
+            let data = try JSONRPCModel.Coder.encoder.encode(self)
             return data
         } catch {
             return nil
