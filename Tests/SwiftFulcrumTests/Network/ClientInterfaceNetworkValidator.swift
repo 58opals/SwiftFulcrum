@@ -19,7 +19,7 @@ struct ClientInterfaceNetworkValidator {
         try await NetworkTestClient.runWithClient(url) { client in
             let response = try await client.submit(
                 method: .blockchain(.headers(.getTip)),
-                responseType: FulcrumResponse.ResultModel.Blockchain.Headers.GetTip.self,
+                responseType: SwiftFulcrum.RPC.Response.ResultModel.Blockchain.Headers.GetTip.self,
                 options: .init(timeout: .seconds(30))
             )
 
@@ -34,18 +34,18 @@ struct ClientInterfaceNetworkValidator {
     }
 
     @Test(
-        "Submit starts FulcrumClient when idle",
+        "Submit starts SwiftFulcrum.Client when idle",
         .timeLimit(.minutes(1)),
         .enabled(if: TestExecutionPolicy.shouldRunNetwork, "Network tests are opt-in. Set SWIFTFULCRUM_RUN_NETWORK=1 to enable them.")
     )
     func submitAndStartClientWhenIdle() async throws {
         let url = try await NetworkTestClient.pickServerURL()
-        let client = try await FulcrumClient(url: url.absoluteString)
+        let client = try await SwiftFulcrum.Client(url: url.absoluteString)
 
         // Avoid calling start() directly to exercise prepareClientForRequests.
         let response = try await client.submit(
             method: .blockchain(.headers(.getTip)),
-            responseType: FulcrumResponse.ResultModel.Blockchain.Headers.GetTip.self,
+            responseType: SwiftFulcrum.RPC.Response.ResultModel.Blockchain.Headers.GetTip.self,
             options: .init(timeout: .seconds(30))
         )
 
@@ -68,13 +68,13 @@ struct ClientInterfaceNetworkValidator {
     )
     func subscribeAndCreateCancellableHeaderSubscription() async throws {
         let url = try await NetworkTestClient.pickServerURL()
-        let cancellation = FulcrumClient.CallModel.Cancellation()
+        let cancellation = SwiftFulcrum.Client.CallModel.Cancellation()
 
         try await NetworkTestClient.runWithClient(url) { client in
             let (initial, updates, cancel) = try await client.subscribe(
                 method: .blockchain(.headers(.subscribe)),
-                initialType: FulcrumResponse.ResultModel.Blockchain.Headers.Subscribe.self,
-                notificationType: FulcrumResponse.ResultModel.Blockchain.Headers.SubscribeNotification.self,
+                initialType: SwiftFulcrum.RPC.Response.ResultModel.Blockchain.Headers.Subscribe.self,
+                notificationType: SwiftFulcrum.RPC.Response.ResultModel.Blockchain.Headers.SubscribeNotification.self,
                 options: .init(timeout: .seconds(30), cancellation: cancellation)
             )
 
@@ -104,8 +104,8 @@ struct ClientInterfaceNetworkValidator {
         try await NetworkTestClient.runWithClient(url) { client in
             let (initial, updates, cancel) = try await client.subscribe(
                 method: .blockchain(.address(.subscribe(address: Self.testAddress))),
-                initialType: FulcrumResponse.ResultModel.Blockchain.Address.Subscribe.self,
-                notificationType: FulcrumResponse.ResultModel.Blockchain.Address.SubscribeNotification.self,
+                initialType: SwiftFulcrum.RPC.Response.ResultModel.Blockchain.Address.Subscribe.self,
+                notificationType: SwiftFulcrum.RPC.Response.ResultModel.Blockchain.Address.SubscribeNotification.self,
                 options: .init(timeout: .seconds(30))
             )
 
@@ -133,8 +133,8 @@ struct ClientInterfaceNetworkValidator {
         try await NetworkTestClient.runWithClient(url) { client in
             let (initial, updates, cancel) = try await client.subscribe(
                 method: .blockchain(.headers(.subscribe)),
-                initialType: FulcrumResponse.ResultModel.Blockchain.Headers.Subscribe.self,
-                notificationType: FulcrumResponse.ResultModel.Blockchain.Headers.SubscribeNotification.self,
+                initialType: SwiftFulcrum.RPC.Response.ResultModel.Blockchain.Headers.Subscribe.self,
+                notificationType: SwiftFulcrum.RPC.Response.ResultModel.Blockchain.Headers.SubscribeNotification.self,
                 options: .init(timeout: .seconds(30))
             )
 
@@ -172,7 +172,7 @@ struct ClientInterfaceNetworkValidator {
 
     // MARK: - Misc RPC
     @Test(
-        "Submit resolves address metadata over live FulcrumClient",
+        "Submit resolves address metadata over live SwiftFulcrum.Client",
         .timeLimit(.minutes(1)),
         .enabled(if: TestExecutionPolicy.shouldRunNetwork, "Network tests are opt-in. Set SWIFTFULCRUM_RUN_NETWORK=1 to enable them.")
     )
@@ -182,7 +182,7 @@ struct ClientInterfaceNetworkValidator {
         try await NetworkTestClient.runWithClient(url) { client in
             let scriptHashResponse = try await client.submit(
                 method: .blockchain(.address(.getScriptHash(address: Self.testAddress))),
-                responseType: FulcrumResponse.ResultModel.Blockchain.Address.GetScriptHash.self,
+                responseType: SwiftFulcrum.RPC.Response.ResultModel.Blockchain.Address.GetScriptHash.self,
                 options: .init(timeout: .seconds(15))
             )
 
@@ -194,7 +194,7 @@ struct ClientInterfaceNetworkValidator {
 
             let balanceResponse = try await client.submit(
                 method: .blockchain(.address(.getBalance(address: Self.testAddress, tokenFilter: nil))),
-                responseType: FulcrumResponse.ResultModel.Blockchain.Address.GetBalance.self,
+                responseType: SwiftFulcrum.RPC.Response.ResultModel.Blockchain.Address.GetBalance.self,
                 options: .init(timeout: .seconds(15))
             )
 
@@ -221,11 +221,11 @@ struct ClientInterfaceNetworkValidator {
             do {
                 _ = try await client.submit(
                     method: .blockchain(.transaction(.broadcast(rawTransaction: "00"))),
-                    responseType: FulcrumResponse.ResultModel.Blockchain.Transaction.Broadcast.self,
+                    responseType: SwiftFulcrum.RPC.Response.ResultModel.Blockchain.Transaction.Broadcast.self,
                     options: .init(timeout: .seconds(15))
                 )
                 Issue.record("Expected broadcast to fail for invalid raw transaction")
-            } catch let error as FulcrumClient.Error {
+            } catch let error as SwiftFulcrum.Client.Error {
                 switch error {
                 case .rpc(let rpcError):
                     #expect(!rpcError.message.isEmpty)

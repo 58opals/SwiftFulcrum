@@ -102,9 +102,9 @@ extension WebSocketModel {
 }
 
 extension WebSocketModel.Server {
-    static func decodeBundledServers(for network: FulcrumClient.Configuration.NetworkModel) throws -> [URL] {
+    static func decodeBundledServers(for network: SwiftFulcrum.Client.Configuration.NetworkModel) throws -> [URL] {
         guard let path = Bundle.module.path(forResource: network.resourceName, ofType: "json") else {
-            throw FulcrumClient.Error.transport(.setupFailed)
+            throw SwiftFulcrum.Client.Error.transport(.setupFailed)
         }
         
         let data = try Data(contentsOf: URL(fileURLWithPath: path))

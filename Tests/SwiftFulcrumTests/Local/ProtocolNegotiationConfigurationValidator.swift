@@ -7,23 +7,23 @@ import SwiftFulcrumTestSupport
 struct ProtocolNegotiationConfigurationValidator {
     @Test("Provides sensible defaults")
     func provideSensibleDefaults() throws {
-        let configuration = FulcrumClient.Configuration()
+        let configuration = SwiftFulcrum.Client.Configuration()
         let negotiation = configuration.protocolNegotiation
 
         #expect(negotiation.clientName.hasPrefix("SwiftFulcrum/"))
-        #expect(negotiation.min == ProtocolVersionModel(string: "1.4"))
-        #expect(negotiation.max == ProtocolVersionModel(string: "1.6.0"))
+        #expect(negotiation.min == SwiftFulcrum.ProtocolVersion(string: "1.4"))
+        #expect(negotiation.max == SwiftFulcrum.ProtocolVersion(string: "1.6.0"))
 
         let supportedRange = try negotiation.supportedRange
-        #expect(supportedRange.contains(try #require(ProtocolVersionModel(string: "1.5"))))
+        #expect(supportedRange.contains(try #require(SwiftFulcrum.ProtocolVersion(string: "1.5"))))
     }
     
     @Test("Invalid protocol negotiation ranges throw recoverable errors")
     func throwForInvalidRanges() throws {
-        let minimumVersion = try #require(ProtocolVersionModel(string: "1.6.0"))
-        let maximumVersion = try #require(ProtocolVersionModel(string: "1.4.0"))
+        let minimumVersion = try #require(SwiftFulcrum.ProtocolVersion(string: "1.6.0"))
+        let maximumVersion = try #require(SwiftFulcrum.ProtocolVersion(string: "1.4.0"))
         
-        let negotiation = FulcrumClient.Configuration.ProtocolNegotiationModel(
+        let negotiation = SwiftFulcrum.Client.Configuration.ProtocolNegotiationModel(
             min: minimumVersion,
             max: maximumVersion
         )
@@ -31,7 +31,7 @@ struct ProtocolNegotiationConfigurationValidator {
         do {
             _ = try negotiation.supportedRange
             Issue.record("Expected supportedRange to throw for an invalid range")
-        } catch let error as FulcrumClient.Error {
+        } catch let error as SwiftFulcrum.Client.Error {
             #expect(
                 error == .client(
                     .invalidProtocolNegotiationRange(
@@ -45,7 +45,7 @@ struct ProtocolNegotiationConfigurationValidator {
         do {
             _ = try negotiation.argument
             Issue.record("Expected argument to throw for an invalid range")
-        } catch let error as FulcrumClient.Error {
+        } catch let error as SwiftFulcrum.Client.Error {
             #expect(
                 error == .client(
                     .invalidProtocolNegotiationRange(
@@ -57,12 +57,12 @@ struct ProtocolNegotiationConfigurationValidator {
         }
         
         do {
-            _ = try FulcrumClient.Configuration.ProtocolNegotiationModel.Argument(
+            _ = try SwiftFulcrum.Client.Configuration.ProtocolNegotiationModel.Argument(
                 minimumVersion: minimumVersion,
                 maximumVersion: maximumVersion
             )
             Issue.record("Expected argument initializer to throw for an invalid range")
-        } catch let error as FulcrumClient.Error {
+        } catch let error as SwiftFulcrum.Client.Error {
             #expect(
                 error == .client(
                     .invalidProtocolNegotiationRange(
@@ -76,17 +76,17 @@ struct ProtocolNegotiationConfigurationValidator {
     
     @Test("Protocol negotiation argument encodes valid ranges")
     func encodeValidRangeArguments() throws {
-        let minimumVersion = try #require(ProtocolVersionModel(string: "1.4"))
-        let maximumVersion = try #require(ProtocolVersionModel(string: "1.6.0"))
+        let minimumVersion = try #require(SwiftFulcrum.ProtocolVersion(string: "1.4"))
+        let maximumVersion = try #require(SwiftFulcrum.ProtocolVersion(string: "1.6.0"))
         
-        let rangeArgument = try FulcrumClient.Configuration.ProtocolNegotiationModel.Argument(
+        let rangeArgument = try SwiftFulcrum.Client.Configuration.ProtocolNegotiationModel.Argument(
             minimumVersion: minimumVersion,
             maximumVersion: maximumVersion
         )
         let rangeObject = try JSONDecoder().decode([String].self, from: JSONEncoder().encode(rangeArgument))
         #expect(rangeObject == ["1.4", "1.6.0"])
         
-        let singleArgument = try FulcrumClient.Configuration.ProtocolNegotiationModel.Argument(
+        let singleArgument = try SwiftFulcrum.Client.Configuration.ProtocolNegotiationModel.Argument(
             minimumVersion: minimumVersion,
             maximumVersion: minimumVersion
         )

@@ -3,13 +3,13 @@
 import Foundation
 
 extension FulcrumNetworkClient {
-    func call<ResultModel: JSONRPCResponse>(
-        method: FulcrumMethodRequest,
+    func call<ResultModel: SwiftFulcrum.RPC.ResponseProtocol>(
+        method: SwiftFulcrum.RPC.Method,
         options: CallModel.Options = .init(),
         suppressTransportLogging: Bool = false
     ) async throws -> (UUID, ResultModel) {
         if method.isSubscription {
-            throw FulcrumClient.Error.client(
+            throw SwiftFulcrum.Client.Error.client(
                 .protocolMismatch("call() cannot be used with subscription methods. Use subscribe(...) instead.")
             )
         }
@@ -28,15 +28,15 @@ extension FulcrumNetworkClient {
                 Task {
                     callTask.cancel()
                     guard let self else { return }
-                    await self.cancelUnary(id, error: FulcrumClient.Error.client(.cancelled))
+                    await self.cancelUnary(id, error: SwiftFulcrum.Client.Error.client(.cancelled))
                 }
             }
         }
         
         if let token = options.token, await token.isCancelled {
             callTask.cancel()
-            await self.cancelUnary(id, error: FulcrumClient.Error.client(.cancelled))
-            throw FulcrumClient.Error.client(.cancelled)
+            await self.cancelUnary(id, error: SwiftFulcrum.Client.Error.client(.cancelled))
+            throw SwiftFulcrum.Client.Error.client(.cancelled)
         }
         
         let raw: Data
@@ -47,7 +47,7 @@ extension FulcrumNetworkClient {
                     try await Task.sleep(for: limit)
                     callTask.cancel()
                     await self.cancelUnary(id)
-                    throw FulcrumClient.Error.client(.timeout(limit))
+                    throw SwiftFulcrum.Client.Error.client(.timeout(limit))
                 }
                 
                 let value = try await group.next()!
@@ -61,18 +61,18 @@ extension FulcrumNetworkClient {
         return try (id, raw.decode(ResultModel.self, context: .init(methodPath: method.path)))
     }
     
-    func subscribe<Initial: JSONRPCResponse, Notification: JSONRPCResponse>(
-        method: FulcrumMethodRequest,
+    func subscribe<Initial: SwiftFulcrum.RPC.ResponseProtocol, Notification: SwiftFulcrum.RPC.ResponseProtocol>(
+        method: SwiftFulcrum.RPC.Method,
         options: CallModel.Options = .init()
     ) async throws -> (UUID, Initial, AsyncThrowingStream<Notification, Swift.Error>) {
         if !method.isSubscription {
-            throw FulcrumClient.Error.client(
+            throw SwiftFulcrum.Client.Error.client(
                 .protocolMismatch("subscribe() requires subscription methods. Use submit(...) for unary calls.")
             )
         }
         
         guard let subscriptionPath = method.subscriptionPath else {
-            throw FulcrumClient.Error.client(.protocolMismatch("subscribe() requires supported subscription methods."))
+            throw SwiftFulcrum.Client.Error.client(.protocolMismatch("subscribe() requires supported subscription methods."))
         }
         
         let id = UUID()
@@ -134,7 +134,7 @@ extension FulcrumNetworkClient {
                         await self.cleanUpSubscriptionSetup(
                             for: subscriptionKey,
                             requestIdentifier: id,
-                            error: FulcrumClient.Error.client(.cancelled)
+                            error: SwiftFulcrum.Client.Error.client(.cancelled)
                         )
                     }
                 }
@@ -161,7 +161,7 @@ extension FulcrumNetworkClient {
                     await self.cleanUpSubscriptionSetup(
                         for: cleanupKey,
                         requestIdentifier: idCopy,
-                        error: FulcrumClient.Error.client(.cancelled)
+                        error: SwiftFulcrum.Client.Error.client(.cancelled)
                     )
                 }
             }
@@ -172,9 +172,9 @@ extension FulcrumNetworkClient {
             await self.cleanUpSubscriptionSetup(
                 for: subscriptionKey,
                 requestIdentifier: id,
-                error: FulcrumClient.Error.client(.cancelled)
+                error: SwiftFulcrum.Client.Error.client(.cancelled)
             )
-            throw FulcrumClient.Error.client(.cancelled)
+            throw SwiftFulcrum.Client.Error.client(.cancelled)
         }
         
         if let limit = options.timeout {
@@ -188,9 +188,9 @@ extension FulcrumNetworkClient {
                     await self.cleanUpSubscriptionSetup(
                         for: subscriptionKey,
                         requestIdentifier: id,
-                        error: FulcrumClient.Error.client(.timeout(limit))
+                        error: SwiftFulcrum.Client.Error.client(.timeout(limit))
                     )
-                    throw FulcrumClient.Error.client(.timeout(limit))
+                    throw SwiftFulcrum.Client.Error.client(.timeout(limit))
                 }
                 
                 let value = try await group.next()!

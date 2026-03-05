@@ -5,7 +5,7 @@ import Foundation
 protocol TransportableModel: Sendable {
     typealias CloseInformation = (code: URLSessionWebSocketTask.CloseCode, reason: String?)
     
-    var connectionState: FulcrumClient.ConnectionState { get async }
+    var connectionState: SwiftFulcrum.Client.ConnectionState { get async }
     var closeInformation: CloseInformation { get async }
     var endpoint: URL { get async }
     
@@ -17,12 +17,12 @@ protocol TransportableModel: Sendable {
     func send(string: String) async throws
     
     func makeMessageStream() async -> AsyncThrowingStream<URLSessionWebSocketTask.Message, Swift.Error>
-    func makeLifecycleEvents() async -> AsyncStream<FulcrumTransportState.EventModel>
-    func makeConnectionStateEvents() async -> AsyncStream<FulcrumClient.ConnectionState>
-    func makeDiagnosticsSnapshot() async -> FulcrumClient.DiagnosticsModel.TransportSnapshot
+    func makeLifecycleEvents() async -> AsyncStream<SwiftFulcrum.Transport.State.EventModel>
+    func makeConnectionStateEvents() async -> AsyncStream<SwiftFulcrum.Client.ConnectionState>
+    func makeDiagnosticsSnapshot() async -> SwiftFulcrum.Client.DiagnosticsModel.TransportSnapshot
     
-    func updateMetrics(_ collector: MetricsClient?) async
-    func updateLogger(_ handler: LogModel.Adapter?) async
+    func updateMetrics(_ collector: SwiftFulcrum.Metrics.ClientProtocol?) async
+    func updateLogger(_ handler: SwiftFulcrum.Logging.Adapter?) async
     
     func registerQuietResponse(for identifier: UUID) async
 }

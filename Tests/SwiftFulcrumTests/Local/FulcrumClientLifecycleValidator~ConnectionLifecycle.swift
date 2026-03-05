@@ -8,7 +8,7 @@ extension FulcrumClientLifecycleValidator {
     func multicastConnectionStateLifecycleToMultipleSubscribers() async throws {
         let transport = TransportTestActor()
         let client = FulcrumNetworkClient(transport: transport, protocolNegotiation: .init())
-        let fulcrum = await FulcrumClient(client: client)
+        let fulcrum = await SwiftFulcrum.Client(client: client)
         
         let firstStream = await fulcrum.makeConnectionStateStream()
         let secondStream = await fulcrum.makeConnectionStateStream()
@@ -38,7 +38,7 @@ extension FulcrumClientLifecycleValidator {
         await transport.configureConnectDelay(.milliseconds(250))
         
         let client = FulcrumNetworkClient(transport: transport, protocolNegotiation: .init())
-        let fulcrum = await FulcrumClient(client: client)
+        let fulcrum = await SwiftFulcrum.Client(client: client)
         
         let startTask = Task { try await fulcrum.start() }
         
@@ -49,7 +49,7 @@ extension FulcrumClientLifecycleValidator {
             try await startTask.value
         } catch is CancellationError {
             // The in-flight start may be cancelled by stop().
-        } catch let error as FulcrumClient.Error {
+        } catch let error as SwiftFulcrum.Client.Error {
             if case .transport(.connectionClosed) = error {
                 // The transport may close during the stop() path.
             } else {

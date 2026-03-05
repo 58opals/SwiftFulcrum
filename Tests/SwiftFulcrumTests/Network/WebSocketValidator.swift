@@ -18,7 +18,7 @@ struct WebSocketValidator {
         try await webSocket.connect()
         #expect(await webSocket.connectionState == .connected)
 
-        let method: SwiftFulcrum.FulcrumMethodRequest = .blockchain(.headers(.getTip))
+        let method: SwiftFulcrum.RPC.Method = .blockchain(.headers(.getTip))
         let request = method.createRequest(with: UUID())
         guard let data = request.data else {
             Issue.record("Failed to encode blockchain.headers.get_tip request")
@@ -28,7 +28,7 @@ struct WebSocketValidator {
         try await webSocket.send(data: data)
 
         var iterator = stream.makeAsyncIterator()
-        var receivedTip: FulcrumResponse.ResultModel.Blockchain.Headers.GetTip?
+        var receivedTip: SwiftFulcrum.RPC.Response.ResultModel.Blockchain.Headers.GetTip?
         while let message = try await iterator.next() {
             let payload: Data?
             switch message {
@@ -40,7 +40,7 @@ struct WebSocketValidator {
                 payload = nil
             }
 
-            if let payload, let decoded = try? payload.decode(FulcrumResponse.ResultModel.Blockchain.Headers.GetTip.self) {
+            if let payload, let decoded = try? payload.decode(SwiftFulcrum.RPC.Response.ResultModel.Blockchain.Headers.GetTip.self) {
                 receivedTip = decoded
                 break
             }

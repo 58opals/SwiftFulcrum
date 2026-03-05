@@ -46,12 +46,10 @@ Task {
 }
 ```
 
-Legacy top-level names (for example `FulcrumClient`, `FulcrumMethodRequest`, `FulcrumResponse`) remain available in this release and are deprecated in favor of `SwiftFulcrum.*` facade paths.
-
 ## Core Capabilities
 
-- Typed RPC requests via `FulcrumMethodRequest`
-- Typed response decoding via `FulcrumResponse.ResultModel.*`
+- Typed RPC requests via `SwiftFulcrum.RPC.Method`
+- Typed response decoding via `SwiftFulcrum.RPC.Response.ResultModel.*`
 - Automatic protocol negotiation (`server.version`)
 - Reconnect/failover with subscription recovery
 - Connection state streams and diagnostics snapshots

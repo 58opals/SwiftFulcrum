@@ -5,7 +5,7 @@ enum TestEndpointPolicy {
     private static let fixedServerURLKey = "SWIFTFULCRUM_TEST_SERVER_URL"
 
     static func resolveServerURL(
-        network: FulcrumClient.Configuration.NetworkModel = .mainnet
+        network: SwiftFulcrum.Client.Configuration.NetworkModel = .mainnet
     ) async throws -> URL {
         let environment = ProcessInfo.processInfo.environment
 
@@ -17,12 +17,12 @@ enum TestEndpointPolicy {
                 let url = URL(string: configuredURL),
                 isWebSocketURL(url)
             else {
-                throw FulcrumClient.Error.client(.invalidURL(configuredURL))
+                throw SwiftFulcrum.Client.Error.client(.invalidURL(configuredURL))
             }
             return url
         }
 
-        let bundledServers = try await FulcrumServerCatalogRepository.bundled.loadServers(
+        let bundledServers = try await SwiftFulcrum.ServerCatalog.Repository.bundled.loadServers(
             for: network,
             fallback: .init()
         )
@@ -31,7 +31,7 @@ enum TestEndpointPolicy {
             return scheme == "ws" || scheme == "wss"
         }
         guard let endpoint = sanitizedServers.first else {
-            throw FulcrumClient.Error.transport(.setupFailed)
+            throw SwiftFulcrum.Client.Error.transport(.setupFailed)
         }
         return endpoint
     }

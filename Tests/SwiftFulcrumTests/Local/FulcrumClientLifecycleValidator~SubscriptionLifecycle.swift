@@ -10,16 +10,16 @@ extension FulcrumClientLifecycleValidator {
         
         var subscribeTask: Task<
             (
-                FulcrumResponse.ResultModel.Blockchain.Headers.Subscribe,
-                AsyncThrowingStream<FulcrumResponse.ResultModel.Blockchain.Headers.SubscribeNotification, Swift.Error>,
+                SwiftFulcrum.RPC.Response.ResultModel.Blockchain.Headers.Subscribe,
+                AsyncThrowingStream<SwiftFulcrum.RPC.Response.ResultModel.Blockchain.Headers.SubscribeNotification, Swift.Error>,
                 @Sendable () async -> Void
             ),
             Swift.Error
         >? = Task {
             try await fulcrum.subscribe(
                 method: .blockchain(.headers(.subscribe)),
-                initialType: FulcrumResponse.ResultModel.Blockchain.Headers.Subscribe.self,
-                notificationType: FulcrumResponse.ResultModel.Blockchain.Headers.SubscribeNotification.self,
+                initialType: SwiftFulcrum.RPC.Response.ResultModel.Blockchain.Headers.Subscribe.self,
+                notificationType: SwiftFulcrum.RPC.Response.ResultModel.Blockchain.Headers.SubscribeNotification.self,
                 options: .init(timeout: .seconds(30))
             )
         }
@@ -32,7 +32,7 @@ extension FulcrumClientLifecycleValidator {
         )
         await transport.enqueueIncoming(.data(subscribePayload))
         var updatesStream: AsyncThrowingStream<
-            FulcrumResponse.ResultModel.Blockchain.Headers.SubscribeNotification,
+            SwiftFulcrum.RPC.Response.ResultModel.Blockchain.Headers.SubscribeNotification,
             Swift.Error
         >?
         do {
@@ -48,7 +48,7 @@ extension FulcrumClientLifecycleValidator {
         subscribeTask = nil
         
         let notificationPayload = try TransportTestActor.encodeSubscriptionNotification(
-            method: FulcrumMethodRequest.blockchain(.headers(.subscribe)).path,
+            method: SwiftFulcrum.RPC.Method.blockchain(.headers(.subscribe)).path,
             parameters: [[
                 "height": 920_001,
                 "hex": String(repeating: "e", count: 160)
@@ -65,7 +65,7 @@ extension FulcrumClientLifecycleValidator {
         updatesStream = nil
         
         var consumeFirstUpdateTask: Task<
-            FulcrumResponse.ResultModel.Blockchain.Headers.SubscribeNotification?,
+            SwiftFulcrum.RPC.Response.ResultModel.Blockchain.Headers.SubscribeNotification?,
             Swift.Error
         >? = Task { [transientUpdatesStream] in
             guard let stream = transientUpdatesStream else { return nil }
@@ -87,7 +87,7 @@ extension FulcrumClientLifecycleValidator {
         }
         #expect(registryDidClear)
         
-        let unsubscribeMethodPath = FulcrumMethodRequest.blockchain(.headers(.unsubscribe)).path
+        let unsubscribeMethodPath = SwiftFulcrum.RPC.Method.blockchain(.headers(.unsubscribe)).path
         let didSendUnsubscribe = await waitUntil(timeout: .seconds(5)) {
             let unsubscribeCount = (try? await countSentMethodOccurrences(
                 unsubscribeMethodPath,
@@ -111,8 +111,8 @@ extension FulcrumClientLifecycleValidator {
         let subscribeTask = Task {
             try await fulcrum.subscribe(
                 method: .blockchain(.headers(.subscribe)),
-                initialType: FulcrumResponse.ResultModel.Blockchain.Headers.Subscribe.self,
-                notificationType: FulcrumResponse.ResultModel.Blockchain.Headers.SubscribeNotification.self,
+                initialType: SwiftFulcrum.RPC.Response.ResultModel.Blockchain.Headers.Subscribe.self,
+                notificationType: SwiftFulcrum.RPC.Response.ResultModel.Blockchain.Headers.SubscribeNotification.self,
                 options: .init(timeout: .seconds(30))
             )
         }
@@ -132,7 +132,7 @@ extension FulcrumClientLifecycleValidator {
         let activeSubscriptions = await fulcrum.listSubscriptions()
         #expect(activeSnapshot.activeSubscriptionCount == 1)
         #expect(activeSubscriptions.count == 1)
-        #expect(activeSubscriptions.first?.methodPath == FulcrumMethodRequest.blockchain(.headers(.subscribe)).path)
+        #expect(activeSubscriptions.first?.methodPath == SwiftFulcrum.RPC.Method.blockchain(.headers(.subscribe)).path)
 
         await cancel()
         #expect(await NetworkTestClient.detectStreamTermination(updates, within: .seconds(5)))

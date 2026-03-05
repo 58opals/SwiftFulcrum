@@ -37,7 +37,7 @@ extension WebSocketModel {
     
     private func waitForConnectionOnce(timeout: TimeInterval) async throws -> Bool {
         guard let task else {
-            throw FulcrumClient.Error.transport(.connectionClosed(closeInformation.code, closeInformation.reason))
+            throw SwiftFulcrum.Client.Error.transport(.connectionClosed(closeInformation.code, closeInformation.reason))
         }
         
         let (stream, continuation) = AsyncThrowingStream<Bool, Error>.makeStream()
@@ -47,7 +47,7 @@ extension WebSocketModel {
         task.sendPing { error in
             if let metrics { Task { await metrics.recordPing(url: currentURL, error: error) } }
             if let error {
-                continuation.finish(throwing: FulcrumClient.Error.NetworkModel.tlsNegotiationFailed(error))
+                continuation.finish(throwing: SwiftFulcrum.Client.Error.NetworkModel.tlsNegotiationFailed(error))
             } else {
                 _ = continuation.yield(true); continuation.finish()
             }

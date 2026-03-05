@@ -27,7 +27,7 @@ struct ClientHeartbeatValidator {
     @Test("Heartbeat reconnect failure fails inflight unary calls with heartbeat timeout", .timeLimit(.minutes(1)))
     func failInflightUnaryCallsWhenHeartbeatReconnectFails() async throws {
         let transport = TransportTestActor()
-        await transport.configureReconnectFailure(FulcrumClient.Error.transport(.reconnectFailed))
+        await transport.configureReconnectFailure(SwiftFulcrum.Client.Error.transport(.reconnectFailed))
 
         let client = FulcrumNetworkClient(
             transport: transport,
@@ -39,10 +39,10 @@ struct ClientHeartbeatValidator {
 
         let callTask = Task {
             do {
-                let _: (UUID, FulcrumResponse.ResultModel.Blockchain.Headers.GetTip) =
+                let _: (UUID, SwiftFulcrum.RPC.Response.ResultModel.Blockchain.Headers.GetTip) =
                     try await client.call(method: .blockchain(.headers(.getTip)))
                 Issue.record("Expected inflight unary to fail when heartbeat reconnect fails")
-            } catch let error as FulcrumClient.Error {
+            } catch let error as SwiftFulcrum.Client.Error {
                 guard case .transport(.heartbeatTimeout) = error else {
                     Issue.record("Expected heartbeat timeout error, got \(error)")
                     return
@@ -53,7 +53,7 @@ struct ClientHeartbeatValidator {
         }
 
         let request = try TransportTestActor.decodeJSONObject(from: await transport.dequeueOutgoing())
-        #expect(request["method"] as? String == FulcrumMethodRequest.blockchain(.headers(.getTip)).path)
+        #expect(request["method"] as? String == SwiftFulcrum.RPC.Method.blockchain(.headers(.getTip)).path)
 
         await callTask.value
         #expect(await transport.makeReconnectAttempts() > 0)
@@ -70,7 +70,7 @@ private extension ClientHeartbeatValidator {
         let versionIdentifier = try #require(versionObject["id"] as? String)
         let versionPayload = try TransportTestActor.encodeResponsePayload(
             identifier: versionIdentifier,
-            result: ["FulcrumClient 2.0", "1.5.3"]
+            result: ["SwiftFulcrum.Client 2.0", "1.5.3"]
         )
         await transport.enqueueIncoming(.data(versionPayload))
 
@@ -81,7 +81,7 @@ private extension ClientHeartbeatValidator {
             result: [
                 "genesis_hash": String(repeating: "0", count: 64),
                 "hash_function": "sha256",
-                "server_version": "FulcrumClient 2.0",
+                "server_version": "SwiftFulcrum.Client 2.0",
                 "protocol_max": "1.6.0",
                 "protocol_min": "1.4.0"
             ]

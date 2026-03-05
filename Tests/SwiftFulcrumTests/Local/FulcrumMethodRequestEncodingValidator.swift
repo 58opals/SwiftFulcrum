@@ -6,7 +6,7 @@ import SwiftFulcrumTestSupport
 @Suite(.tags(.local))
 struct FulcrumMethodRequestEncodingValidator {
     func assertRequest(
-        _ method: FulcrumMethodRequest,
+        _ method: SwiftFulcrum.RPC.Method,
         expectedPath: String,
         expectedParameters: [Any]
     ) throws {
@@ -19,7 +19,7 @@ struct FulcrumMethodRequestEncodingValidator {
         #expect(actualJSON == expectedJSON)
     }
 
-    func requestObject(for method: FulcrumMethodRequest) throws -> [String: Any] {
+    func requestObject(for method: SwiftFulcrum.RPC.Method) throws -> [String: Any] {
         let request = method.createRequest(with: UUID())
         let payload = try #require(request.data)
         let object = try #require(JSONSerialization.jsonObject(with: payload) as? [String: Any])
@@ -28,7 +28,7 @@ struct FulcrumMethodRequestEncodingValidator {
         return object
     }
 
-    func parameters(for method: FulcrumMethodRequest) throws -> [Any] {
+    func parameters(for method: SwiftFulcrum.RPC.Method) throws -> [Any] {
         let object = try requestObject(for: method)
         return try #require(object["params"] as? [Any])
     }

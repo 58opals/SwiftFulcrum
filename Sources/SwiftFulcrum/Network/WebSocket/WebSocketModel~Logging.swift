@@ -4,12 +4,12 @@ import Foundation
 
 extension WebSocketModel {
     func emitLog(
-        _ level: LogModel.Level,
+        _ level: SwiftFulcrum.Logging.Level,
         _ message: @autoclosure () -> String,
         metadata: [String: String] = .init(),
         file: String = #fileID, function: String = #function, line: UInt = #line
     ) {
-        if LogModel.Context.behavior == .quiet && level.priority <= LogModel.Level.info.priority {
+        if SwiftFulcrum.Logging.Context.behavior == .quiet && level.priority <= SwiftFulcrum.Logging.Level.info.priority {
             return
         }
         
@@ -40,7 +40,7 @@ extension WebSocketModel {
         }
         
         guard
-            case .uuid(let identifier) = try? FulcrumResponse.JSONRPCModel.extractIdentifier(from: data),
+            case .uuid(let identifier) = try? SwiftFulcrum.RPC.Response.JSONRPCModel.extractIdentifier(from: data),
             quietResponseIdentifiers.remove(identifier) != nil
         else { return false }
         

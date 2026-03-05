@@ -13,7 +13,7 @@ extension WebSocketModel {
             self.delegate = delegate
         }
 
-        init(_ descriptor: FulcrumClient.Configuration.TLSDescriptorModel) {
+        init(_ descriptor: SwiftFulcrum.Client.Configuration.TLSDescriptorModel) {
             self.options = descriptor.options
             self.delegate = descriptor.delegate
         }

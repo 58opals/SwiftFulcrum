@@ -4,12 +4,12 @@ import Foundation
 
 extension FulcrumNetworkClient {
     struct NegotiatedSessionModel {
-        var negotiatedProtocol: ProtocolVersionModel?
+        var negotiatedProtocol: SwiftFulcrum.ProtocolVersion?
         var serverSoftwareVersion: String?
         var serverFeatures: ServerFeatures?
         var negotiationTask: Task<NegotiatedSessionModel, Swift.Error>?
 
-        init(negotiatedProtocol: ProtocolVersionModel? = nil,
+        init(negotiatedProtocol: SwiftFulcrum.ProtocolVersion? = nil,
              serverSoftwareVersion: String? = nil,
              serverFeatures: ServerFeatures? = nil,
              negotiationTask: Task<NegotiatedSessionModel, Swift.Error>? = nil) {

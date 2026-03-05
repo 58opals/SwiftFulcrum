@@ -30,8 +30,8 @@ extension WebSocketModel {
 
         let configuration: Configuration
         var reconnectionAttempts: Int
-        let network: FulcrumClient.Configuration.NetworkModel
-        let serverCatalogLoader: FulcrumServerCatalogRepository
+        let network: SwiftFulcrum.Client.Configuration.NetworkModel
+        let serverCatalogLoader: SwiftFulcrum.ServerCatalog.Repository
         var serverCatalog: [URL]
         var nextServerIndex: Int
 
@@ -42,8 +42,8 @@ extension WebSocketModel {
 
         init(_ configuration: Configuration,
              reconnectionAttempts: Int = 0,
-             network: FulcrumClient.Configuration.NetworkModel,
-             serverCatalogLoader: FulcrumServerCatalogRepository = .bundled,
+             network: SwiftFulcrum.Client.Configuration.NetworkModel,
+             serverCatalogLoader: SwiftFulcrum.ServerCatalog.Repository = .bundled,
              sleep: @escaping @Sendable (Duration) async throws -> Void = { duration in try await Task.sleep(for: duration) },
              jitter: @escaping @Sendable (ClosedRange<Double>) -> Double = { range in .random(in: range) }) {
             self.configuration = configuration

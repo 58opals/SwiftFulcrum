@@ -23,7 +23,7 @@ extension WebSocketModel {
         _ message: URLSessionWebSocketTask.Message,
         metadata: [String: String]
     ) async throws {
-        guard let task else { throw FulcrumClient.Error.transport(.connectionClosed(closeInformation.code, closeInformation.reason)) }
+        guard let task else { throw SwiftFulcrum.Client.Error.transport(.connectionClosed(closeInformation.code, closeInformation.reason)) }
         
         let messageIdentifier = makeOutgoingMessageIdentifier()
         var metadataWithIdentifier = metadata

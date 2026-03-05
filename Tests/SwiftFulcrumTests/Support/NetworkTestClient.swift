@@ -4,9 +4,9 @@ import SwiftFulcrum
 public struct NetworkTestClient {
     public static func runWithClient(
         _ url: URL,
-        _ body: @Sendable (FulcrumClient) async throws -> Void
+        _ body: @Sendable (SwiftFulcrum.Client) async throws -> Void
     ) async throws {
-        let client = try await FulcrumClient(url: url.absoluteString)
+        let client = try await SwiftFulcrum.Client(url: url.absoluteString)
 
         do {
             try await client.start()
@@ -48,7 +48,7 @@ public struct NetworkTestClient {
     }
 
     public static func pickServerURL(
-        network: FulcrumClient.Configuration.NetworkModel = .mainnet
+        network: SwiftFulcrum.Client.Configuration.NetworkModel = .mainnet
     ) async throws -> URL {
         try await TestEndpointPolicy.resolveServerURL(network: network)
     }

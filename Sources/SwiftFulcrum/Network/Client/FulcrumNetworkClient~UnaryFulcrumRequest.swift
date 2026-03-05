@@ -13,15 +13,15 @@ extension FulcrumNetworkClient {
                 return try await awaitUnaryResponse(from: responseStream)
             } catch {
                 if error is CancellationError {
-                    await cancelUnary(id, error: FulcrumClient.Error.client(.cancelled))
-                    throw FulcrumClient.Error.client(.cancelled)
+                    await cancelUnary(id, error: SwiftFulcrum.Client.Error.client(.cancelled))
+                    throw SwiftFulcrum.Client.Error.client(.cancelled)
                 }
                 await cancelUnary(id, error: error)
                 throw error
             }
         } onCancel: {
             Task {
-                await self.cancelUnary(id, error: FulcrumClient.Error.client(.cancelled))
+                await self.cancelUnary(id, error: SwiftFulcrum.Client.Error.client(.cancelled))
             }
         }
     }
@@ -39,7 +39,7 @@ extension FulcrumNetworkClient {
         var iterator = responseStream.makeAsyncIterator()
 
         guard let payload = try await iterator.next() else {
-            throw FulcrumClient.Error.client(.cancelled)
+            throw SwiftFulcrum.Client.Error.client(.cancelled)
         }
 
         return payload

@@ -2,22 +2,22 @@ import Foundation
 @testable import SwiftFulcrum
 
 extension FulcrumClientLifecycleValidator {
-    func makeStartedFulcrum() async throws -> (FulcrumClient, TransportTestActor) {
+    func makeStartedFulcrum() async throws -> (SwiftFulcrum.Client, TransportTestActor) {
         let transport = TransportTestActor()
         let client = FulcrumNetworkClient(transport: transport, protocolNegotiation: .init())
-        let fulcrum = await FulcrumClient(client: client)
+        let fulcrum = await SwiftFulcrum.Client(client: client)
         try await startAndNegotiate(fulcrum, transport: transport)
         return (fulcrum, transport)
     }
 
-    func startAndNegotiate(_ fulcrum: FulcrumClient, transport: TransportTestActor) async throws {
+    func startAndNegotiate(_ fulcrum: SwiftFulcrum.Client, transport: TransportTestActor) async throws {
         let startTask = Task { try await fulcrum.start() }
 
         let versionObject = try await decodeRequestObject(await transport.dequeueOutgoing())
         let versionIdentifier = try requestIdentifier(from: versionObject)
         let versionPayload = try TransportTestActor.encodeResponsePayload(
             identifier: versionIdentifier,
-            result: ["FulcrumClient 2.0", "1.5.3"]
+            result: ["SwiftFulcrum.Client 2.0", "1.5.3"]
         )
         await transport.enqueueIncoming(.data(versionPayload))
 
@@ -28,7 +28,7 @@ extension FulcrumClientLifecycleValidator {
             result: [
                 "genesis_hash": String(repeating: "0", count: 64),
                 "hash_function": "sha256",
-                "server_version": "FulcrumClient 2.0",
+                "server_version": "SwiftFulcrum.Client 2.0",
                 "protocol_max": "1.6.0",
                 "protocol_min": "1.4.0"
             ]
@@ -81,10 +81,10 @@ extension FulcrumClientLifecycleValidator {
     }
 
     func collectConnectionStates(
-        from stream: AsyncStream<FulcrumClient.ConnectionState>,
+        from stream: AsyncStream<SwiftFulcrum.Client.ConnectionState>,
         count: Int,
         timeout: Duration
-    ) async -> [FulcrumClient.ConnectionState] {
+    ) async -> [SwiftFulcrum.Client.ConnectionState] {
         let collector = ConnectionStateCollectorModel(targetCount: count)
 
         await withTaskGroup(of: Void.self) { group in
@@ -107,7 +107,7 @@ extension FulcrumClientLifecycleValidator {
     }
     
     func detectConnectionStateStreamTermination(
-        _ stream: AsyncStream<FulcrumClient.ConnectionState>,
+        _ stream: AsyncStream<SwiftFulcrum.Client.ConnectionState>,
         within timeout: Duration
     ) async -> Bool {
         await withTaskGroup(of: Bool.self) { group in

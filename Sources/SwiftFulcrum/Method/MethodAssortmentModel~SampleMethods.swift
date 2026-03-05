@@ -1,10 +1,10 @@
 // MethodAssortmentModel~SampleMethods.swift
 
 extension MethodAssortmentModel {
-    static var sampleMethods: [FulcrumMethodRequest] {
-        guard let minimumVersion = ProtocolVersionModel(string: "1.4"),
-              let maximumVersion = ProtocolVersionModel(string: "1.6.0"),
-              let versionRange = ProtocolVersionModel.Range(min: minimumVersion, max: maximumVersion) else {
+    static var sampleMethods: [SwiftFulcrum.RPC.Method] {
+        guard let minimumVersion = SwiftFulcrum.ProtocolVersion(string: "1.4"),
+              let maximumVersion = SwiftFulcrum.ProtocolVersion(string: "1.6.0"),
+              let versionRange = SwiftFulcrum.ProtocolVersion.Range(min: minimumVersion, max: maximumVersion) else {
             preconditionFailure("Sample protocol versions must be valid")
         }
 

@@ -7,13 +7,13 @@ actor FulcrumNetworkClient {
     let transport: TransportableModel
     var jsonRPC: JSONRPCModel
     let router: Router
-    let metrics: MetricsClient?
-    let logger: LogModel.Adapter
-    let protocolNegotiation: FulcrumClient.Configuration.ProtocolNegotiationModel
+    let metrics: SwiftFulcrum.Metrics.ClientProtocol?
+    let logger: SwiftFulcrum.Logging.Adapter
+    let protocolNegotiation: SwiftFulcrum.Client.Configuration.ProtocolNegotiationModel
     
     var state: State
     
-    var subscriptionMethods: [SubscriptionKeyModel: FulcrumMethodRequest]
+    var subscriptionMethods: [SubscriptionKeyModel: SwiftFulcrum.RPC.Method]
     
     var receiveTask: Task<Void, Never>?
     private var lifecycleTask: Task<Void, Never>?
@@ -23,21 +23,21 @@ actor FulcrumNetworkClient {
     let rpcHeartbeatInterval: Duration
     let rpcHeartbeatTimeout: Duration
     
-    var connectionState: FulcrumClient.ConnectionState { get async { await transport.connectionState } }
+    var connectionState: SwiftFulcrum.Client.ConnectionState { get async { await transport.connectionState } }
     
     init(transport: TransportableModel,
-         metrics: MetricsClient? = nil,
-         logger: LogModel.Adapter? = nil,
+         metrics: SwiftFulcrum.Metrics.ClientProtocol? = nil,
+         logger: SwiftFulcrum.Logging.Adapter? = nil,
          heartbeatInterval: Duration = .seconds(25),
          heartbeatTimeout: Duration = .seconds(10),
-         protocolNegotiation: FulcrumClient.Configuration.ProtocolNegotiationModel) {
+         protocolNegotiation: SwiftFulcrum.Client.Configuration.ProtocolNegotiationModel) {
         self.id = .init()
         self.transport = transport
         self.jsonRPC = .init()
         self.router = .init()
         self.metrics = metrics
         self.subscriptionMethods = .init()
-        self.logger = logger ?? LogModel.ConsoleAdapter()
+        self.logger = logger ?? SwiftFulcrum.Logging.ConsoleAdapter()
         self.protocolNegotiation = protocolNegotiation
         self.state = .init()
         self.rpcHeartbeatInterval = heartbeatInterval
@@ -69,7 +69,7 @@ actor FulcrumNetworkClient {
     
     func stop() async {
         let info = await transport.closeInformation
-        let closedError = await FulcrumClient.Error.transport(.connectionClosed(info.code, info.reason))
+        let closedError = await SwiftFulcrum.Client.Error.transport(.connectionClosed(info.code, info.reason))
         let inflightCount = await router.failAll(with: closedError)
         await publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightCount)
         
@@ -101,7 +101,7 @@ actor FulcrumNetworkClient {
         }
     }
     
-    func makeConnectionStateEvents() async -> AsyncStream<FulcrumClient.ConnectionState> {
+    func makeConnectionStateEvents() async -> AsyncStream<SwiftFulcrum.Client.ConnectionState> {
         await transport.makeConnectionStateEvents()
     }
     
@@ -163,7 +163,7 @@ actor FulcrumNetworkClient {
 
 extension FulcrumNetworkClient {
     func emitLog(
-        _ level: LogModel.Level,
+        _ level: SwiftFulcrum.Logging.Level,
         _ message: @autoclosure () -> String,
         metadata: [String: String] = .init(),
         file: String = #fileID, function: String = #function, line: UInt = #line

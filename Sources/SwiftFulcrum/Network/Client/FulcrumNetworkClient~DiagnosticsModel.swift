@@ -3,7 +3,7 @@
 import Foundation
 
 extension FulcrumNetworkClient {
-    func makeDiagnosticsSnapshot() async -> FulcrumClient.DiagnosticsModel.Snapshot {
+    func makeDiagnosticsSnapshot() async -> SwiftFulcrum.Client.DiagnosticsModel.Snapshot {
         let transportSnapshot = await transport.makeDiagnosticsSnapshot()
         let inflightCount = await router.makeInflightUnaryCallCount()
         
@@ -15,7 +15,7 @@ extension FulcrumNetworkClient {
         )
     }
     
-    func listSubscriptions() -> [FulcrumClient.DiagnosticsModel.Subscription] {
+    func listSubscriptions() -> [SwiftFulcrum.Client.DiagnosticsModel.Subscription] {
         subscriptionMethods.map { entry in
                 .init(methodPath: entry.key.methodPath.rawValue, identifier: entry.key.identifier)
         }
@@ -31,7 +31,7 @@ extension FulcrumNetworkClient {
         } else {
             inflightCount = await router.makeInflightUnaryCallCount()
         }
-        let snapshot = FulcrumClient.DiagnosticsModel.Snapshot(
+        let snapshot = SwiftFulcrum.Client.DiagnosticsModel.Snapshot(
             reconnectAttempts: transportSnapshot.reconnectAttempts,
             reconnectSuccesses: transportSnapshot.reconnectSuccesses,
             inflightUnaryCallCount: inflightCount,

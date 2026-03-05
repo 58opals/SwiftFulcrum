@@ -6,20 +6,20 @@ extension FulcrumMethodRequestEncodingValidator {
     func encodeServerAndMempoolRequests() throws {
         try assertRequest(
             .server(.ping),
-            expectedPath: FulcrumMethodRequest.server(.ping).path,
+            expectedPath: SwiftFulcrum.RPC.Method.server(.ping).path,
             expectedParameters: []
         )
 
-        let minimum = try #require(ProtocolVersionModel(string: "1.4"))
-        let maximum = try #require(ProtocolVersionModel(string: "1.6.0"))
-        let negotiationRange = try #require(ProtocolVersionModel.Range(min: minimum, max: maximum))
+        let minimum = try #require(SwiftFulcrum.ProtocolVersion(string: "1.4"))
+        let maximum = try #require(SwiftFulcrum.ProtocolVersion(string: "1.6.0"))
+        let negotiationRange = try #require(SwiftFulcrum.ProtocolVersion.Range(min: minimum, max: maximum))
         try assertRequest(
             .server(.version(clientName: "SwiftFulcrum/Test", protocolNegotiation: .init(range: negotiationRange))),
-            expectedPath: FulcrumMethodRequest.server(.version(clientName: "", protocolNegotiation: .init(range: negotiationRange))).path,
+            expectedPath: SwiftFulcrum.RPC.Method.server(.version(clientName: "", protocolNegotiation: .init(range: negotiationRange))).path,
             expectedParameters: ["SwiftFulcrum/Test", ["1.4", "1.6.0"]]
         )
 
-        let singleVersion = try #require(ProtocolVersionModel(string: "1.5"))
+        let singleVersion = try #require(SwiftFulcrum.ProtocolVersion(string: "1.5"))
         try assertRequest(
             .server(
                 .version(
@@ -27,25 +27,25 @@ extension FulcrumMethodRequestEncodingValidator {
                     protocolNegotiation: .init(minimumVersion: singleVersion, maximumVersion: singleVersion)
                 )
             ),
-            expectedPath: FulcrumMethodRequest.server(.version(clientName: "", protocolNegotiation: .init(minimumVersion: singleVersion, maximumVersion: singleVersion))).path,
+            expectedPath: SwiftFulcrum.RPC.Method.server(.version(clientName: "", protocolNegotiation: .init(minimumVersion: singleVersion, maximumVersion: singleVersion))).path,
             expectedParameters: ["SwiftFulcrum/Test", "1.5"]
         )
 
         try assertRequest(
             .server(.features),
-            expectedPath: FulcrumMethodRequest.server(.features).path,
+            expectedPath: SwiftFulcrum.RPC.Method.server(.features).path,
             expectedParameters: []
         )
 
         try assertRequest(
             .mempool(.getInfo),
-            expectedPath: FulcrumMethodRequest.mempool(.getInfo).path,
+            expectedPath: SwiftFulcrum.RPC.Method.mempool(.getInfo).path,
             expectedParameters: []
         )
 
         try assertRequest(
             .mempool(.getFeeHistogram),
-            expectedPath: FulcrumMethodRequest.mempool(.getFeeHistogram).path,
+            expectedPath: SwiftFulcrum.RPC.Method.mempool(.getFeeHistogram).path,
             expectedParameters: []
         )
     }

@@ -3,7 +3,7 @@
 import Foundation
 
 extension FulcrumNetworkClient {
-    func makeUnsubscribeMethod(for key: SubscriptionKeyModel) -> FulcrumMethodRequest? {
+    func makeUnsubscribeMethod(for key: SubscriptionKeyModel) -> SwiftFulcrum.RPC.Method? {
         switch key.methodPath {
         case .scriptHash:
             guard let id = key.identifier else { return nil }
@@ -24,7 +24,7 @@ extension FulcrumNetworkClient {
 }
 
 extension FulcrumNetworkClient {
-    func deriveSubscriptionIdentifier(for method: FulcrumMethodRequest) -> String? {
+    func deriveSubscriptionIdentifier(for method: SwiftFulcrum.RPC.Method) -> String? {
         switch method {
         case .blockchain(.scripthash(.subscribe(scripthash: let scripthash))):
             return scripthash
@@ -88,7 +88,7 @@ extension FulcrumNetworkClient {
     func configureSubscriptionLifecycle(
         rawContinuation: AsyncThrowingStream<Data, Swift.Error>.Continuation,
         subscriptionKey: SubscriptionKeyModel,
-        method: FulcrumMethodRequest,
+        method: SwiftFulcrum.RPC.Method,
         requestIdentifier: UUID
     ) async throws {
         try await router.addStream(

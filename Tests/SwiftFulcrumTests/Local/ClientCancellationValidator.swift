@@ -8,38 +8,38 @@ struct ClientCancellationValidator {
     @Test("Shared cancellation cancels every in-flight unary call", .timeLimit(.minutes(1)))
     func sharedCancellationCancelsAllInflightUnaryCalls() async throws {
         let (fulcrum, transport) = try await makeStartedFulcrum()
-        let cancellation = FulcrumClient.CallModel.Cancellation()
-        let options = FulcrumClient.CallModel.Options(
+        let cancellation = SwiftFulcrum.Client.CallModel.Cancellation()
+        let options = SwiftFulcrum.Client.CallModel.Options(
             timeout: .milliseconds(250),
             cancellation: cancellation
         )
         
-        let firstTask = Task<FulcrumClient.Error, Never> {
+        let firstTask = Task<SwiftFulcrum.Client.Error, Never> {
             do {
                 _ = try await fulcrum.submit(
                     method: .blockchain(.headers(.getTip)),
-                    responseType: FulcrumResponse.ResultModel.Blockchain.Headers.GetTip.self,
+                    responseType: SwiftFulcrum.RPC.Response.ResultModel.Blockchain.Headers.GetTip.self,
                     options: options
                 )
                 Issue.record("First submit should throw cancelled.")
                 return .client(.unknown(nil))
-            } catch let error as FulcrumClient.Error {
+            } catch let error as SwiftFulcrum.Client.Error {
                 return error
             } catch {
                 return .client(.unknown(error))
             }
         }
         
-        let secondTask = Task<FulcrumClient.Error, Never> {
+        let secondTask = Task<SwiftFulcrum.Client.Error, Never> {
             do {
                 _ = try await fulcrum.submit(
                     method: .mempool(.getInfo),
-                    responseType: FulcrumResponse.ResultModel.Mempool.GetInfo.self,
+                    responseType: SwiftFulcrum.RPC.Response.ResultModel.Mempool.GetInfo.self,
                     options: options
                 )
                 Issue.record("Second submit should throw cancelled.")
                 return .client(.unknown(nil))
-            } catch let error as FulcrumClient.Error {
+            } catch let error as SwiftFulcrum.Client.Error {
                 return error
             } catch {
                 return .client(.unknown(error))
@@ -66,16 +66,16 @@ struct ClientCancellationValidator {
         
         let baselineOutgoingCount = await transport.sentMessages.count
         
-        let submitTask = Task<FulcrumClient.Error, Never> {
+        let submitTask = Task<SwiftFulcrum.Client.Error, Never> {
             do {
                 _ = try await fulcrum.submit(
                     method: .blockchain(.headers(.getTip)),
-                    responseType: FulcrumResponse.ResultModel.Blockchain.Headers.GetTip.self,
+                    responseType: SwiftFulcrum.RPC.Response.ResultModel.Blockchain.Headers.GetTip.self,
                     options: .init(timeout: .milliseconds(100))
                 )
                 Issue.record("submit() should time out when send is delayed.")
                 return .client(.unknown(nil))
-            } catch let error as FulcrumClient.Error {
+            } catch let error as SwiftFulcrum.Client.Error {
                 return error
             } catch {
                 return .client(.unknown(error))
@@ -99,17 +99,17 @@ struct ClientCancellationValidator {
         
         let baselineOutgoingCount = await transport.sentMessages.count
         
-        let subscribeTask = Task<FulcrumClient.Error, Never> {
+        let subscribeTask = Task<SwiftFulcrum.Client.Error, Never> {
             do {
                 _ = try await fulcrum.subscribe(
                     method: .blockchain(.headers(.subscribe)),
-                    initialType: FulcrumResponse.ResultModel.Blockchain.Headers.Subscribe.self,
-                    notificationType: FulcrumResponse.ResultModel.Blockchain.Headers.SubscribeNotification.self,
+                    initialType: SwiftFulcrum.RPC.Response.ResultModel.Blockchain.Headers.Subscribe.self,
+                    notificationType: SwiftFulcrum.RPC.Response.ResultModel.Blockchain.Headers.SubscribeNotification.self,
                     options: .init(timeout: .milliseconds(100))
                 )
                 Issue.record("subscribe() should time out when send is delayed.")
                 return .client(.unknown(nil))
-            } catch let error as FulcrumClient.Error {
+            } catch let error as SwiftFulcrum.Client.Error {
                 return error
             } catch {
                 return .client(.unknown(error))
@@ -131,7 +131,7 @@ struct ClientCancellationValidator {
 }
 
 extension ClientCancellationValidator {
-    private func isCancelledError(_ error: FulcrumClient.Error) -> Bool {
+    private func isCancelledError(_ error: SwiftFulcrum.Client.Error) -> Bool {
         if case .client(.cancelled) = error {
             return true
         }
@@ -139,7 +139,7 @@ extension ClientCancellationValidator {
         return false
     }
     
-    private func isTimeoutError(_ error: FulcrumClient.Error) -> Bool {
+    private func isTimeoutError(_ error: SwiftFulcrum.Client.Error) -> Bool {
         if case .client(.timeout) = error {
             return true
         }
@@ -147,22 +147,22 @@ extension ClientCancellationValidator {
         return false
     }
     
-    func makeStartedFulcrum() async throws -> (FulcrumClient, TransportTestActor) {
+    func makeStartedFulcrum() async throws -> (SwiftFulcrum.Client, TransportTestActor) {
         let transport = TransportTestActor()
         let client = FulcrumNetworkClient(transport: transport, protocolNegotiation: .init())
-        let fulcrum = await FulcrumClient(client: client)
+        let fulcrum = await SwiftFulcrum.Client(client: client)
         try await startAndNegotiate(fulcrum, transport: transport)
         return (fulcrum, transport)
     }
     
-    private func startAndNegotiate(_ fulcrum: FulcrumClient, transport: TransportTestActor) async throws {
+    private func startAndNegotiate(_ fulcrum: SwiftFulcrum.Client, transport: TransportTestActor) async throws {
         let startTask = Task { try await fulcrum.start() }
         
         let versionObject = try TransportTestActor.decodeJSONObject(from: await transport.dequeueOutgoing())
         let versionIdentifier = try requestIdentifier(from: versionObject)
         let versionPayload = try TransportTestActor.encodeResponsePayload(
             identifier: versionIdentifier,
-            result: ["FulcrumClient 2.0", "1.5.3"]
+            result: ["SwiftFulcrum.Client 2.0", "1.5.3"]
         )
         await transport.enqueueIncoming(.data(versionPayload))
         
@@ -173,7 +173,7 @@ extension ClientCancellationValidator {
             result: [
                 "genesis_hash": String(repeating: "0", count: 64),
                 "hash_function": "sha256",
-                "server_version": "FulcrumClient 2.0",
+                "server_version": "SwiftFulcrum.Client 2.0",
                 "protocol_max": "1.6.0",
                 "protocol_min": "1.4.0"
             ]

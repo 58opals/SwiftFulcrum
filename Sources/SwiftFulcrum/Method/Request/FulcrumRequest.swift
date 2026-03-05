@@ -6,10 +6,10 @@ struct FulcrumRequest {
     let jsonrpc: String = "2.0"
     let id: UUID
     let method: String
-    let requestedMethod: FulcrumMethodRequest
+    let requestedMethod: SwiftFulcrum.RPC.Method
     let params: Encodable
     
-    init(id: UUID, method: FulcrumMethodRequest, params: Encodable) {
+    init(id: UUID, method: SwiftFulcrum.RPC.Method, params: Encodable) {
         self.id = id
         self.method = method.path
         self.requestedMethod = method

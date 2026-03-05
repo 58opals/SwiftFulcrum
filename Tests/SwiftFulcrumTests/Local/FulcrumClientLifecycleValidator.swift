@@ -13,11 +13,11 @@ struct FulcrumClientLifecycleValidator {
             do {
                 _ = try await fulcrum.submit(
                     method: .blockchain(.headers(.getTip)),
-                    responseType: FulcrumResponse.ResultModel.Blockchain.Headers.GetTip.self,
+                    responseType: SwiftFulcrum.RPC.Response.ResultModel.Blockchain.Headers.GetTip.self,
                     options: .init(timeout: .milliseconds(100))
                 )
                 Issue.record("submit() should time out when response is missing")
-            } catch let error as FulcrumClient.Error {
+            } catch let error as SwiftFulcrum.Client.Error {
                 guard case .client(.timeout) = error else {
                     Issue.record("Expected timeout, got \(error)")
                     return
@@ -28,7 +28,7 @@ struct FulcrumClientLifecycleValidator {
         }
 
         let request = try await decodeRequestObject(await transport.dequeueOutgoing())
-        #expect(request["method"] as? String == FulcrumMethodRequest.blockchain(.headers(.getTip)).path)
+        #expect(request["method"] as? String == SwiftFulcrum.RPC.Method.blockchain(.headers(.getTip)).path)
 
         await submitTask.value
         await fulcrum.stop()
@@ -37,17 +37,17 @@ struct FulcrumClientLifecycleValidator {
     @Test("submit(cancellation:) throws cancelled", .timeLimit(.minutes(1)))
     func submitCancellationPropagatesCancelledError() async throws {
         let (fulcrum, transport) = try await makeStartedFulcrum()
-        let cancellation = FulcrumClient.CallModel.Cancellation()
+        let cancellation = SwiftFulcrum.Client.CallModel.Cancellation()
 
         let submitTask = Task {
             do {
                 _ = try await fulcrum.submit(
                     method: .blockchain(.headers(.getTip)),
-                    responseType: FulcrumResponse.ResultModel.Blockchain.Headers.GetTip.self,
+                    responseType: SwiftFulcrum.RPC.Response.ResultModel.Blockchain.Headers.GetTip.self,
                     options: .init(timeout: .seconds(30), cancellation: cancellation)
                 )
                 Issue.record("submit() should throw cancelled")
-            } catch let error as FulcrumClient.Error {
+            } catch let error as SwiftFulcrum.Client.Error {
                 guard case .client(.cancelled) = error else {
                     Issue.record("Expected cancelled, got \(error)")
                     return
@@ -72,12 +72,12 @@ struct FulcrumClientLifecycleValidator {
             do {
                 _ = try await fulcrum.subscribe(
                     method: .blockchain(.headers(.subscribe)),
-                    initialType: FulcrumResponse.ResultModel.Blockchain.Headers.Subscribe.self,
-                    notificationType: FulcrumResponse.ResultModel.Blockchain.Headers.SubscribeNotification.self,
+                    initialType: SwiftFulcrum.RPC.Response.ResultModel.Blockchain.Headers.Subscribe.self,
+                    notificationType: SwiftFulcrum.RPC.Response.ResultModel.Blockchain.Headers.SubscribeNotification.self,
                     options: .init(timeout: .milliseconds(100))
                 )
                 Issue.record("subscribe() should time out when initial response is missing")
-            } catch let error as FulcrumClient.Error {
+            } catch let error as SwiftFulcrum.Client.Error {
                 guard case .client(.timeout) = error else {
                     Issue.record("Expected timeout, got \(error)")
                     return
@@ -88,7 +88,7 @@ struct FulcrumClientLifecycleValidator {
         }
 
         let request = try await decodeRequestObject(await transport.dequeueOutgoing())
-        #expect(request["method"] as? String == FulcrumMethodRequest.blockchain(.headers(.subscribe)).path)
+        #expect(request["method"] as? String == SwiftFulcrum.RPC.Method.blockchain(.headers(.subscribe)).path)
 
         await subscribeTask.value
 
@@ -104,7 +104,7 @@ struct FulcrumClientLifecycleValidator {
     func publishConnectionStateLifecycle() async throws {
         let transport = TransportTestActor()
         let client = FulcrumNetworkClient(transport: transport, protocolNegotiation: .init())
-        let fulcrum = await FulcrumClient(client: client)
+        let fulcrum = await SwiftFulcrum.Client(client: client)
 
         let stream = await fulcrum.makeConnectionStateStream()
         let collector = Task { await collectConnectionStates(from: stream, count: 2, timeout: .seconds(2)) }

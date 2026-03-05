@@ -9,19 +9,19 @@ extension WebSocketModel {
         
         let session: URLSession?
         let tlsDescriptor: TLSDescriptor?
-        let metrics: MetricsClient?
-        let logger: LogModel.Adapter?
+        let metrics: SwiftFulcrum.Metrics.ClientProtocol?
+        let logger: SwiftFulcrum.Logging.Adapter?
         let maximumMessageSize: Int
-        let serverCatalogLoader: FulcrumServerCatalogRepository
-        let network: FulcrumClient.Configuration.NetworkModel
+        let serverCatalogLoader: SwiftFulcrum.ServerCatalog.Repository
+        let network: SwiftFulcrum.Client.Configuration.NetworkModel
         
         init(session: URLSession? = nil,
              tlsDescriptor: TLSDescriptor? = nil,
-             metrics: MetricsClient? = nil,
-             logger: LogModel.Adapter? = nil,
+             metrics: SwiftFulcrum.Metrics.ClientProtocol? = nil,
+             logger: SwiftFulcrum.Logging.Adapter? = nil,
              maximumMessageSize: Int = defaultMaximumMessageSize,
-             serverCatalogLoader: FulcrumServerCatalogRepository = .bundled,
-             network: FulcrumClient.Configuration.NetworkModel = .mainnet) {
+             serverCatalogLoader: SwiftFulcrum.ServerCatalog.Repository = .bundled,
+             network: SwiftFulcrum.Client.Configuration.NetworkModel = .mainnet) {
             self.session = session
             self.tlsDescriptor = tlsDescriptor
             self.metrics = metrics
@@ -32,11 +32,11 @@ extension WebSocketModel {
         }
     }
     
-    func updateMetrics(_ collector: MetricsClient?) {
+    func updateMetrics(_ collector: SwiftFulcrum.Metrics.ClientProtocol?) {
         self.metrics = collector
     }
     
-    func updateLogger(_ handler: LogModel.Adapter?) {
-        self.logger = handler ?? LogModel.NoOperationAdapter()
+    func updateLogger(_ handler: SwiftFulcrum.Logging.Adapter?) {
+        self.logger = handler ?? SwiftFulcrum.Logging.NoOperationAdapter()
     }
 }

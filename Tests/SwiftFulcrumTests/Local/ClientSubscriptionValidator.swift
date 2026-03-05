@@ -29,7 +29,7 @@ struct ClientSubscriptionValidator {
 
         let versionPayload = try TransportTestActor.encodeResponsePayload(
             identifier: versionIdentifier,
-            result: ["FulcrumClient 2.0", "1.5.3"]
+            result: ["SwiftFulcrum.Client 2.0", "1.5.3"]
         )
         await transport.enqueueIncoming(.data(versionPayload))
 
@@ -48,7 +48,7 @@ struct ClientSubscriptionValidator {
             result: [
                 "genesis_hash": "0000000000000000000000000000000000000000000000000000000000000000",
                 "hash_function": "sha256",
-                "server_version": "FulcrumClient 2.0",
+                "server_version": "SwiftFulcrum.Client 2.0",
                 "protocol_max": "1.6.0",
                 "protocol_min": "1.4.0"
             ]
@@ -65,8 +65,8 @@ struct ClientSubscriptionValidator {
                 options: .init(timeout: .seconds(30), token: cancellationToken)
             ) as (
                 UUID,
-                FulcrumResponse.ResultModel.Blockchain.Headers.Subscribe,
-                AsyncThrowingStream<FulcrumResponse.ResultModel.Blockchain.Headers.SubscribeNotification, Swift.Error>
+                SwiftFulcrum.RPC.Response.ResultModel.Blockchain.Headers.Subscribe,
+                AsyncThrowingStream<SwiftFulcrum.RPC.Response.ResultModel.Blockchain.Headers.SubscribeNotification, Swift.Error>
             )
         }
 
@@ -79,7 +79,7 @@ struct ClientSubscriptionValidator {
             await client.stop()
             return
         }
-        #expect(subscribeRequestObject["method"] as? String == FulcrumMethodRequest.blockchain(.headers(.subscribe)).path)
+        #expect(subscribeRequestObject["method"] as? String == SwiftFulcrum.RPC.Method.blockchain(.headers(.subscribe)).path)
 
         let initialPayload = try TransportTestActor.encodeResponsePayload(
             identifier: subscribeIdentifier,
@@ -95,7 +95,7 @@ struct ClientSubscriptionValidator {
         #expect(initial.hex == Self.initialHeaderHex)
 
         let notificationPayload = try TransportTestActor.encodeSubscriptionNotification(
-            method: FulcrumMethodRequest.blockchain(.headers(.subscribe)).path,
+            method: SwiftFulcrum.RPC.Method.blockchain(.headers(.subscribe)).path,
             parameters: [[
                 "height": Self.nextHeight,
                 "hex": Self.nextHeaderHex
@@ -105,7 +105,7 @@ struct ClientSubscriptionValidator {
 
         var observedUpdateCount = 0
         for try await update in updates {
-            #expect(update.subscriptionIdentifier == FulcrumMethodRequest.blockchain(.headers(.subscribe)).path)
+            #expect(update.subscriptionIdentifier == SwiftFulcrum.RPC.Method.blockchain(.headers(.subscribe)).path)
             #expect(update.blocks.count == 1)
             guard let block = update.blocks.first else {
                 Issue.record("Expected exactly one block in header notification")

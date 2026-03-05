@@ -16,7 +16,7 @@ struct CashTokensCapabilityValidator {
         """
         let serializedData = try #require(serializedPayload.data(using: .utf8))
 
-        let decoded = try JSONDecoder().decode(FulcrumMethodRequest.BlockchainModel.CashTokens.JSON.self, from: serializedData)
+        let decoded = try JSONDecoder().decode(SwiftFulcrum.RPC.Method.BlockchainModel.CashTokens.JSON.self, from: serializedData)
         let nonFungibleToken = try #require(decoded.nft)
 
         #expect(nonFungibleToken.capability == .none)
@@ -47,7 +47,7 @@ struct CashTokensCapabilityValidator {
         let serializedData = try #require(serializedResponse.data(using: .utf8))
 
         let decodedResponse = try JSONDecoder().decode(
-            FulcrumResponse.JSONRPCModel.Generic<FulcrumResponse.JSONRPCModel.Result.Blockchain.Address.ListUnspent>.self,
+            SwiftFulcrum.RPC.Response.JSONRPCModel.Generic<SwiftFulcrum.RPC.Response.JSONRPCModel.Result.Blockchain.Address.ListUnspent>.self,
             from: serializedData
         )
         let listUnspentItems = try #require(decodedResponse.result)

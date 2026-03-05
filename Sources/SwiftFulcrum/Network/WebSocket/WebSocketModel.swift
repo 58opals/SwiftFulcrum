@@ -6,13 +6,13 @@ actor WebSocketModel {
     var url: URL
     var task: URLSessionWebSocketTask?
     var connectionStateTracker: ConnectionStateTracker
-    let network: FulcrumClient.Configuration.NetworkModel
+    let network: SwiftFulcrum.Client.Configuration.NetworkModel
     
     var sharedMessagesStream: AsyncThrowingStream<URLSessionWebSocketTask.Message, Swift.Error>?
     var messageContinuation: AsyncThrowingStream<URLSessionWebSocketTask.Message, Swift.Error>.Continuation?
     
     let reconnector: Reconnector
-    var logger: LogModel.Adapter
+    var logger: SwiftFulcrum.Logging.Adapter
     
     var reconnectAttemptCount = 0
     var reconnectSuccessCount = 0
@@ -36,7 +36,7 @@ actor WebSocketModel {
     let maximumMessageSize: Int
     
     private let tlsDescriptor: TLSDescriptor?
-    var metrics: MetricsClient?
+    var metrics: SwiftFulcrum.Metrics.ClientProtocol?
     
     init(url: URL,
          configuration: Configuration = .init(),
@@ -58,7 +58,7 @@ actor WebSocketModel {
         self.network = configuration.network
         
         self.metrics = configuration.metrics
-        self.logger = configuration.logger ?? LogModel.ConsoleAdapter()
+        self.logger = configuration.logger ?? SwiftFulcrum.Logging.ConsoleAdapter()
         self.tlsDescriptor = configuration.tlsDescriptor
         self.maximumMessageSize = configuration.maximumMessageSize
         

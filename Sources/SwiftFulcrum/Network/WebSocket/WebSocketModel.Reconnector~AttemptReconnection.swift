@@ -124,7 +124,7 @@ extension WebSocketModel.Reconnector {
         )
         await webSocket.disconnect(with: "Reconnection attempts exhausted.")
         let closeInformation = await webSocket.closeInformation
-        throw FulcrumClient.Error.transport(
+        throw SwiftFulcrum.Client.Error.transport(
             .connectionClosed(closeInformation.code, closeInformation.reason)
         )
     }

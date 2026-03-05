@@ -1,7 +1,7 @@
 // MethodAssortmentModel.swift
 
 struct MethodAssortmentModel {
-    let method: FulcrumMethodRequest
+    let method: SwiftFulcrum.RPC.Method
     let methodPath: String
     
     func validateMethodAssortment() {

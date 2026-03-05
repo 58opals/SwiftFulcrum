@@ -13,7 +13,7 @@ extension WebSocketModel {
         
         await createNewTask(with: nil, shouldCancelReceiver: shouldCancelReceiver)
         guard let task else {
-            throw FulcrumClient.Error.transport(.connectionClosed(closeInformation.code, closeInformation.reason))
+            throw SwiftFulcrum.Client.Error.transport(.connectionClosed(closeInformation.code, closeInformation.reason))
         }
         
         task.resume()
@@ -33,17 +33,17 @@ extension WebSocketModel {
                 emitLog(.error, "connect.timeout")
                 try await performInitialFailoverIfNeeded(
                     shouldAllowFailover: shouldAllowFailover,
-                    failure: FulcrumClient.Error.transport(
+                    failure: SwiftFulcrum.Client.Error.transport(
                         .connectionClosed(closeInformation.code, closeInformation.reason)
                     )
                 )
             }
-        } catch let networkError as FulcrumClient.Error.NetworkModel {
+        } catch let networkError as SwiftFulcrum.Client.Error.NetworkModel {
             await updateConnectionState(.disconnected)
             task.cancel(with: .goingAway, reason: "NetworkModel error during connect.".data(using: .utf8))
             try await performInitialFailoverIfNeeded(
                 shouldAllowFailover: shouldAllowFailover,
-                failure: FulcrumClient.Error.transport(.network(networkError))
+                failure: SwiftFulcrum.Client.Error.transport(.network(networkError))
             )
         } catch {
             await updateConnectionState(.disconnected)
@@ -105,10 +105,10 @@ extension WebSocketModel {
         task = nil
         await updateConnectionState(.disconnected)
         
-        finishConnectWaiters(.failure(FulcrumClient.Error.transport(.connectionClosed(information.code, information.reason))))
+        finishConnectWaiters(.failure(SwiftFulcrum.Client.Error.transport(.connectionClosed(information.code, information.reason))))
         
         messageContinuation?.finish(
-            throwing: FulcrumClient.Error.transport(.connectionClosed(information.code, information.reason))
+            throwing: SwiftFulcrum.Client.Error.transport(.connectionClosed(information.code, information.reason))
         )
         
         await metrics?.recordDisconnect(url: url, closeCode: information.code, reason: reason)

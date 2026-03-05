@@ -1,12 +1,13 @@
-# SwiftFulcrum Facade API Migration
+# SwiftFulcrum Facade API Hard-Cut Migration
 
-## Compatibility-first rollout
+## Release policy
 
-This release introduces `SwiftFulcrum.*` as the default public API surface while keeping legacy top-level names functional and deprecated.
+This release hard-cuts legacy public API names.
+Only `SwiftFulcrum.*` facade paths are exported.
 
 ## Old-to-new mapping
 
-| Legacy API | New facade API |
+| Removed legacy API | Supported facade API |
 | --- | --- |
 | `FulcrumClient` | `SwiftFulcrum.Client` |
 | `FulcrumMethodRequest` | `SwiftFulcrum.RPC.Method` |
@@ -19,26 +20,8 @@ This release introduces `SwiftFulcrum.*` as the default public API surface while
 | `MetricsClient` | `SwiftFulcrum.Metrics.ClientProtocol` |
 | `LogModel` | `SwiftFulcrum.Logging` |
 
-## Module-qualified legacy compatibility
+## Migration checklist
 
-To preserve module-qualified call sites after adding a `SwiftFulcrum` facade root type, this release also includes deprecated nested compatibility aliases:
-
-- `SwiftFulcrum.FulcrumClient`
-- `SwiftFulcrum.FulcrumMethodRequest`
-- `SwiftFulcrum.FulcrumResponse`
-- `SwiftFulcrum.JSONRPCResponse`
-- `SwiftFulcrum.JSONRPCNilAcceptingResponse`
-- `SwiftFulcrum.ProtocolVersionModel`
-- `SwiftFulcrum.FulcrumTransportState`
-- `SwiftFulcrum.FulcrumServerCatalogRepository`
-- `SwiftFulcrum.MetricsClient`
-- `SwiftFulcrum.LogModel`
-
-## Planned removal policy
-
-Legacy top-level APIs and nested legacy compatibility aliases are scheduled for removal in the next major release.
-
-Recommended migration sequence:
-
-1. Move all downstream code to `SwiftFulcrum.*` facade paths in this release window.
-2. Remove uses of deprecated legacy names before adopting the next major version.
+1. Replace all legacy type references with `SwiftFulcrum.*` mappings above.
+2. Update imports/usages that previously relied on top-level legacy symbols.
+3. Re-run local build/tests to confirm no legacy symbol references remain.
