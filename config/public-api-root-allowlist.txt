@@ -1,2 +1,0 @@
-# Allowed top-level public API roots from SwiftFulcrum symbol graph.
-SwiftFulcrum
