@@ -2,6 +2,7 @@
 
 import Foundation
 
+@available(*, deprecated, message: "Use SwiftFulcrum.RPC.Method instead.")
 public enum FulcrumMethodRequest {
     case server(ServerModel)
     case blockchain(BlockchainModel)

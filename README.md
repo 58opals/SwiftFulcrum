@@ -27,12 +27,12 @@ import SwiftFulcrum
 
 Task {
     do {
-        let fulcrum = try await FulcrumClient()
+        let fulcrum = try await SwiftFulcrum.Client()
         try await fulcrum.start()
 
         let response = try await fulcrum.submit(
             method: .blockchain(.headers(.getTip)),
-            responseType: FulcrumResponse.ResultModel.Blockchain.Headers.GetTip.self
+            responseType: SwiftFulcrum.RPC.Response.ResultModel.Blockchain.Headers.GetTip.self
         )
 
         if let tip = response.extractRegularResponse() {
@@ -45,6 +45,8 @@ Task {
     }
 }
 ```
+
+Legacy top-level names (for example `FulcrumClient`, `FulcrumMethodRequest`, `FulcrumResponse`) remain available in this release and are deprecated in favor of `SwiftFulcrum.*` facade paths.
 
 ## Core Capabilities
 

@@ -2,6 +2,7 @@
 
 import Foundation
 
+@available(*, deprecated, message: "Use SwiftFulcrum.ServerCatalog.Repository instead.")
 public struct FulcrumServerCatalogRepository: Sendable {
     enum KindModel { case bundled, constant, custom }
 

@@ -1,0 +1,5 @@
+# Optional additional allowlist entries for public/open declarations
+# outside Sources/SwiftFulcrum/PublicAPI.
+#
+# Keep this file small and temporary. Prefer migrating declarations into
+# the facade namespace rather than adding allowlist exceptions.

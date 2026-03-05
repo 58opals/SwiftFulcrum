@@ -2,6 +2,7 @@
 
 import Foundation
 
+@available(*, deprecated, message: "Use SwiftFulcrum.Metrics.ClientProtocol instead.")
 public protocol MetricsClient: Sendable {
     func recordConnect(url: URL, network: FulcrumClient.Configuration.NetworkModel) async
     func recordDisconnect(url: URL, closeCode: URLSessionWebSocketTask.CloseCode?, reason: String?) async

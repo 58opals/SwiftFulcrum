@@ -2,6 +2,7 @@
 
 import Foundation
 
+@available(*, deprecated, message: "Use SwiftFulcrum.RPC.Response instead.")
 public struct FulcrumResponse {
     public struct RegularModel<ResultModel: Decodable> {
         let id: UUID

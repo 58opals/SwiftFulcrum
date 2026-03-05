@@ -2,6 +2,7 @@
 
 import Foundation
 
+@available(*, deprecated, message: "Use SwiftFulcrum.ProtocolVersion instead.")
 public struct ProtocolVersionModel: Comparable, CustomStringConvertible, Decodable, Sendable {
     public let major: Int
     public let minor: Int

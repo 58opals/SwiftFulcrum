@@ -2,6 +2,7 @@
 
 import Foundation
 
+@available(*, deprecated, message: "Use SwiftFulcrum.Logging instead.")
 public enum LogModel {}
 
 extension LogModel {
@@ -91,4 +92,3 @@ extension LogModel {
         public func log(_ level: LogModel.Level, _ message: @autoclosure () -> String, metadata: [String : String]?, file: String, function: String, line: UInt) {}
     }
 }
-
