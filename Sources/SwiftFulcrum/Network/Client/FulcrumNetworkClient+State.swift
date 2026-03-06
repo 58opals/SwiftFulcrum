@@ -1,12 +1,10 @@
-// FulcrumNetworkClient+State.swift
-
 import Foundation
 
 extension FulcrumNetworkClient {
     struct State {
-        var negotiatedSession: NegotiatedSessionModel
+        var negotiatedSession: NegotiatedSession
         
-        init(negotiatedSession: NegotiatedSessionModel = .init()) {
+        init(negotiatedSession: NegotiatedSession = .init()) {
             self.negotiatedSession = negotiatedSession
         }
     }
@@ -15,7 +13,7 @@ extension FulcrumNetworkClient {
 extension FulcrumNetworkClient.State: Sendable {}
 
 extension FulcrumNetworkClient {
-    typealias ServerFeatures = SwiftFulcrum.RPC.Response.ResultModel.Server.Features
+    typealias ServerFeatures = SwiftFulcrum.RPC.Response.Result.Server.Features
     
     func resetNegotiatedSession() {
         state.negotiatedSession.negotiationTask?.cancel()

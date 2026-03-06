@@ -1,19 +1,17 @@
-// FulcrumNetworkClient.swift
-
 import Foundation
 
 actor FulcrumNetworkClient {
     let id: UUID
-    let transport: TransportableModel
-    var jsonRPC: JSONRPCModel
+    let transport: TransportProtocol
+    var jsonRPC: JSONRPCCodec
     let router: Router
-    let metrics: SwiftFulcrum.Metrics.ClientProtocol?
+    let metrics: SwiftFulcrum.Metrics.MetricsClientProtocol?
     let logger: SwiftFulcrum.Logging.Adapter
-    let protocolNegotiation: SwiftFulcrum.Client.Configuration.ProtocolNegotiationModel
+    let protocolNegotiation: SwiftFulcrum.Client.Configuration.ProtocolNegotiation
     
     var state: State
     
-    var subscriptionMethods: [SubscriptionKeyModel: SwiftFulcrum.RPC.Method]
+    var subscriptionMethods: [SubscriptionKey: SwiftFulcrum.RPC.Method]
     
     var receiveTask: Task<Void, Never>?
     private var lifecycleTask: Task<Void, Never>?
@@ -25,12 +23,12 @@ actor FulcrumNetworkClient {
     
     var connectionState: SwiftFulcrum.Client.ConnectionState { get async { await transport.connectionState } }
     
-    init(transport: TransportableModel,
-         metrics: SwiftFulcrum.Metrics.ClientProtocol? = nil,
+    init(transport: TransportProtocol,
+         metrics: SwiftFulcrum.Metrics.MetricsClientProtocol? = nil,
          logger: SwiftFulcrum.Logging.Adapter? = nil,
          heartbeatInterval: Duration = .seconds(25),
          heartbeatTimeout: Duration = .seconds(10),
-         protocolNegotiation: SwiftFulcrum.Client.Configuration.ProtocolNegotiationModel) {
+         protocolNegotiation: SwiftFulcrum.Client.Configuration.ProtocolNegotiation) {
         self.id = .init()
         self.transport = transport
         self.jsonRPC = .init()

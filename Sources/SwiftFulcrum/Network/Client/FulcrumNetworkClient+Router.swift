@@ -1,5 +1,3 @@
-// FulcrumNetworkClient+Router.swift
-
 import Foundation
 
 extension FulcrumNetworkClient {
@@ -9,7 +7,7 @@ extension FulcrumNetworkClient {
             case stream(AsyncThrowingStream<Data, Swift.Error>.Continuation)
         }
         
-        private var table: [SwiftFulcrum.RPC.Response.IdentifierModel: PendingModel] = .init()
+        private var table: [SwiftFulcrum.RPC.Response.Identifier: PendingModel] = .init()
         
         
         private var inflightUnaryCallCount = 0
@@ -17,7 +15,7 @@ extension FulcrumNetworkClient {
         
         @discardableResult
         func addUnary(id: UUID, continuation: AsyncThrowingStream<Data, Swift.Error>.Continuation) throws -> Int {
-            let key: SwiftFulcrum.RPC.Response.IdentifierModel = .uuid(id)
+            let key: SwiftFulcrum.RPC.Response.Identifier = .uuid(id)
             guard table[key] == nil else { throw SwiftFulcrum.Client.Error.client(.duplicateHandler) }
             table[key] = .unary(continuation)
             inflightUnaryCallCount += 1
@@ -25,13 +23,13 @@ extension FulcrumNetworkClient {
         }
         
         func addStream(key: String, continuation: AsyncThrowingStream<Data, Swift.Error>.Continuation) throws {
-            let identifier: SwiftFulcrum.RPC.Response.IdentifierModel = .string(key)
+            let identifier: SwiftFulcrum.RPC.Response.Identifier = .string(key)
             guard table[identifier] == nil else { throw SwiftFulcrum.Client.Error.client(.duplicateHandler) }
             table[identifier] = .stream(continuation)
         }
         
         func handle(raw: Data) -> Int? {
-            guard let id = try? SwiftFulcrum.RPC.Response.JSONRPCModel.extractIdentifier(from: raw) else { return nil }
+            guard let id = try? SwiftFulcrum.RPC.Response.JSONRPC.extractIdentifier(from: raw) else { return nil }
             switch id {
             case .uuid:
                 return resolve(identifier: id, with: raw)
@@ -43,7 +41,7 @@ extension FulcrumNetworkClient {
         }
         
         @discardableResult
-        func cancel(identifier: SwiftFulcrum.RPC.Response.IdentifierModel, error: Swift.Error? = nil) -> Int? {
+        func cancel(identifier: SwiftFulcrum.RPC.Response.Identifier, error: Swift.Error? = nil) -> Int? {
             guard let entry = table.removeValue(forKey: identifier) else { return nil }
             switch entry {
             case .unary(let continuation):
@@ -93,7 +91,7 @@ extension FulcrumNetworkClient {
             return inflightUnaryCallCount
         }
         
-        private func resolve(identifier: SwiftFulcrum.RPC.Response.IdentifierModel, with raw: Data) -> Int? {
+        private func resolve(identifier: SwiftFulcrum.RPC.Response.Identifier, with raw: Data) -> Int? {
             guard let entry = table[identifier] else { return nil }
             switch entry {
             case .unary(let continuation):

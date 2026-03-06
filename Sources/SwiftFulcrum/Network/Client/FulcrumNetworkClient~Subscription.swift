@@ -1,9 +1,7 @@
-// FulcrumNetworkClient~SubscriptionModel.swift
-
 import Foundation
 
 extension FulcrumNetworkClient {
-    func makeUnsubscribeMethod(for key: SubscriptionKeyModel) -> SwiftFulcrum.RPC.Method? {
+    func makeUnsubscribeMethod(for key: SubscriptionKey) -> SwiftFulcrum.RPC.Method? {
         switch key.methodPath {
         case .scriptHash:
             guard let id = key.identifier else { return nil }
@@ -52,13 +50,13 @@ extension FulcrumNetworkClient {
 
 extension FulcrumNetworkClient {
     @discardableResult
-    func removeStoredSubscriptionMethod(for key: SubscriptionKeyModel) async -> Bool {
+    func removeStoredSubscriptionMethod(for key: SubscriptionKey) async -> Bool {
         guard subscriptionMethods.removeValue(forKey: key) != nil else { return false }
         return true
     }
     
     @discardableResult
-    func cleanUpSubscriptionSetup(for subscriptionKey: SubscriptionKeyModel,
+    func cleanUpSubscriptionSetup(for subscriptionKey: SubscriptionKey,
                                   requestIdentifier: UUID,
                                   error: Swift.Error? = nil) async -> Bool {
         let inflightCount = await router.cancel(identifier: .uuid(requestIdentifier), error: error)
@@ -87,7 +85,7 @@ extension FulcrumNetworkClient {
 extension FulcrumNetworkClient {
     func configureSubscriptionLifecycle(
         rawContinuation: AsyncThrowingStream<Data, Swift.Error>.Continuation,
-        subscriptionKey: SubscriptionKeyModel,
+        subscriptionKey: SubscriptionKey,
         method: SwiftFulcrum.RPC.Method,
         requestIdentifier: UUID
     ) async throws {

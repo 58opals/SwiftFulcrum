@@ -1,5 +1,3 @@
-// FulcrumNetworkClient~WebSocketModel.swift
-
 import Foundation
 
 extension FulcrumNetworkClient {

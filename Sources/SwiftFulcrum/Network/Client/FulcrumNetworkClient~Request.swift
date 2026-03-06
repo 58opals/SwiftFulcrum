@@ -1,13 +1,11 @@
-// FulcrumNetworkClient~FulcrumRequest.swift
-
 import Foundation
 
 extension FulcrumNetworkClient {
-    func call<ResultModel: SwiftFulcrum.RPC.ResponseProtocol>(
+    func call<ResponsePayload: SwiftFulcrum.RPC.ResponseProtocol>(
         method: SwiftFulcrum.RPC.Method,
-        options: CallModel.Options = .init(),
+        options: Call.Options = .init(),
         suppressTransportLogging: Bool = false
-    ) async throws -> (UUID, ResultModel) {
+    ) async throws -> (UUID, ResponsePayload) {
         if method.isSubscription {
             throw SwiftFulcrum.Client.Error.client(
                 .protocolMismatch("call() cannot be used with subscription methods. Use subscribe(...) instead.")
@@ -58,12 +56,12 @@ extension FulcrumNetworkClient {
             raw = try await callTask.value
         }
         
-        return try (id, raw.decode(ResultModel.self, context: .init(methodPath: method.path)))
+        return try (id, raw.decode(ResponsePayload.self, context: .init(methodPath: method.path)))
     }
     
     func subscribe<Initial: SwiftFulcrum.RPC.ResponseProtocol, Notification: SwiftFulcrum.RPC.ResponseProtocol>(
         method: SwiftFulcrum.RPC.Method,
-        options: CallModel.Options = .init()
+        options: Call.Options = .init()
     ) async throws -> (UUID, Initial, AsyncThrowingStream<Notification, Swift.Error>) {
         if !method.isSubscription {
             throw SwiftFulcrum.Client.Error.client(
@@ -77,7 +75,7 @@ extension FulcrumNetworkClient {
         
         let id = UUID()
         let request = method.createRequest(with: id)
-        let subscriptionKey = SubscriptionKeyModel(
+        let subscriptionKey = SubscriptionKey(
             methodPath: subscriptionPath,
             identifier: deriveSubscriptionIdentifier(for: method)
         )
@@ -154,7 +152,7 @@ extension FulcrumNetworkClient {
                 Task {
                     subscriptionTask.cancel()
                     guard let self else { return }
-                    let cleanupKey = SubscriptionKeyModel(
+                    let cleanupKey = SubscriptionKey(
                         methodPath: subscriptionPath,
                         identifier: subscriptionKey.identifier
                     )

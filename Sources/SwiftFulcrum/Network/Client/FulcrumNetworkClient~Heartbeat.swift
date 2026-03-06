@@ -1,5 +1,3 @@
-// FulcrumNetworkClient~Heartbeat.swift
-
 import Foundation
 
 extension FulcrumNetworkClient {
@@ -13,7 +11,7 @@ extension FulcrumNetworkClient {
                     try await Task.sleep(for: rpcHeartbeatInterval)
                     try Task.checkCancellation()
                     
-                    let (_, _): (UUID, SwiftFulcrum.RPC.Response.ResultModel.Server.Ping) =
+                    let (_, _): (UUID, SwiftFulcrum.RPC.Response.Result.Server.Ping) =
                     try await SwiftFulcrum.Logging.perform(withBehavior: .quiet) {
                         try await self.call(
                             method: .server(.ping),
