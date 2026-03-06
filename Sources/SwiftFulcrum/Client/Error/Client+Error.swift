@@ -1,3 +1,5 @@
+// Client+Error.swift
+
 import Foundation
 
 extension SwiftFulcrum.Client {

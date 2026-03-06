@@ -1,8 +1,10 @@
+// Response.Result+Mempool.swift
+
 import Foundation
 
 extension SwiftFulcrum.RPC.Response.Result {
     public struct Mempool {
-        public struct GetInfo: SwiftFulcrum.RPC.ResponseProtocol {
+        public struct GetInfo: SwiftFulcrum.RPC.JSONRPCResponseAdapter {
             public let mempoolMinimumFee: Double?
             public let minimumRelayTransactionFee: Double?
             public let incrementalRelayFee: Double?
@@ -19,7 +21,7 @@ extension SwiftFulcrum.RPC.Response.Result {
             }
         }
         
-        public struct GetFeeHistogram: SwiftFulcrum.RPC.ResponseProtocol {
+        public struct GetFeeHistogram: SwiftFulcrum.RPC.JSONRPCResponseAdapter {
             public let histogram: [Result]
             
             public struct Result: Decodable, Sendable {

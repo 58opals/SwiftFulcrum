@@ -1,7 +1,9 @@
+// Transaction+IDFromPos.swift
+
 import Foundation
 
 extension SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction {
-            public struct IDFromPos: SwiftFulcrum.RPC.ResponseProtocol {
+            public struct IDFromPos: SwiftFulcrum.RPC.JSONRPCResponseAdapter {
                 public let merkle: [String]
                 public let transactionHash: String
                 

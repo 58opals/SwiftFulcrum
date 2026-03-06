@@ -1,3 +1,5 @@
+// WebSocketModel~Send.swift
+
 import Foundation
 
 extension WebSocketModel {

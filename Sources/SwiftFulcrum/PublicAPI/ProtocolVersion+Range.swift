@@ -1,3 +1,5 @@
+// ProtocolVersion+Range.swift
+
 extension SwiftFulcrum.ProtocolVersion {
     public struct Range: Equatable, Sendable {
         public enum Error: Swift.Error, Equatable {

@@ -1,3 +1,5 @@
+// Method+ResponseType.swift
+
 import Foundation
 
 extension SwiftFulcrum.RPC.Method {

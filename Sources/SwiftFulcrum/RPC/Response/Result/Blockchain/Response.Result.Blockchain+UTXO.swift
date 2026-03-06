@@ -1,8 +1,10 @@
+// Response.Result.Blockchain+UTXO.swift
+
 import Foundation
 
 extension SwiftFulcrum.RPC.Response.Result.Blockchain {
     public struct UTXO {
-        public struct GetInfo: SwiftFulcrum.RPC.ResponseProtocol {
+        public struct GetInfo: SwiftFulcrum.RPC.JSONRPCResponseAdapter {
             public let confirmedHeight: UInt?
             public let scriptHash: String
             public let value: UInt

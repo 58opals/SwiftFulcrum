@@ -1,7 +1,9 @@
+// FulcrumNetworkClient~Request.swift
+
 import Foundation
 
 extension FulcrumNetworkClient {
-    func call<ResponsePayload: SwiftFulcrum.RPC.ResponseProtocol>(
+    func call<ResponsePayload: SwiftFulcrum.RPC.JSONRPCResponseAdapter>(
         method: SwiftFulcrum.RPC.Method,
         options: Call.Options = .init(),
         suppressTransportLogging: Bool = false
@@ -59,7 +61,7 @@ extension FulcrumNetworkClient {
         return try (id, raw.decode(ResponsePayload.self, context: .init(methodPath: method.path)))
     }
     
-    func subscribe<Initial: SwiftFulcrum.RPC.ResponseProtocol, Notification: SwiftFulcrum.RPC.ResponseProtocol>(
+    func subscribe<Initial: SwiftFulcrum.RPC.JSONRPCResponseAdapter, Notification: SwiftFulcrum.RPC.JSONRPCResponseAdapter>(
         method: SwiftFulcrum.RPC.Method,
         options: Call.Options = .init()
     ) async throws -> (UUID, Initial, AsyncThrowingStream<Notification, Swift.Error>) {

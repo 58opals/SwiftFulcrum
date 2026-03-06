@@ -1,3 +1,5 @@
+// WebSocketModel~Logging.swift
+
 import Foundation
 
 extension WebSocketModel {

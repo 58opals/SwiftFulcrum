@@ -1,3 +1,5 @@
+// WebSocketModel+Reconnector.swift
+
 import Foundation
 
 extension WebSocketModel {

@@ -1,7 +1,9 @@
+// Transaction+SubscribeNotification.swift
+
 import Foundation
 
 extension SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction {
-            public struct SubscribeNotification: SwiftFulcrum.RPC.ResponseProtocol {
+            public struct SubscribeNotification: SwiftFulcrum.RPC.JSONRPCResponseAdapter {
                 public let subscriptionIdentifier: String
                 public let transactionHash: String
                 public let height: UInt

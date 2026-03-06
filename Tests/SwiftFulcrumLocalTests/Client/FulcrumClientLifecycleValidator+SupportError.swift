@@ -1,3 +1,5 @@
+// FulcrumClientLifecycleValidator+SupportError.swift
+
 import Foundation
 
 extension FulcrumClientLifecycleValidator {

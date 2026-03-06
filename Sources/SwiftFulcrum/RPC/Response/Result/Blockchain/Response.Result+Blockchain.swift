@@ -1,3 +1,5 @@
+// Response.Result+Blockchain.swift
+
 import Foundation
 
 extension SwiftFulcrum.RPC.Response.Result {

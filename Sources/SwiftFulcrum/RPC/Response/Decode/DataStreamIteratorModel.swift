@@ -1,3 +1,5 @@
+// DataStreamIteratorModel.swift
+
 import Foundation
 
 final class DataStreamIteratorModel<Failure: Swift.Error>: @unchecked Sendable {

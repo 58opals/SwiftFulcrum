@@ -1,3 +1,5 @@
+// SubscriptionPathConfiguration.swift
+
 enum SubscriptionPathConfiguration: String, CaseIterable, Sendable {
     case scriptHash = "blockchain.scripthash.subscribe"
     case address = "blockchain.address.subscribe"

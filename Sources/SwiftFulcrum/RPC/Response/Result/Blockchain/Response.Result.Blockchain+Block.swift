@@ -1,8 +1,10 @@
+// Response.Result.Blockchain+Block.swift
+
 import Foundation
 
 extension SwiftFulcrum.RPC.Response.Result.Blockchain {
         public struct Block {
-            public struct Header: SwiftFulcrum.RPC.ResponseProtocol {
+            public struct Header: SwiftFulcrum.RPC.JSONRPCResponseAdapter {
                 public let hex: String
                 public let proof: Proof?
                 
@@ -25,7 +27,7 @@ extension SwiftFulcrum.RPC.Response.Result.Blockchain {
                 }
             }
             
-            public struct Headers: SwiftFulcrum.RPC.ResponseProtocol {
+            public struct Headers: SwiftFulcrum.RPC.JSONRPCResponseAdapter {
                 public let count: UInt
                 public let headers: [String]
                 public let hex: String

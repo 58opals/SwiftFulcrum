@@ -1,3 +1,5 @@
+// WebSocketModel+Configuration.swift
+
 import Foundation
 import Network
 
@@ -7,7 +9,7 @@ extension WebSocketModel {
         
         let session: URLSession?
         let tlsDescriptor: TLSDescriptor?
-        let metrics: SwiftFulcrum.Metrics.MetricsClientProtocol?
+        let metrics: SwiftFulcrum.Metrics.MetricsClient?
         let logger: SwiftFulcrum.Logging.Adapter?
         let maximumMessageSize: Int
         let serverCatalogLoader: SwiftFulcrum.ServerCatalog.Repository
@@ -15,7 +17,7 @@ extension WebSocketModel {
         
         init(session: URLSession? = nil,
              tlsDescriptor: TLSDescriptor? = nil,
-             metrics: SwiftFulcrum.Metrics.MetricsClientProtocol? = nil,
+             metrics: SwiftFulcrum.Metrics.MetricsClient? = nil,
              logger: SwiftFulcrum.Logging.Adapter? = nil,
              maximumMessageSize: Int = defaultMaximumMessageSize,
              serverCatalogLoader: SwiftFulcrum.ServerCatalog.Repository = .bundled,
@@ -30,7 +32,7 @@ extension WebSocketModel {
         }
     }
     
-    func updateMetrics(_ collector: SwiftFulcrum.Metrics.MetricsClientProtocol?) {
+    func updateMetrics(_ collector: SwiftFulcrum.Metrics.MetricsClient?) {
         self.metrics = collector
     }
     

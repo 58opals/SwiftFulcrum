@@ -1,3 +1,5 @@
+// Client~Interface.swift
+
 import Foundation
 
 extension SwiftFulcrum.Client {
@@ -7,7 +9,7 @@ extension SwiftFulcrum.Client {
     ///   - method: RPC method to invoke. Subscription methods are rejected.
     ///   - responseType: Expected result model for decoding.
     ///   - options: Optional timeout and cancellation controls. Cancelling the calling task cancels the request.
-    public func submit<RegularResponseResult: SwiftFulcrum.RPC.ResponseProtocol>(
+    public func submit<RegularResponseResult: SwiftFulcrum.RPC.JSONRPCResponseAdapter>(
         method: SwiftFulcrum.RPC.Method,
         responseType: RegularResponseResult.Type = RegularResponseResult.self,
         options: SwiftFulcrum.Client.Call.Options = .init()
@@ -36,7 +38,7 @@ extension SwiftFulcrum.Client {
     ///   - notificationType: Expected model for decoding subscription updates.
     ///   - options: Optional timeout and cancellation controls. Cancelling the calling task cancels the subscription setup.
     /// - Returns: The initial subscription payload, an update stream, and a cancellation closure tied to the subscription token.
-    public func subscribe<Initial: SwiftFulcrum.RPC.ResponseProtocol, Notification: SwiftFulcrum.RPC.ResponseProtocol>(
+    public func subscribe<Initial: SwiftFulcrum.RPC.JSONRPCResponseAdapter, Notification: SwiftFulcrum.RPC.JSONRPCResponseAdapter>(
         method: SwiftFulcrum.RPC.Method,
         initialType: Initial.Type = Initial.self,
         notificationType: Notification.Type = Notification.self,
@@ -82,7 +84,7 @@ extension SwiftFulcrum.Client {
         }
     }
     
-    private func makeSubscription<Initial: SwiftFulcrum.RPC.ResponseProtocol, Notification: SwiftFulcrum.RPC.ResponseProtocol>(
+    private func makeSubscription<Initial: SwiftFulcrum.RPC.JSONRPCResponseAdapter, Notification: SwiftFulcrum.RPC.JSONRPCResponseAdapter>(
         method: SwiftFulcrum.RPC.Method,
         initialType: Initial.Type,
         notificationType: Notification.Type,

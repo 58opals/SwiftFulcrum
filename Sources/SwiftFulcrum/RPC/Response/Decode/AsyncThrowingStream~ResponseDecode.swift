@@ -1,3 +1,5 @@
+// AsyncThrowingStream~ResponseDecode.swift
+
 import Foundation
 
 extension AsyncThrowingStream where Element == Data, Failure == Swift.Error {
@@ -11,7 +13,7 @@ extension AsyncThrowingStream where Element == Data, Failure == Swift.Error {
         }
     }
 
-    func decode<ResponsePayload: SwiftFulcrum.RPC.ResponseProtocol>(_ type: ResponsePayload.Type) -> AsyncThrowingStream<ResponsePayload, Swift.Error> {
+    func decode<ResponsePayload: SwiftFulcrum.RPC.JSONRPCResponseAdapter>(_ type: ResponsePayload.Type) -> AsyncThrowingStream<ResponsePayload, Swift.Error> {
         let iteratorModel = DataStreamIteratorModel(stream: self)
         return AsyncThrowingStream<ResponsePayload, Swift.Error> {
             guard let chunk = try await iteratorModel.next() else {
@@ -21,7 +23,7 @@ extension AsyncThrowingStream where Element == Data, Failure == Swift.Error {
         }
     }
 
-    func decode<ResponsePayload: SwiftFulcrum.RPC.ResponseProtocol>(_ type: ResponsePayload.Type, context: JSONRPCCodec.DecodeContext?) -> AsyncThrowingStream<ResponsePayload, Swift.Error> {
+    func decode<ResponsePayload: SwiftFulcrum.RPC.JSONRPCResponseAdapter>(_ type: ResponsePayload.Type, context: JSONRPCCodec.DecodeContext?) -> AsyncThrowingStream<ResponsePayload, Swift.Error> {
         let iteratorModel = DataStreamIteratorModel(stream: self)
         return AsyncThrowingStream<ResponsePayload, Swift.Error> {
             guard let chunk = try await iteratorModel.next() else {

@@ -1,3 +1,5 @@
+// WebSocketModel~ConnectionWait.swift
+
 import Foundation
 
 extension WebSocketModel {

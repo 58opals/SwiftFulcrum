@@ -1,3 +1,5 @@
+// Data~ResponseDecode.swift
+
 import Foundation
 
 extension Data {
@@ -17,7 +19,7 @@ extension Data {
         }
     }
     
-    func decode<ResponsePayload: SwiftFulcrum.RPC.ResponseProtocol>(_ type: ResponsePayload.Type, context: JSONRPCCodec.DecodeContext? = nil) throws -> ResponsePayload {
+    func decode<ResponsePayload: SwiftFulcrum.RPC.JSONRPCResponseAdapter>(_ type: ResponsePayload.Type, context: JSONRPCCodec.DecodeContext? = nil) throws -> ResponsePayload {
         let rpcContainer = try JSONRPCCodec.Coder.decoder.decode(
             SwiftFulcrum.RPC.Response.JSONRPC.Generic<ResponsePayload.JSONRPC>.self,
             from: self

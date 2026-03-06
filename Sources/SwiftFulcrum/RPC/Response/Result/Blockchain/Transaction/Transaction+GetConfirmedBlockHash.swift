@@ -1,7 +1,9 @@
+// Transaction+GetConfirmedBlockHash.swift
+
 import Foundation
 
 extension SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction {
-            public struct GetConfirmedBlockHash: SwiftFulcrum.RPC.ResponseProtocol {
+            public struct GetConfirmedBlockHash: SwiftFulcrum.RPC.JSONRPCResponseAdapter {
                 public let blockHash: String
                 public let blockHeader: String?
                 public let blockHeight: UInt

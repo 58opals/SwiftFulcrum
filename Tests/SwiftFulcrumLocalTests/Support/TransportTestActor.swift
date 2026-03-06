@@ -1,7 +1,9 @@
+// TransportTestActor.swift
+
 import Foundation
 @testable import SwiftFulcrum
 
-actor TransportTestActor: TransportProtocol {
+actor TransportTestActor: TransportAdapter {
     private var connectionStateValue: SwiftFulcrum.Client.ConnectionState = .idle
     private var closeInformationValue: CloseInformation = (.invalid, nil)
     private var currentEndpoint: URL
@@ -116,7 +118,7 @@ actor TransportTestActor: TransportProtocol {
         .init(reconnectAttempts: 0, reconnectSuccesses: 0)
     }
 
-    func updateMetrics(_ collector: SwiftFulcrum.Metrics.MetricsClientProtocol?) async { _ = collector }
+    func updateMetrics(_ collector: SwiftFulcrum.Metrics.MetricsClient?) async { _ = collector }
 
     func updateLogger(_ handler: SwiftFulcrum.Logging.Adapter?) async { _ = handler }
 

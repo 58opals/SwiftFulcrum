@@ -1,7 +1,9 @@
+// Transaction+Get.swift
+
 import Foundation
 
 extension SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction {
-            public struct Get: SwiftFulcrum.RPC.ResponseProtocol {
+            public struct Get: SwiftFulcrum.RPC.JSONRPCResponseAdapter {
                 public let blockHash: String
                 public let blocktime: UInt
                 public let confirmations: UInt

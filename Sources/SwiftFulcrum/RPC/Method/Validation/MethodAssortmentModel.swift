@@ -1,3 +1,5 @@
+// MethodAssortmentModel.swift
+
 struct MethodAssortmentModel {
     let method: SwiftFulcrum.RPC.Method
     let methodPath: String

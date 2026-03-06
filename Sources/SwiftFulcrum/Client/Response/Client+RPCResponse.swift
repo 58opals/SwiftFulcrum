@@ -1,3 +1,5 @@
+// Client+RPCResponse.swift
+
 import Foundation
 
 extension SwiftFulcrum.Client {

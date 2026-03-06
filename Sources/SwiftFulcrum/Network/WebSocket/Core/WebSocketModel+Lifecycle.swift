@@ -1,3 +1,5 @@
+// WebSocketModel+Lifecycle.swift
+
 import Foundation
 
 extension WebSocketModel {

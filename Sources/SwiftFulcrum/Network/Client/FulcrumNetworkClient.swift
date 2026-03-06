@@ -1,11 +1,13 @@
+// FulcrumNetworkClient.swift
+
 import Foundation
 
 actor FulcrumNetworkClient {
     let id: UUID
-    let transport: TransportProtocol
+    let transport: TransportAdapter
     var jsonRPC: JSONRPCCodec
     let router: Router
-    let metrics: SwiftFulcrum.Metrics.MetricsClientProtocol?
+    let metrics: SwiftFulcrum.Metrics.MetricsClient?
     let logger: SwiftFulcrum.Logging.Adapter
     let protocolNegotiation: SwiftFulcrum.Client.Configuration.ProtocolNegotiation
     
@@ -23,8 +25,8 @@ actor FulcrumNetworkClient {
     
     var connectionState: SwiftFulcrum.Client.ConnectionState { get async { await transport.connectionState } }
     
-    init(transport: TransportProtocol,
-         metrics: SwiftFulcrum.Metrics.MetricsClientProtocol? = nil,
+    init(transport: TransportAdapter,
+         metrics: SwiftFulcrum.Metrics.MetricsClient? = nil,
          logger: SwiftFulcrum.Logging.Adapter? = nil,
          heartbeatInterval: Duration = .seconds(25),
          heartbeatTimeout: Duration = .seconds(10),

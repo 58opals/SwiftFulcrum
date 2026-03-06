@@ -1,3 +1,5 @@
+// JSONRPC.Blockchain+ScriptHash.swift
+
 import Foundation
 
 extension SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain {

@@ -1,3 +1,5 @@
+// WebSocketReconnectorValidator~RotationPolicy.swift
+
 import Foundation
 import Testing
 @testable import SwiftFulcrum

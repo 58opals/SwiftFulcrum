@@ -1,3 +1,5 @@
+// Method~Path.swift
+
 import Foundation
 
 extension SwiftFulcrum.RPC.Method { var path: String {

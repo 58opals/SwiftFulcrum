@@ -1,3 +1,5 @@
+// Client.swift
+
 import Foundation
 
 /// Actor-based entry point for interacting with Fulcrum servers over WebSocket JSON-RPC.

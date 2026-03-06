@@ -1,8 +1,10 @@
+// Response.Result.Blockchain+Address.swift
+
 import Foundation
 
 extension SwiftFulcrum.RPC.Response.Result.Blockchain {
         public struct Address {
-            public struct GetBalance: SwiftFulcrum.RPC.ResponseProtocol {
+            public struct GetBalance: SwiftFulcrum.RPC.JSONRPCResponseAdapter {
                 public let confirmed: UInt64
                 public let unconfirmed: Int64
                 
@@ -13,7 +15,7 @@ extension SwiftFulcrum.RPC.Response.Result.Blockchain {
                 }
             }
             
-            public struct GetFirstUse: SwiftFulcrum.RPC.ResponseProtocol {
+            public struct GetFirstUse: SwiftFulcrum.RPC.JSONRPCResponseAdapter {
                 public let blockHash: String?
                 public let height: UInt?
                 public let transactionHash: String?
@@ -33,7 +35,7 @@ extension SwiftFulcrum.RPC.Response.Result.Blockchain {
                 }
             }
             
-            public struct GetHistory: SwiftFulcrum.RPC.ResponseProtocol {
+            public struct GetHistory: SwiftFulcrum.RPC.JSONRPCResponseAdapter {
                 public let transactions: [Transaction]
                 public struct Transaction: Decodable, Sendable {
                     public let height: Int
@@ -53,7 +55,7 @@ extension SwiftFulcrum.RPC.Response.Result.Blockchain {
                 }
             }
             
-            public struct GetMempool: SwiftFulcrum.RPC.ResponseProtocol {
+            public struct GetMempool: SwiftFulcrum.RPC.JSONRPCResponseAdapter {
                 public let transactions: [Transaction]
                 public struct Transaction: Decodable, Sendable {
                     public let height: Int
@@ -73,7 +75,7 @@ extension SwiftFulcrum.RPC.Response.Result.Blockchain {
                 }
             }
             
-            public struct GetScriptHash: SwiftFulcrum.RPC.ResponseProtocol {
+            public struct GetScriptHash: SwiftFulcrum.RPC.JSONRPCResponseAdapter {
                 public let scriptHash: String
                 
                 public typealias JSONRPC = SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Address.GetScriptHash
@@ -82,7 +84,7 @@ extension SwiftFulcrum.RPC.Response.Result.Blockchain {
                 }
             }
             
-            public struct ListUnspent: SwiftFulcrum.RPC.ResponseProtocol {
+            public struct ListUnspent: SwiftFulcrum.RPC.JSONRPCResponseAdapter {
                 public let items: [Item]
                 
                 public struct Item: Decodable, Sendable {
@@ -107,7 +109,7 @@ extension SwiftFulcrum.RPC.Response.Result.Blockchain {
                 }
             }
             
-            public struct Subscribe: SwiftFulcrum.RPC.ResponseProtocol {
+            public struct Subscribe: SwiftFulcrum.RPC.JSONRPCResponseAdapter {
                 public let status: String?
                 
                 public typealias JSONRPC = SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Address.Subscribe?
@@ -125,7 +127,7 @@ extension SwiftFulcrum.RPC.Response.Result.Blockchain {
                 }
             }
             
-            public struct SubscribeNotification: SwiftFulcrum.RPC.ResponseProtocol {
+            public struct SubscribeNotification: SwiftFulcrum.RPC.JSONRPCResponseAdapter {
                 public let subscriptionIdentifier: String
                 public let status: String?
                 
@@ -142,7 +144,7 @@ extension SwiftFulcrum.RPC.Response.Result.Blockchain {
                 }
             }
             
-            public struct Unsubscribe: SwiftFulcrum.RPC.ResponseProtocol {
+            public struct Unsubscribe: SwiftFulcrum.RPC.JSONRPCResponseAdapter {
                 public let isSuccess: Bool
                 
                 public typealias JSONRPC = SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Address.Unsubscribe

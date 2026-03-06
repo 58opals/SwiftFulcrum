@@ -1,3 +1,5 @@
+// Client+ConnectionState.swift
+
 import Foundation
 
 extension SwiftFulcrum.Client {

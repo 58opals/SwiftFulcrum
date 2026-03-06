@@ -1,8 +1,10 @@
+// Response.Result.Blockchain+Headers.swift
+
 import Foundation
 
 extension SwiftFulcrum.RPC.Response.Result.Blockchain {
         public struct Headers {
-            public struct GetTip: SwiftFulcrum.RPC.ResponseProtocol {
+            public struct GetTip: SwiftFulcrum.RPC.JSONRPCResponseAdapter {
                 public let height: UInt
                 public let hex: String
                 
@@ -13,7 +15,7 @@ extension SwiftFulcrum.RPC.Response.Result.Blockchain {
                 }
             }
             
-            public struct Subscribe: SwiftFulcrum.RPC.ResponseProtocol {
+            public struct Subscribe: SwiftFulcrum.RPC.JSONRPCResponseAdapter {
                 public let height: UInt
                 public let hex: String
                 
@@ -32,7 +34,7 @@ extension SwiftFulcrum.RPC.Response.Result.Blockchain {
                 }
             }
             
-            public struct SubscribeNotification: SwiftFulcrum.RPC.ResponseProtocol {
+            public struct SubscribeNotification: SwiftFulcrum.RPC.JSONRPCResponseAdapter {
                 public let subscriptionIdentifier: String
                 public let blocks: [Block]
                 
@@ -55,7 +57,7 @@ extension SwiftFulcrum.RPC.Response.Result.Blockchain {
                 }
             }
             
-            public struct Unsubscribe: SwiftFulcrum.RPC.ResponseProtocol {
+            public struct Unsubscribe: SwiftFulcrum.RPC.JSONRPCResponseAdapter {
                 public let isSuccess: Bool
                 
                 public typealias JSONRPC = SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Headers.Unsubscribe

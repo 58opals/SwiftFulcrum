@@ -1,3 +1,5 @@
+// MethodAssortmentModel~SampleMethods.swift
+
 extension MethodAssortmentModel {
     static var sampleMethods: [SwiftFulcrum.RPC.Method] {
         guard let minimumVersion = SwiftFulcrum.ProtocolVersion(string: "1.4"),

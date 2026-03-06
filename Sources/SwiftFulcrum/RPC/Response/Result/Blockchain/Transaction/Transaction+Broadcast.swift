@@ -1,7 +1,9 @@
+// Transaction+Broadcast.swift
+
 import Foundation
 
 extension SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction {
-            public struct Broadcast: SwiftFulcrum.RPC.ResponseProtocol {
+            public struct Broadcast: SwiftFulcrum.RPC.JSONRPCResponseAdapter {
                 public let transactionHash: Data
                 
                 public typealias JSONRPC = SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Transaction.Broadcast

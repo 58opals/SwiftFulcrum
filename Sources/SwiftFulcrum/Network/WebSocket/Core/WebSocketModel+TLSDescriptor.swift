@@ -1,3 +1,5 @@
+// WebSocketModel+TLSDescriptor.swift
+
 import Foundation
 import Network
 

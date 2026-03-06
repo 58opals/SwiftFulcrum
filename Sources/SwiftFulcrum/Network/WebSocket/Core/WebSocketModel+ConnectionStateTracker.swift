@@ -1,3 +1,5 @@
+// WebSocketModel+ConnectionStateTracker.swift
+
 import Foundation
 
 extension WebSocketModel {

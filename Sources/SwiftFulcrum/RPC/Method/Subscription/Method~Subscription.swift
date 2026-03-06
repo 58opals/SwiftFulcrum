@@ -1,3 +1,5 @@
+// Method~Subscription.swift
+
 import Foundation
 
 extension SwiftFulcrum.RPC.Method {

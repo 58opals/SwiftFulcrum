@@ -1,3 +1,5 @@
+// Configuration+ProtocolNegotiation.swift
+
 import Foundation
 
 extension SwiftFulcrum.Client.Configuration {

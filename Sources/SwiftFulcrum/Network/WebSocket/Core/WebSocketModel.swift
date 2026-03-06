@@ -1,3 +1,5 @@
+// WebSocketModel.swift
+
 import Foundation
 
 actor WebSocketModel {
@@ -34,7 +36,7 @@ actor WebSocketModel {
     let maximumMessageSize: Int
     
     private let tlsDescriptor: TLSDescriptor?
-    var metrics: SwiftFulcrum.Metrics.MetricsClientProtocol?
+    var metrics: SwiftFulcrum.Metrics.MetricsClient?
     
     init(url: URL,
          configuration: Configuration = .init(),

@@ -1,3 +1,5 @@
+// SwiftFulcrum.Logging.ConsoleAdapter+Entry.swift
+
 import Foundation
 
 extension SwiftFulcrum.Logging.ConsoleAdapter {

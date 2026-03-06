@@ -1,3 +1,5 @@
+// Client+Diagnostics.swift
+
 import Foundation
 
 extension SwiftFulcrum.Client {

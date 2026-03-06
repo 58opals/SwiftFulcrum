@@ -1,3 +1,5 @@
+// JSONRPCCodec.swift
+
 import Foundation
 
 struct JSONRPCCodec {

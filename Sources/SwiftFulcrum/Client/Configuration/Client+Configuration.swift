@@ -1,3 +1,5 @@
+// Client+Configuration.swift
+
 import Foundation
 import Network
 
@@ -55,7 +57,7 @@ extension SwiftFulcrum.Client {
         
         public var tlsDescriptor: TLSDescriptor?
         public var reconnect: ReconnectPolicy
-        public var metrics: SwiftFulcrum.Metrics.MetricsClientProtocol?
+        public var metrics: SwiftFulcrum.Metrics.MetricsClient?
         public var logger: SwiftFulcrum.Logging.Adapter?
         public var isLoggingEnabled: Bool
         public var urlSession: URLSession?
@@ -71,7 +73,7 @@ extension SwiftFulcrum.Client {
         public init(
             tlsDescriptor: TLSDescriptor? = nil,
             reconnect: ReconnectPolicy = .basic,
-            metrics: SwiftFulcrum.Metrics.MetricsClientProtocol? = nil,
+            metrics: SwiftFulcrum.Metrics.MetricsClient? = nil,
             logger: SwiftFulcrum.Logging.Adapter? = nil,
             isLoggingEnabled: Bool = true,
             urlSession: URLSession? = nil,

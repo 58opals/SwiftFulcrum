@@ -1,3 +1,5 @@
+// FulcrumClientLifecycleValidator+ConnectionStateCollectorModel.swift
+
 import Foundation
 @testable import SwiftFulcrum
 

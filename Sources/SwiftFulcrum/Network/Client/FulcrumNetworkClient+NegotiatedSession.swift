@@ -1,3 +1,5 @@
+// FulcrumNetworkClient+NegotiatedSession.swift
+
 import Foundation
 
 extension FulcrumNetworkClient {

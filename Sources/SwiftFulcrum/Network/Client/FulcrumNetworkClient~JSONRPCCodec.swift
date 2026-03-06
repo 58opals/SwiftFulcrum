@@ -1,3 +1,5 @@
+// FulcrumNetworkClient~JSONRPCCodec.swift
+
 import Foundation
 
 extension FulcrumNetworkClient: Hashable {

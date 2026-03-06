@@ -1,3 +1,5 @@
+// JSONRPCCodec+Error.swift
+
 import Foundation
 
 extension JSONRPCCodec {

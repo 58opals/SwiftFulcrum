@@ -1,3 +1,5 @@
+// PublicAPIFacadeContractValidator.swift
+
 import Testing
 import SwiftFulcrum
 
@@ -24,14 +26,14 @@ struct PublicAPIFacadeContractValidator {
         let serverCatalogRepositoryType: SwiftFulcrum.ServerCatalog.Repository.Type = SwiftFulcrum.ServerCatalog.Repository.self
         _ = serverCatalogRepositoryType
 
-        _ = SwiftFulcrum.Metrics.MetricsClientProtocol.self
+        _ = SwiftFulcrum.Metrics.MetricsClient.self
 
         let loggingType: SwiftFulcrum.Logging.Type = SwiftFulcrum.Logging.self
         _ = loggingType
     }
 
     @Test("Facade response protocol aliases compile")
-    func facadeResponseProtocolsCompile() throws {
+    func facadeResponseAdaptersCompile() throws {
         _ = try DummyResponse(fromRPC: DummyJSONRPC())
         _ = DummyNilAcceptingResponse(nilValue: ())
     }
@@ -39,13 +41,13 @@ struct PublicAPIFacadeContractValidator {
 
 private struct DummyJSONRPC: Decodable {}
 
-private struct DummyResponse: SwiftFulcrum.RPC.ResponseProtocol {
+private struct DummyResponse: SwiftFulcrum.RPC.JSONRPCResponseAdapter {
     typealias JSONRPC = DummyJSONRPC
 
     init(fromRPC jsonrpc: DummyJSONRPC) throws {}
 }
 
-private struct DummyNilAcceptingResponse: SwiftFulcrum.RPC.NilAcceptingResponseProtocol {
+private struct DummyNilAcceptingResponse: SwiftFulcrum.RPC.NilAcceptingResponseAdapter {
     typealias JSONRPC = DummyJSONRPC
 
     init(fromRPC jsonrpc: DummyJSONRPC) throws {}

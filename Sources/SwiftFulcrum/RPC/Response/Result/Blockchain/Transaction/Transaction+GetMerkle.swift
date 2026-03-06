@@ -1,7 +1,9 @@
+// Transaction+GetMerkle.swift
+
 import Foundation
 
 extension SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction {
-            public struct GetMerkle: SwiftFulcrum.RPC.ResponseProtocol {
+            public struct GetMerkle: SwiftFulcrum.RPC.JSONRPCResponseAdapter {
                 public let merkle: [String]
                 public let blockHeight: UInt
                 public let position: UInt

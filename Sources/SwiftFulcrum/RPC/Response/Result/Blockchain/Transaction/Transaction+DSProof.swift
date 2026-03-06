@@ -1,8 +1,10 @@
+// Transaction+DSProof.swift
+
 import Foundation
 
 extension SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction {
     public struct DSProof {
-        public struct Get: SwiftFulcrum.RPC.ResponseProtocol {
+        public struct Get: SwiftFulcrum.RPC.JSONRPCResponseAdapter {
             public let dsProofID: String
             public let transactionID: String
             public let hex: String
@@ -30,7 +32,7 @@ extension SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction {
             }
         }
 
-        public struct List: SwiftFulcrum.RPC.ResponseProtocol {
+        public struct List: SwiftFulcrum.RPC.JSONRPCResponseAdapter {
             public let transactionHashes: [String]
 
             public typealias JSONRPC = SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Transaction.DSProof.List
@@ -40,7 +42,7 @@ extension SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction {
             }
         }
 
-        public struct Subscribe: SwiftFulcrum.RPC.ResponseProtocol {
+        public struct Subscribe: SwiftFulcrum.RPC.JSONRPCResponseAdapter {
             public let proof: Get?
 
             public typealias JSONRPC = SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Transaction.DSProof.Subscribe
@@ -57,7 +59,7 @@ extension SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction {
             }
         }
 
-        public struct SubscribeNotification: SwiftFulcrum.RPC.ResponseProtocol {
+        public struct SubscribeNotification: SwiftFulcrum.RPC.JSONRPCResponseAdapter {
             public let subscriptionIdentifier: String
             public let transactionHash: String
             public let proof: Get?
@@ -106,7 +108,7 @@ extension SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction {
             }
         }
 
-        public struct Unsubscribe: SwiftFulcrum.RPC.ResponseProtocol {
+        public struct Unsubscribe: SwiftFulcrum.RPC.JSONRPCResponseAdapter {
             public let isSuccess: Bool
 
             public typealias JSONRPC = SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Transaction.DSProof.Unsubscribe

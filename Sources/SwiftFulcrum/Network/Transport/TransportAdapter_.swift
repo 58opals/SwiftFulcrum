@@ -1,6 +1,8 @@
+// TransportAdapter_.swift
+
 import Foundation
 
-protocol TransportProtocol: Sendable {
+protocol TransportAdapter: Sendable {
     typealias CloseInformation = (code: URLSessionWebSocketTask.CloseCode, reason: String?)
     
     var connectionState: SwiftFulcrum.Client.ConnectionState { get async }
@@ -19,7 +21,7 @@ protocol TransportProtocol: Sendable {
     func makeConnectionStateEvents() async -> AsyncStream<SwiftFulcrum.Client.ConnectionState>
     func makeDiagnosticsSnapshot() async -> SwiftFulcrum.Client.Diagnostics.TransportSnapshot
     
-    func updateMetrics(_ collector: SwiftFulcrum.Metrics.MetricsClientProtocol?) async
+    func updateMetrics(_ collector: SwiftFulcrum.Metrics.MetricsClient?) async
     func updateLogger(_ handler: SwiftFulcrum.Logging.Adapter?) async
     
     func registerQuietResponse(for identifier: UUID) async

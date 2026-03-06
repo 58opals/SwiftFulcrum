@@ -1,6 +1,8 @@
+// WebSocketTransportModel.swift
+
 import Foundation
 
-actor WebSocketTransportModel: TransportProtocol {
+actor WebSocketTransportModel: TransportAdapter {
     let webSocket: WebSocketModel
     
     init(webSocket: WebSocketModel) {
@@ -60,7 +62,7 @@ actor WebSocketTransportModel: TransportProtocol {
     
     func makeDiagnosticsSnapshot() async -> SwiftFulcrum.Client.Diagnostics.TransportSnapshot { await webSocket.makeDiagnosticsSnapshot() }
     
-    func updateMetrics(_ collector: SwiftFulcrum.Metrics.MetricsClientProtocol?) async { await webSocket.updateMetrics(collector) }
+    func updateMetrics(_ collector: SwiftFulcrum.Metrics.MetricsClient?) async { await webSocket.updateMetrics(collector) }
     
     func updateLogger(_ handler: SwiftFulcrum.Logging.Adapter?) async { await webSocket.updateLogger(handler) }
     

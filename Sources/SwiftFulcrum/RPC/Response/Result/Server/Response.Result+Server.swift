@@ -1,8 +1,10 @@
+// Response.Result+Server.swift
+
 import Foundation
 
 extension SwiftFulcrum.RPC.Response.Result {
     public struct Server {
-        public struct Ping: SwiftFulcrum.RPC.ResponseProtocol {
+        public struct Ping: SwiftFulcrum.RPC.JSONRPCResponseAdapter {
             public typealias JSONRPC = SwiftFulcrum.RPC.Response.JSONRPC.Result.Server.Ping?
             
             public init(fromRPC jsonrpc: JSONRPC) throws {
@@ -12,7 +14,7 @@ extension SwiftFulcrum.RPC.Response.Result {
             }
         }
         
-        public struct Version: SwiftFulcrum.RPC.ResponseProtocol {
+        public struct Version: SwiftFulcrum.RPC.JSONRPCResponseAdapter {
             public let serverVersion: String
             public let negotiatedProtocolVersion: SwiftFulcrum.ProtocolVersion
             
@@ -28,7 +30,7 @@ extension SwiftFulcrum.RPC.Response.Result {
             }
         }
         
-        public struct Features: SwiftFulcrum.RPC.ResponseProtocol {
+        public struct Features: SwiftFulcrum.RPC.JSONRPCResponseAdapter {
             public let genesisHash: String
             public let hashFunction: String
             public let serverVersion: String
