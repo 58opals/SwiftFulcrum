@@ -27,19 +27,17 @@ let package = Package(
         .target(
             name: "SwiftFulcrumTestSupport",
             dependencies: ["SwiftFulcrum"],
-            path: "Tests/SwiftFulcrumTests/Support"
+            path: "Tests/SwiftFulcrumTestSupport"
         ),
         .testTarget(
             name: "SwiftFulcrumLocalTests",
             dependencies: ["SwiftFulcrum", "SwiftFulcrumTestSupport"],
-            path: "Tests/SwiftFulcrumTests",
-            exclude: ["Network", "Support"]
+            path: "Tests/SwiftFulcrumLocalTests"
         ),
         .testTarget(
             name: "SwiftFulcrumNetworkTests",
             dependencies: ["SwiftFulcrum", "SwiftFulcrumTestSupport"],
-            path: "Tests/SwiftFulcrumTests",
-            exclude: ["Local", "Support"]
+            path: "Tests/SwiftFulcrumNetworkTests"
         )
     ]
 )

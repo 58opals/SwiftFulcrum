@@ -1,0 +1,60 @@
+// ServerCatalog+Repository.swift
+
+import Foundation
+
+extension SwiftFulcrum.ServerCatalog {
+    public struct Repository: Sendable {
+        let usesBundledCatalog: Bool
+        private let loadCatalog: @Sendable (SwiftFulcrum.Client.Configuration.Network, [URL]) async throws -> [URL]
+
+        public init(load: @escaping @Sendable (SwiftFulcrum.Client.Configuration.Network, [URL]) async throws -> [URL]) {
+            self.init(load: load, usesBundledCatalog: false)
+        }
+
+        init(
+            load: @escaping @Sendable (SwiftFulcrum.Client.Configuration.Network, [URL]) async throws -> [URL],
+            usesBundledCatalog: Bool
+        ) {
+            self.loadCatalog = load
+            self.usesBundledCatalog = usesBundledCatalog
+        }
+
+        public func loadServers(
+            for network: SwiftFulcrum.Client.Configuration.Network,
+            fallback: [URL]
+        ) async throws -> [URL] {
+            try await loadCatalog(network, fallback)
+        }
+    }
+}
+
+extension SwiftFulcrum.ServerCatalog.Repository {
+    public static let bundled = Self(load: { network, fallback in
+        try await Task.detached(priority: .utility) {
+            if let bundled = try? WebSocketModel.Server.decodeBundledServers(for: network), !bundled.isEmpty {
+                return bundled
+            }
+
+            let sanitizedFallback = sanitizeServers(fallback)
+            guard !sanitizedFallback.isEmpty else { throw SwiftFulcrum.Client.Error.transport(.setupFailed) }
+            return sanitizedFallback
+        }.value
+    }, usesBundledCatalog: true)
+
+    public static func makeConstant(_ servers: [URL]) -> Self {
+        Self(load: { _, _ in
+            let sanitizedServers = sanitizeServers(servers)
+            guard !sanitizedServers.isEmpty else {
+                throw SwiftFulcrum.Client.Error.transport(.setupFailed)
+            }
+            return sanitizedServers
+        }, usesBundledCatalog: false)
+    }
+
+    public static func sanitizeServers(_ servers: [URL]) -> [URL] {
+        servers.filter { server in
+            guard let scheme = server.scheme?.lowercased() else { return false }
+            return scheme == "ws" || scheme == "wss"
+        }
+    }
+}

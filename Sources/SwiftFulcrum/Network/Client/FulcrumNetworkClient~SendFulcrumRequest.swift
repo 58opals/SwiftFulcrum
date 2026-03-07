@@ -7,7 +7,7 @@ extension FulcrumNetworkClient {
         try Task.checkCancellation()
 
         if case .server(.version) = request.requestedMethod {
-            guard let data = request.data else { throw FulcrumClient.Error.coding(.encode(nil)) }
+            guard let data = request.data else { throw SwiftFulcrum.Client.Error.coding(.encode(nil)) }
             try Task.checkCancellation()
             try await self.send(data: data)
             return
@@ -15,7 +15,7 @@ extension FulcrumNetworkClient {
 
         _ = try await ensureNegotiatedProtocol()
 
-        guard let data = request.data else { throw FulcrumClient.Error.coding(.encode(nil)) }
+        guard let data = request.data else { throw SwiftFulcrum.Client.Error.coding(.encode(nil)) }
         try Task.checkCancellation()
         try await self.send(data: data)
     }

@@ -2,14 +2,14 @@
 
 import Foundation
 
-actor WebSocketTransportModel: TransportableModel {
+actor WebSocketTransportModel: TransportAdapter {
     let webSocket: WebSocketModel
     
     init(webSocket: WebSocketModel) {
         self.webSocket = webSocket
     }
     
-    var connectionState: FulcrumClient.ConnectionState { get async { mapConnectionState(await webSocket.connectionState) } }
+    var connectionState: SwiftFulcrum.Client.ConnectionState { get async { mapConnectionState(await webSocket.connectionState) } }
     var closeInformation: CloseInformation { get async { await webSocket.closeInformation } }
     var endpoint: URL { get async { await webSocket.url } }
     
@@ -27,7 +27,7 @@ actor WebSocketTransportModel: TransportableModel {
         await webSocket.makeMessageStream()
     }
     
-    func makeLifecycleEvents() async -> AsyncStream<FulcrumTransportState.EventModel> {
+    func makeLifecycleEvents() async -> AsyncStream<SwiftFulcrum.Transport.State.Event> {
         let baseStream = await webSocket.makeLifecycleEvents()
         return AsyncStream { continuation in
             let task = Task { [weak webSocket] in
@@ -46,7 +46,7 @@ actor WebSocketTransportModel: TransportableModel {
         }
     }
     
-    func makeConnectionStateEvents() async -> AsyncStream<FulcrumClient.ConnectionState> {
+    func makeConnectionStateEvents() async -> AsyncStream<SwiftFulcrum.Client.ConnectionState> {
         let baseStream = await webSocket.makeConnectionStateEvents()
         return AsyncStream { continuation in
             let task = Task { [weak webSocket] in
@@ -60,15 +60,15 @@ actor WebSocketTransportModel: TransportableModel {
         }
     }
     
-    func makeDiagnosticsSnapshot() async -> FulcrumClient.DiagnosticsModel.TransportSnapshotModel { await webSocket.makeDiagnosticsSnapshot() }
+    func makeDiagnosticsSnapshot() async -> ClientDiagnosticsTransportState { await webSocket.makeDiagnosticsSnapshot() }
     
-    func updateMetrics(_ collector: MetricsClient?) async { await webSocket.updateMetrics(collector) }
+    func updateMetrics(_ collector: SwiftFulcrum.Metrics.MetricsClient?) async { await webSocket.updateMetrics(collector) }
     
-    func updateLogger(_ handler: LogModel.AdapterModel?) async { await webSocket.updateLogger(handler) }
+    func updateLogger(_ handler: SwiftFulcrum.Logging.Adapter?) async { await webSocket.updateLogger(handler) }
     
     func registerQuietResponse(for identifier: UUID) async { await webSocket.registerQuietResponse(for: identifier) }
     
-    private func mapConnectionState(_ state: WebSocketModel.ConnectionState) -> FulcrumClient.ConnectionState {
+    private func mapConnectionState(_ state: WebSocketModel.ConnectionState) -> SwiftFulcrum.Client.ConnectionState {
         switch state {
         case .idle: return .idle
         case .connecting: return .connecting

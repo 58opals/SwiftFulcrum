@@ -26,7 +26,7 @@ extension FulcrumNetworkClient {
                     metadata: ["error": (error as NSError).localizedDescription])
             
             let info = await transport.closeInformation
-            let closedError = await FulcrumClient.Error.transport(.connectionClosed(info.code, info.reason))
+            let closedError = await SwiftFulcrum.Client.Error.transport(.connectionClosed(info.code, info.reason))
             
             let inflightCount = await self.router.failUnaries(with: closedError)
             await publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightCount)

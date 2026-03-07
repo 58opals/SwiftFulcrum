@@ -13,8 +13,8 @@ extension FulcrumNetworkClient {
                     try await Task.sleep(for: rpcHeartbeatInterval)
                     try Task.checkCancellation()
                     
-                    let (_, _): (UUID, FulcrumResponse.ResultModel.ServerModel.PingModel) =
-                    try await LogModel.perform(withBehavior: .quiet) {
+                    let (_, _): (UUID, SwiftFulcrum.RPC.Response.Result.Server.Ping) =
+                    try await SwiftFulcrum.Logging.perform(withBehavior: .quiet) {
                         try await self.call(
                             method: .server(.ping),
                             options: .init(timeout: rpcHeartbeatTimeout),
@@ -37,7 +37,7 @@ extension FulcrumNetworkClient {
                     } catch is CancellationError {
                         break
                     } catch {
-                        let inflightCount = await self.router.failUnaries(with: FulcrumClient.Error.transport(.heartbeatTimeout))
+                        let inflightCount = await self.router.failUnaries(with: SwiftFulcrum.Client.Error.transport(.heartbeatTimeout))
                         await self.publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightCount)
                         break
                     }

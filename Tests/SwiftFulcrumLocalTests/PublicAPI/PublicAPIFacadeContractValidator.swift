@@ -1,0 +1,55 @@
+// PublicAPIFacadeContractValidator.swift
+
+import Testing
+import SwiftFulcrum
+
+@Suite(.tags(.local))
+struct PublicAPIFacadeContractValidator {
+    @Test("Facade namespace aliases compile")
+    func facadeAliasesCompile() {
+        let clientType: SwiftFulcrum.Client.Type = SwiftFulcrum.Client.self
+        _ = clientType
+
+        let method: SwiftFulcrum.RPC.Method = .blockchain(.headers(.getTip))
+        _ = method
+
+        let responseType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.GetTip.Type =
+            SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.GetTip.self
+        _ = responseType
+
+        let protocolVersionType: SwiftFulcrum.ProtocolVersion.Type = SwiftFulcrum.ProtocolVersion.self
+        _ = protocolVersionType
+
+        let transportStateType: SwiftFulcrum.Transport.State.Type = SwiftFulcrum.Transport.State.self
+        _ = transportStateType
+
+        let serverCatalogRepositoryType: SwiftFulcrum.ServerCatalog.Repository.Type = SwiftFulcrum.ServerCatalog.Repository.self
+        _ = serverCatalogRepositoryType
+
+        _ = SwiftFulcrum.Metrics.MetricsClient.self
+
+        let loggingType: SwiftFulcrum.Logging.Type = SwiftFulcrum.Logging.self
+        _ = loggingType
+    }
+
+    @Test("Facade response protocol aliases compile")
+    func facadeResponseAdaptersCompile() throws {
+        _ = try DummyResponse(fromRPC: DummyJSONRPC())
+        _ = DummyNilAcceptingResponse(nilValue: ())
+    }
+}
+
+private struct DummyJSONRPC: Decodable {}
+
+private struct DummyResponse: SwiftFulcrum.RPC.JSONRPCResponseAdapter {
+    typealias JSONRPC = DummyJSONRPC
+
+    init(fromRPC jsonrpc: DummyJSONRPC) throws {}
+}
+
+private struct DummyNilAcceptingResponse: SwiftFulcrum.RPC.NilAcceptingResponseAdapter {
+    typealias JSONRPC = DummyJSONRPC
+
+    init(fromRPC jsonrpc: DummyJSONRPC) throws {}
+    init(nilValue: ()) {}
+}
