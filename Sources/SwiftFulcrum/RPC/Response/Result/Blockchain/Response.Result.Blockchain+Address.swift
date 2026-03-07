@@ -122,7 +122,7 @@ extension SwiftFulcrum.RPC.Response.Result.Blockchain {
                     case .status(let statusString):
                         self.status = statusString
                     case .addressAndStatus(let pair):
-                        throw SwiftFulcrum.RPC.Response.Result.Error.unexpectedFormat("Expected a status string; got address and status array for Address.Subscribe: \(pair.description)")
+                        throw ResponseResultDecodeError.unexpectedFormat("Expected a status string; got address and status array for Address.Subscribe: \(pair.description)")
                     }
                 }
             }
@@ -135,11 +135,11 @@ extension SwiftFulcrum.RPC.Response.Result.Blockchain {
                 public init(fromRPC jsonrpc: JSONRPC) throws {
                     switch jsonrpc {
                     case .addressAndStatus(let pair):
-                        guard let first = pair.first, let address = first else { throw SwiftFulcrum.RPC.Response.Result.Error.missingField("subscriptionIdentifier") }
+                        guard let first = pair.first, let address = first else { throw ResponseResultDecodeError.missingField("subscriptionIdentifier") }
                         self.subscriptionIdentifier = address
                         self.status = (pair.count > 1) ? pair[1] : nil
                     case .status(let statusString):
-                        throw SwiftFulcrum.RPC.Response.Result.Error.unexpectedFormat("Expected address and status pair; got single status: \(statusString)")
+                        throw ResponseResultDecodeError.unexpectedFormat("Expected address and status pair; got single status: \(statusString)")
                     }
                 }
             }

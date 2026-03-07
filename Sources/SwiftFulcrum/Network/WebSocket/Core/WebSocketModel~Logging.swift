@@ -9,7 +9,7 @@ extension WebSocketModel {
         metadata: [String: String] = .init(),
         file: String = #fileID, function: String = #function, line: UInt = #line
     ) {
-        if SwiftFulcrum.Logging.Context.behavior == .quiet && level.priority <= SwiftFulcrum.Logging.Level.info.priority {
+        if LoggingBehaviorState.behavior == .quiet && level.priority <= SwiftFulcrum.Logging.Level.info.priority {
             return
         }
         

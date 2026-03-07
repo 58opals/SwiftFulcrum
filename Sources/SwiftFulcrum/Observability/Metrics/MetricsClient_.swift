@@ -2,8 +2,8 @@
 
 import Foundation
 
-public extension SwiftFulcrum.Metrics {
-    protocol MetricsClient: Sendable {
+extension SwiftFulcrum.Metrics {
+    public protocol MetricsClient: Sendable {
         func recordConnect(url: URL, network: SwiftFulcrum.Client.Configuration.Network) async
         func recordDisconnect(url: URL, closeCode: URLSessionWebSocketTask.CloseCode?, reason: String?) async
         func recordSend(url: URL, message: URLSessionWebSocketTask.Message) async

@@ -18,22 +18,22 @@ extension SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction {
                         for pair in pairs {
                             switch pair {
                             case .transactionHash(let transactionHash):
-                                guard hashValue == nil else { throw SwiftFulcrum.RPC.Response.Result.Error.unexpectedFormat("Duplicate transaction hash in notification payload") }
+                                guard hashValue == nil else { throw ResponseResultDecodeError.unexpectedFormat("Duplicate transaction hash in notification payload") }
                                 hashValue = transactionHash
                             case .height(let height):
-                                guard heightValue == nil else { throw SwiftFulcrum.RPC.Response.Result.Error.unexpectedFormat("Duplicate height in notification payload") }
+                                guard heightValue == nil else { throw ResponseResultDecodeError.unexpectedFormat("Duplicate height in notification payload") }
                                 heightValue = height
                             }
                         }
                         
-                        guard let transactionHash = hashValue else { throw SwiftFulcrum.RPC.Response.Result.Error.missingField("transactionHash") }
-                        guard let height = heightValue else { throw SwiftFulcrum.RPC.Response.Result.Error.missingField("height") }
+                        guard let transactionHash = hashValue else { throw ResponseResultDecodeError.missingField("transactionHash") }
+                        guard let height = heightValue else { throw ResponseResultDecodeError.missingField("height") }
                         
                         self.subscriptionIdentifier = transactionHash
                         self.transactionHash = transactionHash
                         self.height = height
                     case .height(let height):
-                        throw SwiftFulcrum.RPC.Response.Result.Error.unexpectedFormat("Expected [txid, height] for Transaction.Subscribe; got height only: \(height.description)")
+                        throw ResponseResultDecodeError.unexpectedFormat("Expected [txid, height] for Transaction.Subscribe; got height only: \(height.description)")
                     }
                 }
             }

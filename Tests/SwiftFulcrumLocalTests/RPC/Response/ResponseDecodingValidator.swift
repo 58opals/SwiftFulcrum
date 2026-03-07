@@ -171,7 +171,7 @@ struct ResponseDecodingValidator {
                 context: .init(methodPath: "server.version")
             )
             Issue.record("Expected decode to fail with unexpected format")
-        } catch let error as SwiftFulcrum.RPC.Response.Result.Error {
+        } catch let error as ResponseResultDecodeError {
             guard case .unexpectedFormat(let message) = error else {
                 Issue.record("Expected unexpected format, got \(error)")
                 return

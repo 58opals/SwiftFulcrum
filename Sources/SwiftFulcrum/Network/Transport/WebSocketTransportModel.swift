@@ -60,7 +60,7 @@ actor WebSocketTransportModel: TransportAdapter {
         }
     }
     
-    func makeDiagnosticsSnapshot() async -> SwiftFulcrum.Client.Diagnostics.TransportSnapshot { await webSocket.makeDiagnosticsSnapshot() }
+    func makeDiagnosticsSnapshot() async -> ClientDiagnosticsTransportState { await webSocket.makeDiagnosticsSnapshot() }
     
     func updateMetrics(_ collector: SwiftFulcrum.Metrics.MetricsClient?) async { await webSocket.updateMetrics(collector) }
     

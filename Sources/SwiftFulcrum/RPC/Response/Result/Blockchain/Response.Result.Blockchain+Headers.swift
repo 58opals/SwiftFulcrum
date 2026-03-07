@@ -29,7 +29,7 @@ extension SwiftFulcrum.RPC.Response.Result.Blockchain {
                         self.height = batch[0].height
                         self.hex = batch[0].hex
                     case .newHeader(let batch):
-                        throw SwiftFulcrum.RPC.Response.Result.Error.unexpectedFormat("Expected single top header; received batch of new headers: \(batch.description)")
+                        throw ResponseResultDecodeError.unexpectedFormat("Expected single top header; received batch of new headers: \(batch.description)")
                     }
                 }
             }
@@ -49,7 +49,7 @@ extension SwiftFulcrum.RPC.Response.Result.Blockchain {
                     
                     switch jsonrpc {
                     case .newHeader(let list):
-                        guard !list.isEmpty else { throw SwiftFulcrum.RPC.Response.Result.Error.missingField("header list empty") }
+                        guard !list.isEmpty else { throw ResponseResultDecodeError.missingField("header list empty") }
                         self.blocks = list.map { Block(height: $0.height, hex: $0.hex) }
                     case .topHeader(let tip):
                         self.blocks = [Block(height: tip.height, hex: tip.hex)]

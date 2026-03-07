@@ -3,7 +3,11 @@
 import Foundation
 
 extension FulcrumNetworkClient {
-    func executeUnaryRequest(id: UUID, request: FulcrumRequest) async throws -> Data {
+    func executeUnaryRequest(
+        id: UUID,
+        request: FulcrumRequest,
+        timeoutState: RequestTimeoutState? = nil
+    ) async throws -> Data {
         try await withTaskCancellationHandler {
             let responseStream = try await registerUnaryResponse(for: id)
 
@@ -13,15 +17,17 @@ extension FulcrumNetworkClient {
                 return try await awaitUnaryResponse(from: responseStream)
             } catch {
                 if error is CancellationError {
-                    await cancelUnary(id, error: SwiftFulcrum.Client.Error.client(.cancelled))
-                    throw SwiftFulcrum.Client.Error.client(.cancelled)
+                    let cancellationError = await makeRequestCancellationError(using: timeoutState)
+                    await cancelUnary(id, error: cancellationError)
+                    throw cancellationError
                 }
                 await cancelUnary(id, error: error)
                 throw error
             }
         } onCancel: {
             Task {
-                await self.cancelUnary(id, error: SwiftFulcrum.Client.Error.client(.cancelled))
+                let cancellationError = await self.makeRequestCancellationError(using: timeoutState)
+                await self.cancelUnary(id, error: cancellationError)
             }
         }
     }
@@ -43,5 +49,13 @@ extension FulcrumNetworkClient {
         }
 
         return payload
+    }
+
+    func makeRequestCancellationError(using timeoutState: RequestTimeoutState?) async -> SwiftFulcrum.Client.Error {
+        if let timeoutState, let timeoutError = await timeoutState.timeoutError {
+            return timeoutError
+        }
+
+        return SwiftFulcrum.Client.Error.client(.cancelled)
     }
 }

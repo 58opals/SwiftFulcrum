@@ -52,7 +52,7 @@ extension SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction {
                 case .dsProof(let proof):
                     self.proof = proof.map { Get(fromRPC: $0) }
                 case .transactionHashAndDSProof(let pairs):
-                    throw SwiftFulcrum.RPC.Response.Result.Error.unexpectedFormat(
+                    throw ResponseResultDecodeError.unexpectedFormat(
                         "Expected DSProof or nil for DSProof.Subscribe initial response; got [txHash, DSProof]: \(pairs)"
                     )
                 }
@@ -76,19 +76,19 @@ extension SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction {
                         switch pair {
                         case .transactionHash(let hash):
                             guard hashValue == nil else {
-                                throw SwiftFulcrum.RPC.Response.Result.Error.unexpectedFormat("Duplicate txHash in DSProof notification payload")
+                                throw ResponseResultDecodeError.unexpectedFormat("Duplicate txHash in DSProof notification payload")
                             }
                             hashValue = hash
                         case .dsProof(let proof):
                             guard rawProofValue == nil else {
-                                throw SwiftFulcrum.RPC.Response.Result.Error.unexpectedFormat("Duplicate dsProof in DSProof notification payload")
+                                throw ResponseResultDecodeError.unexpectedFormat("Duplicate dsProof in DSProof notification payload")
                             }
                             rawProofValue = proof
                         }
                     }
 
                     guard let hash = hashValue else {
-                        throw SwiftFulcrum.RPC.Response.Result.Error.missingField("transactionHash")
+                        throw ResponseResultDecodeError.missingField("transactionHash")
                     }
 
                     self.subscriptionIdentifier = hash
@@ -96,7 +96,7 @@ extension SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction {
                     self.proof = rawProofValue.map { Get(fromRPC: $0) }
                 case .dsProof(let proof):
                     guard let rawProof = proof else {
-                        throw SwiftFulcrum.RPC.Response.Result.Error.unexpectedFormat(
+                        throw ResponseResultDecodeError.unexpectedFormat(
                             "Nil DSProof in notification without accompanying transaction hash"
                         )
                     }

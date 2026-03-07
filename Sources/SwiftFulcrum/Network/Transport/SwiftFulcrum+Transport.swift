@@ -1,6 +1,6 @@
 // SwiftFulcrum+Transport.swift
 
-public extension SwiftFulcrum {
-    enum Transport {
+extension SwiftFulcrum {
+    public enum Transport {
     }
 }

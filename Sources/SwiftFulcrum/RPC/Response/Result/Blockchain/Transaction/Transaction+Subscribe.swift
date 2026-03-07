@@ -12,7 +12,7 @@ extension SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction {
                     case .height(let height):
                         self.height = height
                     case .transactionHashAndHeight(let pairs):
-                        throw SwiftFulcrum.RPC.Response.Result.Error.unexpectedFormat("Expected a height uint; got transaction hash and height array for Transaction.Subscribe: \(pairs.description)")
+                        throw ResponseResultDecodeError.unexpectedFormat("Expected a height uint; got transaction hash and height array for Transaction.Subscribe: \(pairs.description)")
                     }
                 }
             }

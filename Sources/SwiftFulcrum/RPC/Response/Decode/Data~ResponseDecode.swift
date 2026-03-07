@@ -36,7 +36,7 @@ extension Data {
             case .empty(let uuid):
                 throw SwiftFulcrum.Client.Error.client(.emptyResponse(uuid))
             }
-        } catch let formatError as SwiftFulcrum.RPC.Response.Result.Error {
+        } catch let formatError as ResponseResultDecodeError {
             if case .unexpectedFormat(let message) = formatError {
                 let methodHint: String? = {
                     if let methodPath = context?.methodPath { return methodPath }
@@ -46,7 +46,7 @@ extension Data {
                     methodHint.map { "[method: \($0)]" },
                     "[payload: \(self.count) B]"
                 ].compactMap { $0 }.joined(separator: " ")
-                throw SwiftFulcrum.RPC.Response.Result.Error.unexpectedFormat("\(prefix) \(message)")
+                throw ResponseResultDecodeError.unexpectedFormat("\(prefix) \(message)")
             }
             throw formatError
         }

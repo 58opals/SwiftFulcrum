@@ -73,12 +73,12 @@ extension SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction {
                 public init(fromRPC jsonrpc: JSONRPC) throws {
                     switch jsonrpc {
                     case .raw(let raw):
-                        throw SwiftFulcrum.RPC.Response.Result.Error.unexpectedFormat("Expected detailed transaction information; received raw hex string: \(raw)")
+                        throw ResponseResultDecodeError.unexpectedFormat("Expected detailed transaction information; received raw hex string: \(raw)")
                     case .detailed(let detailed):
-                        guard let blockHash = detailed.blockhash else { throw SwiftFulcrum.RPC.Response.Result.Error.missingField("blockhash") }
-                        guard let blocktime = detailed.blocktime else { throw SwiftFulcrum.RPC.Response.Result.Error.missingField("blocktime") }
-                        guard let confirmations = detailed.confirmations else { throw SwiftFulcrum.RPC.Response.Result.Error.missingField("confirmations") }
-                        guard let time = detailed.time else { throw SwiftFulcrum.RPC.Response.Result.Error.missingField("time") }
+                        guard let blockHash = detailed.blockhash else { throw ResponseResultDecodeError.missingField("blockhash") }
+                        guard let blocktime = detailed.blocktime else { throw ResponseResultDecodeError.missingField("blocktime") }
+                        guard let confirmations = detailed.confirmations else { throw ResponseResultDecodeError.missingField("confirmations") }
+                        guard let time = detailed.time else { throw ResponseResultDecodeError.missingField("time") }
                         
                         self.blockHash = blockHash
                         self.blocktime = blocktime

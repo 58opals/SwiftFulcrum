@@ -19,7 +19,7 @@ protocol TransportAdapter: Sendable {
     func makeMessageStream() async -> AsyncThrowingStream<URLSessionWebSocketTask.Message, Swift.Error>
     func makeLifecycleEvents() async -> AsyncStream<SwiftFulcrum.Transport.State.Event>
     func makeConnectionStateEvents() async -> AsyncStream<SwiftFulcrum.Client.ConnectionState>
-    func makeDiagnosticsSnapshot() async -> SwiftFulcrum.Client.Diagnostics.TransportSnapshot
+    func makeDiagnosticsSnapshot() async -> ClientDiagnosticsTransportState
     
     func updateMetrics(_ collector: SwiftFulcrum.Metrics.MetricsClient?) async
     func updateLogger(_ handler: SwiftFulcrum.Logging.Adapter?) async

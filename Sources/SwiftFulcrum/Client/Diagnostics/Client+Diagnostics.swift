@@ -35,11 +35,6 @@ extension SwiftFulcrum.Client.Diagnostics {
             self.identifier = identifier
         }
     }
-    
-    struct TransportSnapshot: Sendable {
-        let reconnectAttempts: Int
-        let reconnectSuccesses: Int
-    }
 }
 
 extension SwiftFulcrum.Client {

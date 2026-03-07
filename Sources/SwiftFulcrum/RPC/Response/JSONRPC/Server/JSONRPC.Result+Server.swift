@@ -39,34 +39,31 @@ extension SwiftFulcrum.RPC.Response.JSONRPC.Result {
                 public let rpa: ReusablePaymentAddress?
                 public let hasBroadcastPackageSupport: Bool?
 
-                enum CodingKeys: String, CodingKey {
-                    case genesis_hash
-                    case hash_function
-                    case server_version
-                    case protocol_max
-                    case protocol_min
-                    case pruning
-                    case hosts
-                    case hasDoubleSpendProofs = "dsproof"
-                    case hasCashTokens = "cashtokens"
-                    case rpa
-                    case hasBroadcastPackageSupport = "broadcast_package"
-                }
-
                 public init(from decoder: Decoder) throws {
-                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                    let container = try decoder.container(keyedBy: JSONRPCResponseDecodeModel.CodingKeyModel.self)
+                    let genesisHashKey = JSONRPCResponseDecodeModel.CodingKeyModel("genesis_hash")
+                    let hashFunctionKey = JSONRPCResponseDecodeModel.CodingKeyModel("hash_function")
+                    let serverVersionKey = JSONRPCResponseDecodeModel.CodingKeyModel("server_version")
+                    let protocolMaxKey = JSONRPCResponseDecodeModel.CodingKeyModel("protocol_max")
+                    let protocolMinKey = JSONRPCResponseDecodeModel.CodingKeyModel("protocol_min")
+                    let pruningKey = JSONRPCResponseDecodeModel.CodingKeyModel("pruning")
+                    let hostsKey = JSONRPCResponseDecodeModel.CodingKeyModel("hosts")
+                    let doubleSpendProofsKey = JSONRPCResponseDecodeModel.CodingKeyModel("dsproof")
+                    let cashTokensKey = JSONRPCResponseDecodeModel.CodingKeyModel("cashtokens")
+                    let reusablePaymentAddressKey = JSONRPCResponseDecodeModel.CodingKeyModel("rpa")
+                    let broadcastPackageKey = JSONRPCResponseDecodeModel.CodingKeyModel("broadcast_package")
 
-                    self.genesis_hash = try container.decode(String.self, forKey: .genesis_hash)
-                    self.hash_function = try container.decode(String.self, forKey: .hash_function)
-                    self.server_version = try container.decode(String.self, forKey: .server_version)
-                    self.protocol_max = try container.decode(String.self, forKey: .protocol_max)
-                    self.protocol_min = try container.decode(String.self, forKey: .protocol_min)
-                    self.pruning = try container.decodeIfPresent(Int.self, forKey: .pruning)
-                    self.hosts = try container.decodeIfPresent([String: Host].self, forKey: .hosts)
-                    self.hasDoubleSpendProofs = try container.decodeIfPresent(Bool.self, forKey: .hasDoubleSpendProofs)
-                    self.hasCashTokens = try container.decodeIfPresent(Bool.self, forKey: .hasCashTokens)
-                    self.rpa = try container.decodeIfPresent(ReusablePaymentAddress.self, forKey: .rpa)
-                    self.hasBroadcastPackageSupport = try container.decodeIfPresent(Bool.self, forKey: .hasBroadcastPackageSupport)
+                    self.genesis_hash = try container.decode(String.self, forKey: genesisHashKey)
+                    self.hash_function = try container.decode(String.self, forKey: hashFunctionKey)
+                    self.server_version = try container.decode(String.self, forKey: serverVersionKey)
+                    self.protocol_max = try container.decode(String.self, forKey: protocolMaxKey)
+                    self.protocol_min = try container.decode(String.self, forKey: protocolMinKey)
+                    self.pruning = try container.decodeIfPresent(Int.self, forKey: pruningKey)
+                    self.hosts = try container.decodeIfPresent([String: Host].self, forKey: hostsKey)
+                    self.hasDoubleSpendProofs = try container.decodeIfPresent(Bool.self, forKey: doubleSpendProofsKey)
+                    self.hasCashTokens = try container.decodeIfPresent(Bool.self, forKey: cashTokensKey)
+                    self.rpa = try container.decodeIfPresent(ReusablePaymentAddress.self, forKey: reusablePaymentAddressKey)
+                    self.hasBroadcastPackageSupport = try container.decodeIfPresent(Bool.self, forKey: broadcastPackageKey)
                 }
                 
                 public struct Host: Decodable, Sendable {

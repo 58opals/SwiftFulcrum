@@ -2,8 +2,8 @@
 
 import Foundation
 
-public extension SwiftFulcrum {
-    struct ProtocolVersion: Comparable, CustomStringConvertible, Decodable, Sendable {
+extension SwiftFulcrum {
+    public struct ProtocolVersion: Comparable, CustomStringConvertible, Decodable, Sendable {
     public let major: Int
     public let minor: Int
     public let patch: Int

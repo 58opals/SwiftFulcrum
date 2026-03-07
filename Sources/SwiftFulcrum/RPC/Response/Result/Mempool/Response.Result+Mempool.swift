@@ -29,11 +29,11 @@ extension SwiftFulcrum.RPC.Response.Result {
                 public let virtualSize: UInt
                 
                 init(from pair: SwiftFulcrum.RPC.Response.JSONRPC.Result.Mempool.FeeHistogram) throws {
-                    guard pair.count == 2 else { throw SwiftFulcrum.RPC.Response.Result.Error.unexpectedFormat("Histogram entry must be [fee, vsize]; got \(pair)") }
+                    guard pair.count == 2 else { throw ResponseResultDecodeError.unexpectedFormat("Histogram entry must be [fee, vsize]; got \(pair)") }
                     let feeValue = pair[0].value
                     let virtualSizeValue = pair[1].value
-                    guard feeValue.isFinite, feeValue >= 0 else { throw SwiftFulcrum.RPC.Response.Result.Error.unexpectedFormat("Invalid fee: \(feeValue)") }
-                    guard virtualSizeValue.isFinite, virtualSizeValue >= 0, virtualSizeValue <= Double(UInt.max) else { throw SwiftFulcrum.RPC.Response.Result.Error.unexpectedFormat("Invalid vsize: \(virtualSizeValue)") }
+                    guard feeValue.isFinite, feeValue >= 0 else { throw ResponseResultDecodeError.unexpectedFormat("Invalid fee: \(feeValue)") }
+                    guard virtualSizeValue.isFinite, virtualSizeValue >= 0, virtualSizeValue <= Double(UInt.max) else { throw ResponseResultDecodeError.unexpectedFormat("Invalid vsize: \(virtualSizeValue)") }
                     
                     self.fee = feeValue
                     self.virtualSize = UInt(virtualSizeValue.rounded(.towardZero))
@@ -44,7 +44,7 @@ extension SwiftFulcrum.RPC.Response.Result {
             public init(fromRPC jsonrpc: JSONRPC) throws {
                 self.histogram = try jsonrpc.enumerated().map { index, pair in
                     do { return try Result(from: pair) }
-                    catch { throw SwiftFulcrum.RPC.Response.Result.Error.unexpectedFormat("Malformed entry at index \(index): \(error)") }
+                    catch { throw ResponseResultDecodeError.unexpectedFormat("Malformed entry at index \(index): \(error)") }
                 }.sorted { $0.fee < $1.fee }
             }
         }

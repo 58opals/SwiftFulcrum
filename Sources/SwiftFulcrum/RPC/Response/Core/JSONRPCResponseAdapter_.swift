@@ -2,8 +2,8 @@
 
 import Foundation
 
-public extension SwiftFulcrum.RPC {
-    protocol JSONRPCResponseAdapter: Decodable, Sendable {
+extension SwiftFulcrum.RPC {
+    public protocol JSONRPCResponseAdapter: Decodable, Sendable {
         associatedtype JSONRPC: Decodable
         init(fromRPC jsonrpc: JSONRPC) throws
     }

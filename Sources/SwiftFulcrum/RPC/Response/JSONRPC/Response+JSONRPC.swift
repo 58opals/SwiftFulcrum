@@ -4,11 +4,6 @@ import Foundation
 
 extension SwiftFulcrum.RPC.Response {
     public struct JSONRPC {
-        struct IdentifierExtractable: Decodable, Sendable {
-            let id: UUID?
-            let method: String?
-        }
-        
         public struct Generic<Payload: Decodable>: Decodable {
             let jsonrpc: String
             
@@ -25,21 +20,24 @@ extension SwiftFulcrum.RPC.Response {
             private let hasParamsKey: Bool
             var hasResult: Bool { hasResultKey }
             var hasParams: Bool { hasParamsKey }
-            
-            enum CodingKeys: String, CodingKey {
-                case jsonrpc, id, result, error, method, params
-            }
-            
+
             public init(from decoder: Decoder) throws {
-                let container = try decoder.container(keyedBy: CodingKeys.self)
-                self.jsonrpc = try container.decode(String.self, forKey: .jsonrpc)
-                self.id = try container.decodeIfPresent(UUID.self, forKey: .id)
-                self.result = try container.decodeIfPresent(Payload.self, forKey: .result)
-                self.error = try container.decodeIfPresent(SwiftFulcrum.RPC.Response.Error.Result.self, forKey: .error)
-                self.method = try container.decodeIfPresent(String.self, forKey: .method)
-                self.params = try container.decodeIfPresent(Payload.self, forKey: .params)
-                self.hasResultKey = container.contains(.result)
-                self.hasParamsKey = container.contains(.params)
+                let container = try decoder.container(keyedBy: JSONRPCResponseDecodeModel.CodingKeyModel.self)
+                let jsonrpcKey = JSONRPCResponseDecodeModel.CodingKeyModel("jsonrpc")
+                let idKey = JSONRPCResponseDecodeModel.CodingKeyModel("id")
+                let resultKey = JSONRPCResponseDecodeModel.CodingKeyModel("result")
+                let errorKey = JSONRPCResponseDecodeModel.CodingKeyModel("error")
+                let methodKey = JSONRPCResponseDecodeModel.CodingKeyModel("method")
+                let paramsKey = JSONRPCResponseDecodeModel.CodingKeyModel("params")
+
+                self.jsonrpc = try container.decode(String.self, forKey: jsonrpcKey)
+                self.id = try container.decodeIfPresent(UUID.self, forKey: idKey)
+                self.result = try container.decodeIfPresent(Payload.self, forKey: resultKey)
+                self.error = try container.decodeIfPresent(SwiftFulcrum.RPC.Response.Error.Result.self, forKey: errorKey)
+                self.method = try container.decodeIfPresent(String.self, forKey: methodKey)
+                self.params = try container.decodeIfPresent(Payload.self, forKey: paramsKey)
+                self.hasResultKey = container.contains(resultKey)
+                self.hasParamsKey = container.contains(paramsKey)
             }
         }
     }
@@ -50,14 +48,14 @@ extension SwiftFulcrum.RPC.Response.JSONRPC.Generic: Sendable where Payload: Sen
 
 extension SwiftFulcrum.RPC.Response.JSONRPC {
     static func extractIdentifier(from data: Data) throws -> SwiftFulcrum.RPC.Response.Identifier {
-        let response = try JSONRPCCodec.Coder.decoder.decode(SwiftFulcrum.RPC.Response.JSONRPC.IdentifierExtractable.self, from: data)
+        let response = try JSONRPCCodec.Coder.decoder.decode(JSONRPCResponseDecodeModel.IdentifierEnvelopeModel.self, from: data)
         switch (response.id, response.method) {
         case let (id?, nil):
             return .uuid(id)
         case let (nil, string?):
             return .string(string)
         default:
-            throw SwiftFulcrum.RPC.Response.JSONRPC.Error.wrongResponseType
+            throw JSONRPCResponseDecodeError.wrongResponseType
         }
     }
 }
@@ -69,7 +67,7 @@ extension SwiftFulcrum.RPC.Response.JSONRPC.Generic {
            method == nil,
            result == nil,
            hasResult {
-            if let nilProducer = SwiftFulcrum.RPC.Response.JSONRPC.ResultNilProducer.produceNilIfOptional(Payload.self) {
+            if let nilProducer = JSONRPCResponseDecodeModel.makeOptionalNilValue(Payload.self) {
                 return .regular(SwiftFulcrum.RPC.Response.Regular(id: id, result: nilProducer))
             }
         }
@@ -85,21 +83,7 @@ extension SwiftFulcrum.RPC.Response.JSONRPC.Generic {
         case let (id?, .none, _, _, _):
             return .empty(id)
         default:
-            throw SwiftFulcrum.RPC.Response.JSONRPC.Error.cannotIdentifyResponseType(id)
+            throw JSONRPCResponseDecodeError.cannotIdentifyResponseType(id)
         }
     }
-}
-
-extension SwiftFulcrum.RPC.Response.JSONRPC {
-    fileprivate protocol NilConstructible { static var nilValue: Self { get } }
-    private enum ResultNilProducer {
-        static func produceNilIfOptional<T>(_ type: T.Type) -> T? {
-            guard let optionalType = T.self as? NilConstructible.Type else { return nil }
-            return optionalType.nilValue as? T
-        }
-    }
-}
-
-extension Optional: SwiftFulcrum.RPC.Response.JSONRPC.NilConstructible {
-    static var nilValue: Self { nil }
 }

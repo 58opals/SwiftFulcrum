@@ -2,27 +2,27 @@
 
 import Foundation
 
-public extension SwiftFulcrum.RPC {
-    struct Response {
-    public struct Regular<Payload: Decodable> {
-        let id: UUID
-        let result: Payload
-    }
-    
-    public struct Subscription<Payload: Decodable> {
-        let methodPath: String
-        let result: Payload
-    }
-    
-    public struct Error: Decodable, Sendable {
-        public struct Result: Decodable, Sendable {
-            let code: Int
-            let message: String
+extension SwiftFulcrum.RPC {
+    public struct Response {
+        public struct Regular<Payload: Decodable> {
+            let id: UUID
+            let result: Payload
         }
-        
-        let id: UUID
-        let error: Result
-    }
+
+        public struct Subscription<Payload: Decodable> {
+            let methodPath: String
+            let result: Payload
+        }
+
+        public struct Error: Decodable, Sendable {
+            public struct Result: Decodable, Sendable {
+                let code: Int
+                let message: String
+            }
+
+            let id: UUID
+            let error: Result
+        }
     }
 }
 

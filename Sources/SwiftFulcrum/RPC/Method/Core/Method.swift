@@ -2,8 +2,8 @@
 
 import Foundation
 
-public extension SwiftFulcrum.RPC {
-    enum Method {
+extension SwiftFulcrum.RPC {
+    public enum Method {
     case server(Server)
     case blockchain(Blockchain)
     case mempool(Mempool)

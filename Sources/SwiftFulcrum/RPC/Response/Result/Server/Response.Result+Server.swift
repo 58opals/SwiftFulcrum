@@ -9,7 +9,7 @@ extension SwiftFulcrum.RPC.Response.Result {
             
             public init(fromRPC jsonrpc: JSONRPC) throws {
                 guard jsonrpc == nil else {
-                    throw SwiftFulcrum.RPC.Response.Result.Error.unexpectedFormat("Expected null result for server.ping().")
+                    throw ResponseResultDecodeError.unexpectedFormat("Expected null result for server.ping().")
                 }
             }
         }
@@ -22,7 +22,7 @@ extension SwiftFulcrum.RPC.Response.Result {
             
             public init(fromRPC jsonrpc: JSONRPC) throws {
                 guard let protocolVersion = SwiftFulcrum.ProtocolVersion(string: jsonrpc.protocolVersion) else {
-                    throw SwiftFulcrum.RPC.Response.Result.Error.unexpectedFormat("Negotiated protocol version is invalid: \(jsonrpc.protocolVersion)")
+                    throw ResponseResultDecodeError.unexpectedFormat("Negotiated protocol version is invalid: \(jsonrpc.protocolVersion)")
                 }
                 
                 self.serverVersion = jsonrpc.serverVersion
@@ -47,10 +47,10 @@ extension SwiftFulcrum.RPC.Response.Result {
             
             public init(fromRPC jsonrpc: JSONRPC) throws {
                 guard let minVersion = SwiftFulcrum.ProtocolVersion(string: jsonrpc.protocol_min) else {
-                    throw SwiftFulcrum.RPC.Response.Result.Error.unexpectedFormat("Minimum protocol version is invalid: \(jsonrpc.protocol_min)")
+                    throw ResponseResultDecodeError.unexpectedFormat("Minimum protocol version is invalid: \(jsonrpc.protocol_min)")
                 }
                 guard let maxVersion = SwiftFulcrum.ProtocolVersion(string: jsonrpc.protocol_max) else {
-                    throw SwiftFulcrum.RPC.Response.Result.Error.unexpectedFormat("Maximum protocol version is invalid: \(jsonrpc.protocol_max)")
+                    throw ResponseResultDecodeError.unexpectedFormat("Maximum protocol version is invalid: \(jsonrpc.protocol_max)")
                 }
                 
                 self.genesisHash = jsonrpc.genesis_hash

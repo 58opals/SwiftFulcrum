@@ -1,6 +1,6 @@
 // SwiftFulcrum+RPC.swift
 
-public extension SwiftFulcrum {
-    enum RPC {
+extension SwiftFulcrum {
+    public enum RPC {
     }
 }

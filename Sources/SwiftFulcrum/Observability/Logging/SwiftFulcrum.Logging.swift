@@ -2,8 +2,8 @@
 
 import Foundation
 
-public extension SwiftFulcrum {
-    enum Logging {}
+extension SwiftFulcrum {
+    public enum Logging {}
 }
 
 extension SwiftFulcrum.Logging {

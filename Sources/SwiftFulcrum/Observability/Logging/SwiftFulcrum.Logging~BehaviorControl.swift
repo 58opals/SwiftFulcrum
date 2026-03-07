@@ -7,7 +7,7 @@ extension SwiftFulcrum.Logging {
         withBehavior behavior: Behavior,
         operation: @Sendable () async throws -> T
     ) async rethrows -> T {
-        try await Context.$behavior.withValue(behavior) {
+        try await LoggingBehaviorState.$behavior.withValue(behavior) {
             try await operation()
         }
     }

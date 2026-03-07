@@ -114,7 +114,7 @@ actor TransportTestActor: TransportAdapter {
         return stream
     }
 
-    func makeDiagnosticsSnapshot() async -> SwiftFulcrum.Client.Diagnostics.TransportSnapshot {
+    func makeDiagnosticsSnapshot() async -> ClientDiagnosticsTransportState {
         .init(reconnectAttempts: 0, reconnectSuccesses: 0)
     }
 

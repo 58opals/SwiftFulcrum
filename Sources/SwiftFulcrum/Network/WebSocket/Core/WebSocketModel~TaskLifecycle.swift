@@ -40,7 +40,7 @@ extension WebSocketModel {
     
     func recordReconnectSuccess() { reconnectSuccessCount &+= 1 }
     
-    func makeDiagnosticsSnapshot() -> SwiftFulcrum.Client.Diagnostics.TransportSnapshot {
+    func makeDiagnosticsSnapshot() -> ClientDiagnosticsTransportState {
         .init(
             reconnectAttempts: reconnectAttemptCount,
             reconnectSuccesses: reconnectSuccessCount

@@ -6,26 +6,14 @@ extension SwiftFulcrum.RPC.Method {
     func createBlockchainRequest(_ blockchain: Blockchain, uuid: UUID) -> FulcrumRequest {
         switch blockchain {
         case .estimateFee(let numberOfBlocks):
-            struct ParametersModel: Encodable {
-                let numberOfBlocks: Int
-                func encode(to encoder: Encoder) throws {
-                    var container = encoder.unkeyedContainer()
-                    try container.encode(numberOfBlocks)
-                }
-            }
             return FulcrumRequest(id: uuid,
-                           method: self,
-                           params: ParametersModel(numberOfBlocks: numberOfBlocks))
+                                  method: self,
+                                  params: RPCRequestParametersModel.SingleValueModel(value: numberOfBlocks))
 
         case .relayFee:
-            struct ParametersModel: Encodable {
-                func encode(to encoder: Encoder) throws {
-                    _ = encoder.unkeyedContainer()
-                }
-            }
             return FulcrumRequest(id: uuid,
-                           method: self,
-                           params: ParametersModel())
+                                  method: self,
+                                  params: RPCRequestParametersModel.EmptyModel())
 
         case .scripthash(let scripthash):
             return createScriptHashRequest(scripthash, uuid: uuid)

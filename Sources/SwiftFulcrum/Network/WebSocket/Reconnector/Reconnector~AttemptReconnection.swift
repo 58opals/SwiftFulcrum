@@ -19,7 +19,7 @@ extension WebSocketModel.Reconnector {
         let maximumAttempts: Int
         if configuration.isUnlimited {
             maximumAttempts = Int.max
-        } else if serverCatalogLoader.isBundled, overrideURL == nil {
+        } else if serverCatalogLoader.usesBundledCatalog, overrideURL == nil {
             maximumAttempts = max(configuration.maximumReconnectionAttempts, rotation.count)
         } else {
             maximumAttempts = configuration.maximumReconnectionAttempts

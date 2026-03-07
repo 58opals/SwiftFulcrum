@@ -1,6 +1,6 @@
 // SwiftFulcrum+ServerCatalog.swift
 
-public extension SwiftFulcrum {
-    enum ServerCatalog {
+extension SwiftFulcrum {
+    public enum ServerCatalog {
     }
 }

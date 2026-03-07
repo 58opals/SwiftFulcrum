@@ -7,8 +7,8 @@ import Foundation
 /// Create an instance, call ``start()`` to establish connectivity, use ``submit(...)`` for unary
 /// requests or ``subscribe(...)`` for streaming updates, and finish by invoking ``stop()`` to
 /// release resources.
-public extension SwiftFulcrum {
-    actor Client {
+extension SwiftFulcrum {
+    public actor Client {
         let client: FulcrumNetworkClient
     
     private(set) var isRunning = false
