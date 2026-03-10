@@ -11,6 +11,21 @@ struct PublicAPIFacadeContractValidator {
         let clientType: SwiftFulcrum.Client.Type = SwiftFulcrum.Client.self
         _ = clientType
 
+        let configurationType: SwiftFulcrum.Client.Configuration.Type = SwiftFulcrum.Client.Configuration.self
+        _ = configurationType
+
+        let callOptionsType: SwiftFulcrum.Client.Call.Options.Type = SwiftFulcrum.Client.Call.Options.self
+        _ = callOptionsType
+
+        let diagnosticsType: SwiftFulcrum.Client.Diagnostics.Type = SwiftFulcrum.Client.Diagnostics.self
+        _ = diagnosticsType
+
+        let connectionStateType: SwiftFulcrum.Client.ConnectionState.Type = SwiftFulcrum.Client.ConnectionState.self
+        _ = connectionStateType
+
+        let clientErrorType: SwiftFulcrum.Client.Error.Type = SwiftFulcrum.Client.Error.self
+        _ = clientErrorType
+
         let method: SwiftFulcrum.RPC.Method = .blockchain(.headers(.getTip))
         _ = method
 
@@ -39,12 +54,19 @@ struct PublicAPIFacadeContractValidator {
             )
         }
         _ = unaryRequest
-    }
 
-    @Test("Facade response protocol aliases compile")
-    func facadeResponseAdaptersCompile() throws {
-        _ = try DummyResponse(fromRPC: DummyJSONRPC())
-        _ = DummyNilAcceptingResponse(nilValue: ())
+        let streamingRequest: @Sendable (SwiftFulcrum.Client) async throws -> (
+            SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe,
+            AsyncThrowingStream<SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification, Swift.Error>,
+            @Sendable () async -> Void
+        ) = { client in
+            try await client.subscribe(
+                method: .blockchain(.headers(.subscribe)),
+                initialType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe.self,
+                notificationType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification.self
+            )
+        }
+        _ = streamingRequest
     }
 
     @Test(
@@ -57,15 +79,21 @@ struct PublicAPIFacadeContractValidator {
 
         let requiredSymbols = [
             "SwiftFulcrum.Client",
+            "SwiftFulcrum.Client.Configuration",
+            "SwiftFulcrum.Client.Call.Options",
+            "SwiftFulcrum.Client.Diagnostics",
+            "SwiftFulcrum.Client.ConnectionState",
+            "SwiftFulcrum.Client.Error",
             "SwiftFulcrum.RPC.Method",
             "SwiftFulcrum.RPC.Response.Result",
+            "SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.GetTip",
             "SwiftFulcrum.ProtocolVersion",
             "SwiftFulcrum.Transport.State",
             "SwiftFulcrum.ServerCatalog.Repository",
             "SwiftFulcrum.Metrics",
             "SwiftFulcrum.Logging",
-            "SwiftFulcrum.RPC.JSONRPCResponseAdapter",
-            "SwiftFulcrum.RPC.NilAcceptingResponseAdapter"
+            "SwiftFulcrum.Metrics.MetricsClient",
+            "SwiftFulcrum.Logging.Adapter"
         ]
 
         for symbol in requiredSymbols {
@@ -81,7 +109,11 @@ struct PublicAPIFacadeContractValidator {
             "SwiftFulcrum.RPC.Response.Error",
             "SwiftFulcrum.RPC.Response.Kind",
             "SwiftFulcrum.RPC.Response.Identifier",
-            "SwiftFulcrum.RPC.Response.JSONRPC.Generic"
+            "SwiftFulcrum.RPC.JSONRPCResponseAdapter",
+            "SwiftFulcrum.RPC.NilAcceptingResponseAdapter",
+            "SwiftFulcrum.RPC.Response.JSONRPC",
+            "SwiftFulcrum.RPC.Response.JSONRPC.Generic",
+            "SwiftFulcrum.RPC.Response.JSONRPC.Result"
         ]
 
         for symbol in hiddenSymbols {
@@ -90,24 +122,15 @@ struct PublicAPIFacadeContractValidator {
     }
 }
 
-private struct DummyJSONRPC: Decodable {}
-
-private struct DummyResponse: SwiftFulcrum.RPC.JSONRPCResponseAdapter {
-    typealias JSONRPC = DummyJSONRPC
-
-    init(fromRPC jsonrpc: DummyJSONRPC) throws {}
-}
-
-private struct DummyNilAcceptingResponse: SwiftFulcrum.RPC.NilAcceptingResponseAdapter {
-    typealias JSONRPC = DummyJSONRPC
-
-    init(fromRPC jsonrpc: DummyJSONRPC) throws {}
-    init(nilValue: ()) {}
-}
-
 private extension PublicAPIFacadeContractValidator {
     static var hasGeneratedPublicSymbolGraph: Bool {
-        (try? locateGeneratedPublicSymbolGraph()) != nil
+        guard let symbolGraphURL = try? locateGeneratedPublicSymbolGraph(),
+              let symbolGraphModificationDate = try? modificationDate(for: symbolGraphURL),
+              let latestSourceModificationDate = try? latestPublicSurfaceModificationDate() else {
+            return false
+        }
+
+        return symbolGraphModificationDate >= latestSourceModificationDate
     }
 
     func loadGeneratedPublicSymbolGraph() throws -> SymbolGraphModel {
@@ -140,6 +163,46 @@ private extension PublicAPIFacadeContractValidator {
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .deletingLastPathComponent()
+    }
+
+    static func latestPublicSurfaceModificationDate() throws -> Date {
+        let packageRoot = packageRootURL()
+        let publicSurfaceRoots = [
+            packageRoot.appending(path: "Package.swift"),
+            packageRoot.appending(path: "Sources")
+        ]
+
+        return try publicSurfaceRoots.reduce(.distantPast) { latestDate, rootURL in
+            var isDirectory = ObjCBool(false)
+            FileManager.default.fileExists(atPath: rootURL.path(), isDirectory: &isDirectory)
+            if isDirectory.boolValue {
+                return try max(latestDate, latestModificationDate(in: rootURL))
+            }
+            return try max(latestDate, modificationDate(for: rootURL))
+        }
+    }
+
+    static func latestModificationDate(in directoryURL: URL) throws -> Date {
+        guard let enumerator = FileManager.default.enumerator(
+            at: directoryURL,
+            includingPropertiesForKeys: [.isRegularFileKey, .contentModificationDateKey]
+        ) else {
+            return .distantPast
+        }
+
+        var latestDate = Date.distantPast
+        for case let fileURL as URL in enumerator {
+            let values = try fileURL.resourceValues(forKeys: [.isRegularFileKey, .contentModificationDateKey])
+            guard values.isRegularFile == true else { continue }
+            latestDate = max(latestDate, values.contentModificationDate ?? .distantPast)
+        }
+
+        return latestDate
+    }
+
+    static func modificationDate(for fileURL: URL) throws -> Date {
+        let values = try fileURL.resourceValues(forKeys: [.contentModificationDateKey])
+        return values.contentModificationDate ?? .distantPast
     }
 
     struct SymbolGraphModel: Decodable {

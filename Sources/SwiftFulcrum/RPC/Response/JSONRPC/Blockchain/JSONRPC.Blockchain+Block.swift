@@ -3,20 +3,20 @@
 import Foundation
 
 extension SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain {
-    public struct Block {
-        public typealias Header = HeaderParameters
+    struct Block {
+        typealias Header = HeaderParameters
 
-        public enum HeaderParameters: Decodable, Sendable {
+        enum HeaderParameters: Decodable, Sendable {
             case raw(String)
             case proof(Proof)
 
-            public struct Proof: Decodable, Sendable {
-                public let branch: [String]
-                public let header: String
-                public let root: String
+            struct Proof: Decodable, Sendable {
+                let branch: [String]
+                let header: String
+                let root: String
             }
 
-            public init(from decoder: Decoder) throws {
+            init(from decoder: Decoder) throws {
                 let container = try decoder.singleValueContainer()
 
                 if let singleValue = try? container.decode(String.self) {
@@ -36,15 +36,15 @@ extension SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain {
             }
         }
 
-        public struct Headers: Decodable, Sendable {
-            public let count: UInt
-            public let hex: String
-            public let max: UInt
-            public let root: String?
-            public let branch: [String]?
-            public let headers: [String]?
+        struct Headers: Decodable, Sendable {
+            let count: UInt
+            let hex: String
+            let max: UInt
+            let root: String?
+            let branch: [String]?
+            let headers: [String]?
 
-            public init(from decoder: Decoder) throws {
+            init(from decoder: Decoder) throws {
                 let container = try decoder.container(keyedBy: JSONRPCResponseDecodeModel.CodingKeyModel.self)
                 let countKey = JSONRPCResponseDecodeModel.CodingKeyModel("count")
                 let hexKey = JSONRPCResponseDecodeModel.CodingKeyModel("hex")

@@ -3,18 +3,16 @@
 import Foundation
 
 extension SwiftFulcrum.RPC.Response.Result.Blockchain {
-        public struct Header {
-            public struct Get: SwiftFulcrum.RPC.JSONRPCResponseAdapter {
-                public let height: UInt
-                public let hex: String
-                
-                public typealias JSONRPC = SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Header.Get
-                public init(fromRPC jsonrpc: JSONRPC) {
-                    self.height = jsonrpc.height
-                    self.hex = jsonrpc.hex
-                }
+    public struct Header {
+        public struct Get: Decodable, Sendable {
+            public let height: UInt
+            public let hex: String
+
+            public init(from decoder: Decoder) throws {
+                let payloadModel = try SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Header.Get(from: decoder)
+                self.height = payloadModel.height
+                self.hex = payloadModel.hex
             }
         }
-        
-
+    }
 }

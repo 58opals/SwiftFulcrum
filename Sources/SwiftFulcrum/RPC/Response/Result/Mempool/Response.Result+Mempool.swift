@@ -4,24 +4,24 @@ import Foundation
 
 extension SwiftFulcrum.RPC.Response.Result {
     public struct Mempool {
-        public struct GetInfo: SwiftFulcrum.RPC.JSONRPCResponseAdapter {
+        public struct GetInfo: Decodable, Sendable {
             public let mempoolMinimumFee: Double?
             public let minimumRelayTransactionFee: Double?
             public let incrementalRelayFee: Double?
             public let unbroadcastCount: Int?
             public let isFullReplaceByFeeEnabled: Bool?
-            
-            public typealias JSONRPC = SwiftFulcrum.RPC.Response.JSONRPC.Result.Mempool.GetInfo
-            public init(fromRPC jsonrpc: JSONRPC) {
-                self.mempoolMinimumFee = jsonrpc.mempoolminfee?.value
-                self.minimumRelayTransactionFee = jsonrpc.minrelaytxfee?.value
-                self.incrementalRelayFee = jsonrpc.incrementalrelayfee?.value
-                self.unbroadcastCount = jsonrpc.unbroadcastcount
-                self.isFullReplaceByFeeEnabled = jsonrpc.isFullReplaceByFeeEnabled
+
+            public init(from decoder: Decoder) throws {
+                let payloadModel = try SwiftFulcrum.RPC.Response.JSONRPC.Result.Mempool.GetInfo(from: decoder)
+                self.mempoolMinimumFee = payloadModel.mempoolminfee?.value
+                self.minimumRelayTransactionFee = payloadModel.minrelaytxfee?.value
+                self.incrementalRelayFee = payloadModel.incrementalrelayfee?.value
+                self.unbroadcastCount = payloadModel.unbroadcastcount
+                self.isFullReplaceByFeeEnabled = payloadModel.isFullReplaceByFeeEnabled
             }
         }
         
-        public struct GetFeeHistogram: SwiftFulcrum.RPC.JSONRPCResponseAdapter {
+        public struct GetFeeHistogram: Decodable, Sendable {
             public let histogram: [Result]
             
             public struct Result: Decodable, Sendable {
@@ -39,10 +39,10 @@ extension SwiftFulcrum.RPC.Response.Result {
                     self.virtualSize = UInt(virtualSizeValue.rounded(.towardZero))
                 }
             }
-            
-            public typealias JSONRPC = SwiftFulcrum.RPC.Response.JSONRPC.Result.Mempool.GetFeeHistogram
-            public init(fromRPC jsonrpc: JSONRPC) throws {
-                self.histogram = try jsonrpc.enumerated().map { index, pair in
+
+            public init(from decoder: Decoder) throws {
+                let payloadModel = try SwiftFulcrum.RPC.Response.JSONRPC.Result.Mempool.GetFeeHistogram(from: decoder)
+                self.histogram = try payloadModel.enumerated().map { index, pair in
                     do { return try Result(from: pair) }
                     catch { throw ResponseResultDecodeError.unexpectedFormat("Malformed entry at index \(index): \(error)") }
                 }.sorted { $0.fee < $1.fee }

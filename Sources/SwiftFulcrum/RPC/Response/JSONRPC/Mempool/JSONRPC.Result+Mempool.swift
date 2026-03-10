@@ -3,11 +3,11 @@
 import Foundation
 
 extension SwiftFulcrum.RPC.Response.JSONRPC.Result {
-    public struct Mempool {
-        public struct FlexibleNumber: Decodable, Sendable {
-            public let value: Double
+    struct Mempool {
+        struct FlexibleNumber: Decodable, Sendable {
+            let value: Double
 
-            public init(from decoder: Decoder) throws {
+            init(from decoder: Decoder) throws {
                 let container = try decoder.singleValueContainer()
                 if let double = try? container.decode(Double.self) { self.value = double; return }
                 if let int = try? container.decode(Int.self) { self.value = Double(int); return }
@@ -21,14 +21,14 @@ extension SwiftFulcrum.RPC.Response.JSONRPC.Result {
             }
         }
 
-        public struct GetInfo: Decodable, Sendable {
-            public let mempoolminfee: FlexibleNumber?
-            public let minrelaytxfee: FlexibleNumber?
-            public let incrementalrelayfee: FlexibleNumber?
-            public let unbroadcastcount: Int?
-            public let isFullReplaceByFeeEnabled: Bool?
+        struct GetInfo: Decodable, Sendable {
+            let mempoolminfee: FlexibleNumber?
+            let minrelaytxfee: FlexibleNumber?
+            let incrementalrelayfee: FlexibleNumber?
+            let unbroadcastcount: Int?
+            let isFullReplaceByFeeEnabled: Bool?
 
-            public init(from decoder: Decoder) throws {
+            init(from decoder: Decoder) throws {
                 let container = try decoder.container(keyedBy: JSONRPCResponseDecodeModel.CodingKeyModel.self)
                 let mempoolMinimumFeeKey = JSONRPCResponseDecodeModel.CodingKeyModel("mempoolminfee")
                 let minimumRelayTransactionFeeKey = JSONRPCResponseDecodeModel.CodingKeyModel("minrelaytxfee")
@@ -44,7 +44,7 @@ extension SwiftFulcrum.RPC.Response.JSONRPC.Result {
             }
         }
 
-        public typealias FeeHistogram = [FlexibleNumber]
-        public typealias GetFeeHistogram = [FeeHistogram]
+        typealias FeeHistogram = [FlexibleNumber]
+        typealias GetFeeHistogram = [FeeHistogram]
     }
 }

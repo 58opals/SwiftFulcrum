@@ -3,14 +3,11 @@
 import Foundation
 
 extension SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction {
-            public struct GetHeight: SwiftFulcrum.RPC.JSONRPCResponseAdapter {
-                public let height: UInt
-                
-                public typealias JSONRPC = SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Transaction.GetHeight
-                public init(fromRPC jsonrpc: JSONRPC) {
-                    self.height = jsonrpc
-                }
-            }
-            
+    public struct GetHeight: Decodable, Sendable {
+        public let height: UInt
 
+        public init(from decoder: Decoder) throws {
+            self.height = try UInt(from: decoder)
+        }
+    }
 }

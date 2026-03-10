@@ -87,6 +87,38 @@ struct ResponseDecodingValidator {
         #expect(features.hasDoubleSpendProofs == true)
     }
 
+    @Test("Decodes nil result payloads without wrapper adapters")
+    func decodeNilResultPayloads() throws {
+        let pingPayload = try jsonData(
+            ["jsonrpc": "2.0", "id": UUID().uuidString, "result": NSNull()]
+        )
+        _ = try pingPayload.decode(
+            SwiftFulcrum.RPC.Response.Result.Server.Ping.self,
+            context: .init(methodPath: "server.ping")
+        )
+
+        let firstUsePayload = try jsonData(
+            ["jsonrpc": "2.0", "id": UUID().uuidString, "result": NSNull()]
+        )
+        let firstUse = try firstUsePayload.decode(
+            SwiftFulcrum.RPC.Response.Result.Blockchain.Address.GetFirstUse.self,
+            context: .init(methodPath: "blockchain.address.get_first_use")
+        )
+        #expect(firstUse.isFound == false)
+        #expect(firstUse.blockHash == nil)
+        #expect(firstUse.height == nil)
+        #expect(firstUse.transactionHash == nil)
+
+        let subscribePayload = try jsonData(
+            ["jsonrpc": "2.0", "id": UUID().uuidString, "result": NSNull()]
+        )
+        let subscribe = try subscribePayload.decode(
+            SwiftFulcrum.RPC.Response.Result.Blockchain.Address.Subscribe.self,
+            context: .init(methodPath: "blockchain.address.subscribe")
+        )
+        #expect(subscribe.status == nil)
+    }
+
     @Test("Decodes headers/address/transaction/dsproof notifications")
     func decodeSubscriptionNotifications() throws {
         let headerPayload = try jsonData(

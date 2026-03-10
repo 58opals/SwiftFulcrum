@@ -138,7 +138,9 @@ extension SwiftFulcrum {
     /// Forces a reconnect to the active or next available server while preserving subscription intent.
     ///
     /// Only callable after ``start()`` has succeeded. The call suspends while the reconnection attempt
-    /// completes; cancelling the calling task cancels the in-flight reconnection.
+    /// completes; cancelling the calling task cancels the in-flight reconnection. Active subscriptions
+    /// are restored by ``SwiftFulcrum.Client`` / `FulcrumNetworkClient`, so downstream callers should
+    /// not add a second manual resubscribe layer.
     public func reconnect() async throws {
         guard self.isRunning else { return }
         try await self.client.reconnect()

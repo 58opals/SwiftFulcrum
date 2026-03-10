@@ -10,7 +10,7 @@ extension SwiftFulcrum.Client {
     ///   - responseType: Expected result model for decoding.
     ///   - options: Optional timeout and cancellation controls. Cancelling the calling task cancels the request.
     /// - Returns: The decoded Fulcrum result model for the requested method.
-    public func request<RegularResponseResult: SwiftFulcrum.RPC.JSONRPCResponseAdapter>(
+    public func request<RegularResponseResult: Decodable & Sendable>(
         method: SwiftFulcrum.RPC.Method,
         responseType: RegularResponseResult.Type = RegularResponseResult.self,
         options: SwiftFulcrum.Client.Call.Options = .init()
@@ -40,7 +40,7 @@ extension SwiftFulcrum.Client {
     ///   - options: Optional timeout and cancellation controls. Cancelling the calling task cancels the subscription setup.
     /// - Returns: The initial subscription payload, an update stream, and a cancellation closure tied to the subscription token.
     ///   Reconnects preserve the active subscription intent so downstream callers do not need to resubscribe manually.
-    public func subscribe<Initial: SwiftFulcrum.RPC.JSONRPCResponseAdapter, Notification: SwiftFulcrum.RPC.JSONRPCResponseAdapter>(
+    public func subscribe<Initial: Decodable & Sendable, Notification: Decodable & Sendable>(
         method: SwiftFulcrum.RPC.Method,
         initialType: Initial.Type = Initial.self,
         notificationType: Notification.Type = Notification.self,
@@ -86,7 +86,7 @@ extension SwiftFulcrum.Client {
         }
     }
     
-    private func makeSubscription<Initial: SwiftFulcrum.RPC.JSONRPCResponseAdapter, Notification: SwiftFulcrum.RPC.JSONRPCResponseAdapter>(
+    private func makeSubscription<Initial: Decodable & Sendable, Notification: Decodable & Sendable>(
         method: SwiftFulcrum.RPC.Method,
         initialType: Initial.Type,
         notificationType: Notification.Type,

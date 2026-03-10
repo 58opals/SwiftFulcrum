@@ -3,18 +3,16 @@
 import Foundation
 
 extension SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction {
-            public struct GetConfirmedBlockHash: SwiftFulcrum.RPC.JSONRPCResponseAdapter {
-                public let blockHash: String
-                public let blockHeader: String?
-                public let blockHeight: UInt
-                
-                public typealias JSONRPC = SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Transaction.GetConfirmedBlockHash
-                public init(fromRPC jsonrpc: JSONRPC) {
-                    self.blockHash = jsonrpc.block_hash
-                    self.blockHeader = jsonrpc.block_header
-                    self.blockHeight = jsonrpc.block_height
-                }
-            }
-            
+    public struct GetConfirmedBlockHash: Decodable, Sendable {
+        public let blockHash: String
+        public let blockHeader: String?
+        public let blockHeight: UInt
 
+        public init(from decoder: Decoder) throws {
+            let payloadModel = try SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Transaction.GetConfirmedBlockHash(from: decoder)
+            self.blockHash = payloadModel.block_hash
+            self.blockHeader = payloadModel.block_header
+            self.blockHeight = payloadModel.block_height
+        }
+    }
 }

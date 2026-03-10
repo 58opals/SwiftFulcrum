@@ -3,7 +3,7 @@
 import Foundation
 
 extension SwiftFulcrum.RPC.Response {
-    public struct JSONRPC {
+    struct JSONRPC {
         struct Generic<Payload: Decodable>: Decodable {
             let jsonrpc: String
             

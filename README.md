@@ -30,15 +30,24 @@ Task {
         let fulcrum = try await SwiftFulcrum.Client()
         try await fulcrum.start()
 
-        let response = try await fulcrum.submit(
+        let tip = try await fulcrum.request(
             method: .blockchain(.headers(.getTip)),
-            responseType: SwiftFulcrum.RPC.Response.ResultModel.Blockchain.Headers.GetTip.self
+            responseType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.GetTip.self
         )
+        print("Best header height: \(tip.height)")
 
-        if let tip = response.extractRegularResponse() {
-            print("Best header height: \(tip.height)")
+        let (initial, updates, cancel) = try await fulcrum.subscribe(
+            method: .blockchain(.headers(.subscribe)),
+            initialType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe.self,
+            notificationType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification.self
+        )
+        print("Subscribed from height: \(initial.height)")
+
+        for try await update in updates.prefix(1) {
+            print("Received \(update.blocks.count) new header(s)")
         }
 
+        await cancel()
         await fulcrum.stop()
     } catch {
         print("Connection error: \(error)")
@@ -49,10 +58,15 @@ Task {
 ## Core Capabilities
 
 - Typed RPC requests via `SwiftFulcrum.RPC.Method`
-- Typed response decoding via `SwiftFulcrum.RPC.Response.ResultModel.*`
+- Typed response decoding via `SwiftFulcrum.RPC.Response.Result.*`
 - Automatic protocol negotiation (`server.version`)
 - Reconnect/failover with subscription recovery
 - Connection state streams and diagnostics snapshots
+
+## Subscription Recovery
+
+Active `subscribe(...)` registrations are persisted and restored by `SwiftFulcrum.Client` / `FulcrumNetworkClient`
+after failover or an explicit `reconnect()`. Downstream callers should not add a second manual resubscribe layer.
 
 ## Resource Files
 

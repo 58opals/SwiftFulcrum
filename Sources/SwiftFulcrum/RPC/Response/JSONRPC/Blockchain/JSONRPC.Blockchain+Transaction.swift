@@ -3,56 +3,56 @@
 import Foundation
 
 extension SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain {
-            public struct Transaction {
-                public typealias Broadcast = String
-                
-                public typealias Get = GetParameters
-                public enum GetParameters: Decodable, Sendable {
+    struct Transaction {
+        typealias Broadcast = String
+
+        typealias Get = GetParameters
+        enum GetParameters: Decodable, Sendable {
                     case raw(String)
                     case detailed(Detailed)
                     
-                    public struct Detailed: Decodable, Sendable {
-                        public let blockhash: String?
-                        public let blocktime: UInt?
-                        public let confirmations: UInt?
-                        public let hash: String
-                        public let hex: String
-                        public let locktime: UInt
-                        public let size: UInt
-                        public let time: UInt?
-                        public let txid: String
-                        public let version: UInt
-                        public let vin: [Input]
-                        public let vout: [Output]
-                        
-                        public struct Input: Decodable, Sendable {
-                            public let scriptSig: ScriptSig
-                            public let sequence: UInt
-                            public let txid: String
-                            public let vout: UInt
-                            
-                            public struct ScriptSig: Decodable, Sendable {
-                                public let asm: String
-                                public let hex: String
+            struct Detailed: Decodable, Sendable {
+                let blockhash: String?
+                let blocktime: UInt?
+                let confirmations: UInt?
+                let hash: String
+                let hex: String
+                let locktime: UInt
+                let size: UInt
+                let time: UInt?
+                let txid: String
+                let version: UInt
+                let vin: [Input]
+                let vout: [Output]
+
+                struct Input: Decodable, Sendable {
+                    let scriptSig: ScriptSig
+                    let sequence: UInt
+                    let txid: String
+                    let vout: UInt
+
+                    struct ScriptSig: Decodable, Sendable {
+                        let asm: String
+                        let hex: String
                             }
                         }
                         
-                        public struct Output: Decodable, Sendable {
-                            public let n: UInt
-                            public let scriptPubKey: ScriptPubKey
-                            public let value: Double
-                            
-                            public struct ScriptPubKey: Decodable, Sendable {
-                                public let addresses: [String]?
-                                public let asm: String
-                                public let hex: String
-                                public let reqSigs: UInt?
-                                public let type: String
+                struct Output: Decodable, Sendable {
+                    let n: UInt
+                    let scriptPubKey: ScriptPubKey
+                    let value: Double
+
+                    struct ScriptPubKey: Decodable, Sendable {
+                        let addresses: [String]?
+                        let asm: String
+                        let hex: String
+                        let reqSigs: UInt?
+                        let type: String
                             }
                         }
                     }
                     
-                    public init(from decoder: Decoder) throws {
+            init(from decoder: Decoder) throws {
                         let container = try decoder.singleValueContainer()
                         
                         if let singleValue = try? container.decode(String.self) {
@@ -69,37 +69,37 @@ extension SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain {
                                                          .init(codingPath: decoder.codingPath,
                                                                debugDescription: "Expected String or Detailed"))
                     }
-                }
-                
-                public struct GetConfirmedBlockHash: Decodable, Sendable {
-                    public let block_hash: String
-                    public let block_header: String?
-                    public let block_height: UInt
-                }
-                
-                public typealias GetHeight = UInt
-                
-                public struct GetMerkle: Decodable, Sendable {
-                    public let merkle: [String]
-                    public let block_height: UInt
-                    public let pos: UInt
-                }
-                
-                public struct IDFromPos: Decodable, Sendable {
-                    public let merkle: [String]
-                    public let tx_hash: String
-                }
-                
-                public typealias Subscribe = SubscribeParameters
-                public enum SubscribeParameters: Decodable, Sendable {
+        }
+
+        struct GetConfirmedBlockHash: Decodable, Sendable {
+            let block_hash: String
+            let block_header: String?
+            let block_height: UInt
+        }
+
+        typealias GetHeight = UInt
+
+        struct GetMerkle: Decodable, Sendable {
+            let merkle: [String]
+            let block_height: UInt
+            let pos: UInt
+        }
+
+        struct IDFromPos: Decodable, Sendable {
+            let merkle: [String]
+            let tx_hash: String
+        }
+
+        typealias Subscribe = SubscribeParameters
+        enum SubscribeParameters: Decodable, Sendable {
                     case height(UInt)
                     case transactionHashAndHeight([TransactionHashAndHeight])
                     
-                    public enum TransactionHashAndHeight: Decodable, Sendable {
+                    enum TransactionHashAndHeight: Decodable, Sendable {
                         case transactionHash(String)
                         case height(UInt)
                         
-                        public init(from decoder: Decoder) throws {
+                        init(from decoder: Decoder) throws {
                             let container = try decoder.singleValueContainer()
                             
                             if let stringResult = try? container.decode(String.self) {
@@ -118,7 +118,7 @@ extension SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain {
                         }
                     }
                     
-                    public init(from decoder: Decoder) throws {
+                    init(from decoder: Decoder) throws {
                         let container = try decoder.singleValueContainer()
                         
                         if let uintResult = try? container.decode(UInt.self) {
@@ -135,36 +135,36 @@ extension SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain {
                                                          .init(codingPath: decoder.codingPath,
                                                                debugDescription: "Expected UInt (height) or String and UInt (transaction hash and height)"))
                     }
+        }
+
+        typealias Unsubscribe = Bool
+
+        struct DSProof {
+            struct Get: Decodable, Sendable {
+                let dspid: String
+                let txid: String
+                let hex: String
+                let outpoint: Outpoint
+                let descendants: [String]
+
+                struct Outpoint: Decodable, Sendable {
+                    let txid: String
+                    let vout: UInt
                 }
-                
-                public typealias Unsubscribe = Bool
-                
-                public struct DSProof {
-                    public struct Get: Decodable, Sendable {
-                        public let dspid: String
-                        public let txid: String
-                        public let hex: String
-                        public let outpoint: Outpoint
-                        public let descendants: [String]
-                        
-                        public struct Outpoint: Decodable, Sendable {
-                            public let txid: String
-                            public let vout: UInt
-                        }
-                    }
-                    
-                    public typealias List = [String]
-                    
-                    public typealias Subscribe = SubscribeParameters
-                    public enum SubscribeParameters: Decodable, Sendable {
+            }
+
+            typealias List = [String]
+
+            typealias Subscribe = SubscribeParameters
+            enum SubscribeParameters: Decodable, Sendable {
                         case dsProof(Get?)
                         case transactionHashAndDSProof([TransactionHashAndDS])
                         
-                        public enum TransactionHashAndDS: Decodable, Sendable {
+                        enum TransactionHashAndDS: Decodable, Sendable {
                             case transactionHash(String)
                             case dsProof(Get)
                             
-                            public init(from decoder: Decoder) throws {
+                            init(from decoder: Decoder) throws {
                                 let container = try decoder.singleValueContainer()
                                 
                                 if let stringResult = try? container.decode(String.self) {
@@ -183,7 +183,7 @@ extension SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain {
                             }
                         }
                         
-                        public init(from decoder: Decoder) throws {
+                        init(from decoder: Decoder) throws {
                             let container = try decoder.singleValueContainer()
                             
                             if container.decodeNil() {
@@ -205,11 +205,9 @@ extension SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain {
                                                              .init(codingPath: decoder.codingPath,
                                                                    debugDescription: "Expected nil, a DSProof, or [txHash, dsProof]"))
                         }
-                    }
-                    
-                    public typealias Unsubscribe = Bool
-                }
             }
-            
 
+            typealias Unsubscribe = Bool
+        }
+    }
 }

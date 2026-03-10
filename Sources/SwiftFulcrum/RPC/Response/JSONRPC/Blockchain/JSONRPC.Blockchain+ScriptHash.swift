@@ -3,47 +3,47 @@
 import Foundation
 
 extension SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain {
-            public struct ScriptHash {
-                public struct GetBalance: Decodable, Sendable {
-                    public let confirmed: UInt64
-                    public let unconfirmed: Int64
-                }
-                
-                public struct GetFirstUse: Decodable, Sendable {
-                    public let block_hash: String
-                    public let height: UInt
-                    public let tx_hash: String
-                }
-                
-                public typealias GetHistory = [GetHistoryItem]
-                public struct GetHistoryItem: Decodable, Sendable {
-                    public let height: Int
-                    public let tx_hash: String
-                    public let fee: UInt?
-                }
-                
-                public typealias GetMempool = [GetMempoolItem]
-                public struct GetMempoolItem: Decodable, Sendable {
-                    public let height: Int
-                    public let tx_hash: String
-                    public let fee: UInt?
-                }
-                
-                public typealias ListUnspent = [ListUnspentItem]
-                public struct ListUnspentItem: Decodable, Sendable {
-                    public let height: UInt
-                    public let token_data: SwiftFulcrum.RPC.Method.Blockchain.CashTokens.JSON?
-                    public let tx_hash: String
-                    public let tx_pos: UInt
-                    public let value: UInt64
-                }
-                
-                public typealias Subscribe = SubscribeParameters
-                public enum SubscribeParameters: Decodable, Sendable {
+    struct ScriptHash {
+        struct GetBalance: Decodable, Sendable {
+            let confirmed: UInt64
+            let unconfirmed: Int64
+        }
+
+        struct GetFirstUse: Decodable, Sendable {
+            let block_hash: String
+            let height: UInt
+            let tx_hash: String
+        }
+
+        typealias GetHistory = [GetHistoryItem]
+        struct GetHistoryItem: Decodable, Sendable {
+            let height: Int
+            let tx_hash: String
+            let fee: UInt?
+        }
+
+        typealias GetMempool = [GetMempoolItem]
+        struct GetMempoolItem: Decodable, Sendable {
+            let height: Int
+            let tx_hash: String
+            let fee: UInt?
+        }
+
+        typealias ListUnspent = [ListUnspentItem]
+        struct ListUnspentItem: Decodable, Sendable {
+            let height: UInt
+            let token_data: SwiftFulcrum.RPC.Method.Blockchain.CashTokens.JSON?
+            let tx_hash: String
+            let tx_pos: UInt
+            let value: UInt64
+        }
+
+        typealias Subscribe = SubscribeParameters
+        enum SubscribeParameters: Decodable, Sendable {
                     case status(String)
                     case scripthashAndStatus([String?])
                     
-                    public init(from decoder: Decoder) throws {
+                    init(from decoder: Decoder) throws {
                         let container = try decoder.singleValueContainer()
                         
                         if let singleValue = try? container.decode(String.self) {
@@ -60,10 +60,8 @@ extension SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain {
                                                          .init(codingPath: decoder.codingPath,
                                                                debugDescription: "Expected String or [String?]"))
                     }
-                }
-                
-                public typealias Unsubscribe = Bool
-            }
-            
+        }
 
+        typealias Unsubscribe = Bool
+    }
 }
