@@ -11,24 +11,19 @@ struct ClientInterfaceNetworkValidator {
 
     // MARK: - Unary
     @Test(
-        "Submit returns current blockchain tip",
+        "Request returns current blockchain tip",
         .timeLimit(.minutes(1)),
         .enabled(if: TestExecutionPolicy.shouldRunNetwork, "Network tests are opt-in. Set SWIFTFULCRUM_RUN_NETWORK=1 to enable them.")
     )
-    func submitAndReturnBlockchainTip() async throws {
+    func requestAndReturnBlockchainTip() async throws {
         let url = try await NetworkTestClient.pickServerURL()
 
         try await NetworkTestClient.runWithClient(url) { client in
-            let response = try await client.submit(
+            let tip = try await client.request(
                 method: .blockchain(.headers(.getTip)),
                 responseType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.GetTip.self,
                 options: .init(timeout: .seconds(30))
             )
-
-            guard let tip = response.extractRegularResponse() else {
-                Issue.record("submit should return a single response for getTip")
-                return
-            }
 
             #expect(tip.height > 0)
             #expect(tip.hex.count == 160)
@@ -36,25 +31,20 @@ struct ClientInterfaceNetworkValidator {
     }
 
     @Test(
-        "Submit starts SwiftFulcrum.Client when idle",
+        "Request starts SwiftFulcrum.Client when idle",
         .timeLimit(.minutes(1)),
         .enabled(if: TestExecutionPolicy.shouldRunNetwork, "Network tests are opt-in. Set SWIFTFULCRUM_RUN_NETWORK=1 to enable them.")
     )
-    func submitAndStartClientWhenIdle() async throws {
+    func requestAndStartClientWhenIdle() async throws {
         let url = try await NetworkTestClient.pickServerURL()
         let client = try await SwiftFulcrum.Client(url: url.absoluteString)
 
         // Avoid calling start() directly to exercise prepareClientForRequests.
-        let response = try await client.submit(
+        let tip = try await client.request(
             method: .blockchain(.headers(.getTip)),
             responseType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.GetTip.self,
             options: .init(timeout: .seconds(30))
         )
-
-        guard case .single(_, let tip) = response else {
-            Issue.record("Expected unary response for headers.getTip")
-            return
-        }
 
         #expect(tip.height > 0)
         #expect(await client.isRunning)
@@ -174,36 +164,27 @@ struct ClientInterfaceNetworkValidator {
 
     // MARK: - Misc RPC
     @Test(
-        "Submit resolves address metadata over live SwiftFulcrum.Client",
+        "Request resolves address metadata over live SwiftFulcrum.Client",
         .timeLimit(.minutes(1)),
         .enabled(if: TestExecutionPolicy.shouldRunNetwork, "Network tests are opt-in. Set SWIFTFULCRUM_RUN_NETWORK=1 to enable them.")
     )
-    func submitAndResolveAddressQueries() async throws {
+    func requestAndResolveAddressQueries() async throws {
         let url = try await NetworkTestClient.pickServerURL()
 
         try await NetworkTestClient.runWithClient(url) { client in
-            let scriptHashResponse = try await client.submit(
+            let scriptHashResult = try await client.request(
                 method: .blockchain(.address(.getScriptHash(address: Self.testAddress))),
                 responseType: SwiftFulcrum.RPC.Response.Result.Blockchain.Address.GetScriptHash.self,
                 options: .init(timeout: .seconds(15))
             )
 
-            guard case .single(_, let scriptHashResult) = scriptHashResponse else {
-                Issue.record("Expected unary response for address.get_scripthash")
-                return
-            }
             #expect(scriptHashResult.scriptHash.count == 64)
 
-            let balanceResponse = try await client.submit(
+            let balanceResult = try await client.request(
                 method: .blockchain(.address(.getBalance(address: Self.testAddress, tokenFilter: nil))),
                 responseType: SwiftFulcrum.RPC.Response.Result.Blockchain.Address.GetBalance.self,
                 options: .init(timeout: .seconds(15))
             )
-
-            guard case .single(_, let balanceResult) = balanceResponse else {
-                Issue.record("Expected unary response for address.get_balance")
-                return
-            }
 
             // Just assert decoding + basic invariants.
             #expect(balanceResult.confirmed >= 0)
@@ -212,16 +193,16 @@ struct ClientInterfaceNetworkValidator {
     }
 
     @Test(
-        "Submit surfaces rpc errors for invalid broadcasts",
+        "Request surfaces rpc errors for invalid broadcasts",
         .timeLimit(.minutes(1)),
         .enabled(if: TestExecutionPolicy.shouldRunNetwork, "Network tests are opt-in. Set SWIFTFULCRUM_RUN_NETWORK=1 to enable them.")
     )
-    func submitAndPropagateBroadcastErrors() async throws {
+    func requestAndPropagateBroadcastErrors() async throws {
         let url = try await NetworkTestClient.pickServerURL()
 
         try await NetworkTestClient.runWithClient(url) { client in
             do {
-                _ = try await client.submit(
+                _ = try await client.request(
                     method: .blockchain(.transaction(.broadcast(rawTransaction: "00"))),
                     responseType: SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction.Broadcast.self,
                     options: .init(timeout: .seconds(15))

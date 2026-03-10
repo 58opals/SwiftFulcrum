@@ -4,7 +4,7 @@ import Foundation
 
 extension SwiftFulcrum.RPC.Response {
     public struct JSONRPC {
-        public struct Generic<Payload: Decodable>: Decodable {
+        struct Generic<Payload: Decodable>: Decodable {
             let jsonrpc: String
             
             // MARK: Regular
@@ -21,7 +21,7 @@ extension SwiftFulcrum.RPC.Response {
             var hasResult: Bool { hasResultKey }
             var hasParams: Bool { hasParamsKey }
 
-            public init(from decoder: Decoder) throws {
+            init(from decoder: Decoder) throws {
                 let container = try decoder.container(keyedBy: JSONRPCResponseDecodeModel.CodingKeyModel.self)
                 let jsonrpcKey = JSONRPCResponseDecodeModel.CodingKeyModel("jsonrpc")
                 let idKey = JSONRPCResponseDecodeModel.CodingKeyModel("id")

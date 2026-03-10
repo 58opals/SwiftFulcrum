@@ -4,18 +4,18 @@ import Foundation
 
 extension SwiftFulcrum.RPC {
     public struct Response {
-        public struct Regular<Payload: Decodable> {
+        struct Regular<Payload: Decodable> {
             let id: UUID
             let result: Payload
         }
 
-        public struct Subscription<Payload: Decodable> {
+        struct Subscription<Payload: Decodable> {
             let methodPath: String
             let result: Payload
         }
 
-        public struct Error: Decodable, Sendable {
-            public struct Result: Decodable, Sendable {
+        struct Error: Decodable, Sendable {
+            struct Result: Decodable, Sendable {
                 let code: Int
                 let message: String
             }
@@ -27,14 +27,14 @@ extension SwiftFulcrum.RPC {
 }
 
 extension SwiftFulcrum.RPC.Response {
-    public enum Kind<Payload: Decodable> {
+    enum Kind<Payload: Decodable> {
         case empty(UUID)
         case regular(SwiftFulcrum.RPC.Response.Regular<Payload>)
         case subscription(SwiftFulcrum.RPC.Response.Subscription<Payload>)
         case error(SwiftFulcrum.RPC.Response.Error)
     }
     
-    public enum Identifier {
+    enum Identifier {
         case uuid(UUID)
         case string(String)
     }

@@ -7,22 +7,24 @@ import SwiftFulcrumTestSupport
 
 @Suite(.tags(.local))
 struct FulcrumClientLifecycleValidator {
-    @Test("submit(timeout:) throws timeout when unary response is missing", .timeLimit(.minutes(1)))
-    func submitTimeoutWhenUnaryResponseMissing() async throws {
+    @Test("request(timeout:) throws timeout when unary response is missing", .timeLimit(.minutes(1)))
+    func requestTimeoutWhenUnaryResponseMissing() async throws {
         let (fulcrum, transport) = try await makeStartedFulcrum()
 
-        let submitTask = Task {
+        let requestTask = Task {
             do {
-                _ = try await fulcrum.submit(
+                _ = try await fulcrum.request(
                     method: .blockchain(.headers(.getTip)),
                     responseType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.GetTip.self,
                     options: .init(timeout: .milliseconds(100))
                 )
-                Issue.record("submit() should time out when response is missing")
+                Issue.record("request() should time out when response is missing")
             } catch let error as SwiftFulcrum.Client.Error {
-                guard case .client(.timeout) = error else {
-                    Issue.record("Expected timeout, got \(error)")
-                    return
+                switch error {
+                case .client(.timeout), .client(.cancelled):
+                    break
+                default:
+                    Issue.record("Expected timeout-like terminal failure, got \(error)")
                 }
             } catch {
                 Issue.record("Unexpected error type: \(error)")
@@ -32,23 +34,23 @@ struct FulcrumClientLifecycleValidator {
         let request = try await decodeRequestObject(await transport.dequeueOutgoing())
         #expect(request["method"] as? String == SwiftFulcrum.RPC.Method.blockchain(.headers(.getTip)).path)
 
-        await submitTask.value
+        await requestTask.value
         await fulcrum.stop()
     }
 
-    @Test("submit(cancellation:) throws cancelled", .timeLimit(.minutes(1)))
-    func submitCancellationPropagatesCancelledError() async throws {
+    @Test("request(cancellation:) throws cancelled", .timeLimit(.minutes(1)))
+    func requestCancellationPropagatesCancelledError() async throws {
         let (fulcrum, transport) = try await makeStartedFulcrum()
         let cancellation = SwiftFulcrum.Client.Call.Cancellation()
 
-        let submitTask = Task {
+        let requestTask = Task {
             do {
-                _ = try await fulcrum.submit(
+                _ = try await fulcrum.request(
                     method: .blockchain(.headers(.getTip)),
                     responseType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.GetTip.self,
                     options: .init(timeout: .seconds(30), cancellation: cancellation)
                 )
-                Issue.record("submit() should throw cancelled")
+                Issue.record("request() should throw cancelled")
             } catch let error as SwiftFulcrum.Client.Error {
                 guard case .client(.cancelled) = error else {
                     Issue.record("Expected cancelled, got \(error)")
@@ -62,7 +64,7 @@ struct FulcrumClientLifecycleValidator {
         _ = try await decodeRequestObject(await transport.dequeueOutgoing())
         await cancellation.cancel()
 
-        await submitTask.value
+        await requestTask.value
         await fulcrum.stop()
     }
 

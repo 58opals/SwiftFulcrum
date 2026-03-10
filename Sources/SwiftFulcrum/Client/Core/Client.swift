@@ -4,7 +4,7 @@ import Foundation
 
 /// Actor-based entry point for interacting with Fulcrum servers over WebSocket JSON-RPC.
 ///
-/// Create an instance, call ``start()`` to establish connectivity, use ``submit(...)`` for unary
+/// Create an instance, call ``start()`` to establish connectivity, use ``request(...)`` for unary
 /// requests or ``subscribe(...)`` for streaming updates, and finish by invoking ``stop()`` to
 /// release resources.
 extension SwiftFulcrum {
@@ -81,7 +81,7 @@ extension SwiftFulcrum {
         startConnectionStateObservation()
     }
     
-    /// Establishes the WebSocketModel connection and prepares stream resubscription.
+    /// Establishes the WebSocketModel connection and prepares automatic subscription restoration.
     ///
     /// This call is idempotent and safe to invoke from concurrent tasks. It suspends until the
     /// underlying socket is connected or fails. If ``stop()`` is called while ``start()`` is in
@@ -135,7 +135,7 @@ extension SwiftFulcrum {
         await resetConnectionStateStream()
     }
     
-    /// Forces a reconnect to the active or next available server while preserving subscription intents.
+    /// Forces a reconnect to the active or next available server while preserving subscription intent.
     ///
     /// Only callable after ``start()`` has succeeded. The call suspends while the reconnection attempt
     /// completes; cancelling the calling task cancels the in-flight reconnection.

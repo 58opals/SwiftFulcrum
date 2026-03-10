@@ -18,12 +18,12 @@ struct ClientCancellationValidator {
         
         let firstTask = Task<SwiftFulcrum.Client.Error, Never> {
             do {
-                _ = try await fulcrum.submit(
+                _ = try await fulcrum.request(
                     method: .blockchain(.headers(.getTip)),
                     responseType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.GetTip.self,
                     options: options
                 )
-                Issue.record("First submit should throw cancelled.")
+                Issue.record("First request should throw cancelled.")
                 return .client(.unknown(nil))
             } catch let error as SwiftFulcrum.Client.Error {
                 return error
@@ -34,12 +34,12 @@ struct ClientCancellationValidator {
         
         let secondTask = Task<SwiftFulcrum.Client.Error, Never> {
             do {
-                _ = try await fulcrum.submit(
+                _ = try await fulcrum.request(
                     method: .mempool(.getInfo),
                     responseType: SwiftFulcrum.RPC.Response.Result.Mempool.GetInfo.self,
                     options: options
                 )
-                Issue.record("Second submit should throw cancelled.")
+                Issue.record("Second request should throw cancelled.")
                 return .client(.unknown(nil))
             } catch let error as SwiftFulcrum.Client.Error {
                 return error
@@ -61,21 +61,21 @@ struct ClientCancellationValidator {
         await fulcrum.stop()
     }
     
-    @Test("submit(timeout:) does not emit a late request after timeout", .timeLimit(.minutes(1)))
-    func submitTimeoutDoesNotEmitLateRequest() async throws {
+    @Test("request(timeout:) does not emit a late request after timeout", .timeLimit(.minutes(1)))
+    func requestTimeoutDoesNotEmitLateRequest() async throws {
         let (fulcrum, transport) = try await makeStartedFulcrum()
         await transport.configureOutgoingSendDelay(.seconds(1))
         
         let baselineOutgoingCount = await transport.sentMessages.count
         
-        let submitTask = Task<SwiftFulcrum.Client.Error, Never> {
+        let requestTask = Task<SwiftFulcrum.Client.Error, Never> {
             do {
-                _ = try await fulcrum.submit(
+                _ = try await fulcrum.request(
                     method: .blockchain(.headers(.getTip)),
                     responseType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.GetTip.self,
                     options: .init(timeout: .milliseconds(100))
                 )
-                Issue.record("submit() should time out when send is delayed.")
+                Issue.record("request() should time out when send is delayed.")
                 return .client(.unknown(nil))
             } catch let error as SwiftFulcrum.Client.Error {
                 return error
@@ -84,7 +84,7 @@ struct ClientCancellationValidator {
             }
         }
         
-        let error = await submitTask.value
+        let error = await requestTask.value
         #expect(isTimeoutError(error))
         
         try? await Task.sleep(for: .milliseconds(1_200))

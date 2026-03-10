@@ -3,26 +3,27 @@
 import Foundation
 
 extension SwiftFulcrum.Client {
-    /// Issues a unary JSON-RPC request and waits for its decoded response.
+    /// Issues a unary JSON-RPC request and returns the decoded result payload.
     ///
     /// - Parameters:
     ///   - method: RPC method to invoke. Subscription methods are rejected.
     ///   - responseType: Expected result model for decoding.
     ///   - options: Optional timeout and cancellation controls. Cancelling the calling task cancels the request.
-    public func submit<RegularResponseResult: SwiftFulcrum.RPC.JSONRPCResponseAdapter>(
+    /// - Returns: The decoded Fulcrum result model for the requested method.
+    public func request<RegularResponseResult: SwiftFulcrum.RPC.JSONRPCResponseAdapter>(
         method: SwiftFulcrum.RPC.Method,
         responseType: RegularResponseResult.Type = RegularResponseResult.self,
         options: SwiftFulcrum.Client.Call.Options = .init()
-    ) async throws -> RPCResponse<RegularResponseResult, Never> {
+    ) async throws -> RegularResponseResult {
         if method.isSubscription {
-            throw SwiftFulcrum.Client.Error.client(.protocolMismatch("submit() cannot be used with subscription methods. Use subscribe(...)."))
+            throw SwiftFulcrum.Client.Error.client(.protocolMismatch("request() cannot be used with subscription methods. Use subscribe(...)."))
         }
         
         try await ensureClientIsReadyForRequests(within: options.timeout)
         
         do {
-            let (id, result): (UUID, RegularResponseResult) = try await client.call(method: method, options: options.clientOptions)
-            return .single(id: id, result: result)
+            let (_, result): (UUID, RegularResponseResult) = try await client.call(method: method, options: options.clientOptions)
+            return result
         } catch let fulcrumError as SwiftFulcrum.Client.Error {
             throw fulcrumError
         } catch {
@@ -38,6 +39,7 @@ extension SwiftFulcrum.Client {
     ///   - notificationType: Expected model for decoding subscription updates.
     ///   - options: Optional timeout and cancellation controls. Cancelling the calling task cancels the subscription setup.
     /// - Returns: The initial subscription payload, an update stream, and a cancellation closure tied to the subscription token.
+    ///   Reconnects preserve the active subscription intent so downstream callers do not need to resubscribe manually.
     public func subscribe<Initial: SwiftFulcrum.RPC.JSONRPCResponseAdapter, Notification: SwiftFulcrum.RPC.JSONRPCResponseAdapter>(
         method: SwiftFulcrum.RPC.Method,
         initialType: Initial.Type = Initial.self,
@@ -97,7 +99,7 @@ extension SwiftFulcrum.Client {
     ) {
         if !method.isSubscription {
             throw SwiftFulcrum.Client.Error.client(
-                .protocolMismatch("subscribe() requires subscription methods. Use submit(...) for unary calls.")
+                .protocolMismatch("subscribe() requires subscription methods. Use request(...) for unary calls.")
             )
         }
         
