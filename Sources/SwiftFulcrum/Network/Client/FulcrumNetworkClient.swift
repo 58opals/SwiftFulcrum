@@ -14,6 +14,7 @@ actor FulcrumNetworkClient {
     var state: State
     
     var subscriptionMethods: [SubscriptionKey: SwiftFulcrum.RPC.Method]
+    var subscriptionCleanupTasks: [SubscriptionKey: Task<Bool, Never>]
     
     var receiveTask: Task<Void, Never>?
     private var lifecycleTask: Task<Void, Never>?
@@ -37,6 +38,7 @@ actor FulcrumNetworkClient {
         self.router = .init()
         self.metrics = metrics
         self.subscriptionMethods = .init()
+        self.subscriptionCleanupTasks = .init()
         self.logger = logger ?? SwiftFulcrum.Logging.ConsoleAdapter()
         self.protocolNegotiation = protocolNegotiation
         self.state = .init()
