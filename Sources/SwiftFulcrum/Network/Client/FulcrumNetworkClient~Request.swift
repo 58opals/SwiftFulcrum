@@ -28,11 +28,9 @@ extension FulcrumNetworkClient {
         
         if let token = options.token {
             await token.register { [weak self] in
-                Task {
-                    callTask.cancel()
-                    guard let self else { return }
-                    await self.cancelUnary(id, error: SwiftFulcrum.Client.Error.client(.cancelled))
-                }
+                callTask.cancel()
+                guard let self else { return }
+                await self.cancelUnary(id, error: SwiftFulcrum.Client.Error.client(.cancelled))
             }
         }
         
@@ -164,19 +162,17 @@ extension FulcrumNetworkClient {
         if let token = options.token {
             let idCopy = id
             await token.register { [weak self] in
-                Task {
-                    subscriptionTask.cancel()
-                    guard let self else { return }
-                    let cleanupKey = SubscriptionKey(
-                        methodPath: subscriptionPath,
-                        identifier: subscriptionKey.identifier
-                    )
-                    await self.cleanUpSubscriptionSetup(
-                        for: cleanupKey,
-                        requestIdentifier: idCopy,
-                        error: SwiftFulcrum.Client.Error.client(.cancelled)
-                    )
-                }
+                subscriptionTask.cancel()
+                guard let self else { return }
+                let cleanupKey = SubscriptionKey(
+                    methodPath: subscriptionPath,
+                    identifier: subscriptionKey.identifier
+                )
+                await self.scheduleSubscriptionCleanup(
+                    for: cleanupKey,
+                    requestIdentifier: idCopy,
+                    error: SwiftFulcrum.Client.Error.client(.cancelled)
+                )
             }
         }
         

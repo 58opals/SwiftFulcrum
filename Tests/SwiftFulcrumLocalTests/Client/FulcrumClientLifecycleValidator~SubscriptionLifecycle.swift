@@ -6,10 +6,74 @@ import SwiftFulcrumTestSupport
 @testable import SwiftFulcrum
 
 extension FulcrumClientLifecycleValidator {
+    @Test("cancel() allows immediate same-key resubscribe", .timeLimit(.minutes(1)))
+    func cancellingSubscriptionAllowsImmediateSameKeyResubscribe() async throws {
+        let (fulcrum, transport) = try await makeStartedFulcrum()
+        let subscribeMethod = SwiftFulcrum.RPC.Method.blockchain(.headers(.subscribe))
+
+        let firstSubscribeTask = Task {
+            try await fulcrum.subscribe(
+                method: subscribeMethod,
+                initialType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe.self,
+                notificationType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification.self,
+                options: .init(timeout: .seconds(30))
+            )
+        }
+
+        let firstSubscribeRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
+        let firstSubscribeIdentifier = try requestIdentifier(from: firstSubscribeRequest)
+        let firstSubscribePayload = try TransportTestActor.encodeResponsePayload(
+            identifier: firstSubscribeIdentifier,
+            result: ["height": 925_000, "hex": String(repeating: "9", count: 160)]
+        )
+        await transport.enqueueIncoming(.data(firstSubscribePayload))
+
+        let (_, firstUpdates, firstCancel) = try await firstSubscribeTask.value
+        let baselineSubscribeCount = try await countSentMethodOccurrences(subscribeMethod.path, transport: transport)
+
+        await firstCancel()
+
+        let secondSubscribeTask = Task {
+            try await fulcrum.subscribe(
+                method: subscribeMethod,
+                initialType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe.self,
+                notificationType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification.self,
+                options: .init(timeout: .seconds(30))
+            )
+        }
+
+        let didSendSecondSubscribe = await waitUntil(timeout: .seconds(2)) {
+            let subscribeCount = (try? await countSentMethodOccurrences(
+                subscribeMethod.path,
+                transport: transport
+            )) ?? 0
+            return subscribeCount == baselineSubscribeCount + 1
+        }
+        #expect(didSendSecondSubscribe)
+
+        let secondSubscribeRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
+        let secondSubscribeIdentifier = try requestIdentifier(from: secondSubscribeRequest)
+        let secondSubscribePayload = try TransportTestActor.encodeResponsePayload(
+            identifier: secondSubscribeIdentifier,
+            result: ["height": 925_001, "hex": String(repeating: "a", count: 160)]
+        )
+        await transport.enqueueIncoming(.data(secondSubscribePayload))
+
+        let (secondInitial, secondUpdates, secondCancel) = try await secondSubscribeTask.value
+        #expect(secondInitial.height == 925_001)
+        #expect((await fulcrum.listSubscriptions()).count == 1)
+        #expect(await NetworkTestClient.detectStreamTermination(firstUpdates, within: .seconds(5)))
+
+        await secondCancel()
+        #expect(await NetworkTestClient.detectStreamTermination(secondUpdates, within: .seconds(5)))
+
+        await fulcrum.stop()
+    }
+
     @Test("dropping decoded updates stream triggers unsubscribe cleanup", .timeLimit(.minutes(1)))
     func droppingDecodedUpdatesStreamTriggersUnsubscribeCleanup() async throws {
         let (fulcrum, transport) = try await makeStartedFulcrum()
-        
+
         var subscribeTask: Task<
             (
                 SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe,
@@ -25,7 +89,7 @@ extension FulcrumClientLifecycleValidator {
                 options: .init(timeout: .seconds(30))
             )
         }
-        
+
         let subscribeRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
         let subscribeIdentifier = try requestIdentifier(from: subscribeRequest)
         let subscribePayload = try TransportTestActor.encodeResponsePayload(
@@ -48,7 +112,7 @@ extension FulcrumClientLifecycleValidator {
             updatesStream = subscription.1
         }
         subscribeTask = nil
-        
+
         let notificationPayload = try TransportTestActor.encodeSubscriptionNotification(
             method: SwiftFulcrum.RPC.Method.blockchain(.headers(.subscribe)).path,
             parameters: [[
@@ -57,7 +121,7 @@ extension FulcrumClientLifecycleValidator {
             ]]
         )
         await transport.enqueueIncoming(.data(notificationPayload))
-        
+
         guard updatesStream != nil else {
             Issue.record("Subscription should provide an updates stream")
             await fulcrum.stop()
@@ -65,7 +129,7 @@ extension FulcrumClientLifecycleValidator {
         }
         var transientUpdatesStream = updatesStream
         updatesStream = nil
-        
+
         var consumeFirstUpdateTask: Task<
             SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification?,
             Swift.Error
@@ -83,12 +147,12 @@ extension FulcrumClientLifecycleValidator {
         let firstUpdate = try await activeConsumeFirstUpdateTask.value
         consumeFirstUpdateTask = nil
         #expect(firstUpdate?.blocks.first?.height == 920_001)
-        
+
         let registryDidClear = await waitUntil(timeout: .seconds(5)) {
             (await fulcrum.listSubscriptions()).isEmpty
         }
         #expect(registryDidClear)
-        
+
         let unsubscribeMethodPath = SwiftFulcrum.RPC.Method.blockchain(.headers(.unsubscribe)).path
         let didSendUnsubscribe = await waitUntil(timeout: .seconds(5)) {
             let unsubscribeCount = (try? await countSentMethodOccurrences(
@@ -98,7 +162,7 @@ extension FulcrumClientLifecycleValidator {
             return unsubscribeCount > 0
         }
         #expect(didSendUnsubscribe)
-        
+
         await fulcrum.stop()
     }
 

@@ -42,11 +42,64 @@ extension FulcrumNetworkClient {
 
 extension FulcrumNetworkClient {
     func resubscribeStoredMethods() async {
-        for method in subscriptionMethods.values {
+        await awaitPendingSubscriptionCleanups()
+        let methods = Array(subscriptionMethods.values)
+        for method in methods {
             let requestID = UUID()
             let request = method.createRequest(with: requestID)
             try? await send(request: request)
         }
+    }
+}
+
+extension FulcrumNetworkClient {
+    func awaitPendingSubscriptionCleanup(for key: SubscriptionKey) async {
+        guard let task = subscriptionCleanupTasks[key] else { return }
+        _ = await task.value
+    }
+
+    func awaitPendingSubscriptionCleanups() async {
+        let tasks = Array(subscriptionCleanupTasks.values)
+        for task in tasks {
+            _ = await task.value
+        }
+    }
+
+    @discardableResult
+    func scheduleSubscriptionCleanup(
+        for subscriptionKey: SubscriptionKey,
+        requestIdentifier: UUID,
+        error: Swift.Error? = nil,
+        sendUnsubscribe: Bool = false
+    ) async -> Bool {
+        if let task = subscriptionCleanupTasks[subscriptionKey] {
+            return await task.value
+        }
+
+        let task = Task<Bool, Never> { [weak self] in
+            guard let self else { return false }
+
+            let didRemove = await self.cleanUpSubscriptionSetup(
+                for: subscriptionKey,
+                requestIdentifier: requestIdentifier,
+                error: error
+            )
+
+            guard sendUnsubscribe,
+                  didRemove,
+                  let method = await self.makeUnsubscribeMethod(for: subscriptionKey) else {
+                return didRemove
+            }
+
+            let request = method.createRequest(with: UUID())
+            try? await self.send(request: request)
+            return didRemove
+        }
+
+        subscriptionCleanupTasks[subscriptionKey] = task
+        let didRemove = await task.value
+        subscriptionCleanupTasks.removeValue(forKey: subscriptionKey)
+        return didRemove
     }
 }
 
@@ -56,16 +109,16 @@ extension FulcrumNetworkClient {
         guard subscriptionMethods.removeValue(forKey: key) != nil else { return false }
         return true
     }
-    
+
     @discardableResult
     func cleanUpSubscriptionSetup(for subscriptionKey: SubscriptionKey,
                                   requestIdentifier: UUID,
                                   error: Swift.Error? = nil) async -> Bool {
         let inflightCount = await router.cancel(identifier: .uuid(requestIdentifier), error: error)
         await router.cancel(identifier: .string(subscriptionKey.string), error: error)
-        
+
         let didRemove = await removeStoredSubscriptionMethod(for: subscriptionKey)
-        
+
         if didRemove {
             emitLog(.info,
                     "subscription_registry.removed",
@@ -77,9 +130,9 @@ extension FulcrumNetworkClient {
             )
             await publishSubscriptionRegistry()
         }
-        
+
         await publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightCount)
-        
+
         return didRemove
     }
 }
@@ -91,12 +144,14 @@ extension FulcrumNetworkClient {
         method: SwiftFulcrum.RPC.Method,
         requestIdentifier: UUID
     ) async throws {
+        await awaitPendingSubscriptionCleanup(for: subscriptionKey)
+        try Task.checkCancellation()
         try await router.addStream(
             key: subscriptionKey.string,
             continuation: rawContinuation
         )
         subscriptionMethods[subscriptionKey] = method
-        
+
         emitLog(.info,
                 "subscription_registry.added",
                 metadata: [
@@ -107,20 +162,16 @@ extension FulcrumNetworkClient {
         )
         await publishSubscriptionRegistry()
         await publishDiagnosticsSnapshot()
-        
+
         rawContinuation.onTermination = { @Sendable [weak self] _ in
             guard let self else { return }
-            
+
             Task {
-                let removed = await self.cleanUpSubscriptionSetup(
+                _ = await self.scheduleSubscriptionCleanup(
                     for: subscriptionKey,
-                    requestIdentifier: requestIdentifier
+                    requestIdentifier: requestIdentifier,
+                    sendUnsubscribe: true
                 )
-                
-                if removed, let method = await self.makeUnsubscribeMethod(for: subscriptionKey) {
-                    let request = method.createRequest(with: UUID())
-                    try? await self.send(request: request)
-                }
             }
         }
     }
