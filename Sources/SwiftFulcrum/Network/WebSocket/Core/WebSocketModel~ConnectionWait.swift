@@ -39,7 +39,44 @@ extension WebSocketModel {
         guard let task else {
             throw SwiftFulcrum.Client.Error.transport(.connectionClosed(closeInformation.code, closeInformation.reason))
         }
+
+        if let connectionEventTracker {
+            return try await waitForConnectionOpenEvent(
+                taskIdentifier: task.taskIdentifier,
+                timeout: timeout,
+                connectionEventTracker: connectionEventTracker
+            )
+        }
         
+        return try await waitForConnectionPong(task: task, timeout: timeout)
+    }
+    
+    private func waitForConnectionOpenEvent(
+        taskIdentifier: Int,
+        timeout: TimeInterval,
+        connectionEventTracker: WebSocketConnectionEventTracker
+    ) async throws -> Bool {
+        try await withThrowingTaskGroup(of: Bool.self) { group in
+            group.addTask {
+                try await connectionEventTracker.waitForOpen(taskIdentifier: taskIdentifier)
+                return true
+            }
+            
+            group.addTask {
+                try await Task.sleep(for: .seconds(timeout))
+                return false
+            }
+            
+            let winner = try await group.next() ?? false
+            group.cancelAll()
+            return winner
+        }
+    }
+    
+    private func waitForConnectionPong(
+        task: URLSessionWebSocketTask,
+        timeout: TimeInterval
+    ) async throws -> Bool {
         let (stream, continuation) = AsyncThrowingStream<Bool, Error>.makeStream()
         let currentURL = self.url
         let metrics = self.metrics
