@@ -34,6 +34,8 @@ actor WebSocketModel {
     let session: URLSession
     let connectionTimeout: TimeInterval
     let maximumMessageSize: Int
+    let connectionEventTracker: WebSocketConnectionEventTracker?
+    let sessionDelegateProxy: WebSocketSessionDelegateProxy?
     
     private let tlsDescriptor: TLSDescriptor?
     var metrics: SwiftFulcrum.Metrics.MetricsClient?
@@ -64,16 +66,23 @@ actor WebSocketModel {
         
         if let session = configuration.session {
             self.session = session
+            self.connectionEventTracker = nil
+            self.sessionDelegateProxy = nil
         } else {
             let sessionConfiguration = URLSessionConfiguration.default
-            sessionConfiguration.timeoutIntervalForRequest = connectionTimeout
-            sessionConfiguration.timeoutIntervalForResource = connectionTimeout
+            let connectionEventTracker = WebSocketConnectionEventTracker()
+            let sessionDelegateProxy = WebSocketSessionDelegateProxy(
+                connectionEventTracker: connectionEventTracker,
+                baseDelegate: configuration.tlsDescriptor?.delegate
+            )
             
-            if let descriptor = configuration.tlsDescriptor {
-                self.session = URLSession(configuration: sessionConfiguration, delegate: descriptor.delegate, delegateQueue: nil)
-            } else {
-                self.session = URLSession(configuration: sessionConfiguration)
-            }
+            self.connectionEventTracker = connectionEventTracker
+            self.sessionDelegateProxy = sessionDelegateProxy
+            self.session = URLSession(
+                configuration: sessionConfiguration,
+                delegate: sessionDelegateProxy,
+                delegateQueue: nil
+            )
         }
     }
 }

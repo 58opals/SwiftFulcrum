@@ -100,6 +100,9 @@ extension WebSocketModel {
         await cancelReceiverTask()
         
         let information = closeInformation
+        if let task {
+            await connectionEventTracker?.stopTracking(taskIdentifier: task.taskIdentifier)
+        }
         
         task?.cancel(with: .goingAway, reason: reason?.data(using: .utf8))
         task = nil

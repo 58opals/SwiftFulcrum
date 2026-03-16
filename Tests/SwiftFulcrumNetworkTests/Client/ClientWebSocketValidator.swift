@@ -69,4 +69,35 @@ struct ClientWebSocketValidator {
         #expect(terminated)
         #expect(await client.connectionState == .disconnected)
     }
+
+    @Test(
+        "SwiftFulcrum.Client remains usable after idling past connection timeout",
+        .timeLimit(.minutes(1)),
+        .enabled(if: TestExecutionPolicy.shouldRunNetwork, "Network tests are opt-in. Set SWIFTFULCRUM_RUN_NETWORK=1 to enable them.")
+    )
+    func remainUsableAfterIdlingPastConnectionTimeout() async throws {
+        let url = try await NetworkTestClient.pickServerURL()
+        let client = try await SwiftFulcrum.Client(
+            url: url.absoluteString,
+            configuration: .init(connectionTimeout: 2)
+        )
+
+        do {
+            try await client.start()
+            try await Task.sleep(for: .seconds(4))
+
+            let tip: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.GetTip = try await client.request(
+                method: .blockchain(.headers(.getTip)),
+                responseType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.GetTip.self,
+                options: .init(timeout: .seconds(15))
+            )
+
+            #expect(tip.height > 0)
+            #expect(await client.connectionState == .connected)
+            await client.stop()
+        } catch {
+            await client.stop()
+            throw error
+        }
+    }
 }
