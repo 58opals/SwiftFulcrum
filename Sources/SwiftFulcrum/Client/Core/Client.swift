@@ -4,9 +4,9 @@ import Foundation
 
 /// Actor-based entry point for interacting with Fulcrum servers over WebSocket JSON-RPC.
 ///
-/// Create an instance, call ``start()`` to establish connectivity, use ``request(...)`` for unary
-/// requests or ``subscribe(...)`` for streaming updates, and finish by invoking ``stop()`` to
-/// release resources.
+/// Create an instance, use ``request(...)`` for unary requests or ``subscribe(...)`` for streaming
+/// updates to lazily start the client when idle, and finish by invoking ``stop()`` to release
+/// resources. Call ``start()`` only when you need to establish connectivity ahead of time.
 extension SwiftFulcrum {
     public actor Client {
         let client: FulcrumNetworkClient
@@ -137,12 +137,17 @@ extension SwiftFulcrum {
     
     /// Forces a reconnect to the active or next available server while preserving subscription intent.
     ///
-    /// Only callable after ``start()`` has succeeded. The call suspends while the reconnection attempt
-    /// completes; cancelling the calling task cancels the in-flight reconnection. Active subscriptions
-    /// are restored by ``SwiftFulcrum.Client`` / `FulcrumNetworkClient`, so downstream callers should
-    /// not add a second manual resubscribe layer.
+    /// Call this only after ``start()`` has succeeded. If the client is not running, this method
+    /// throws a protocol mismatch error instead of returning silently. The call suspends while the
+    /// reconnection attempt and subscription restore requests complete; cancelling the calling task
+    /// cancels the in-flight reconnection. Successful restores remain active automatically, while a
+    /// server-rejected restore terminates only the affected subscription stream.
     public func reconnect() async throws {
-        guard self.isRunning else { return }
+        guard self.isRunning else {
+            throw SwiftFulcrum.Client.Error.client(
+                .protocolMismatch("reconnect() requires start() to succeed before reconnecting.")
+            )
+        }
         try await self.client.reconnect()
     }
     }

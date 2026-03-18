@@ -5,6 +5,18 @@ import Testing
 import SwiftFulcrumTestSupport
 @testable import SwiftFulcrum
 
+private actor ReconnectCompletionState {
+    private var completed = false
+
+    func markCompleted() {
+        completed = true
+    }
+
+    func isCompleted() -> Bool {
+        completed
+    }
+}
+
 extension FulcrumClientLifecycleValidator {
     @Test("reconnect cleanup allows immediate same-key resubscribe", .timeLimit(.minutes(1)))
     func reconnectCleanupAllowsImmediateSameKeyResubscribe() async throws {
@@ -69,6 +81,12 @@ extension FulcrumClientLifecycleValidator {
 
         let reconnectResubscribeRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
         #expect(reconnectResubscribeRequest["method"] as? String == subscribeMethod.path)
+        let reconnectResubscribeIdentifier = try requestIdentifier(from: reconnectResubscribeRequest)
+        let reconnectResubscribePayload = try TransportTestActor.encodeResponsePayload(
+            identifier: reconnectResubscribeIdentifier,
+            result: ["height": 940_000, "hex": String(repeating: "f", count: 160)]
+        )
+        await transport.enqueueIncoming(.data(reconnectResubscribePayload))
 
         await cancel()
 
@@ -159,8 +177,15 @@ extension FulcrumClientLifecycleValidator {
             transport: transport
         )
 
+        let reconnectCompletion = ReconnectCompletionState()
         let reconnectTask = Task {
-            try await fulcrum.reconnect()
+            do {
+                try await fulcrum.reconnect()
+                await reconnectCompletion.markCompleted()
+            } catch {
+                await reconnectCompletion.markCompleted()
+                throw error
+            }
         }
 
         let versionRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
@@ -187,8 +212,6 @@ extension FulcrumClientLifecycleValidator {
         )
         await transport.enqueueIncoming(.data(featuresPayload))
 
-        try await reconnectTask.value
-
         let didResubscribe = await waitUntil(timeout: .seconds(2)) {
             let subscribeCount = (try? await countSentMethodOccurrences(
                 subscribeMethodPath,
@@ -198,6 +221,22 @@ extension FulcrumClientLifecycleValidator {
         }
 
         #expect(didResubscribe)
+        let reconnectResubscribeRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
+        let reconnectResubscribeIdentifier = try requestIdentifier(from: reconnectResubscribeRequest)
+        #expect(reconnectResubscribeRequest["method"] as? String == subscribeMethodPath)
+
+        let didFinishBeforeAck = await waitUntil(timeout: .milliseconds(150)) {
+            await reconnectCompletion.isCompleted()
+        }
+        #expect(didFinishBeforeAck == false)
+
+        let reconnectResubscribePayload = try TransportTestActor.encodeResponsePayload(
+            identifier: reconnectResubscribeIdentifier,
+            result: ["height": 910_000, "hex": String(repeating: "c", count: 160)]
+        )
+        await transport.enqueueIncoming(.data(reconnectResubscribePayload))
+
+        try await reconnectTask.value
         #expect((await fulcrum.listSubscriptions()).count == 1)
 
         await cancel()
@@ -271,6 +310,14 @@ extension FulcrumClientLifecycleValidator {
         }
 
         #expect(didResubscribe)
+        let reconnectResubscribeRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
+        let reconnectResubscribeIdentifier = try requestIdentifier(from: reconnectResubscribeRequest)
+        #expect(reconnectResubscribeRequest["method"] as? String == subscribeMethodPath)
+        let reconnectResubscribePayload = try TransportTestActor.encodeResponsePayload(
+            identifier: reconnectResubscribeIdentifier,
+            result: ["height": 930_000, "hex": String(repeating: "f", count: 160)]
+        )
+        await transport.enqueueIncoming(.data(reconnectResubscribePayload))
         #expect((await fulcrum.listSubscriptions()).count == 1)
 
         let notificationPayload = try TransportTestActor.encodeSubscriptionNotification(
@@ -288,6 +335,205 @@ extension FulcrumClientLifecycleValidator {
 
         await cancel()
         #expect(await NetworkTestClient.detectStreamTermination(updates, within: .seconds(5)))
+        await fulcrum.stop()
+    }
+
+    @Test("reconnect restore error removes failed subscription and preserves others", .timeLimit(.minutes(1)))
+    func reconnectRestoreErrorRemovesFailedSubscriptionAndPreservesOthers() async throws {
+        let (fulcrum, transport) = try await makeStartedFulcrum()
+        let headersMethod = SwiftFulcrum.RPC.Method.blockchain(.headers(.subscribe))
+        let scripthashIdentifier = String(repeating: "b", count: 64)
+        let scripthashMethod = SwiftFulcrum.RPC.Method.blockchain(.scripthash(.subscribe(scripthash: scripthashIdentifier)))
+
+        let headersSubscribeTask = Task {
+            try await fulcrum.subscribe(
+                method: headersMethod,
+                initialType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe.self,
+                notificationType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification.self,
+                options: .init(timeout: .seconds(30))
+            )
+        }
+
+        let headersSubscribeRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
+        let headersSubscribeIdentifier = try requestIdentifier(from: headersSubscribeRequest)
+        let headersSubscribePayload = try TransportTestActor.encodeResponsePayload(
+            identifier: headersSubscribeIdentifier,
+            result: ["height": 950_000, "hex": String(repeating: "1", count: 160)]
+        )
+        await transport.enqueueIncoming(.data(headersSubscribePayload))
+        let (_, headersUpdates, headersCancel) = try await headersSubscribeTask.value
+
+        let scripthashSubscribeTask = Task {
+            try await fulcrum.subscribe(
+                method: scripthashMethod,
+                initialType: SwiftFulcrum.RPC.Response.Result.Blockchain.ScriptHash.Subscribe.self,
+                notificationType: SwiftFulcrum.RPC.Response.Result.Blockchain.ScriptHash.SubscribeNotification.self,
+                options: .init(timeout: .seconds(30))
+            )
+        }
+
+        let scripthashSubscribeRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
+        let scripthashSubscribeIdentifier = try requestIdentifier(from: scripthashSubscribeRequest)
+        let scripthashSubscribePayload = try TransportTestActor.encodeResponsePayload(
+            identifier: scripthashSubscribeIdentifier,
+            result: "confirmed-status"
+        )
+        await transport.enqueueIncoming(.data(scripthashSubscribePayload))
+        let (_, scripthashUpdates, _) = try await scripthashSubscribeTask.value
+
+        #expect((await fulcrum.listSubscriptions()).count == 2)
+
+        let reconnectTask = Task {
+            try await fulcrum.reconnect()
+        }
+
+        let versionRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
+        #expect(versionRequest["method"] as? String == "server.version")
+        let versionIdentifier = try requestIdentifier(from: versionRequest)
+        let versionPayload = try TransportTestActor.encodeResponsePayload(
+            identifier: versionIdentifier,
+            result: ["SwiftFulcrum.Client 2.0", "1.5.3"]
+        )
+        await transport.enqueueIncoming(.data(versionPayload))
+
+        let featuresRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
+        #expect(featuresRequest["method"] as? String == "server.features")
+        let featuresIdentifier = try requestIdentifier(from: featuresRequest)
+        let featuresPayload = try TransportTestActor.encodeResponsePayload(
+            identifier: featuresIdentifier,
+            result: [
+                "genesis_hash": String(repeating: "0", count: 64),
+                "hash_function": "sha256",
+                "server_version": "SwiftFulcrum.Client 2.0",
+                "protocol_max": "1.6.0",
+                "protocol_min": "1.4.0"
+            ]
+        )
+        await transport.enqueueIncoming(.data(featuresPayload))
+
+        for _ in 0..<2 {
+            let restoreRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
+            let restoreIdentifier = try requestIdentifier(from: restoreRequest)
+            let restoreMethodPath = try #require(restoreRequest["method"] as? String)
+
+            switch restoreMethodPath {
+            case headersMethod.path:
+                let restorePayload = try TransportTestActor.encodeResponsePayload(
+                    identifier: restoreIdentifier,
+                    result: ["height": 950_000, "hex": String(repeating: "1", count: 160)]
+                )
+                await transport.enqueueIncoming(.data(restorePayload))
+            case scripthashMethod.path:
+                let restorePayload = try TransportTestActor.encodeErrorPayload(
+                    identifier: restoreIdentifier,
+                    code: -32001,
+                    message: "restore rejected"
+                )
+                await transport.enqueueIncoming(.data(restorePayload))
+            default:
+                Issue.record("Unexpected restore request: \(restoreMethodPath)")
+            }
+        }
+
+        try await reconnectTask.value
+
+        let activeSubscriptions = await fulcrum.listSubscriptions()
+        #expect(activeSubscriptions.count == 1)
+        #expect(activeSubscriptions.first?.methodPath == headersMethod.path)
+
+        let failedRestoreError = await waitForStreamTerminalError(scripthashUpdates, within: .seconds(2))
+        guard case .rpc(let serverError) = failedRestoreError as? SwiftFulcrum.Client.Error else {
+            Issue.record("Expected failed restore to terminate with RPC error, got \(String(describing: failedRestoreError))")
+            await headersCancel()
+            await fulcrum.stop()
+            return
+        }
+        #expect(serverError.code == -32001)
+        #expect(serverError.message == "restore rejected")
+
+        let notificationPayload = try TransportTestActor.encodeSubscriptionNotification(
+            method: headersMethod.path,
+            parameters: [[
+                "height": 950_001,
+                "hex": String(repeating: "2", count: 160)
+            ]]
+        )
+        await transport.enqueueIncoming(.data(notificationPayload))
+
+        var headersIterator = headersUpdates.makeAsyncIterator()
+        let update = try await headersIterator.next()
+        #expect(update?.blocks.first?.height == 950_001)
+
+        await headersCancel()
+        #expect(await NetworkTestClient.detectStreamTermination(headersUpdates, within: .seconds(5)))
+        await fulcrum.stop()
+    }
+
+    @Test("reconnect restore send failure removes failed subscription", .timeLimit(.minutes(1)))
+    func reconnectRestoreSendFailureRemovesFailedSubscription() async throws {
+        let (fulcrum, transport) = try await makeStartedFulcrum()
+        let subscribeMethod = SwiftFulcrum.RPC.Method.blockchain(.headers(.subscribe))
+
+        let subscribeTask = Task {
+            try await fulcrum.subscribe(
+                method: subscribeMethod,
+                initialType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe.self,
+                notificationType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification.self,
+                options: .init(timeout: .seconds(30))
+            )
+        }
+
+        let subscribeRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
+        let subscribeIdentifier = try requestIdentifier(from: subscribeRequest)
+        let subscribePayload = try TransportTestActor.encodeResponsePayload(
+            identifier: subscribeIdentifier,
+            result: ["height": 960_000, "hex": String(repeating: "3", count: 160)]
+        )
+        await transport.enqueueIncoming(.data(subscribePayload))
+        let (_, updates, _) = try await subscribeTask.value
+
+        let sendFailure = SwiftFulcrum.Client.Error.transport(.reconnectFailed)
+        await transport.configureOutgoingSendFailure(sendFailure, forMethodPath: subscribeMethod.path)
+
+        let reconnectTask = Task {
+            try await fulcrum.reconnect()
+        }
+
+        let versionRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
+        #expect(versionRequest["method"] as? String == "server.version")
+        let versionIdentifier = try requestIdentifier(from: versionRequest)
+        let versionPayload = try TransportTestActor.encodeResponsePayload(
+            identifier: versionIdentifier,
+            result: ["SwiftFulcrum.Client 2.0", "1.5.3"]
+        )
+        await transport.enqueueIncoming(.data(versionPayload))
+
+        let featuresRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
+        #expect(featuresRequest["method"] as? String == "server.features")
+        let featuresIdentifier = try requestIdentifier(from: featuresRequest)
+        let featuresPayload = try TransportTestActor.encodeResponsePayload(
+            identifier: featuresIdentifier,
+            result: [
+                "genesis_hash": String(repeating: "0", count: 64),
+                "hash_function": "sha256",
+                "server_version": "SwiftFulcrum.Client 2.0",
+                "protocol_max": "1.6.0",
+                "protocol_min": "1.4.0"
+            ]
+        )
+        await transport.enqueueIncoming(.data(featuresPayload))
+
+        try await reconnectTask.value
+
+        #expect((await fulcrum.listSubscriptions()).isEmpty)
+
+        let terminalError = await waitForStreamTerminalError(updates, within: .seconds(2))
+        guard case .transport(.reconnectFailed) = terminalError as? SwiftFulcrum.Client.Error else {
+            Issue.record("Expected restore send failure to terminate with reconnectFailed, got \(String(describing: terminalError))")
+            await fulcrum.stop()
+            return
+        }
+
         await fulcrum.stop()
     }
 

@@ -14,7 +14,7 @@ extension FulcrumNetworkClient {
             do {
                 try Task.checkCancellation()
                 try await send(request: request)
-                return try await awaitUnaryResponse(from: responseStream)
+                return try await awaitUnaryResponse(from: responseStream, timeoutState: timeoutState)
             } catch {
                 if error is CancellationError {
                     let cancellationError = await makeRequestCancellationError(using: timeoutState)
@@ -40,11 +40,15 @@ extension FulcrumNetworkClient {
     }
 
     func awaitUnaryResponse(
-        from responseStream: AsyncThrowingStream<Data, Swift.Error>
+        from responseStream: AsyncThrowingStream<Data, Swift.Error>,
+        timeoutState: RequestTimeoutState? = nil
     ) async throws -> Data {
         var iterator = responseStream.makeAsyncIterator()
 
         guard let payload = try await iterator.next() else {
+            if let timeoutState, let timeoutError = await timeoutState.timeoutError {
+                throw timeoutError
+            }
             throw SwiftFulcrum.Client.Error.client(.cancelled)
         }
 

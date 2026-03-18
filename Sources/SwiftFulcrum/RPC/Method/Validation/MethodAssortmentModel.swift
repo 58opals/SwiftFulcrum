@@ -47,7 +47,7 @@ struct MethodAssortmentModel {
                 case .header(_, _): return
                 case .headers(_, _, _): return
                 }
-                // MARK: - Blockchain.HeaderModel
+                // MARK: - Blockchain.Header
             case .header(let header):
                 switch header {
                 case .get(_): return
@@ -123,7 +123,7 @@ struct MethodAssortmentModel {
             // MARK: - Blockchain.Block
         case "blockchain.block.header": return
         case "blockchain.block.headers": return
-            // MARK: - Blockchain.HeaderModel
+            // MARK: - Blockchain.Header
         case "blockchain.header.get": return
             // MARK: - Blockchain.Headers
         case "blockchain.headers.get_tip": return

@@ -65,8 +65,9 @@ Task {
 
 ## Subscription Recovery
 
-Active `subscribe(...)` registrations are persisted and restored by `SwiftFulcrum.Client` / `FulcrumNetworkClient`
-after failover or an explicit `reconnect()`. Downstream callers should not add a second manual resubscribe layer.
+Active `subscribe(...)` registrations are reissued by `SwiftFulcrum.Client` / `FulcrumNetworkClient`
+after failover or an explicit `reconnect()`. Successful restores remain active automatically; if a server
+rejects a restore, only the affected subscription terminates with error and is removed from the registry.
 
 ## Resource Files
 

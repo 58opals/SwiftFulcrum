@@ -12,6 +12,14 @@ extension TransportTestActor {
         outgoingSendDelay = delay
     }
 
+    func configureOutgoingSendFailure(_ error: Swift.Error?, forMethodPath methodPath: String) {
+        if let error {
+            outgoingSendFailuresByMethodPath[methodPath] = error
+        } else {
+            outgoingSendFailuresByMethodPath.removeValue(forKey: methodPath)
+        }
+    }
+
     func configureConnectDelay(_ delay: Duration?) {
         connectDelay = delay
     }

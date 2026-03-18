@@ -43,11 +43,53 @@ extension FulcrumNetworkClient {
 extension FulcrumNetworkClient {
     func resubscribeStoredMethods() async {
         await awaitPendingSubscriptionCleanups()
-        let methods = Array(subscriptionMethods.values)
-        for method in methods {
-            let requestID = UUID()
-            let request = method.createRequest(with: requestID)
-            try? await send(request: request)
+        let methods = Array(subscriptionMethods)
+        for (subscriptionKey, method) in methods {
+            await restoreStoredSubscription(method, for: subscriptionKey)
+        }
+    }
+}
+
+extension FulcrumNetworkClient {
+    func restoreStoredSubscription(_ method: SwiftFulcrum.RPC.Method, for subscriptionKey: SubscriptionKey) async {
+        let requestIdentifier = UUID()
+        let request = method.createRequest(with: requestIdentifier)
+
+        do {
+            let rawResponseStream = try await registerUnaryResponse(for: requestIdentifier)
+            try await send(request: request)
+            let rawResponse = try await awaitUnaryResponse(from: rawResponseStream)
+
+            switch try SwiftFulcrum.RPC.Response.JSONRPC.classifyErasedResponse(from: rawResponse) {
+            case .regular:
+                emitLog(.info,
+                        "subscription_registry.restored",
+                        metadata: [
+                            "identifier": subscriptionKey.identifier ?? "",
+                            "method": method.path
+                        ]
+                )
+            case .error(let error):
+                throw error
+            case .empty(let identifier):
+                throw SwiftFulcrum.Client.Error.client(.emptyResponse(identifier))
+            }
+        } catch {
+            let didRemove = await cleanUpSubscriptionSetup(
+                for: subscriptionKey,
+                requestIdentifier: requestIdentifier,
+                error: error
+            )
+
+            emitLog(.error,
+                    "subscription_registry.restore_failed",
+                    metadata: [
+                        "identifier": subscriptionKey.identifier ?? "",
+                        "method": method.path,
+                        "removed": String(didRemove),
+                        "error": error.localizedDescription
+                    ]
+            )
         }
     }
 }

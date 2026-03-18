@@ -25,6 +25,7 @@ actor TransportTestActor: TransportAdapter {
     private(set) var sentMessages: [URLSessionWebSocketTask.Message] = .init()
     var connectDelay: Duration?
     var outgoingSendDelay: Duration?
+    var outgoingSendFailuresByMethodPath: [String: Swift.Error] = .init()
 
     var reconnectFailure: Swift.Error?
     var reconnectAttempts = 0
@@ -60,11 +61,17 @@ actor TransportTestActor: TransportAdapter {
 
     func send(data: Data) async throws {
         try await applyOutgoingSendDelayIfNeeded()
+        if let error = consumeOutgoingSendFailure(from: data) {
+            throw error
+        }
         recordOutgoing(.data(data))
     }
 
     func send(string: String) async throws {
         try await applyOutgoingSendDelayIfNeeded()
+        if let data = string.data(using: .utf8), let error = consumeOutgoingSendFailure(from: data) {
+            throw error
+        }
         recordOutgoing(.string(string))
     }
 
@@ -148,6 +155,17 @@ actor TransportTestActor: TransportAdapter {
         sentMessages.append(message)
         outgoingQueue.append(message)
         resolvePendingOutgoingContinuations()
+    }
+
+    private func consumeOutgoingSendFailure(from data: Data) -> Swift.Error? {
+        guard
+            let jsonObject = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            let methodPath = jsonObject["method"] as? String
+        else {
+            return nil
+        }
+
+        return outgoingSendFailuresByMethodPath.removeValue(forKey: methodPath)
     }
     
     private func applyOutgoingSendDelayIfNeeded() async throws {

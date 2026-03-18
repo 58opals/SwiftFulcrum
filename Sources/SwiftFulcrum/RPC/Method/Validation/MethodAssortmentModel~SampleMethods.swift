@@ -92,7 +92,7 @@ extension MethodAssortmentModel {
                              count: 10,
                              checkpointHeight: 0))),
 
-            // Blockchain.HeaderModel
+            // Blockchain.Header
             .blockchain(
                 .header(
                     .get(blockHash: "0000000000000000029c2784e7453617ea6d8e73cbc91b293d06cf41cf3a5286"))),

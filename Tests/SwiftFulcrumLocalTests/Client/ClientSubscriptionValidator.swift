@@ -75,7 +75,7 @@ struct ClientSubscriptionValidator {
         let subscribeRequest = await transport.dequeueOutgoing()
         let subscribeRequestObject = try TransportTestActor.decodeJSONObject(from: subscribeRequest)
         guard let subscribeIdentifier = subscribeRequestObject["id"] as? String else {
-            Issue.record("SubscribeModel request is missing an identifier")
+            Issue.record("Subscribe request is missing an identifier")
             subscribeTask.cancel()
             await cancellationToken.cancel()
             await client.stop()

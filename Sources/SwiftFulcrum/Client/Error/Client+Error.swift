@@ -54,7 +54,7 @@ extension SwiftFulcrum.Client.Error.Network: Swift.Error, Equatable, Sendable {
     public static func == (lhs: SwiftFulcrum.Client.Error.Network, rhs: SwiftFulcrum.Client.Error.Network) -> Bool {
         switch (lhs, rhs) {
         case (.tlsNegotiationFailed(let leftError), .tlsNegotiationFailed(let rightError)):
-            return (leftError == nil && rightError == nil) || (leftError?.localizedDescription == rightError?.localizedDescription)
+            return wrappedErrorsAreEqual(leftError, rightError)
         }
     }
 }
@@ -79,9 +79,9 @@ extension SwiftFulcrum.Client.Error.CodingModel: Swift.Error, Equatable, Sendabl
     public static func == (lhs: SwiftFulcrum.Client.Error.CodingModel, rhs: SwiftFulcrum.Client.Error.CodingModel) -> Bool {
         switch (lhs, rhs) {
         case (.encode(let leftError), .encode(let rightError)):
-            return (leftError == nil && rightError == nil) || (leftError?.localizedDescription == rightError?.localizedDescription)
+            return wrappedErrorsAreEqual(leftError, rightError)
         case (.decode(let leftError), .decode(let rightError)):
-            return (leftError == nil && rightError == nil) || (leftError?.localizedDescription == rightError?.localizedDescription)
+            return wrappedErrorsAreEqual(leftError, rightError)
         default:
             return false
         }
@@ -114,9 +114,30 @@ extension SwiftFulcrum.Client.Error.ClientIssue: Swift.Error, Equatable, Sendabl
         ):
             return leftMinimum == rightMinimum && leftMaximum == rightMaximum
         case (.unknown(let leftError), .unknown(let rightError)):
-            return (leftError == nil && rightError == nil) || (leftError?.localizedDescription == rightError?.localizedDescription)
+            return wrappedErrorsAreEqual(leftError, rightError)
         default:
             return false
         }
     }
+}
+
+private func wrappedErrorsAreEqual(_ lhs: Swift.Error?, _ rhs: Swift.Error?) -> Bool {
+    wrappedErrorIdentity(lhs) == wrappedErrorIdentity(rhs)
+}
+
+private func wrappedErrorIdentity(_ error: Swift.Error?) -> WrappedErrorIdentity? {
+    guard let error else { return nil }
+
+    let nsError = error as NSError
+    return WrappedErrorIdentity(
+        typeName: String(reflecting: type(of: error)),
+        domain: nsError.domain,
+        code: nsError.code
+    )
+}
+
+private struct WrappedErrorIdentity: Equatable {
+    let typeName: String
+    let domain: String
+    let code: Int
 }

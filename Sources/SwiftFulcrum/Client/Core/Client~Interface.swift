@@ -39,7 +39,9 @@ extension SwiftFulcrum.Client {
     ///   - notificationType: Expected model for decoding subscription updates.
     ///   - options: Optional timeout and cancellation controls. Cancelling the calling task cancels the subscription setup.
     /// - Returns: The initial subscription payload, an update stream, and a cancellation closure tied to the subscription token.
-    ///   Reconnects preserve the active subscription intent so downstream callers do not need to resubscribe manually.
+    ///   Reconnect restore is best-effort, so downstream callers usually do not need to resubscribe
+    ///   manually. If a restore is rejected, the affected updates stream terminates and requires a
+    ///   fresh ``subscribe(...)`` call to resume.
     public func subscribe<Initial: Decodable & Sendable, Notification: Decodable & Sendable>(
         method: SwiftFulcrum.RPC.Method,
         initialType: Initial.Type = Initial.self,

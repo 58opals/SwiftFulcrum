@@ -10,8 +10,9 @@ extension WebSocketModel.Reconnector {
         let capped = min(base, configuration.maximumDelay)
         let jitteredSeconds = capped * jitter(configuration.jitterRange)
         let roundedSeconds = Self.roundToNanosecondPrecision(jitteredSeconds)
+        let finalSeconds = min(roundedSeconds, configuration.maximumDelay)
 
-        return .seconds(roundedSeconds)
+        return .seconds(finalSeconds)
     }
 
     private static func roundToNanosecondPrecision(_ seconds: Double) -> Double {
