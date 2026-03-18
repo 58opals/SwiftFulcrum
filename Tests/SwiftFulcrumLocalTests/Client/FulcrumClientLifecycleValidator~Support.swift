@@ -132,4 +132,32 @@ extension FulcrumClientLifecycleValidator {
         }
     }
 
+    func waitForStreamTerminalError<Element: Sendable>(
+        _ stream: AsyncThrowingStream<Element, Swift.Error>,
+        within timeout: Duration
+    ) async -> Swift.Error? {
+        await withTaskGroup(of: Swift.Error?.self) { group in
+            group.addTask {
+                var iterator = stream.makeAsyncIterator()
+                do {
+                    while let _ = try await iterator.next() {
+                        // Keep draining until the stream terminates.
+                    }
+                    return nil
+                } catch {
+                    return error
+                }
+            }
+
+            group.addTask {
+                try? await Task.sleep(for: timeout)
+                return SupportError.streamTerminationTimedOut
+            }
+
+            let result = await group.next() ?? SupportError.streamTerminationTimedOut
+            group.cancelAll()
+            return result
+        }
+    }
+
 }

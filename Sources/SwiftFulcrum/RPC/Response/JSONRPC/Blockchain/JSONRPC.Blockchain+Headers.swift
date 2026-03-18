@@ -29,7 +29,7 @@ extension SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain {
                         
                         throw DecodingError.typeMismatch(SubscribeParameters.self,
                                                          .init(codingPath: decoder.codingPath,
-                                                               debugDescription: "Expected top header's height and hex or new header's heights and hexes"))
+                                                               debugDescription: "Expected top header's height and hex or new headers' heights and hexes"))
                     }
         }
 

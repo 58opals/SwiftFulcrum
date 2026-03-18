@@ -7,6 +7,26 @@ import SwiftFulcrumTestSupport
 
 @Suite(.tags(.local))
 struct FulcrumClientLifecycleValidator {
+    @Test("reconnect() before start() throws protocol mismatch", .timeLimit(.minutes(1)))
+    func reconnectBeforeStartThrowsProtocolMismatch() async {
+        let transport = TransportTestActor()
+        let client = FulcrumNetworkClient(transport: transport, protocolNegotiation: .init())
+        let fulcrum = await SwiftFulcrum.Client(client: client)
+
+        do {
+            try await fulcrum.reconnect()
+            Issue.record("reconnect() should throw before start()")
+        } catch let error as SwiftFulcrum.Client.Error {
+            guard case .client(.protocolMismatch(let message)) = error else {
+                Issue.record("Expected protocol mismatch, got \(error)")
+                return
+            }
+            #expect(message == "reconnect() requires start() to succeed before reconnecting.")
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
     @Test("request(timeout:) throws timeout when unary response is missing", .timeLimit(.minutes(1)))
     func requestTimeoutWhenUnaryResponseMissing() async throws {
         let (fulcrum, transport) = try await makeStartedFulcrum()
@@ -20,11 +40,9 @@ struct FulcrumClientLifecycleValidator {
                 )
                 Issue.record("request() should time out when response is missing")
             } catch let error as SwiftFulcrum.Client.Error {
-                switch error {
-                case .client(.timeout), .client(.cancelled):
-                    break
-                default:
-                    Issue.record("Expected timeout-like terminal failure, got \(error)")
+                guard case .client(.timeout) = error else {
+                    Issue.record("Expected timeout, got \(error)")
+                    return
                 }
             } catch {
                 Issue.record("Unexpected error type: \(error)")

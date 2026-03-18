@@ -71,7 +71,8 @@ struct WebSocketConnectionValidator {
                 return
             }
 
-            #expect(forwardedError?.localizedDescription == expectedError.localizedDescription)
+            let forwardedURLError = try? #require(forwardedError as? URLError)
+            #expect(forwardedURLError?.code == expectedError.code)
         } catch {
             Issue.record("Unexpected error type: \(error)")
         }

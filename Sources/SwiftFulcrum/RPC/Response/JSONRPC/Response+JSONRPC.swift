@@ -47,6 +47,12 @@ extension SwiftFulcrum.RPC.Response.JSONRPC: Sendable {}
 extension SwiftFulcrum.RPC.Response.JSONRPC.Generic: Sendable where Payload: Sendable {}
 
 extension SwiftFulcrum.RPC.Response.JSONRPC {
+    enum ErasedResponseKind: Sendable {
+        case regular(UUID)
+        case error(SwiftFulcrum.Client.Error)
+        case empty(UUID?)
+    }
+
     static func extractIdentifier(from data: Data) throws -> SwiftFulcrum.RPC.Response.Identifier {
         let response = try JSONRPCCodec.Coder.decoder.decode(JSONRPCResponseDecodeModel.IdentifierEnvelopeModel.self, from: data)
         switch (response.id, response.method) {
@@ -57,6 +63,27 @@ extension SwiftFulcrum.RPC.Response.JSONRPC {
         default:
             throw JSONRPCResponseDecodeError.wrongResponseType
         }
+    }
+
+    static func classifyErasedResponse(from data: Data) throws -> ErasedResponseKind {
+        let response = try JSONRPCCodec.Coder.decoder.decode(
+            JSONRPCResponseDecodeModel.ErasedResponseEnvelopeModel.self,
+            from: data
+        )
+
+        if let id = response.id, response.error == nil, response.hasResult {
+            return .regular(id)
+        }
+
+        if let id = response.id, let error = response.error {
+            return .error(.rpc(.init(id: id, code: error.code, message: error.message)))
+        }
+
+        if let id = response.id {
+            return .empty(id)
+        }
+
+        throw JSONRPCResponseDecodeError.cannotIdentifyResponseType(response.id)
     }
 }
 

@@ -57,8 +57,10 @@ extension WebSocketReconnectorValidator {
 
         let minimumDelay = await minimumJitterReconnector.makeDelay(for: 1)
         let maximumDelay = await maximumJitterReconnector.makeDelay(for: 2)
+        let cappedDelay = await maximumJitterReconnector.makeDelay(for: 5)
 
         #expect(minimumDelay == .seconds(2.4))
         #expect(maximumDelay == .seconds(7.8))
+        #expect(cappedDelay == .seconds(30))
     }
 }
