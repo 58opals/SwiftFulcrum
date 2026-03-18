@@ -25,6 +25,8 @@ actor TransportTestActor: TransportAdapter {
     private(set) var sentMessages: [URLSessionWebSocketTask.Message] = .init()
     var connectDelay: Duration?
     var outgoingSendDelay: Duration?
+    var shouldPauseOutgoingSend = false
+    var pendingOutgoingSendGateContinuations: [CheckedContinuation<Void, Never>] = .init()
     var outgoingSendFailuresByMethodPath: [String: Swift.Error] = .init()
 
     var reconnectFailure: Swift.Error?
@@ -61,6 +63,7 @@ actor TransportTestActor: TransportAdapter {
 
     func send(data: Data) async throws {
         try await applyOutgoingSendDelayIfNeeded()
+        try await applyOutgoingSendPauseIfNeeded()
         if let error = consumeOutgoingSendFailure(from: data) {
             throw error
         }
@@ -69,6 +72,7 @@ actor TransportTestActor: TransportAdapter {
 
     func send(string: String) async throws {
         try await applyOutgoingSendDelayIfNeeded()
+        try await applyOutgoingSendPauseIfNeeded()
         if let data = string.data(using: .utf8), let error = consumeOutgoingSendFailure(from: data) {
             throw error
         }
@@ -172,10 +176,28 @@ actor TransportTestActor: TransportAdapter {
         guard let outgoingSendDelay else { return }
         try await Task.sleep(for: outgoingSendDelay)
     }
+
+    private func applyOutgoingSendPauseIfNeeded() async throws {
+        guard shouldPauseOutgoingSend else { return }
+
+        await withCheckedContinuation { continuation in
+            pendingOutgoingSendGateContinuations.append(continuation)
+        }
+        try Task.checkCancellation()
+    }
     
     private func applyConnectDelayIfNeeded() async throws {
         guard let connectDelay else { return }
         try await Task.sleep(for: connectDelay)
+    }
+
+    func resumePendingOutgoingSends() {
+        let continuations = pendingOutgoingSendGateContinuations
+        pendingOutgoingSendGateContinuations.removeAll(keepingCapacity: false)
+
+        for continuation in continuations {
+            continuation.resume()
+        }
     }
 
     private func resolvePendingOutgoingContinuations() {

@@ -108,6 +108,7 @@ extension FulcrumNetworkClient {
                         Initial.self,
                         context: .init(methodPath: method.path)
                     )
+                    clearSubscriptionSetupRequestIdentifier(id, for: subscriptionKey)
                     
                     let decodedStream = rawStream.decode(
                         Notification.self,

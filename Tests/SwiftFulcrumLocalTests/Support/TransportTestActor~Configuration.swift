@@ -12,6 +12,13 @@ extension TransportTestActor {
         outgoingSendDelay = delay
     }
 
+    func configureOutgoingSendPaused(_ isPaused: Bool) {
+        shouldPauseOutgoingSend = isPaused
+        if !isPaused {
+            resumePendingOutgoingSends()
+        }
+    }
+
     func configureOutgoingSendFailure(_ error: Swift.Error?, forMethodPath methodPath: String) {
         if let error {
             outgoingSendFailuresByMethodPath[methodPath] = error
@@ -26,5 +33,9 @@ extension TransportTestActor {
 
     func makeReconnectAttempts() -> Int {
         reconnectAttempts
+    }
+
+    func makePendingOutgoingSendCount() -> Int {
+        pendingOutgoingSendGateContinuations.count
     }
 }
