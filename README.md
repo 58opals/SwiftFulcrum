@@ -4,21 +4,47 @@
 
 # SwiftFulcrum
 
-SwiftFulcrum is a pure Swift, actor-based client for Fulcrum WebSocket JSON-RPC servers on the Bitcoin Cash network.
+SwiftFulcrum is the Swift/BCH network-layer package for talking to public Fulcrum servers over WebSocket JSON-RPC.
+It provides an actor-based client, typed RPC methods and result models, reconnect handling, and subscription recovery while staying focused on Fulcrum protocol responsibilities rather than wallet or app-domain logic.
+
+Start with `SwiftFulcrum.Client` when you need typed requests, typed response models, and resilient subscription handling from Apple-platform apps, packages, or tools.
+
+## Purpose and Boundaries
+
+- For Swift/BCH consumers that need a typed Fulcrum adapter, including direct downstream packages such as Opal Base
+- Owns Fulcrum transport, protocol modeling, reconnect behavior, bundled server catalogs, and client observability surfaces
+- Does not own wallet business logic, persistence, UI, or non-Fulcrum protocol expansion
+
+For deeper package context, audience, and integration expectations, see [docs/context.md](docs/context.md).
 
 ## Requirements
 
-- Swift 6.0+
-- iOS 18+, macOS 15+, watchOS 11+, tvOS 18+, visionOS 2+
+- Swift tools version: `6.0`
+- Platforms:
+  - `iOS 18`
+  - `macOS 15`
+  - `watchOS 11`
+  - `tvOS 18`
+  - `visionOS 2`
 
 ## Installation (Swift Package Manager)
 
 ```swift
 // Package.swift
 dependencies: [
-    .package(url: "https://github.com/58opals/SwiftFulcrum.git", .upToNextMajor(from: "0.5.0"))
+    .package(url: "https://github.com/58opals/SwiftFulcrum.git", from: "0.5.5")
+],
+targets: [
+    .target(
+        name: "YourApp",
+        dependencies: [
+            .product(name: "SwiftFulcrum", package: "SwiftFulcrum")
+        ]
+    )
 ]
 ```
+
+If you need unreleased changes, pin a branch or revision instead of a release tag.
 
 ## Quick Start
 
@@ -27,51 +53,34 @@ import SwiftFulcrum
 
 Task {
     do {
-        let fulcrum = try await SwiftFulcrum.Client()
-        try await fulcrum.start()
+        let client = try await SwiftFulcrum.Client()
 
-        let tip = try await fulcrum.request(
+        let tip = try await client.request(
             method: .blockchain(.headers(.getTip)),
             responseType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.GetTip.self
         )
         print("Best header height: \(tip.height)")
-
-        let (initial, updates, cancel) = try await fulcrum.subscribe(
-            method: .blockchain(.headers(.subscribe)),
-            initialType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe.self,
-            notificationType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification.self
-        )
-        print("Subscribed from height: \(initial.height)")
-
-        for try await update in updates.prefix(1) {
-            print("Received \(update.blocks.count) new header(s)")
-        }
-
-        await cancel()
-        await fulcrum.stop()
+        await client.stop()
     } catch {
-        print("Connection error: \(error)")
+        print("Fulcrum error: \(error)")
     }
 }
 ```
 
+`request(...)` starts the client automatically when idle. `SwiftFulcrum.Client()` uses the bundled mainnet server catalog by default; pass `url:` or `configuration:` when you need a fixed endpoint or different network settings.
+
 ## Core Capabilities
 
-- Typed RPC requests via `SwiftFulcrum.RPC.Method`
-- Typed response decoding via `SwiftFulcrum.RPC.Response.Result.*`
-- Automatic protocol negotiation (`server.version`)
-- Reconnect/failover with subscription recovery
-- Connection state streams and diagnostics snapshots
+- Actor-isolated `SwiftFulcrum.Client` entrypoint for unary requests and streaming subscriptions
+- Typed RPC methods via `SwiftFulcrum.RPC.Method`
+- Typed response models under `SwiftFulcrum.RPC.Response.Result.*`
+- Automatic protocol negotiation plus reconnect and failover with subscription recovery
+- Connection-state streams and diagnostics snapshots for observability
 
-## Subscription Recovery
+## Testing
 
-Active `subscribe(...)` registrations are reissued by `SwiftFulcrum.Client` / `FulcrumNetworkClient`
-after failover or an explicit `reconnect()`. Successful restores remain active automatically; if a server
-rejects a restore, only the affected subscription terminates with error and is removed from the registry.
+```bash
+swift test
+```
 
-## Resource Files
-
-The package includes server catalog resources used at runtime:
-
-- `Sources/SwiftFulcrum/Network/WebSocket/servers.mainnet.json`
-- `Sources/SwiftFulcrum/Network/WebSocket/servers.testnet.json`
+Set `SWIFTFULCRUM_RUN_NETWORK=1` to enable the opt-in network test suite.
