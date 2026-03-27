@@ -4,8 +4,18 @@
 
 # SwiftFulcrum
 
-SwiftFulcrum is a Swift package that provides an actor-based Fulcrum WebSocket JSON-RPC client for Bitcoin Cash.
-Start with `SwiftFulcrum.Client` when you need typed requests, typed response models, and resilient subscription handling from Apple-platform apps or tools.
+SwiftFulcrum is the Swift/BCH network-layer package for talking to public Fulcrum servers over WebSocket JSON-RPC.
+It provides an actor-based client, typed RPC methods and result models, reconnect handling, and subscription recovery while staying focused on Fulcrum protocol responsibilities rather than wallet or app-domain logic.
+
+Start with `SwiftFulcrum.Client` when you need typed requests, typed response models, and resilient subscription handling from Apple-platform apps, packages, or tools.
+
+## Purpose and Boundaries
+
+- For Swift/BCH consumers that need a typed Fulcrum adapter, including direct downstream packages such as Opal Base
+- Owns Fulcrum transport, protocol modeling, reconnect behavior, bundled server catalogs, and client observability surfaces
+- Does not own wallet business logic, persistence, UI, or non-Fulcrum protocol expansion
+
+For deeper package context, audience, and integration expectations, see [docs/context.md](docs/context.md).
 
 ## Requirements
 
