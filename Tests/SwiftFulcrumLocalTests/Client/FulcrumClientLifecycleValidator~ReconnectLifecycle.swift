@@ -12,7 +12,7 @@ private actor ReconnectCompletionState {
         completed = true
     }
 
-    func isCompleted() -> Bool {
+    var isCompleted: Bool {
         completed
     }
 }
@@ -226,7 +226,7 @@ extension FulcrumClientLifecycleValidator {
         #expect(reconnectResubscribeRequest["method"] as? String == subscribeMethodPath)
 
         let didFinishBeforeAck = await waitUntil(timeout: .milliseconds(150)) {
-            await reconnectCompletion.isCompleted()
+            await reconnectCompletion.isCompleted
         }
         #expect(didFinishBeforeAck == false)
 
@@ -306,14 +306,14 @@ extension FulcrumClientLifecycleValidator {
         #expect(restoreRequest["method"] as? String == subscribeMethod.path)
 
         let didFinishBeforeCancel = await waitUntil(timeout: .milliseconds(150)) {
-            await reconnectCompletion.isCompleted()
+            await reconnectCompletion.isCompleted
         }
         #expect(didFinishBeforeCancel == false)
 
         await cancel()
 
         let didReconnectFinish = await waitUntil(timeout: .seconds(2)) {
-            await reconnectCompletion.isCompleted()
+            await reconnectCompletion.isCompleted
         }
         #expect(didReconnectFinish)
 
@@ -399,7 +399,7 @@ extension FulcrumClientLifecycleValidator {
         #expect(didPauseRestoreSend)
 
         let didFinishBeforeCancel = await waitUntil(timeout: .milliseconds(150)) {
-            await reconnectCompletion.isCompleted()
+            await reconnectCompletion.isCompleted
         }
         #expect(didFinishBeforeCancel == false)
         #expect(await transport.sentMessages.count == baselineOutgoingCount)
@@ -415,7 +415,7 @@ extension FulcrumClientLifecycleValidator {
         await transport.configureOutgoingSendPaused(false)
 
         let didReconnectFinish = await waitUntil(timeout: .seconds(2)) {
-            await reconnectCompletion.isCompleted()
+            await reconnectCompletion.isCompleted
         }
         #expect(didReconnectFinish)
 

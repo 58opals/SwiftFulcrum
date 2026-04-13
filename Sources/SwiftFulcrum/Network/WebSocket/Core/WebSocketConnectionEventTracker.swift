@@ -1,3 +1,5 @@
+// WebSocketConnectionEventTracker.swift
+
 import Foundation
 
 actor WebSocketConnectionEventTracker {
