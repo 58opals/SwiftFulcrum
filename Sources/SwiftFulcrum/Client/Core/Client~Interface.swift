@@ -75,17 +75,41 @@ extension SwiftFulcrum.Client {
         if !isRunning {
             try await start()
         }
-        
+
         let state = await client.connectionState
-        
+        await updateConnectionState(state)
+
         switch state {
         case .connected:
             return
-        case .connecting, .idle, .reconnecting:
+        case .connecting:
+            try await waitForClientConnectionToBecomeReady()
+        case .reconnecting:
+            try await client.awaitReconnectReadiness()
+        case .idle:
             try await client.start()
         case .disconnected:
             try await client.reconnect()
         }
+    }
+
+    private func waitForClientConnectionToBecomeReady() async throws {
+        for await state in makeConnectionStateStream() {
+            switch state {
+            case .connected:
+                return
+            case .idle:
+                try await client.start()
+                return
+            case .disconnected:
+                try await client.reconnect()
+                return
+            case .connecting, .reconnecting:
+                continue
+            }
+        }
+        
+        throw CancellationError()
     }
     
     private func makeSubscription<Initial: Decodable & Sendable, Notification: Decodable & Sendable>(

@@ -19,6 +19,7 @@ actor FulcrumNetworkClient {
     var subscriptionSetupTasks: [SubscriptionKey: Task<Void, Swift.Error>]
     
     var receiveTask: Task<Void, Never>?
+    private var reconnectTask: Task<Void, Swift.Error>?
     private var lifecycleTask: Task<Void, Never>?
     private var diagnosticsStateTask: Task<Void, Never>?
     
@@ -74,6 +75,12 @@ actor FulcrumNetworkClient {
     }
     
     func stop() async {
+        if let reconnectTask {
+            reconnectTask.cancel()
+            _ = try? await reconnectTask.value
+            self.reconnectTask = nil
+        }
+
         let info = await transport.closeInformation
         let closedError = await SwiftFulcrum.Client.Error.transport(.connectionClosed(info.code, info.reason))
         let inflightCount = await router.failAll(with: closedError)
@@ -86,29 +93,49 @@ actor FulcrumNetworkClient {
     }
     
     func reconnect(with url: URL? = nil) async throws {
-        await cancelBackgroundTasks()
-        resetNegotiatedSession()
-        try await transport.reconnect(with: url)
-        startReceivingTask()
-        
-        do {
-            _ = try await ensureNegotiatedProtocol()
-            emitLog(.info, "client.reconnect_resubscribe.begin")
-            await resubscribeStoredMethods()
-            emitLog(.info,
-                    "client.reconnect_resubscribe.end",
-                    metadata: ["count": String(subscriptionMethods.count)])
-            startLifecycleObservationTasks()
-            await publishDiagnosticsSnapshot()
-        } catch {
-            await cancelBackgroundTasks()
-            await transport.disconnect(with: "FulcrumNetworkClient.reconnect() negotiation failed")
-            throw error
+        if let reconnectTask {
+            return try await reconnectTask.value
         }
+
+        let reconnectTask = Task<Void, Swift.Error> { [weak self] in
+            guard let self else { throw CancellationError() }
+
+            await self.cancelBackgroundTasks()
+            await self.resetNegotiatedSession()
+            try await self.transport.reconnect(with: url)
+            await self.startReceivingTask()
+
+            do {
+                _ = try await self.ensureNegotiatedProtocol()
+                await self.emitLog(.info, "client.reconnect_resubscribe.begin")
+                await self.resubscribeStoredMethods()
+                await self.emitLog(.info,
+                                   "client.reconnect_resubscribe.end",
+                                   metadata: ["count": String(self.subscriptionMethods.count)])
+                await self.startLifecycleObservationTasks()
+                await self.publishDiagnosticsSnapshot()
+            } catch {
+                await self.cancelBackgroundTasks()
+                await self.transport.disconnect(with: "FulcrumNetworkClient.reconnect() negotiation failed")
+                throw error
+            }
+        }
+
+        self.reconnectTask = reconnectTask
+        defer {
+            self.reconnectTask = nil
+        }
+
+        try await reconnectTask.value
     }
     
     func makeConnectionStateEvents() async -> AsyncStream<SwiftFulcrum.Client.ConnectionState> {
         await transport.makeConnectionStateEvents()
+    }
+
+    func awaitReconnectReadiness() async throws {
+        guard let reconnectTask else { return }
+        try await reconnectTask.value
     }
     
     private func startReceivingTask() {
