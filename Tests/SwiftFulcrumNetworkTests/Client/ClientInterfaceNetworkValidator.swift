@@ -5,7 +5,8 @@ import Testing
 import SwiftFulcrumTestSupport
 @testable import SwiftFulcrum
 
-@Suite(.tags(.network))
+extension SwiftFulcrumNetworkValidators {
+@Suite(.serialized, .tags(.network))
 struct ClientInterfaceNetworkValidator {
     private static let testAddress = "bitcoincash:qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a"
 
@@ -144,22 +145,28 @@ struct ClientInterfaceNetworkValidator {
 
             print("Current tip height: \(initial.height)")
 
-            var updateCount = 0
+            var observedUpdateCount = 0
             for try await update in updates {
-                if updateCount == 0 {
-                    print("Subscription identifier (method): \(update.subscriptionIdentifier)")
-                    print("Number of blocks: \(update.blocks.count)")
-                    for block in update.blocks {
-                        #expect(block.height > 0)
-                        #expect(block.hex.count == 160)
+                #expect(
+                    update.subscriptionIdentifier
+                        == SwiftFulcrum.RPC.Method.blockchain(.headers(.subscribe)).path
+                )
+                _ = try #require(update.blocks.first)
 
-                        print("\(block.height): \(block.hex)")
-                    }
-                    updateCount += 1
+                print("Subscription identifier (method): \(update.subscriptionIdentifier)")
+                print("Number of blocks: \(update.blocks.count)")
+                for block in update.blocks {
+                    #expect(block.height > 0)
+                    #expect(block.hex.count == 160)
+
+                    print("\(block.height): \(block.hex)")
                 }
+                observedUpdateCount += 1
 
                 break
             }
+
+            #expect(observedUpdateCount == 1)
 
             await subscription.cancel()
 
@@ -227,4 +234,5 @@ struct ClientInterfaceNetworkValidator {
             }
         }
     }
+}
 }

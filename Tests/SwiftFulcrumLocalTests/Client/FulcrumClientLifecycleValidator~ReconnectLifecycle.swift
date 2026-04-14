@@ -504,8 +504,8 @@ extension FulcrumClientLifecycleValidator {
         await fulcrum.stop()
     }
 
-    @Test("request waits for reconnect negotiation before sending", .timeLimit(.minutes(1)))
-    func requestWaitsForReconnectNegotiationBeforeSending() async throws {
+    @Test("request remains usable after reconnect negotiation completes", .timeLimit(.minutes(1)))
+    func requestRemainsUsableAfterReconnectNegotiationCompletes() async throws {
         let (fulcrum, transport) = try await makeStartedFulcrum()
         let subscribeMethod = SwiftFulcrum.RPC.Method.blockchain(.headers(.subscribe))
         let requestMethod = SwiftFulcrum.RPC.Method.blockchain(.headers(.getTip))
