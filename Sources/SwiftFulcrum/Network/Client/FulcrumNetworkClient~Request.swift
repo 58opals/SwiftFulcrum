@@ -25,42 +25,59 @@ extension FulcrumNetworkClient {
         let callTask = Task<Data, Swift.Error> {
             try await executeUnaryRequest(id: id, request: request, timeoutState: timeoutState)
         }
-        
-        if let token = options.token {
-            await token.register { [weak self] in
-                callTask.cancel()
-                guard let self else { return }
-                await self.cancelUnary(id, error: SwiftFulcrum.Client.Error.client(.cancelled))
-            }
-        }
-        
-        if let token = options.token, await token.isCancelled {
-            callTask.cancel()
-            await self.cancelUnary(id, error: SwiftFulcrum.Client.Error.client(.cancelled))
-            throw SwiftFulcrum.Client.Error.client(.cancelled)
-        }
-        
+
         let raw: Data
-        if let limit = options.timeout {
-            let timeoutError = SwiftFulcrum.Client.Error.client(.timeout(limit))
-            raw = try await withThrowingTaskGroup(of: Data.self) { group in
-                group.addTask { try await callTask.value }
-                group.addTask {
-                    try await Task.sleep(for: limit)
-                    await timeoutState.mark(timeoutError)
-                    callTask.cancel()
-                    await self.cancelUnary(id, error: timeoutError)
-                    throw timeoutError
+        do {
+            raw = try await withTaskCancellationHandler {
+                if let token = options.token {
+                    await token.register { [weak self] in
+                        callTask.cancel()
+                        guard let self else { return }
+                        let cancellationError = await self.makeRequestCancellationError(using: timeoutState)
+                        await self.cancelUnary(id, error: cancellationError)
+                    }
                 }
-                
-                let value = try await group.next()!
-                group.cancelAll()
-                return value
+
+                if let token = options.token, await token.isCancelled {
+                    let cancellationError = await self.makeRequestCancellationError(using: timeoutState)
+                    callTask.cancel()
+                    await self.cancelUnary(id, error: cancellationError)
+                    throw cancellationError
+                }
+
+                if let limit = options.timeout {
+                    let timeoutError = SwiftFulcrum.Client.Error.client(.timeout(limit))
+                    return try await withThrowingTaskGroup(of: Data.self) { group in
+                        group.addTask { try await callTask.value }
+                        group.addTask {
+                            try await Task.sleep(for: limit)
+                            await timeoutState.mark(timeoutError)
+                            callTask.cancel()
+                            await self.cancelUnary(id, error: timeoutError)
+                            throw timeoutError
+                        }
+
+                        let value = try await group.next()!
+                        group.cancelAll()
+                        return value
+                    }
+                }
+
+                return try await callTask.value
+            } onCancel: {
+                Task {
+                    let cancellationError = await self.makeRequestCancellationError(using: timeoutState)
+                    callTask.cancel()
+                    await self.cancelUnary(id, error: cancellationError)
+                }
             }
-        } else {
-            raw = try await callTask.value
+        } catch {
+            if error is CancellationError {
+                throw await makeRequestCancellationError(using: timeoutState)
+            }
+            throw error
         }
-        
+
         return try (id, raw.decode(ResponsePayload.self, context: .init(methodPath: method.path)))
     }
     
@@ -159,58 +176,79 @@ extension FulcrumNetworkClient {
                 throw resolvedError
             }
         }
-        
-        if let token = options.token {
-            let idCopy = id
-            await token.register { [weak self] in
-                subscriptionTask.cancel()
-                guard let self else { return }
-                let cleanupKey = SubscriptionKey(
-                    methodPath: subscriptionPath,
-                    identifier: subscriptionKey.identifier
-                )
-                await self.scheduleSubscriptionCleanup(
-                    for: cleanupKey,
-                    requestIdentifier: idCopy,
-                    error: SwiftFulcrum.Client.Error.client(.cancelled)
-                )
-            }
-        }
-        
-        if let token = options.token, await token.isCancelled {
-            subscriptionTask.cancel()
-            await self.cleanUpSubscriptionSetup(
-                for: subscriptionKey,
-                requestIdentifier: id,
-                error: SwiftFulcrum.Client.Error.client(.cancelled)
-            )
-            throw SwiftFulcrum.Client.Error.client(.cancelled)
-        }
-        
-        if let limit = options.timeout {
-            let timeoutError = SwiftFulcrum.Client.Error.client(.timeout(limit))
-            return try await withThrowingTaskGroup(
-                of: (UUID, Initial, AsyncThrowingStream<Notification, Swift.Error>).self
-            ) { group in
-                group.addTask { try await subscriptionTask.value }
-                group.addTask {
-                    try await Task.sleep(for: limit)
-                    await timeoutState.mark(timeoutError)
+
+        do {
+            return try await withTaskCancellationHandler {
+                if let token = options.token {
+                    let idCopy = id
+                    await token.register { [weak self] in
+                        subscriptionTask.cancel()
+                        guard let self else { return }
+                        let cleanupKey = SubscriptionKey(
+                            methodPath: subscriptionPath,
+                            identifier: subscriptionKey.identifier
+                        )
+                        let cancellationError = await self.makeRequestCancellationError(using: timeoutState)
+                        await self.scheduleSubscriptionCleanup(
+                            for: cleanupKey,
+                            requestIdentifier: idCopy,
+                            error: cancellationError
+                        )
+                    }
+                }
+
+                if let token = options.token, await token.isCancelled {
+                    let cancellationError = await self.makeRequestCancellationError(using: timeoutState)
                     subscriptionTask.cancel()
                     await self.cleanUpSubscriptionSetup(
                         for: subscriptionKey,
                         requestIdentifier: id,
-                        error: timeoutError
+                        error: cancellationError
                     )
-                    throw timeoutError
+                    throw cancellationError
                 }
-                
-                let value = try await group.next()!
-                group.cancelAll()
-                return value
+
+                if let limit = options.timeout {
+                    let timeoutError = SwiftFulcrum.Client.Error.client(.timeout(limit))
+                    return try await withThrowingTaskGroup(
+                        of: (UUID, Initial, AsyncThrowingStream<Notification, Swift.Error>).self
+                    ) { group in
+                        group.addTask { try await subscriptionTask.value }
+                        group.addTask {
+                            try await Task.sleep(for: limit)
+                            await timeoutState.mark(timeoutError)
+                            subscriptionTask.cancel()
+                            await self.cleanUpSubscriptionSetup(
+                                for: subscriptionKey,
+                                requestIdentifier: id,
+                                error: timeoutError
+                            )
+                            throw timeoutError
+                        }
+
+                        let value = try await group.next()!
+                        group.cancelAll()
+                        return value
+                    }
+                }
+
+                return try await subscriptionTask.value
+            } onCancel: {
+                Task {
+                    let cancellationError = await self.makeRequestCancellationError(using: timeoutState)
+                    subscriptionTask.cancel()
+                    await self.cleanUpSubscriptionSetup(
+                        for: subscriptionKey,
+                        requestIdentifier: id,
+                        error: cancellationError
+                    )
+                }
             }
-        } else {
-            return try await subscriptionTask.value
+        } catch {
+            if error is CancellationError {
+                throw await makeRequestCancellationError(using: timeoutState)
+            }
+            throw error
         }
     }
 }

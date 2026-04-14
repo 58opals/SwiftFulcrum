@@ -5,7 +5,8 @@ import Testing
 import SwiftFulcrumTestSupport
 @testable import SwiftFulcrum
 
-@Suite(.tags(.network))
+extension SwiftFulcrumNetworkValidators {
+@Suite(.serialized, .tags(.network))
 struct ClientInterfaceNetworkValidator {
     private static let testAddress = "bitcoincash:qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a"
 
@@ -37,7 +38,7 @@ struct ClientInterfaceNetworkValidator {
     )
     func requestAndStartClientWhenIdle() async throws {
         let url = try await NetworkTestClient.pickServerURL()
-        let client = try await SwiftFulcrum.Client(url: url.absoluteString)
+        let client = try await SwiftFulcrum.Client(connectingTo: url)
 
         // Avoid calling start() directly to exercise prepareClientForRequests.
         let tip = try await client.request(
@@ -63,17 +64,20 @@ struct ClientInterfaceNetworkValidator {
         let cancellation = SwiftFulcrum.Client.Call.Cancellation()
 
         try await NetworkTestClient.runWithClient(url) { client in
-            let (initial, updates, cancel) = try await client.subscribe(
+            let subscription: SwiftFulcrum.Client.Subscription<
+                SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe,
+                SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification
+            > = try await client.subscribe(
                 method: .blockchain(.headers(.subscribe)),
-                initialType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe.self,
-                notificationType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification.self,
                 options: .init(timeout: .seconds(30), cancellation: cancellation)
             )
+            let initial = subscription.initial
+            let updates = subscription.updates
 
             #expect(initial.height > 0)
             #expect(initial.hex.count == 160)
 
-            await cancel()
+            await subscription.cancel()
 
             #expect(await cancellation.isCancelled)
 
@@ -94,17 +98,20 @@ struct ClientInterfaceNetworkValidator {
         let url = try await NetworkTestClient.pickServerURL()
 
         try await NetworkTestClient.runWithClient(url) { client in
-            let (initial, updates, cancel) = try await client.subscribe(
+            let subscription: SwiftFulcrum.Client.Subscription<
+                SwiftFulcrum.RPC.Response.Result.Blockchain.Address.Subscribe,
+                SwiftFulcrum.RPC.Response.Result.Blockchain.Address.SubscribeNotification
+            > = try await client.subscribe(
                 method: .blockchain(.address(.subscribe(address: Self.testAddress))),
-                initialType: SwiftFulcrum.RPC.Response.Result.Blockchain.Address.Subscribe.self,
-                notificationType: SwiftFulcrum.RPC.Response.Result.Blockchain.Address.SubscribeNotification.self,
                 options: .init(timeout: .seconds(30))
             )
+            let initial = subscription.initial
+            let updates = subscription.updates
 
             // nil is valid for never-seen addresses; if present, it should be non-empty.
             #expect(initial.status?.isEmpty != true)
 
-            await cancel()
+            await subscription.cancel()
 
             let terminated = await NetworkTestClient.detectStreamTermination(
                 updates,
@@ -123,36 +130,45 @@ struct ClientInterfaceNetworkValidator {
         let url = try await NetworkTestClient.pickServerURL()
 
         try await NetworkTestClient.runWithClient(url) { client in
-            let (initial, updates, cancel) = try await client.subscribe(
+            let subscription: SwiftFulcrum.Client.Subscription<
+                SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe,
+                SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification
+            > = try await client.subscribe(
                 method: .blockchain(.headers(.subscribe)),
-                initialType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe.self,
-                notificationType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification.self,
                 options: .init(timeout: .seconds(30))
             )
+            let initial = subscription.initial
+            let updates = subscription.updates
 
             #expect(initial.height > 0)
             #expect(initial.hex.count == 160)
 
             print("Current tip height: \(initial.height)")
 
-            var updateCount = 0
+            var observedUpdateCount = 0
             for try await update in updates {
-                if updateCount == 0 {
-                    print("Subscription identifier (method): \(update.subscriptionIdentifier)")
-                    print("Number of blocks: \(update.blocks.count)")
-                    for block in update.blocks {
-                        #expect(block.height > 0)
-                        #expect(block.hex.count == 160)
+                #expect(
+                    update.subscriptionIdentifier
+                        == SwiftFulcrum.RPC.Method.blockchain(.headers(.subscribe)).path
+                )
+                _ = try #require(update.blocks.first)
 
-                        print("\(block.height): \(block.hex)")
-                    }
-                    updateCount += 1
+                print("Subscription identifier (method): \(update.subscriptionIdentifier)")
+                print("Number of blocks: \(update.blocks.count)")
+                for block in update.blocks {
+                    #expect(block.height > 0)
+                    #expect(block.hex.count == 160)
+
+                    print("\(block.height): \(block.hex)")
                 }
+                observedUpdateCount += 1
 
                 break
             }
 
-            await cancel()
+            #expect(observedUpdateCount == 1)
+
+            await subscription.cancel()
 
             let terminated = await NetworkTestClient.detectStreamTermination(
                 updates,
@@ -218,4 +234,5 @@ struct ClientInterfaceNetworkValidator {
             }
         }
     }
+}
 }

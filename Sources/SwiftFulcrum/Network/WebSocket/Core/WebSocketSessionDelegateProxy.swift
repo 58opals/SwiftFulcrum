@@ -1,3 +1,5 @@
+// WebSocketSessionDelegateProxy.swift
+
 import Foundation
 
 final class WebSocketSessionDelegateProxy: NSObject, URLSessionWebSocketDelegate {

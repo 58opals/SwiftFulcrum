@@ -12,7 +12,7 @@ struct ClientInterfaceLocalValidator {
     @Test("Unary request rejects subscription methods", .timeLimit(.minutes(1)))
     func rejectSubscriptionMethodsOnRequest() async throws {
         // No network dependency: request() should reject before attempting to connect.
-        let client = try await SwiftFulcrum.Client(url: "ws://example.com")
+        let client = try await SwiftFulcrum.Client(connectingTo: try #require(URL(string: "ws://example.com")))
 
         let subscriptionMethods: [SwiftFulcrum.RPC.Method] = [
             .blockchain(.headers(.subscribe)),
@@ -97,7 +97,7 @@ struct ClientInterfaceLocalValidator {
     @Test("subscribe rejects unary methods", .timeLimit(.minutes(1)))
     func rejectUnaryMethodsOnSubscribe() async throws {
         // No network dependency: subscribe() should reject before attempting to connect.
-        let client = try await SwiftFulcrum.Client(url: "ws://example.com")
+        let client = try await SwiftFulcrum.Client(connectingTo: try #require(URL(string: "ws://example.com")))
 
         let unaryMethods: [SwiftFulcrum.RPC.Method] = [
             .blockchain(.headers(.getTip)),
@@ -108,8 +108,8 @@ struct ClientInterfaceLocalValidator {
             do {
                 _ = try await client.subscribe(
                     method: method,
-                    initialType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe.self,
-                    notificationType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification.self
+                    initial: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe.self,
+                    notifications: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification.self
                 )
                 Issue.record("subscribe() should reject unary methods (method: \(method))")
             } catch let error as SwiftFulcrum.Client.Error {

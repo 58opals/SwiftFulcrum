@@ -14,8 +14,8 @@ extension FulcrumClientLifecycleValidator {
         let firstSubscribeTask = Task {
             try await fulcrum.subscribe(
                 method: subscribeMethod,
-                initialType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe.self,
-                notificationType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification.self,
+                initial: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe.self,
+                notifications: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification.self,
                 options: .init(timeout: .seconds(30))
             )
         }
@@ -28,16 +28,17 @@ extension FulcrumClientLifecycleValidator {
         )
         await transport.enqueueIncoming(.data(firstSubscribePayload))
 
-        let (_, firstUpdates, firstCancel) = try await firstSubscribeTask.value
+        let firstSubscription = try await firstSubscribeTask.value
+        let firstUpdates = firstSubscription.updates
         let baselineSubscribeCount = try await countSentMethodOccurrences(subscribeMethod.path, transport: transport)
 
-        await firstCancel()
+        await firstSubscription.cancel()
 
         let secondSubscribeTask = Task {
             try await fulcrum.subscribe(
                 method: subscribeMethod,
-                initialType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe.self,
-                notificationType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification.self,
+                initial: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe.self,
+                notifications: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification.self,
                 options: .init(timeout: .seconds(30))
             )
         }
@@ -59,13 +60,13 @@ extension FulcrumClientLifecycleValidator {
         )
         await transport.enqueueIncoming(.data(secondSubscribePayload))
 
-        let (secondInitial, secondUpdates, secondCancel) = try await secondSubscribeTask.value
-        #expect(secondInitial.height == 925_001)
+        let secondSubscription = try await secondSubscribeTask.value
+        #expect(secondSubscription.initial.height == 925_001)
         #expect((await fulcrum.listSubscriptions()).count == 1)
         #expect(await NetworkTestClient.detectStreamTermination(firstUpdates, within: .seconds(5)))
 
-        await secondCancel()
-        #expect(await NetworkTestClient.detectStreamTermination(secondUpdates, within: .seconds(5)))
+        await secondSubscription.cancel()
+        #expect(await NetworkTestClient.detectStreamTermination(secondSubscription.updates, within: .seconds(5)))
 
         await fulcrum.stop()
     }
@@ -75,17 +76,16 @@ extension FulcrumClientLifecycleValidator {
         let (fulcrum, transport) = try await makeStartedFulcrum()
 
         var subscribeTask: Task<
-            (
+            SwiftFulcrum.Client.Subscription<
                 SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe,
-                AsyncThrowingStream<SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification, Swift.Error>,
-                @Sendable () async -> Void
-            ),
+                SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification
+            >,
             Swift.Error
         >? = Task {
             try await fulcrum.subscribe(
                 method: .blockchain(.headers(.subscribe)),
-                initialType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe.self,
-                notificationType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification.self,
+                initial: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe.self,
+                notifications: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification.self,
                 options: .init(timeout: .seconds(30))
             )
         }
@@ -108,8 +108,8 @@ extension FulcrumClientLifecycleValidator {
                 return
             }
             let subscription = try await task.value
-            #expect(subscription.0.height == 920_000)
-            updatesStream = subscription.1
+            #expect(subscription.initial.height == 920_000)
+            updatesStream = subscription.updates
         }
         subscribeTask = nil
 
@@ -177,8 +177,8 @@ extension FulcrumClientLifecycleValidator {
         let subscribeTask = Task {
             try await fulcrum.subscribe(
                 method: .blockchain(.headers(.subscribe)),
-                initialType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe.self,
-                notificationType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification.self,
+                initial: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe.self,
+                notifications: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification.self,
                 options: .init(timeout: .seconds(30))
             )
         }
@@ -191,8 +191,8 @@ extension FulcrumClientLifecycleValidator {
         )
         await transport.enqueueIncoming(.data(payload))
 
-        let (initial, updates, cancel) = try await subscribeTask.value
-        #expect(initial.height == 900_000)
+        let subscription = try await subscribeTask.value
+        #expect(subscription.initial.height == 900_000)
 
         let activeSnapshot = await fulcrum.makeDiagnosticsSnapshot()
         let activeSubscriptions = await fulcrum.listSubscriptions()
@@ -200,8 +200,8 @@ extension FulcrumClientLifecycleValidator {
         #expect(activeSubscriptions.count == 1)
         #expect(activeSubscriptions.first?.methodPath == SwiftFulcrum.RPC.Method.blockchain(.headers(.subscribe)).path)
 
-        await cancel()
-        #expect(await NetworkTestClient.detectStreamTermination(updates, within: .seconds(5)))
+        await subscription.cancel()
+        #expect(await NetworkTestClient.detectStreamTermination(subscription.updates, within: .seconds(5)))
 
         let finalSnapshot = await fulcrum.makeDiagnosticsSnapshot()
         #expect(finalSnapshot.activeSubscriptionCount == 0)

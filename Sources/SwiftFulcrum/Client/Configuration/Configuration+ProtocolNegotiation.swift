@@ -4,38 +4,66 @@ import Foundation
 
 extension SwiftFulcrum.Client.Configuration {
     public struct ProtocolNegotiation: Sendable {
-        public var clientName: String
-        public var min: SwiftFulcrum.ProtocolVersion
-        public var max: SwiftFulcrum.ProtocolVersion
-        public var argument: Argument {
-            get throws {
-                try .init(range: supportedRange)
-            }
+        public let clientName: String
+        public let minimumVersion: SwiftFulcrum.ProtocolVersion
+        public let maximumVersion: SwiftFulcrum.ProtocolVersion
+        public let supportedRange: SwiftFulcrum.ProtocolVersion.Range
+
+        public init() {
+            let minimumVersion = SwiftFulcrum.Client.Configuration.defaultMinimumProtocolVersion
+            let maximumVersion = SwiftFulcrum.Client.Configuration.defaultMaximumProtocolVersion
+            let supportedRange = SwiftFulcrum.ProtocolVersion.Range(
+                min: minimumVersion,
+                max: maximumVersion
+            )!
+
+            self.init(
+                clientName: SwiftFulcrum.Client.Configuration.defaultClientName,
+                minimumVersion: minimumVersion,
+                maximumVersion: maximumVersion,
+                supportedRange: supportedRange
+            )
         }
-        
-        public var supportedRange: SwiftFulcrum.ProtocolVersion.Range {
-            get throws {
-                guard let range = SwiftFulcrum.ProtocolVersion.Range(min: min, max: max) else {
-                    throw SwiftFulcrum.Client.Error.client(
-                        .invalidProtocolNegotiationRange(
-                            minimumVersion: min,
-                            maximumVersion: max
-                        )
-                    )
-                }
-                
-                return range
-            }
-        }
-        
+
         public init(
-            clientName: String = "SwiftFulcrum/\(SwiftFulcrum.Client.Configuration.resolveLibraryVersion())",
-            min: SwiftFulcrum.ProtocolVersion = SwiftFulcrum.Client.Configuration.defaultMinimumProtocolVersion,
-            max: SwiftFulcrum.ProtocolVersion = SwiftFulcrum.Client.Configuration.defaultMaximumProtocolVersion
+            clientName: String = SwiftFulcrum.Client.Configuration.defaultClientName,
+            minimumVersion: SwiftFulcrum.ProtocolVersion,
+            maximumVersion: SwiftFulcrum.ProtocolVersion
+        ) throws {
+            guard let supportedRange = SwiftFulcrum.ProtocolVersion.Range(
+                min: minimumVersion,
+                max: maximumVersion
+            ) else {
+                throw SwiftFulcrum.Client.Error.client(
+                    .invalidProtocolNegotiationRange(
+                        minimumVersion: minimumVersion,
+                        maximumVersion: maximumVersion
+                    )
+                )
+            }
+
+            self.init(
+                clientName: clientName,
+                minimumVersion: minimumVersion,
+                maximumVersion: maximumVersion,
+                supportedRange: supportedRange
+            )
+        }
+
+        public func makeArgument() -> Argument {
+            .init(range: supportedRange)
+        }
+
+        init(
+            clientName: String,
+            minimumVersion: SwiftFulcrum.ProtocolVersion,
+            maximumVersion: SwiftFulcrum.ProtocolVersion,
+            supportedRange: SwiftFulcrum.ProtocolVersion.Range
         ) {
             self.clientName = clientName
-            self.min = min
-            self.max = max
+            self.minimumVersion = minimumVersion
+            self.maximumVersion = maximumVersion
+            self.supportedRange = supportedRange
         }
     }
 }
@@ -76,6 +104,10 @@ extension SwiftFulcrum.Client.Configuration.ProtocolNegotiation {
 }
 
 extension SwiftFulcrum.Client.Configuration {
+    public static var defaultClientName: String {
+        "SwiftFulcrum/\(resolveLibraryVersion())"
+    }
+
     public static var defaultMinimumProtocolVersion: SwiftFulcrum.ProtocolVersion {
         guard let version = SwiftFulcrum.ProtocolVersion(string: "1.4") else {
             preconditionFailure("Default minimum protocol version must be valid")

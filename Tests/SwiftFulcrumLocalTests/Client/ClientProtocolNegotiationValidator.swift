@@ -18,7 +18,10 @@ struct ClientProtocolNegotiationValidator {
         }
 
         let transport = TransportTestActor()
-        let negotiation = SwiftFulcrum.Client.Configuration.ProtocolNegotiation(min: minimum, max: maximum)
+        let negotiation = try SwiftFulcrum.Client.Configuration.ProtocolNegotiation(
+            minimumVersion: minimum,
+            maximumVersion: maximum
+        )
         let client = FulcrumNetworkClient(transport: transport, protocolNegotiation: negotiation)
 
         let startTask = Task { try await client.start() }

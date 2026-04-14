@@ -32,8 +32,8 @@ extension FulcrumNetworkClient {
     }
     
     private func performProtocolNegotiation() async throws -> NegotiatedSession {
-        let negotiationArgument = try protocolNegotiation.argument
-        let supportedRange = try protocolNegotiation.supportedRange
+        let negotiationArgument = protocolNegotiation.makeArgument()
+        let supportedRange = protocolNegotiation.supportedRange
         
         let (_, version): (UUID, SwiftFulcrum.RPC.Response.Result.Server.Version) = try await call(
             method: .server(

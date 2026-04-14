@@ -5,7 +5,8 @@ import Testing
 import SwiftFulcrumTestSupport
 @testable import SwiftFulcrum
 
-@Suite(.tags(.network))
+extension SwiftFulcrumNetworkValidators {
+@Suite(.serialized, .tags(.network))
 struct WebSocketValidator {
     @Test(
         "WebSocketModel connects and exchanges a unary request",
@@ -80,4 +81,5 @@ struct WebSocketValidator {
         #expect(terminated)
         #expect(await webSocket.connectionState == .disconnected)
     }
+}
 }
