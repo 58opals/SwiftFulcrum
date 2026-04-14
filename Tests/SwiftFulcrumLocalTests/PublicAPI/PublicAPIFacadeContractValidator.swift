@@ -17,6 +17,12 @@ struct PublicAPIFacadeContractValidator {
         let callOptionsType: SwiftFulcrum.Client.Call.Options.Type = SwiftFulcrum.Client.Call.Options.self
         _ = callOptionsType
 
+        let subscriptionType: SwiftFulcrum.Client.Subscription<
+            SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe,
+            SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification
+        >.Type = SwiftFulcrum.Client.Subscription.self
+        _ = subscriptionType
+
         let diagnosticsType: SwiftFulcrum.Client.Diagnostics.Type = SwiftFulcrum.Client.Diagnostics.self
         _ = diagnosticsType
 
@@ -55,16 +61,11 @@ struct PublicAPIFacadeContractValidator {
         }
         _ = unaryRequest
 
-        let streamingRequest: @Sendable (SwiftFulcrum.Client) async throws -> (
+        let streamingRequest: @Sendable (SwiftFulcrum.Client) async throws -> SwiftFulcrum.Client.Subscription<
             SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe,
-            AsyncThrowingStream<SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification, Swift.Error>,
-            @Sendable () async -> Void
-        ) = { client in
-            try await client.subscribe(
-                method: .blockchain(.headers(.subscribe)),
-                initialType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe.self,
-                notificationType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification.self
-            )
+            SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification
+        > = { client in
+            try await client.subscribe(method: .blockchain(.headers(.subscribe)))
         }
         _ = streamingRequest
     }
@@ -81,6 +82,7 @@ struct PublicAPIFacadeContractValidator {
             "SwiftFulcrum.Client",
             "SwiftFulcrum.Client.Configuration",
             "SwiftFulcrum.Client.Call.Options",
+            "SwiftFulcrum.Client.Subscription",
             "SwiftFulcrum.Client.Diagnostics",
             "SwiftFulcrum.Client.ConnectionState",
             "SwiftFulcrum.Client.Error",

@@ -8,7 +8,7 @@ public struct NetworkTestClient {
         _ url: URL,
         _ body: @Sendable (SwiftFulcrum.Client) async throws -> Void
     ) async throws {
-        let client = try await SwiftFulcrum.Client(url: url.absoluteString)
+        let client = try await SwiftFulcrum.Client(connectingTo: url)
 
         do {
             try await client.start()

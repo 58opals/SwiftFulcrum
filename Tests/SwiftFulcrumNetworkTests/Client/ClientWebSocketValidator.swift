@@ -78,7 +78,7 @@ struct ClientWebSocketValidator {
     func remainUsableAfterIdlingPastConnectionTimeout() async throws {
         let url = try await NetworkTestClient.pickServerURL()
         let client = try await SwiftFulcrum.Client(
-            url: url.absoluteString,
+            connectingTo: url,
             configuration: .init(connectionTimeout: 2)
         )
 

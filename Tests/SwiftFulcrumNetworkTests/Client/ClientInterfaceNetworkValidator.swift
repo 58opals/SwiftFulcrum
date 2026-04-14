@@ -37,7 +37,7 @@ struct ClientInterfaceNetworkValidator {
     )
     func requestAndStartClientWhenIdle() async throws {
         let url = try await NetworkTestClient.pickServerURL()
-        let client = try await SwiftFulcrum.Client(url: url.absoluteString)
+        let client = try await SwiftFulcrum.Client(connectingTo: url)
 
         // Avoid calling start() directly to exercise prepareClientForRequests.
         let tip = try await client.request(
@@ -63,17 +63,20 @@ struct ClientInterfaceNetworkValidator {
         let cancellation = SwiftFulcrum.Client.Call.Cancellation()
 
         try await NetworkTestClient.runWithClient(url) { client in
-            let (initial, updates, cancel) = try await client.subscribe(
+            let subscription: SwiftFulcrum.Client.Subscription<
+                SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe,
+                SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification
+            > = try await client.subscribe(
                 method: .blockchain(.headers(.subscribe)),
-                initialType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe.self,
-                notificationType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification.self,
                 options: .init(timeout: .seconds(30), cancellation: cancellation)
             )
+            let initial = subscription.initial
+            let updates = subscription.updates
 
             #expect(initial.height > 0)
             #expect(initial.hex.count == 160)
 
-            await cancel()
+            await subscription.cancel()
 
             #expect(await cancellation.isCancelled)
 
@@ -94,17 +97,20 @@ struct ClientInterfaceNetworkValidator {
         let url = try await NetworkTestClient.pickServerURL()
 
         try await NetworkTestClient.runWithClient(url) { client in
-            let (initial, updates, cancel) = try await client.subscribe(
+            let subscription: SwiftFulcrum.Client.Subscription<
+                SwiftFulcrum.RPC.Response.Result.Blockchain.Address.Subscribe,
+                SwiftFulcrum.RPC.Response.Result.Blockchain.Address.SubscribeNotification
+            > = try await client.subscribe(
                 method: .blockchain(.address(.subscribe(address: Self.testAddress))),
-                initialType: SwiftFulcrum.RPC.Response.Result.Blockchain.Address.Subscribe.self,
-                notificationType: SwiftFulcrum.RPC.Response.Result.Blockchain.Address.SubscribeNotification.self,
                 options: .init(timeout: .seconds(30))
             )
+            let initial = subscription.initial
+            let updates = subscription.updates
 
             // nil is valid for never-seen addresses; if present, it should be non-empty.
             #expect(initial.status?.isEmpty != true)
 
-            await cancel()
+            await subscription.cancel()
 
             let terminated = await NetworkTestClient.detectStreamTermination(
                 updates,
@@ -123,12 +129,15 @@ struct ClientInterfaceNetworkValidator {
         let url = try await NetworkTestClient.pickServerURL()
 
         try await NetworkTestClient.runWithClient(url) { client in
-            let (initial, updates, cancel) = try await client.subscribe(
+            let subscription: SwiftFulcrum.Client.Subscription<
+                SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe,
+                SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification
+            > = try await client.subscribe(
                 method: .blockchain(.headers(.subscribe)),
-                initialType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe.self,
-                notificationType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification.self,
                 options: .init(timeout: .seconds(30))
             )
+            let initial = subscription.initial
+            let updates = subscription.updates
 
             #expect(initial.height > 0)
             #expect(initial.hex.count == 160)
@@ -152,7 +161,7 @@ struct ClientInterfaceNetworkValidator {
                 break
             }
 
-            await cancel()
+            await subscription.cancel()
 
             let terminated = await NetworkTestClient.detectStreamTermination(
                 updates,

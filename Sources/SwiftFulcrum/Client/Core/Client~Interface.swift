@@ -18,14 +18,18 @@ extension SwiftFulcrum.Client {
         if method.isSubscription {
             throw SwiftFulcrum.Client.Error.client(.protocolMismatch("request() cannot be used with subscription methods. Use subscribe(...)."))
         }
-        
-        try await ensureClientIsReadyForRequests(within: options.timeout)
+
+        let deadline = makeDeadline(for: options.timeout)
+        try await ensureClientIsReadyForRequests(until: deadline)
         
         do {
-            let (_, result): (UUID, RegularResponseResult) = try await client.call(method: method, options: options.clientOptions)
+            let (_, result): (UUID, RegularResponseResult) = try await client.call(
+                method: method,
+                options: try makeClientOptions(from: options, constrainedBy: deadline)
+            )
             return result
         } catch let fulcrumError as SwiftFulcrum.Client.Error {
-            throw fulcrumError
+            throw remapTimeoutErrorIfNeeded(fulcrumError, originalLimit: deadline?.limit)
         } catch {
             throw SwiftFulcrum.Client.Error.client(.unknown(error))
         }
@@ -35,45 +39,43 @@ extension SwiftFulcrum.Client {
     ///
     /// - Parameters:
     ///   - method: Subscription RPC method to invoke.
-    ///   - initialType: Expected model for decoding the initial response.
-    ///   - notificationType: Expected model for decoding subscription updates.
+    ///   - initial: Expected model for decoding the initial response.
+    ///   - notifications: Expected model for decoding subscription updates.
     ///   - options: Optional timeout and cancellation controls. Cancelling the calling task cancels the subscription setup.
-    /// - Returns: The initial subscription payload, an update stream, and a cancellation closure tied to the subscription token.
+    /// - Returns: A subscription wrapper containing the initial payload, the updates stream, and a cancellation handle.
     ///   Reconnect restore is best-effort, so downstream callers usually do not need to resubscribe
     ///   manually. If a restore is rejected, the affected updates stream terminates and requires a
     ///   fresh ``subscribe(...)`` call to resume.
-    public func subscribe<Initial: Decodable & Sendable, Notification: Decodable & Sendable>(
+    public func subscribe<Initial: Decodable & Sendable, Update: Decodable & Sendable>(
         method: SwiftFulcrum.RPC.Method,
-        initialType: Initial.Type = Initial.self,
-        notificationType: Notification.Type = Notification.self,
+        initial: Initial.Type = Initial.self,
+        notifications: Update.Type = Update.self,
         options: SwiftFulcrum.Client.Call.Options = .init()
-    ) async throws -> (Initial, AsyncThrowingStream<Notification, Swift.Error>, @Sendable () async -> Void) {
-        let subscription = try await makeSubscription(
+    ) async throws -> Subscription<Initial, Update> {
+        let deadline = makeDeadline(for: options.timeout)
+        return try await makeSubscription(
             method: method,
-            initialType: initialType,
-            notificationType: notificationType,
-            options: options
+            initialType: initial,
+            notificationType: notifications,
+            options: options,
+            deadline: deadline
         )
-        return (subscription.initialResponse, subscription.updates, subscription.cancel)
     }
 }
 
 // MARK: -
 extension SwiftFulcrum.Client {
-    private func ensureClientIsReadyForRequests(within timeout: Duration?) async throws {
-        guard let timeout else {
-            try await prepareClientForRequests()
-            return
-        }
-        
-        try await executeWithTimeout(limit: timeout) {
-            try await self.prepareClientForRequests()
-        }
+    private typealias TimeoutDeadline = (limit: Duration, instant: ContinuousClock.Instant)
+
+    private func ensureClientIsReadyForRequests(until deadline: TimeoutDeadline?) async throws {
+        try await prepareClientForRequests(until: deadline)
     }
     
-    private func prepareClientForRequests() async throws {
+    private func prepareClientForRequests(until deadline: TimeoutDeadline?) async throws {
         if !isRunning {
-            try await start()
+            try await executeBeforeDeadline(deadline) {
+                try await self.start()
+            }
         }
 
         let state = await client.connectionState
@@ -83,13 +85,21 @@ extension SwiftFulcrum.Client {
         case .connected:
             return
         case .connecting:
-            try await waitForClientConnectionToBecomeReady()
+            try await executeBeforeDeadline(deadline) {
+                try await self.waitForClientConnectionToBecomeReady()
+            }
         case .reconnecting:
-            try await client.awaitReconnectReadiness()
+            try await executeBeforeDeadline(deadline) {
+                try await self.client.awaitReconnectReadiness()
+            }
         case .idle:
-            try await client.start()
+            try await executeBeforeDeadline(deadline) {
+                try await self.client.start()
+            }
         case .disconnected:
-            try await client.reconnect()
+            try await executeBeforeDeadline(deadline) {
+                try await self.client.reconnect()
+            }
         }
     }
 
@@ -112,41 +122,100 @@ extension SwiftFulcrum.Client {
         throw CancellationError()
     }
     
-    private func makeSubscription<Initial: Decodable & Sendable, Notification: Decodable & Sendable>(
+    private func makeSubscription<Initial: Decodable & Sendable, Update: Decodable & Sendable>(
         method: SwiftFulcrum.RPC.Method,
         initialType: Initial.Type,
-        notificationType: Notification.Type,
-        options: SwiftFulcrum.Client.Call.Options
-    ) async throws -> (
-        identifier: UUID,
-        initialResponse: Initial,
-        updates: AsyncThrowingStream<Notification, Swift.Error>,
-        cancel: @Sendable () async -> Void
-    ) {
+        notificationType: Update.Type,
+        options: SwiftFulcrum.Client.Call.Options,
+        deadline: TimeoutDeadline?
+    ) async throws -> Subscription<Initial, Update> {
         if !method.isSubscription {
             throw SwiftFulcrum.Client.Error.client(
                 .protocolMismatch("subscribe() requires subscription methods. Use request(...) for unary calls.")
             )
         }
-        
-        try await ensureClientIsReadyForRequests(within: options.timeout)
+
+        try await ensureClientIsReadyForRequests(until: deadline)
         
         let token = options.cancellation?.token ?? FulcrumNetworkClient.Call.Token()
-        let effectiveOptions = FulcrumNetworkClient.Call.Options(timeout: options.timeout, token: token)
+        let effectiveOptions = try FulcrumNetworkClient.Call.Options(
+            timeout: remainingTimeout(until: deadline),
+            token: token
+        )
         do {
-            let (identifier, initial, updates): (UUID, Initial, AsyncThrowingStream<Notification, Swift.Error>) =
+            let (_, initial, updates): (UUID, Initial, AsyncThrowingStream<Update, Swift.Error>) =
             try await client.subscribe(method: method, options: effectiveOptions)
-            return (
-                identifier,
-                initial,
-                updates,
-                { await token.cancel() }
+            return Subscription(
+                initial: initial,
+                updates: updates,
+                cancellationHandler: { await token.cancel() }
             )
         } catch let fulcrumError as SwiftFulcrum.Client.Error {
-            throw fulcrumError
+            throw remapTimeoutErrorIfNeeded(fulcrumError, originalLimit: deadline?.limit)
         } catch {
             throw SwiftFulcrum.Client.Error.client(.unknown(error))
         }
+    }
+
+    private func makeDeadline(for limit: Duration?) -> TimeoutDeadline? {
+        guard let limit else { return nil }
+
+        let clock = ContinuousClock()
+        return (limit: limit, instant: clock.now.advanced(by: limit))
+    }
+
+    private func makeClientOptions(
+        from options: SwiftFulcrum.Client.Call.Options,
+        constrainedBy deadline: TimeoutDeadline?
+    ) throws -> FulcrumNetworkClient.Call.Options {
+        .init(timeout: try remainingTimeout(until: deadline), token: options.cancellation?.token)
+    }
+
+    private func remainingTimeout(until deadline: TimeoutDeadline?) throws -> Duration? {
+        guard let deadline else { return nil }
+        return try remainingTimeoutBefore(deadline)
+    }
+
+    private func remainingTimeoutBefore(_ deadline: TimeoutDeadline) throws -> Duration {
+        let now = ContinuousClock().now
+        let remaining = now.duration(to: deadline.instant)
+
+        guard remaining > .zero else {
+            throw SwiftFulcrum.Client.Error.client(.timeout(deadline.limit))
+        }
+
+        return remaining
+    }
+
+    private func executeBeforeDeadline<T: Sendable>(
+        _ deadline: TimeoutDeadline?,
+        operation: @Sendable @escaping () async throws -> T
+    ) async throws -> T {
+        guard let deadline else {
+            return try await operation()
+        }
+
+        do {
+            return try await executeWithTimeout(
+                limit: remainingTimeoutBefore(deadline),
+                operation: operation
+            )
+        } catch let fulcrumError as SwiftFulcrum.Client.Error {
+            throw remapTimeoutErrorIfNeeded(fulcrumError, originalLimit: deadline.limit)
+        }
+    }
+
+    private func remapTimeoutErrorIfNeeded(
+        _ error: SwiftFulcrum.Client.Error,
+        originalLimit: Duration?
+    ) -> SwiftFulcrum.Client.Error {
+        guard let originalLimit else { return error }
+
+        if case .client(.timeout) = error {
+            return .client(.timeout(originalLimit))
+        }
+
+        return error
     }
     
     private func executeWithTimeout<T: Sendable>(
