@@ -141,4 +141,18 @@ struct WebSocketConnectionValidator {
         #expect(recorder.closeCodes == [.normalClosure])
         #expect(recorder.closeReasons == ["closed"])
     }
+
+    @Test("disconnect() preserves close information after clearing the task", .timeLimit(.minutes(1)))
+    func disconnectPreservesCloseInformationAfterClearingTask() async {
+        let webSocket = WebSocketModel(url: URL(string: "wss://example.invalid")!)
+
+        await webSocket.disconnect(with: "unit-test shutdown")
+
+        let closeInformation = await webSocket.closeInformation
+        #expect(closeInformation.code == .goingAway)
+        #expect(closeInformation.reason == "unit-test shutdown")
+
+        let session = await webSocket.session
+        session.invalidateAndCancel()
+    }
 }

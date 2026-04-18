@@ -113,6 +113,7 @@ extension WebSocketModel {
         } else {
             finalInformation = existingInformation
         }
+        lastCloseInformation = finalInformation
 
         await updateConnectionState(.disconnected)
 

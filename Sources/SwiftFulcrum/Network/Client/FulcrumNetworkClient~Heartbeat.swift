@@ -37,7 +37,9 @@ extension FulcrumNetworkClient {
                     } catch is CancellationError {
                         break
                     } catch {
-                        let inflightCount = await self.router.failUnaries(with: SwiftFulcrum.Client.Error.transport(.heartbeatTimeout))
+                        let heartbeatTimeoutError = SwiftFulcrum.Client.Error.transport(.heartbeatTimeout)
+                        let inflightCount = await self.router.failAll(with: heartbeatTimeoutError)
+                        await self.dropAllStoredSubscriptions()
                         await self.publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightCount)
                         break
                     }

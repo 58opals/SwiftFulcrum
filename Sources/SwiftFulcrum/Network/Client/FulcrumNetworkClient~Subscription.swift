@@ -3,6 +3,23 @@
 import Foundation
 
 extension FulcrumNetworkClient {
+    func dropAllStoredSubscriptions() async {
+        let setupTasks = Array(subscriptionSetupTasks.values)
+        subscriptionSetupRequestIdentifiers.removeAll(keepingCapacity: false)
+        subscriptionSetupTasks.removeAll(keepingCapacity: false)
+        for task in setupTasks {
+            task.cancel()
+        }
+
+        subscriptionCleanupTasks.removeAll(keepingCapacity: false)
+
+        guard !subscriptionMethods.isEmpty else { return }
+        subscriptionMethods.removeAll(keepingCapacity: false)
+        await publishSubscriptionRegistry()
+    }
+}
+
+extension FulcrumNetworkClient {
     func makeUnsubscribeMethod(for key: SubscriptionKey) -> SwiftFulcrum.RPC.Method? {
         switch key.methodPath {
         case .scriptHash:

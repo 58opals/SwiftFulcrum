@@ -154,11 +154,13 @@ private extension SwiftFulcrum.Client {
             fallback: configuration.bootstrapServers ?? .init()
         )
 
-        guard let server = serverList.randomElement() else {
+        let validServers = serverList.compactMap { try? validate(endpoint: $0) }
+
+        guard let server = validServers.randomElement() else {
             throw Error.transport(.setupFailed)
         }
 
-        return try validate(endpoint: server)
+        return server
     }
 
     static func makeWebSocket(connectingTo endpoint: URL, configuration: Configuration) throws -> WebSocketModel {

@@ -76,6 +76,7 @@ actor FulcrumNetworkClient {
     
     func stop() async {
         if let reconnectTask {
+            resetNegotiatedSession()
             reconnectTask.cancel()
             _ = try? await reconnectTask.value
             self.reconnectTask = nil
