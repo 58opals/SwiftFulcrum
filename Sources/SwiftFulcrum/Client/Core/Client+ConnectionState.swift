@@ -41,6 +41,12 @@ extension SwiftFulcrum.Client {
             }
         }
     }
+
+    func stopConnectionStateObservation() async {
+        connectionStateObservationTask?.cancel()
+        await connectionStateObservationTask?.value
+        connectionStateObservationTask = nil
+    }
     
     func updateConnectionState(_ state: ConnectionState) async {
         guard currentConnectionState != state else { return }

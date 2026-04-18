@@ -87,6 +87,13 @@ extension SwiftFulcrum {
         /// This call is idempotent and deterministic. It cancels any in-flight ``start()`` and always
         /// performs teardown so the client is not left running.
         public func stop() async {
+            let networkConnectionState = await client.connectionState
+            let shouldPreserveIdleState =
+                !isRunning &&
+                startTask == nil &&
+                currentConnectionState == .idle &&
+                networkConnectionState == .idle
+
             desiredRunning = false
             self.isRunning = false
 
@@ -96,12 +103,18 @@ extension SwiftFulcrum {
                 self.startTask = nil
             }
 
+            if shouldPreserveIdleState {
+                await stopConnectionStateObservation()
+            }
+
             await self.client.stop()
             desiredRunning = false
 
-            connectionStateObservationTask?.cancel()
-            await connectionStateObservationTask?.value
-            connectionStateObservationTask = nil
+            if !shouldPreserveIdleState {
+                await stopConnectionStateObservation()
+            } else {
+                currentConnectionState = .idle
+            }
             await resetConnectionStateStream()
         }
 

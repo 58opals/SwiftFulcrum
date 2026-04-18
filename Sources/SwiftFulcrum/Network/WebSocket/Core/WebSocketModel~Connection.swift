@@ -99,25 +99,41 @@ extension WebSocketModel {
     func disconnect(with reason: String? = nil) async {
         await cancelReceiverTask()
         
-        let information = closeInformation
+        let existingInformation = closeInformation
         if let task {
             await connectionEventTracker?.stopTracking(taskIdentifier: task.taskIdentifier)
         }
         
         task?.cancel(with: .goingAway, reason: reason?.data(using: .utf8))
         task = nil
+
+        let finalInformation: (code: URLSessionWebSocketTask.CloseCode, reason: String?)
+        if let reason {
+            finalInformation = (.goingAway, reason)
+        } else {
+            finalInformation = existingInformation
+        }
+
         await updateConnectionState(.disconnected)
-        
-        finishConnectWaiters(.failure(SwiftFulcrum.Client.Error.transport(.connectionClosed(information.code, information.reason))))
-        
-        messageContinuation?.finish(
-            throwing: SwiftFulcrum.Client.Error.transport(.connectionClosed(information.code, information.reason))
+
+        let closedError = SwiftFulcrum.Client.Error.transport(
+            .connectionClosed(finalInformation.code, finalInformation.reason)
         )
         
-        await metrics?.recordDisconnect(url: url, closeCode: information.code, reason: reason)
+        finishConnectWaiters(.failure(closedError))
+        
+        messageContinuation?.finish(throwing: closedError)
+        
+        await metrics?.recordDisconnect(
+            url: url,
+            closeCode: finalInformation.code,
+            reason: finalInformation.reason
+        )
         await resetMessageStreamAndReader()
-        emitLog(.info, "disconnect", metadata: ["reason": reason ?? "nil",
-                                                "code": String(information.code.rawValue)])
-        emitLifecycle(.disconnected(code: information.code, reason: reason))
+        emitLog(.info, "disconnect", metadata: [
+            "reason": finalInformation.reason ?? "nil",
+            "code": String(finalInformation.code.rawValue)
+        ])
+        emitLifecycle(.disconnected(code: finalInformation.code, reason: finalInformation.reason))
     }
 }

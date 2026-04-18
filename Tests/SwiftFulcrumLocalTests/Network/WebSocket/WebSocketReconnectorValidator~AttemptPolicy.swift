@@ -5,6 +5,53 @@ import Testing
 @testable import SwiftFulcrum
 
 extension WebSocketReconnectorValidator {
+    @Test("Reconnector exhaustion reports a concrete close reason", .timeLimit(.minutes(1)))
+    func reportConcreteCloseReasonWhenAttemptsAreExhausted() async throws {
+        let configuration = WebSocketModel.Reconnector.Configuration(
+            maximumReconnectionAttempts: 1,
+            reconnectionDelay: 0.01,
+            maximumDelay: 0.01,
+            jitterRange: 1.0 ... 1.0
+        )
+
+        let unreachable = URL(string: "wss://127.0.0.1:9")!
+        let networkSession = URLSession(configuration: .ephemeral)
+        defer { networkSession.invalidateAndCancel() }
+
+        let webSocket = WebSocketModel(
+            url: unreachable,
+            configuration: .init(
+                session: networkSession,
+                serverCatalogLoader: .makeConstant([unreachable])
+            ),
+            reconnectConfiguration: configuration,
+            connectionTimeout: 0.01,
+            sleep: { duration in try await Task.sleep(for: duration) },
+            jitter: { _ in 1 }
+        )
+
+        do {
+            try await webSocket.reconnector.attemptReconnection(
+                for: webSocket,
+                shouldCancelReceiver: false,
+                isInitialConnection: false
+            )
+            Issue.record("Reconnector should exhaust instead of succeeding")
+        } catch let error as SwiftFulcrum.Client.Error {
+            guard case .transport(.connectionClosed(let code, let reason)) = error else {
+                Issue.record("Expected connectionClosed transport error, got \(error)")
+                return
+            }
+
+            #expect(code == .goingAway)
+            #expect(reason == "Reconnection attempts exhausted.")
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+
+        await webSocket.disconnect(with: "test teardown")
+    }
+
     @Test("Reconnector cycles through full rotation before repeating candidates", .timeLimit(.minutes(1)))
     func cycleThroughFullRotationBeforeRepeat() async throws {
         let configuration = WebSocketModel.Reconnector.Configuration(

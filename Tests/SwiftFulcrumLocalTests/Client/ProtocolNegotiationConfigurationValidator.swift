@@ -80,4 +80,19 @@ struct ProtocolNegotiationConfigurationValidator {
         let singleObject = try JSONDecoder().decode(String.self, from: JSONEncoder().encode(singleArgument))
         #expect(singleObject == "1.4")
     }
+
+    @Test("Explicit zero patch versions stay explicit in protocol negotiation")
+    func preserveExplicitZeroPatchVersions() throws {
+        let exactVersion = try #require(
+            SwiftFulcrum.ProtocolVersion(major: 1, minor: 6, patch: 0)
+        )
+        #expect(exactVersion.description == "1.6.0")
+
+        let exactArgument = try SwiftFulcrum.Client.Configuration.ProtocolNegotiation.Argument(
+            minimumVersion: exactVersion,
+            maximumVersion: exactVersion
+        )
+        let encoded = try JSONDecoder().decode(String.self, from: JSONEncoder().encode(exactArgument))
+        #expect(encoded == "1.6.0")
+    }
 }
