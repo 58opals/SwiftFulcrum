@@ -26,10 +26,11 @@ extension SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain {
                 let vout: [Output]
 
                 struct Input: Decodable, Sendable {
-                    let scriptSig: ScriptSig
+                    let coinbase: String?
+                    let scriptSig: ScriptSig?
                     let sequence: UInt
-                    let txid: String
-                    let vout: UInt
+                    let txid: String?
+                    let vout: UInt?
 
                     struct ScriptSig: Decodable, Sendable {
                         let asm: String
@@ -43,6 +44,7 @@ extension SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain {
                     let value: Double
 
                     struct ScriptPubKey: Decodable, Sendable {
+                        let address: String?
                         let addresses: [String]?
                         let asm: String
                         let hex: String

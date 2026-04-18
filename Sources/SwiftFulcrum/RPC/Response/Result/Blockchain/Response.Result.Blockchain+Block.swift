@@ -37,7 +37,7 @@ extension SwiftFulcrum.RPC.Response.Result.Blockchain {
                 let payloadModel = try SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Block.Headers(from: decoder)
                 self.count = payloadModel.count
                 self.hex = payloadModel.hex
-                self.headers = payloadModel.headers ?? Self.splitHeaders(hex: payloadModel.hex)
+                self.headers = try Self.resolveHeaders(from: payloadModel)
                 self.max = payloadModel.max
                 self.proof = {
                     guard let branch = payloadModel.branch,
@@ -48,23 +48,53 @@ extension SwiftFulcrum.RPC.Response.Result.Blockchain {
                 }()
             }
 
-            private static func splitHeaders(hex: String) -> [String] {
+            private static func resolveHeaders(
+                from payloadModel: SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Block.Headers
+            ) throws -> [String] {
+                let headers: [String]
+                if let providedHeaders = payloadModel.headers {
+                    headers = providedHeaders
+                    try validateHeaderLengths(headers)
+                } else {
+                    headers = try splitHeaders(hex: payloadModel.hex)
+                }
+
+                guard headers.count == Int(payloadModel.count) else {
+                    throw ResponseResultDecodeError.unexpectedFormat(
+                        "Expected \(payloadModel.count) block headers; decoded \(headers.count)"
+                    )
+                }
+
+                return headers
+            }
+
+            private static func validateHeaderLengths(_ headers: [String]) throws {
                 let headerCharacterLength = 160
+                guard headers.allSatisfy({ $0.count == headerCharacterLength }) else {
+                    throw ResponseResultDecodeError.unexpectedFormat(
+                        "Expected each block header to be exactly \(headerCharacterLength) hex characters"
+                    )
+                }
+            }
+
+            private static func splitHeaders(hex: String) throws -> [String] {
+                let headerCharacterLength = 160
+
+                guard hex.count.isMultiple(of: headerCharacterLength) else {
+                    throw ResponseResultDecodeError.unexpectedFormat(
+                        "Expected concatenated block headers hex to be a multiple of \(headerCharacterLength) characters"
+                    )
+                }
+
                 var headers: [String] = .init()
                 var currentIndex = hex.startIndex
 
                 while currentIndex < hex.endIndex {
-                    guard let endIndex = hex.index(
+                    let endIndex = hex.index(
                         currentIndex,
                         offsetBy: headerCharacterLength,
                         limitedBy: hex.endIndex
-                    ) else {
-                        break
-                    }
-
-                    guard hex.distance(from: currentIndex, to: endIndex) == headerCharacterLength else {
-                        break
-                    }
+                    )!
 
                     headers.append(String(hex[currentIndex ..< endIndex]))
                     currentIndex = endIndex

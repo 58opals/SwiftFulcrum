@@ -175,6 +175,37 @@ struct ResponseDecodingValidator {
         #expect(dsProofUpdate.proof?.transactionID == "abc123")
     }
 
+    @Test("Rejects oversized address and scripthash notification payloads")
+    func rejectOversizedAddressAndScriptHashNotifications() throws {
+        let addressPayload = try jsonData(
+            [
+                "jsonrpc": "2.0",
+                "method": "blockchain.address.subscribe",
+                "params": ["bitcoincash:qtest", "status", "unexpected"]
+            ]
+        )
+        #expect(throws: ResponseResultDecodeError.self) {
+            _ = try addressPayload.decode(
+                SwiftFulcrum.RPC.Response.Result.Blockchain.Address.SubscribeNotification.self,
+                context: .init(methodPath: "blockchain.address.subscribe")
+            )
+        }
+
+        let scripthashPayload = try jsonData(
+            [
+                "jsonrpc": "2.0",
+                "method": "blockchain.scripthash.subscribe",
+                "params": [String(repeating: "b", count: 64), "status", "unexpected"]
+            ]
+        )
+        #expect(throws: ResponseResultDecodeError.self) {
+            _ = try scripthashPayload.decode(
+                SwiftFulcrum.RPC.Response.Result.Blockchain.ScriptHash.SubscribeNotification.self,
+                context: .init(methodPath: "blockchain.scripthash.subscribe")
+            )
+        }
+    }
+
     @Test("Decodes mempool fee histogram flexible number pairs")
     func decodeMempoolFeeHistogram() throws {
         let payload = try jsonData(
@@ -189,6 +220,203 @@ struct ResponseDecodingValidator {
         #expect(histogram.histogram[0].virtualSize == 1000)
         #expect(histogram.histogram[1].fee == 2.5)
         #expect(histogram.histogram[1].virtualSize == 2000)
+    }
+
+    @Test("Decodes verbose mempool transactions without confirmation metadata")
+    func decodeVerboseMempoolTransactionWithoutConfirmationMetadata() throws {
+        let payload = try jsonData(
+            [
+                "jsonrpc": "2.0",
+                "id": UUID().uuidString,
+                "result": [
+                    "hash": "36a3692a41a8ac60b73f7f41ee23f5c917413e5b2fad9e44b34865bd0d601a3d",
+                    "hex": "01000000",
+                    "locktime": 0,
+                    "size": 225,
+                    "txid": "36a3692a41a8ac60b73f7f41ee23f5c917413e5b2fad9e44b34865bd0d601a3d",
+                    "version": 1,
+                    "vin": [
+                        [
+                            "scriptSig": [
+                                "asm": "0014deadbeef",
+                                "hex": "160014deadbeef"
+                            ],
+                            "sequence": 4_294_967_295,
+                            "txid": "5bb9142c960a838329694d3fe9ba08c2a6421c5158d8f7044cb7c48006c1b484",
+                            "vout": 0
+                        ]
+                    ],
+                    "vout": [
+                        [
+                            "n": 0,
+                            "scriptPubKey": [
+                                "asm": "OP_DUP OP_HASH160 deadbeef OP_EQUALVERIFY OP_CHECKSIG",
+                                "hex": "76a914deadbeef88ac",
+                                "type": "pubkeyhash"
+                            ],
+                            "value": 1.25
+                        ]
+                    ]
+                ]
+            ]
+        )
+
+        let transaction = try payload.decode(
+            SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction.Get.self,
+            context: .init(methodPath: "blockchain.transaction.get")
+        )
+
+        #expect(transaction.blockHash == nil)
+        #expect(transaction.blocktime == nil)
+        #expect(transaction.confirmations == nil)
+        #expect(transaction.time == nil)
+        #expect(transaction.transactionID == "36a3692a41a8ac60b73f7f41ee23f5c917413e5b2fad9e44b34865bd0d601a3d")
+        #expect(transaction.inputs.count == 1)
+        #expect(transaction.outputs.count == 1)
+    }
+
+    @Test("Decodes verbose coinbase transactions without spend-input fields")
+    func decodeVerboseCoinbaseTransaction() throws {
+        let payload = try jsonData(
+            [
+                "jsonrpc": "2.0",
+                "id": UUID().uuidString,
+                "result": [
+                    "blockhash": String(repeating: "0", count: 64),
+                    "blocktime": 1_520_074_861,
+                    "confirmations": 679,
+                    "hash": "4f0b8f66c9f4f4f833e8ef7d8e731654c5e7f4a90b1f8be7508f3a6a7bb9c001",
+                    "hex": "02000000",
+                    "locktime": 0,
+                    "size": 204,
+                    "time": 1_520_074_861,
+                    "txid": "4f0b8f66c9f4f4f833e8ef7d8e731654c5e7f4a90b1f8be7508f3a6a7bb9c001",
+                    "version": 2,
+                    "vin": [
+                        [
+                            "coinbase": "03aabbcc",
+                            "sequence": 4_294_967_295
+                        ]
+                    ],
+                    "vout": [
+                        [
+                            "n": 0,
+                            "scriptPubKey": [
+                                "asm": "OP_HASH160 deadbeef OP_EQUAL",
+                                "hex": "a914deadbeef87",
+                                "type": "scripthash"
+                            ],
+                            "value": 6.25
+                        ]
+                    ]
+                ]
+            ]
+        )
+
+        let transaction = try payload.decode(
+            SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction.Get.self,
+            context: .init(methodPath: "blockchain.transaction.get")
+        )
+
+        #expect(transaction.inputs.count == 1)
+        #expect(transaction.inputs[0].isCoinbase)
+        #expect(transaction.inputs[0].coinbase == "03aabbcc")
+        #expect(transaction.inputs[0].scriptSig == nil)
+        #expect(transaction.inputs[0].transactionID == nil)
+        #expect(transaction.inputs[0].indexNumberOfPreviousTransactionOutput == nil)
+    }
+
+    @Test("Decodes verbose transaction outputs that use singular scriptPubKey address")
+    func decodeVerboseTransactionOutputWithSingularAddress() throws {
+        let payload = try jsonData(
+            [
+                "jsonrpc": "2.0",
+                "id": UUID().uuidString,
+                "result": [
+                    "hash": "36a3692a41a8ac60b73f7f41ee23f5c917413e5b2fad9e44b34865bd0d601a3d",
+                    "hex": "01000000",
+                    "locktime": 0,
+                    "size": 225,
+                    "txid": "36a3692a41a8ac60b73f7f41ee23f5c917413e5b2fad9e44b34865bd0d601a3d",
+                    "version": 1,
+                    "vin": [
+                        [
+                            "scriptSig": [
+                                "asm": "0014deadbeef",
+                                "hex": "160014deadbeef"
+                            ],
+                            "sequence": 4_294_967_295,
+                            "txid": "5bb9142c960a838329694d3fe9ba08c2a6421c5158d8f7044cb7c48006c1b484",
+                            "vout": 0
+                        ]
+                    ],
+                    "vout": [
+                        [
+                            "n": 0,
+                            "scriptPubKey": [
+                                "address": "bitcoincash:qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a",
+                                "asm": "OP_DUP OP_HASH160 deadbeef OP_EQUALVERIFY OP_CHECKSIG",
+                                "hex": "76a914deadbeef88ac",
+                                "type": "pubkeyhash"
+                            ],
+                            "value": 1.25
+                        ]
+                    ]
+                ]
+            ]
+        )
+
+        let transaction = try payload.decode(
+            SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction.Get.self,
+            context: .init(methodPath: "blockchain.transaction.get")
+        )
+
+        #expect(transaction.outputs.count == 1)
+        #expect(transaction.outputs[0].scriptPubKey.addresses == ["bitcoincash:qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a"])
+    }
+
+    @Test("Rejects malformed block.headers batches instead of truncating them")
+    func rejectMalformedBlockHeaderBatch() throws {
+        let payload = try jsonData(
+            [
+                "jsonrpc": "2.0",
+                "id": UUID().uuidString,
+                "result": [
+                    "count": 2,
+                    "hex": String(repeating: "a", count: 161),
+                    "max": 2016
+                ]
+            ]
+        )
+
+        #expect(throws: ResponseResultDecodeError.self) {
+            _ = try payload.decode(
+                SwiftFulcrum.RPC.Response.Result.Blockchain.Block.Headers.self,
+                context: .init(methodPath: "blockchain.block.headers")
+            )
+        }
+    }
+
+    @Test("Rejects malformed block.headers arrays with invalid header widths")
+    func rejectMalformedBlockHeaderArray() throws {
+        let payload = try jsonData(
+            [
+                "jsonrpc": "2.0",
+                "id": UUID().uuidString,
+                "result": [
+                    "count": 1,
+                    "headers": [String(repeating: "b", count: 159)],
+                    "max": 2016
+                ]
+            ]
+        )
+
+        #expect(throws: ResponseResultDecodeError.self) {
+            _ = try payload.decode(
+                SwiftFulcrum.RPC.Response.Result.Blockchain.Block.Headers.self,
+                context: .init(methodPath: "blockchain.block.headers")
+            )
+        }
     }
 
     @Test("Unexpected format errors include decode context")
