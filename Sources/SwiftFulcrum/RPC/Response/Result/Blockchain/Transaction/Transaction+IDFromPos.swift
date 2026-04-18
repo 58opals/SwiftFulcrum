@@ -9,8 +9,14 @@ extension SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction {
 
         public init(from decoder: Decoder) throws {
             let payloadModel = try SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Transaction.IDFromPos(from: decoder)
-            self.merkle = payloadModel.merkle
-            self.transactionHash = payloadModel.tx_hash
+            switch payloadModel {
+            case .transactionHash(let transactionHash):
+                self.merkle = []
+                self.transactionHash = transactionHash
+            case .merkleProof(let merkleProof):
+                self.merkle = merkleProof.merkle
+                self.transactionHash = merkleProof.tx_hash
+            }
         }
     }
 }

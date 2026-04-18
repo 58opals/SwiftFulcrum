@@ -72,9 +72,8 @@ actor FulcrumNetworkClient {
     }
 
     private func performStart() async throws {
-        resetNegotiatedSession()
-        
         guard receiveTask == nil else { return }
+        resetNegotiatedSession()
         
         try await self.transport.connect()
         startReceivingTask()

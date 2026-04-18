@@ -246,6 +246,22 @@ struct ResponseDecodingValidator {
         #expect(histogram.histogram[1].virtualSize == 2000)
     }
 
+    @Test("Decodes transaction.id_from_pos without a merkle proof")
+    func decodeTransactionIDFromPosWithoutMerkleProof() throws {
+        let transactionHash = String(repeating: "f", count: 64)
+        let payload = try jsonData(
+            ["jsonrpc": "2.0", "id": UUID().uuidString, "result": transactionHash]
+        )
+
+        let result = try payload.decode(
+            SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction.IDFromPos.self,
+            context: .init(methodPath: "blockchain.transaction.id_from_pos")
+        )
+
+        #expect(result.transactionHash == transactionHash)
+        #expect(result.merkle.isEmpty)
+    }
+
     @Test("Decodes verbose mempool transactions without confirmation metadata")
     func decodeVerboseMempoolTransactionWithoutConfirmationMetadata() throws {
         let payload = try jsonData(

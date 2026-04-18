@@ -185,6 +185,34 @@ struct WebSocketConnectionValidator {
         let session = await webSocket.session
         session.invalidateAndCancel()
     }
+
+    @Test("connect timeout preserves the timeout close reason", .timeLimit(.minutes(1)))
+    func connectTimeoutPreservesTimeoutCloseReason() async throws {
+        let hangingServer = try LocalHangingTCPServer()
+        let endpoint = try await hangingServer.start()
+        defer { hangingServer.stop() }
+
+        let webSocket = WebSocketModel(
+            url: endpoint,
+            connectionTimeout: 0.05
+        )
+
+        do {
+            try await webSocket.connect(shouldAllowFailover: false)
+            Issue.record("Expected connect() to fail when the socket never opens")
+        } catch let error as SwiftFulcrum.Client.Error {
+            guard case .transport(.connectionClosed(let code, let reason)) = error else {
+                Issue.record("Expected connectionClosed timeout error, got \(error)")
+                return
+            }
+
+            #expect(code == .goingAway)
+            #expect(reason == "Connection timed out.")
+        }
+
+        let session = await webSocket.session
+        session.invalidateAndCancel()
+    }
 }
 
 private extension WebSocketConnectionValidator {

@@ -87,9 +87,37 @@ extension SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain {
             let pos: UInt
         }
 
-        struct IDFromPos: Decodable, Sendable {
-            let merkle: [String]
-            let tx_hash: String
+        typealias IDFromPos = IDFromPosParameters
+        enum IDFromPosParameters: Decodable, Sendable {
+            case transactionHash(String)
+            case merkleProof(MerkleProof)
+
+            struct MerkleProof: Decodable, Sendable {
+                let merkle: [String]
+                let tx_hash: String
+            }
+
+            init(from decoder: Decoder) throws {
+                let container = try decoder.singleValueContainer()
+
+                if let transactionHash = try? container.decode(String.self) {
+                    self = .transactionHash(transactionHash)
+                    return
+                }
+
+                if let merkleProof = try? container.decode(MerkleProof.self) {
+                    self = .merkleProof(merkleProof)
+                    return
+                }
+
+                throw DecodingError.typeMismatch(
+                    IDFromPosParameters.self,
+                    .init(
+                        codingPath: decoder.codingPath,
+                        debugDescription: "Expected transaction hash string or merkle proof object"
+                    )
+                )
+            }
         }
 
         typealias Subscribe = SubscribeParameters

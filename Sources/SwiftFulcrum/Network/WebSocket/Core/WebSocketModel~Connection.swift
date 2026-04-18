@@ -53,14 +53,16 @@ extension WebSocketModel {
                 if shouldEmitLifecycle { emitLifecycle(.connected(isReconnect: false)) }
                 ensureAutomaticReceiving()
             } else {
+                let timeoutReason = "Connection timed out."
+                let timeoutFailure = SwiftFulcrum.Client.Error.transport(
+                    .connectionClosed(.goingAway, timeoutReason)
+                )
                 await updateConnectionState(.disconnected)
-                task.cancel(with: .goingAway, reason: "Connection timed out.".data(using: .utf8))
+                task.cancel(with: .goingAway, reason: timeoutReason.data(using: .utf8))
                 emitLog(.error, "connect.timeout")
                 try await performInitialFailoverIfNeeded(
                     shouldAllowFailover: shouldAllowFailover,
-                    failure: SwiftFulcrum.Client.Error.transport(
-                        .connectionClosed(closeInformation.code, closeInformation.reason)
-                    )
+                    failure: timeoutFailure
                 )
             }
         } catch let networkError as SwiftFulcrum.Client.Error.Network {

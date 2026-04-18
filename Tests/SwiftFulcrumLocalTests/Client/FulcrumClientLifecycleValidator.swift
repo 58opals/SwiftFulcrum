@@ -87,6 +87,97 @@ struct FulcrumClientLifecycleValidator {
         await client.stop()
     }
 
+    @Test("redundant start() does not force protocol renegotiation on the next request", .timeLimit(.minutes(1)))
+    func redundantStartDoesNotForceProtocolRenegotiationOnNextRequest() async throws {
+        let transport = TransportTestActor()
+        let client = FulcrumNetworkClient(transport: transport, protocolNegotiation: .init())
+
+        let startTask = Task { try await client.start() }
+        let versionObject = try await decodeRequestObject(await transport.dequeueOutgoing())
+        let versionIdentifier = try requestIdentifier(from: versionObject)
+        let versionPayload = try TransportTestActor.encodeResponsePayload(
+            identifier: versionIdentifier,
+            result: ["SwiftFulcrum.Client 2.0", "1.5.3"]
+        )
+        await transport.enqueueIncoming(.data(versionPayload))
+
+        let featuresObject = try await decodeRequestObject(await transport.dequeueOutgoing())
+        let featuresIdentifier = try requestIdentifier(from: featuresObject)
+        let featuresPayload = try TransportTestActor.encodeResponsePayload(
+            identifier: featuresIdentifier,
+            result: [
+                "genesis_hash": String(repeating: "0", count: 64),
+                "hash_function": "sha256",
+                "server_version": "SwiftFulcrum.Client 2.0",
+                "protocol_max": "1.6.0",
+                "protocol_min": "1.4.0"
+            ]
+        )
+        await transport.enqueueIncoming(.data(featuresPayload))
+        _ = try await startTask.value
+
+        let baselineVersionRequestCount = try await countSentMethodOccurrences("server.version", transport: transport)
+        #expect(baselineVersionRequestCount == 1)
+
+        try await client.start()
+
+        let requestTask = Task {
+            try await client.call(
+                method: .blockchain(.headers(.getTip))
+            ) as (UUID, SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.GetTip)
+        }
+
+        let firstOutgoing = try await decodeRequestObject(await transport.dequeueOutgoing())
+        let firstMethod = firstOutgoing["method"] as? String
+
+        if firstMethod == "server.version" {
+            let versionIdentifier = try requestIdentifier(from: firstOutgoing)
+            let versionPayload = try TransportTestActor.encodeResponsePayload(
+                identifier: versionIdentifier,
+                result: ["SwiftFulcrum.Client 2.0", "1.5.3"]
+            )
+            await transport.enqueueIncoming(.data(versionPayload))
+
+            let featuresObject = try await decodeRequestObject(await transport.dequeueOutgoing())
+            #expect(featuresObject["method"] as? String == "server.features")
+            let featuresIdentifier = try requestIdentifier(from: featuresObject)
+            let featuresPayload = try TransportTestActor.encodeResponsePayload(
+                identifier: featuresIdentifier,
+                result: [
+                    "genesis_hash": String(repeating: "0", count: 64),
+                    "hash_function": "sha256",
+                    "server_version": "SwiftFulcrum.Client 2.0",
+                    "protocol_max": "1.6.0",
+                    "protocol_min": "1.4.0"
+                ]
+            )
+            await transport.enqueueIncoming(.data(featuresPayload))
+        }
+
+        #expect(firstMethod == SwiftFulcrum.RPC.Method.blockchain(.headers(.getTip)).path)
+
+        let requestObject = firstMethod == SwiftFulcrum.RPC.Method.blockchain(.headers(.getTip)).path
+            ? firstOutgoing
+            : try await decodeRequestObject(await transport.dequeueOutgoing())
+        #expect(requestObject["method"] as? String == SwiftFulcrum.RPC.Method.blockchain(.headers(.getTip)).path)
+
+        let requestIdentifier = try requestIdentifier(from: requestObject)
+        let requestPayload = try TransportTestActor.encodeResponsePayload(
+            identifier: requestIdentifier,
+            result: [
+                "height": 950_000,
+                "hex": String(repeating: "a", count: 160)
+            ]
+        )
+        await transport.enqueueIncoming(.data(requestPayload))
+
+        let (_, response) = try await requestTask.value
+        #expect(response.height == 950_000)
+        #expect(try await countSentMethodOccurrences("server.version", transport: transport) == baselineVersionRequestCount)
+
+        await client.stop()
+    }
+
     @Test("request(timeout:) throws timeout when unary response is missing", .timeLimit(.minutes(1)))
     func requestTimeoutWhenUnaryResponseMissing() async throws {
         let (fulcrum, transport) = try await makeStartedFulcrum()

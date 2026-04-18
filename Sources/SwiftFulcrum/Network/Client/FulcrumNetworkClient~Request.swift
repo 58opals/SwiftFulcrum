@@ -189,10 +189,12 @@ extension FulcrumNetworkClient {
                             identifier: subscriptionKey.identifier
                         )
                         let cancellationError = await self.makeRequestCancellationError(using: timeoutState)
+                        let shouldSendUnsubscribe = await self.shouldSendUnsubscribeOnCancellation(for: cleanupKey)
                         await self.scheduleSubscriptionCleanup(
                             for: cleanupKey,
                             requestIdentifier: idCopy,
-                            error: cancellationError
+                            error: cancellationError,
+                            sendUnsubscribe: shouldSendUnsubscribe
                         )
                     }
                 }

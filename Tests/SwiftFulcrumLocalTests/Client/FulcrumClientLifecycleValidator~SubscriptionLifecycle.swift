@@ -210,4 +210,48 @@ extension FulcrumClientLifecycleValidator {
         await fulcrum.stop()
     }
 
+    @Test("cancel() emits an unsubscribe request for active subscriptions", .timeLimit(.minutes(1)))
+    func cancellingSubscriptionEmitsUnsubscribeRequest() async throws {
+        let (fulcrum, transport) = try await makeStartedFulcrum()
+        let subscribeMethod = SwiftFulcrum.RPC.Method.blockchain(.headers(.subscribe))
+        let unsubscribeMethodPath = SwiftFulcrum.RPC.Method.blockchain(.headers(.unsubscribe)).path
+
+        let subscribeTask = Task {
+            try await fulcrum.subscribe(
+                method: subscribeMethod,
+                initial: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe.self,
+                notifications: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification.self,
+                options: .init(timeout: .seconds(30))
+            )
+        }
+
+        let subscribeRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
+        let subscribeIdentifier = try requestIdentifier(from: subscribeRequest)
+        let subscribePayload = try TransportTestActor.encodeResponsePayload(
+            identifier: subscribeIdentifier,
+            result: ["height": 930_000, "hex": String(repeating: "c", count: 160)]
+        )
+        await transport.enqueueIncoming(.data(subscribePayload))
+
+        let subscription = try await subscribeTask.value
+        let baselineUnsubscribeCount = try await countSentMethodOccurrences(
+            unsubscribeMethodPath,
+            transport: transport
+        )
+
+        await subscription.cancel()
+
+        let didSendUnsubscribe = await waitUntil(timeout: .seconds(2)) {
+            let unsubscribeCount = (try? await countSentMethodOccurrences(
+                unsubscribeMethodPath,
+                transport: transport
+            )) ?? 0
+            return unsubscribeCount == baselineUnsubscribeCount + 1
+        }
+        #expect(didSendUnsubscribe)
+        #expect(await NetworkTestClient.detectStreamTermination(subscription.updates, within: .seconds(5)))
+
+        await fulcrum.stop()
+    }
+
 }

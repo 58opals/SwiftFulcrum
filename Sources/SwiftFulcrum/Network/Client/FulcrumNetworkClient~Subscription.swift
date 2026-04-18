@@ -58,6 +58,11 @@ extension FulcrumNetworkClient {
 }
 
 extension FulcrumNetworkClient {
+    func shouldSendUnsubscribeOnCancellation(for subscriptionKey: SubscriptionKey) -> Bool {
+        subscriptionMethods[subscriptionKey] != nil
+            && subscriptionSetupRequestIdentifiers[subscriptionKey] == nil
+    }
+
     func resubscribeStoredMethods() async {
         await awaitPendingSubscriptionCleanups()
         let methods = Array(subscriptionMethods)
