@@ -18,17 +18,27 @@ extension FulcrumNetworkClient.Call {
     }
     
     actor Token {
-        private var handlers: [@Sendable () async -> Void] = .init()
+        typealias RegistrationID = UUID
+
+        private var handlers: [RegistrationID: @Sendable () async -> Void] = .init()
         private var isCancellationRequested = false
         
         init() {}
         
-        func register(_ handler: @escaping @Sendable () async -> Void) async {
+        @discardableResult
+        func register(_ handler: @escaping @Sendable () async -> Void) async -> RegistrationID? {
             if isCancellationRequested {
                 await handler()
+                return nil
             } else {
-                handlers.append(handler)
+                let registrationID = RegistrationID()
+                handlers[registrationID] = handler
+                return registrationID
             }
+        }
+
+        func unregister(_ registrationID: RegistrationID) {
+            handlers.removeValue(forKey: registrationID)
         }
         
         public func cancel() async {
@@ -38,7 +48,7 @@ extension FulcrumNetworkClient.Call {
             let registeredHandlers = handlers
             handlers.removeAll(keepingCapacity: false)
             
-            for handler in registeredHandlers {
+            for handler in registeredHandlers.values {
                 await handler()
             }
         }

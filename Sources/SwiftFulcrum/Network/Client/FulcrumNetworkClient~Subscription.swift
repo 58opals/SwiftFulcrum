@@ -3,6 +3,13 @@
 import Foundation
 
 extension FulcrumNetworkClient {
+    struct SubscriptionCancellationRegistration: Sendable {
+        let token: FulcrumNetworkClient.Call.Token
+        let registrationID: FulcrumNetworkClient.Call.Token.RegistrationID
+    }
+}
+
+extension FulcrumNetworkClient {
     func dropAllStoredSubscriptions() async {
         let setupTasks = Array(subscriptionSetupTasks.values)
         subscriptionSetupRequestIdentifiers.removeAll(keepingCapacity: false)
@@ -12,6 +19,12 @@ extension FulcrumNetworkClient {
         }
 
         subscriptionCleanupTasks.removeAll(keepingCapacity: false)
+
+        let cancellationRegistrations = Array(subscriptionCancellationRegistrations.values)
+        subscriptionCancellationRegistrations.removeAll(keepingCapacity: false)
+        for cancellationRegistration in cancellationRegistrations {
+            await cancellationRegistration.token.unregister(cancellationRegistration.registrationID)
+        }
 
         guard !subscriptionMethods.isEmpty else { return }
         subscriptionMethods.removeAll(keepingCapacity: false)
@@ -186,6 +199,30 @@ extension FulcrumNetworkClient {
 }
 
 extension FulcrumNetworkClient {
+    func recordSubscriptionCancellationRegistration(
+        _ cancellationRegistration: SubscriptionCancellationRegistration?,
+        for subscriptionKey: SubscriptionKey
+    ) async {
+        guard let cancellationRegistration else { return }
+
+        if let existingRegistration = subscriptionCancellationRegistrations.updateValue(
+            cancellationRegistration,
+            forKey: subscriptionKey
+        ) {
+            await existingRegistration.token.unregister(existingRegistration.registrationID)
+        }
+    }
+
+    func clearSubscriptionCancellationRegistration(for subscriptionKey: SubscriptionKey) async {
+        guard let cancellationRegistration = subscriptionCancellationRegistrations.removeValue(forKey: subscriptionKey) else {
+            return
+        }
+
+        await cancellationRegistration.token.unregister(cancellationRegistration.registrationID)
+    }
+}
+
+extension FulcrumNetworkClient {
     func recordSubscriptionSetupRequestIdentifier(
         _ requestIdentifier: UUID,
         for subscriptionKey: SubscriptionKey
@@ -307,6 +344,7 @@ extension FulcrumNetworkClient {
             }
         }
         await router.cancel(identifier: .string(subscriptionKey.string), error: error)
+        await clearSubscriptionCancellationRegistration(for: subscriptionKey)
 
         let didRemove = await removeStoredSubscriptionMethod(for: subscriptionKey)
 

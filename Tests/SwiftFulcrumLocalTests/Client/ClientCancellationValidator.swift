@@ -78,6 +78,110 @@ struct ClientCancellationValidator {
         
         await fulcrum.stop()
     }
+
+    @Test("Completed subscriptions unregister shared cancellation handlers", .timeLimit(.minutes(1)))
+    func completedSubscriptionsUnregisterSharedCancellationHandlers() async throws {
+        let (fulcrum, transport) = try await makeStartedFulcrum()
+        let sharedCancellation = SwiftFulcrum.Client.Call.Cancellation()
+        let subscribeMethod = SwiftFulcrum.RPC.Method.blockchain(.headers(.subscribe))
+        let sharedOptions = SwiftFulcrum.Client.Call.Options(
+            timeout: .seconds(30),
+            cancellation: sharedCancellation
+        )
+
+        let firstSubscribeTask = Task {
+            try await fulcrum.subscribe(
+                method: subscribeMethod,
+                initial: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe.self,
+                notifications: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification.self,
+                options: sharedOptions
+            )
+        }
+
+        let firstSubscribeRequest = try TransportTestActor.decodeJSONObject(from: await transport.dequeueOutgoing())
+        let firstSubscribeIdentifier = try requestIdentifier(from: firstSubscribeRequest)
+        let firstSubscribePayload = try TransportTestActor.encodeResponsePayload(
+            identifier: firstSubscribeIdentifier,
+            result: ["height": 940_000, "hex": String(repeating: "a", count: 160)]
+        )
+        await transport.enqueueIncoming(.data(firstSubscribePayload))
+
+        _ = try await firstSubscribeTask.value
+
+        guard let firstRequestIdentifier = UUID(uuidString: firstSubscribeIdentifier) else {
+            Issue.record("First subscription identifier should be a UUID")
+            await fulcrum.stop()
+            return
+        }
+        let networkClient = await fulcrum.client
+        _ = await networkClient.cleanUpSubscriptionSetup(
+            for: .init(methodPath: .headers, identifier: nil),
+            requestIdentifier: firstRequestIdentifier
+        )
+
+        let didClearFirstSubscription = await waitUntil(timeout: .seconds(2)) {
+            (await fulcrum.listSubscriptions()).isEmpty
+        }
+        #expect(didClearFirstSubscription)
+
+        let secondSubscribeTask = Task {
+            try await fulcrum.subscribe(
+                method: subscribeMethod,
+                initial: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe.self,
+                notifications: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification.self,
+                options: .init(timeout: .seconds(30))
+            )
+        }
+
+        let secondSubscribeRequest = try TransportTestActor.decodeJSONObject(from: await transport.dequeueOutgoing())
+        let secondSubscribeIdentifier = try requestIdentifier(from: secondSubscribeRequest)
+        let secondSubscribePayload = try TransportTestActor.encodeResponsePayload(
+            identifier: secondSubscribeIdentifier,
+            result: ["height": 940_001, "hex": String(repeating: "b", count: 160)]
+        )
+        await transport.enqueueIncoming(.data(secondSubscribePayload))
+
+        let secondSubscription = try await secondSubscribeTask.value
+        #expect((await fulcrum.listSubscriptions()).count == 1)
+
+        await sharedCancellation.cancel()
+
+        let didPreserveSecondSubscription = await waitUntil(timeout: .milliseconds(250)) {
+            (await fulcrum.listSubscriptions()).count == 1
+        }
+        #expect(didPreserveSecondSubscription)
+
+        let notificationPayload = try TransportTestActor.encodeSubscriptionNotification(
+            method: subscribeMethod.path,
+            parameters: [[
+                "height": 940_002,
+                "hex": String(repeating: "c", count: 160)
+            ]]
+        )
+        await transport.enqueueIncoming(.data(notificationPayload))
+
+        let update = try await withThrowingTaskGroup(
+            of: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification?.self
+        ) { group in
+            group.addTask {
+                var iterator = secondSubscription.updates.makeAsyncIterator()
+                return try await iterator.next()
+            }
+            group.addTask {
+                try await Task.sleep(for: .milliseconds(500))
+                return nil
+            }
+
+            let nextUpdate = try await group.next() ?? nil
+            group.cancelAll()
+            return nextUpdate
+        }
+
+        #expect(update?.blocks.first?.height == 940_002)
+
+        await secondSubscription.cancel()
+        await fulcrum.stop()
+    }
     
     @Test("request(timeout:) does not emit a late request after timeout", .timeLimit(.minutes(1)))
     func requestTimeoutDoesNotEmitLateRequest() async throws {

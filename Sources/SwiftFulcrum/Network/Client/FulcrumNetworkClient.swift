@@ -14,6 +14,7 @@ actor FulcrumNetworkClient {
     var state: State
     
     var subscriptionMethods: [SubscriptionKey: SwiftFulcrum.RPC.Method]
+    var subscriptionCancellationRegistrations: [SubscriptionKey: SubscriptionCancellationRegistration]
     var subscriptionCleanupTasks: [SubscriptionKey: Task<Bool, Never>]
     var subscriptionSetupRequestIdentifiers: [SubscriptionKey: UUID]
     var subscriptionSetupTasks: [SubscriptionKey: Task<Void, Swift.Error>]
@@ -42,6 +43,7 @@ actor FulcrumNetworkClient {
         self.router = .init()
         self.metrics = metrics
         self.subscriptionMethods = .init()
+        self.subscriptionCancellationRegistrations = .init()
         self.subscriptionCleanupTasks = .init()
         self.subscriptionSetupRequestIdentifiers = .init()
         self.subscriptionSetupTasks = .init()
