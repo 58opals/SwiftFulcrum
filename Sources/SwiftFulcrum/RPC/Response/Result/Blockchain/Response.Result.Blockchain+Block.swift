@@ -39,13 +39,16 @@ extension SwiftFulcrum.RPC.Response.Result.Blockchain {
                 self.hex = payloadModel.hex
                 self.headers = try Self.resolveHeaders(from: payloadModel)
                 self.max = payloadModel.max
-                self.proof = {
-                    guard let branch = payloadModel.branch,
-                          let root = payloadModel.root else {
-                        return nil
-                    }
-                    return Block.Header.Proof(branch: branch, root: root)
-                }()
+                switch (payloadModel.branch, payloadModel.root) {
+                case let (.some(branch), .some(root)):
+                    self.proof = Block.Header.Proof(branch: branch, root: root)
+                case (nil, nil):
+                    self.proof = nil
+                case (.some, nil), (nil, .some):
+                    throw ResponseResultDecodeError.unexpectedFormat(
+                        "Expected block.headers proof metadata to include both branch and root"
+                    )
+                }
             }
 
             private static func resolveHeaders(

@@ -88,18 +88,18 @@ extension SwiftFulcrum {
         /// performs teardown so the client is not left running.
         public func stop() async {
             let networkConnectionState = await client.connectionState
+            let inFlightStartTask = startTask
             let shouldPreserveIdleState =
                 !isRunning &&
-                startTask == nil &&
+                inFlightStartTask == nil &&
                 currentConnectionState == .idle &&
                 networkConnectionState == .idle
 
             desiredRunning = false
             self.isRunning = false
 
-            if let startTask {
-                startTask.cancel()
-                _ = try? await startTask.value
+            if let inFlightStartTask {
+                inFlightStartTask.cancel()
                 self.startTask = nil
             }
 
@@ -108,6 +108,9 @@ extension SwiftFulcrum {
             }
 
             await self.client.stop()
+            if let inFlightStartTask {
+                _ = try? await inFlightStartTask.value
+            }
             desiredRunning = false
 
             if !shouldPreserveIdleState {
@@ -175,8 +178,10 @@ private extension SwiftFulcrum.Client {
     }
 
     static func validate(endpoint: URL) throws -> URL {
-        guard ["ws", "wss"].contains(endpoint.scheme?.lowercased()) else {
-            throw Error.transport(.setupFailed)
+        guard ["ws", "wss"].contains(endpoint.scheme?.lowercased()),
+              let host = endpoint.host,
+              !host.isEmpty else {
+            throw Error.client(.invalidURL(endpoint.absoluteString))
         }
 
         return endpoint

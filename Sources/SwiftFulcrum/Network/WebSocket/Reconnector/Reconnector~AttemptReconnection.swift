@@ -68,7 +68,7 @@ extension WebSocketModel.Reconnector {
             do {
                 if shouldCancelReceiver { await webSocket.cancelReceiverTask() }
                 await webSocket.updateURL(candidateURL)
-                try await webSocket.connect(
+                try await webSocket.performConnect(
                     shouldEmitLifecycle: false,
                     shouldAllowFailover: false,
                     shouldCancelReceiver: shouldCancelReceiver

@@ -87,6 +87,30 @@ struct ResponseDecodingValidator {
         #expect(features.hasDoubleSpendProofs == true)
     }
 
+    @Test("Rejects server.features with an inverted protocol range")
+    func rejectServerFeaturesWithInvertedProtocolRange() throws {
+        let payload = try jsonData(
+            [
+                "jsonrpc": "2.0",
+                "id": UUID().uuidString,
+                "result": [
+                    "genesis_hash": String(repeating: "0", count: 64),
+                    "hash_function": "sha256",
+                    "server_version": "Fulcrum 2.0",
+                    "protocol_max": "1.4.0",
+                    "protocol_min": "1.6.0"
+                ]
+            ]
+        )
+
+        #expect(throws: ResponseResultDecodeError.self) {
+            _ = try payload.decode(
+                SwiftFulcrum.RPC.Response.Result.Server.Features.self,
+                context: .init(methodPath: "server.features")
+            )
+        }
+    }
+
     @Test("Decodes nil result payloads without wrapper adapters")
     func decodeNilResultPayloads() throws {
         let pingPayload = try jsonData(
@@ -407,6 +431,29 @@ struct ResponseDecodingValidator {
                     "count": 1,
                     "headers": [String(repeating: "b", count: 159)],
                     "max": 2016
+                ]
+            ]
+        )
+
+        #expect(throws: ResponseResultDecodeError.self) {
+            _ = try payload.decode(
+                SwiftFulcrum.RPC.Response.Result.Blockchain.Block.Headers.self,
+                context: .init(methodPath: "blockchain.block.headers")
+            )
+        }
+    }
+
+    @Test("Rejects incomplete block.headers proof metadata")
+    func rejectIncompleteBlockHeaderProofMetadata() throws {
+        let payload = try jsonData(
+            [
+                "jsonrpc": "2.0",
+                "id": UUID().uuidString,
+                "result": [
+                    "count": 1,
+                    "hex": String(repeating: "c", count: 160),
+                    "max": 2016,
+                    "branch": [String(repeating: "d", count: 64)]
                 ]
             ]
         )

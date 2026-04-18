@@ -17,7 +17,8 @@ actor WebSocketModel {
     
     var reconnectAttemptCount = 0
     var reconnectSuccessCount = 0
-    
+
+    var connectTask: Task<Void, Swift.Error>?
     var isConnectionInFlight = false
     var connectWaiters = [CheckedContinuation<Bool, Error>]()
     var isConnected: Bool { get async { await connectionStateTracker.state == .connected } }

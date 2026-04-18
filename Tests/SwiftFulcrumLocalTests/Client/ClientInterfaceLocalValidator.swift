@@ -9,6 +9,26 @@ import SwiftFulcrumTestSupport
 struct ClientInterfaceLocalValidator {
     private static let testAddress = "bitcoincash:qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a"
 
+    @Test("Client initialization rejects hostless WebSocket endpoints")
+    func rejectHostlessWebSocketEndpoint() async throws {
+        let invalidEndpoint = try #require(URL(string: "ws:///missing-host"))
+
+        do {
+            let client = try await SwiftFulcrum.Client(connectingTo: invalidEndpoint)
+            await client.stop()
+            Issue.record("Expected hostless WebSocket endpoint to be rejected during initialization")
+        } catch let error as SwiftFulcrum.Client.Error {
+            switch error {
+            case .client(.invalidURL(let value)):
+                #expect(value == invalidEndpoint.absoluteString)
+            default:
+                Issue.record("Unexpected SwiftFulcrum.Client.Error: \(error)")
+            }
+        } catch {
+            Issue.record("Unexpected non-SwiftFulcrum.Client error: \(error)")
+        }
+    }
+
     @Test("Unary request rejects subscription methods", .timeLimit(.minutes(1)))
     func rejectSubscriptionMethodsOnRequest() async throws {
         // No network dependency: request() should reject before attempting to connect.

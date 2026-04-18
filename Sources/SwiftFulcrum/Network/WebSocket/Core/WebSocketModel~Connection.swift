@@ -8,6 +8,31 @@ extension WebSocketModel {
         shouldAllowFailover: Bool = true,
         shouldCancelReceiver: Bool = true
     ) async throws {
+        if let existingConnectTask = self.connectTask {
+            return try await existingConnectTask.value
+        }
+
+        let connectTask = Task<Void, Swift.Error> { [weak self] in
+            guard let self else { throw CancellationError() }
+            try await self.performConnect(
+                shouldEmitLifecycle: shouldEmitLifecycle,
+                shouldAllowFailover: shouldAllowFailover,
+                shouldCancelReceiver: shouldCancelReceiver
+            )
+        }
+        self.connectTask = connectTask
+        defer {
+            self.connectTask = nil
+        }
+
+        try await connectTask.value
+    }
+
+    func performConnect(
+        shouldEmitLifecycle: Bool = true,
+        shouldAllowFailover: Bool = true,
+        shouldCancelReceiver: Bool = true
+    ) async throws {
         guard await !self.isConnected else { return }
         await updateConnectionState(.connecting)
         

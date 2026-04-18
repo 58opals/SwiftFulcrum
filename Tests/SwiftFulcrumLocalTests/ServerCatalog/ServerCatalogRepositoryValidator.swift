@@ -38,6 +38,7 @@ struct ServerCatalogRepositoryValidator {
     func sanitizeFallbackCatalog() async throws {
         let fallbackServers = [
             URL(string: "http://invalid.fulcrum.example")!,
+            URL(string: "ws:///missing-host")!,
             URL(string: "wss://valid.fulcrum.example")!
         ]
         let loader = SwiftFulcrum.ServerCatalog.Repository { _, fallback in
