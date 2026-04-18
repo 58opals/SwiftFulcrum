@@ -25,20 +25,23 @@ extension FulcrumNetworkClient {
         let callTask = Task<Data, Swift.Error> {
             try await executeUnaryRequest(id: id, request: request, timeoutState: timeoutState)
         }
+        let token = options.token
+        let cancellationRegistrationID: FulcrumNetworkClient.Call.Token.RegistrationID?
+        if let token {
+            cancellationRegistrationID = await token.register { [weak self] in
+                callTask.cancel()
+                guard let self else { return }
+                let cancellationError = await self.makeRequestCancellationError(using: timeoutState)
+                await self.cancelUnary(id, error: cancellationError)
+            }
+        } else {
+            cancellationRegistrationID = nil
+        }
 
         let raw: Data
         do {
             raw = try await withTaskCancellationHandler {
-                if let token = options.token {
-                    await token.register { [weak self] in
-                        callTask.cancel()
-                        guard let self else { return }
-                        let cancellationError = await self.makeRequestCancellationError(using: timeoutState)
-                        await self.cancelUnary(id, error: cancellationError)
-                    }
-                }
-
-                if let token = options.token, await token.isCancelled {
+                if let token, await token.isCancelled {
                     let cancellationError = await self.makeRequestCancellationError(using: timeoutState)
                     callTask.cancel()
                     await self.cancelUnary(id, error: cancellationError)
@@ -72,10 +75,17 @@ extension FulcrumNetworkClient {
                 }
             }
         } catch {
+            if let token, let cancellationRegistrationID {
+                await token.unregister(cancellationRegistrationID)
+            }
             if error is CancellationError {
                 throw await makeRequestCancellationError(using: timeoutState)
             }
             throw error
+        }
+
+        if let token, let cancellationRegistrationID {
+            await token.unregister(cancellationRegistrationID)
         }
 
         return try (id, raw.decode(ResponsePayload.self, context: .init(methodPath: method.path)))
@@ -102,6 +112,7 @@ extension FulcrumNetworkClient {
             identifier: deriveSubscriptionIdentifier(for: method)
         )
         let timeoutState = RequestTimeoutState()
+        let token = options.token
         
         let subscriptionTask = Task<(UUID, Initial, AsyncThrowingStream<Notification, Swift.Error>), Swift.Error> {
             do {
@@ -176,28 +187,38 @@ extension FulcrumNetworkClient {
                 throw resolvedError
             }
         }
+        let cancellationRegistrationID: FulcrumNetworkClient.Call.Token.RegistrationID?
+        if let token {
+            cancellationRegistrationID = await token.register { [weak self] in
+                subscriptionTask.cancel()
+                guard let self else { return }
+                let cleanupKey = SubscriptionKey(
+                    methodPath: subscriptionPath,
+                    identifier: subscriptionKey.identifier
+                )
+                let cancellationError = await self.makeRequestCancellationError(using: timeoutState)
+                let shouldSendUnsubscribe = await self.shouldSendUnsubscribeOnCancellation(for: cleanupKey)
+                await self.scheduleSubscriptionCleanup(
+                    for: cleanupKey,
+                    requestIdentifier: id,
+                    error: cancellationError,
+                    sendUnsubscribe: shouldSendUnsubscribe
+                )
+            }
+        } else {
+            cancellationRegistrationID = nil
+        }
+        let cancellationRegistration: SubscriptionCancellationRegistration?
+        if let token, let cancellationRegistrationID {
+            cancellationRegistration = .init(token: token, registrationID: cancellationRegistrationID)
+        } else {
+            cancellationRegistration = nil
+        }
 
+        let subscriptionResult: (UUID, Initial, AsyncThrowingStream<Notification, Swift.Error>)
         do {
-            return try await withTaskCancellationHandler {
-                if let token = options.token {
-                    let idCopy = id
-                    await token.register { [weak self] in
-                        subscriptionTask.cancel()
-                        guard let self else { return }
-                        let cleanupKey = SubscriptionKey(
-                            methodPath: subscriptionPath,
-                            identifier: subscriptionKey.identifier
-                        )
-                        let cancellationError = await self.makeRequestCancellationError(using: timeoutState)
-                        await self.scheduleSubscriptionCleanup(
-                            for: cleanupKey,
-                            requestIdentifier: idCopy,
-                            error: cancellationError
-                        )
-                    }
-                }
-
-                if let token = options.token, await token.isCancelled {
+            subscriptionResult = try await withTaskCancellationHandler {
+                if let token, await token.isCancelled {
                     let cancellationError = await self.makeRequestCancellationError(using: timeoutState)
                     subscriptionTask.cancel()
                     await self.cleanUpSubscriptionSetup(
@@ -245,10 +266,17 @@ extension FulcrumNetworkClient {
                 }
             }
         } catch {
+            if let token, let cancellationRegistrationID {
+                await token.unregister(cancellationRegistrationID)
+            }
             if error is CancellationError {
                 throw await makeRequestCancellationError(using: timeoutState)
             }
             throw error
         }
+
+        await recordSubscriptionCancellationRegistration(cancellationRegistration, for: subscriptionKey)
+
+        return subscriptionResult
     }
 }

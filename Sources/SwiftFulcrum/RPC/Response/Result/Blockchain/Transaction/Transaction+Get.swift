@@ -4,27 +4,31 @@ import Foundation
 
 extension SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction {
     public struct Get: Decodable, Sendable {
-        public let blockHash: String
-        public let blocktime: UInt
-        public let confirmations: UInt
+        public let blockHash: String?
+        public let blocktime: UInt?
+        public let confirmations: UInt?
         public let hash: String
         public let hex: String
         public let locktime: UInt
         public let size: UInt
-        public let time: UInt
+        public let time: UInt?
         public let transactionID: String
         public let version: UInt
         public let inputs: [Input]
         public let outputs: [Output]
 
         public struct Input: Decodable, Sendable {
-            public let scriptSig: ScriptSig
+            public let coinbase: String?
+            public let scriptSig: ScriptSig?
             public let sequence: UInt
-            public let transactionID: String
-            public let indexNumberOfPreviousTransactionOutput: UInt
+            public let transactionID: String?
+            public let indexNumberOfPreviousTransactionOutput: UInt?
+
+            public var isCoinbase: Bool { coinbase != nil }
 
             init(from payloadModel: SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Transaction.Get.Detailed.Input) {
-                self.scriptSig = ScriptSig(from: payloadModel.scriptSig)
+                self.coinbase = payloadModel.coinbase
+                self.scriptSig = payloadModel.scriptSig.map(ScriptSig.init(from:))
                 self.sequence = payloadModel.sequence
                 self.transactionID = payloadModel.txid
                 self.indexNumberOfPreviousTransactionOutput = payloadModel.vout
@@ -60,7 +64,13 @@ extension SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction {
                 public let type: String
 
                 init(from payloadModel: SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Transaction.Get.Detailed.Output.ScriptPubKey) {
-                    self.addresses = payloadModel.addresses ?? .init()
+                    if let addresses = payloadModel.addresses {
+                        self.addresses = addresses
+                    } else if let address = payloadModel.address {
+                        self.addresses = [address]
+                    } else {
+                        self.addresses = .init()
+                    }
                     self.assemblyScriptLanguage = payloadModel.asm
                     self.hex = payloadModel.hex
                     self.requiredSignatures = payloadModel.reqSigs ?? 0
@@ -75,19 +85,14 @@ extension SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction {
             case .raw(let raw):
                 throw ResponseResultDecodeError.unexpectedFormat("Expected detailed transaction information; received raw hex string: \(raw)")
             case .detailed(let detailed):
-                guard let blockHash = detailed.blockhash else { throw ResponseResultDecodeError.missingField("blockhash") }
-                guard let blocktime = detailed.blocktime else { throw ResponseResultDecodeError.missingField("blocktime") }
-                guard let confirmations = detailed.confirmations else { throw ResponseResultDecodeError.missingField("confirmations") }
-                guard let time = detailed.time else { throw ResponseResultDecodeError.missingField("time") }
-
-                self.blockHash = blockHash
-                self.blocktime = blocktime
-                self.confirmations = confirmations
+                self.blockHash = detailed.blockhash
+                self.blocktime = detailed.blocktime
+                self.confirmations = detailed.confirmations
                 self.hash = detailed.hash
                 self.hex = detailed.hex
                 self.locktime = detailed.locktime
                 self.size = detailed.size
-                self.time = time
+                self.time = detailed.time
                 self.transactionID = detailed.txid
                 self.version = detailed.version
                 self.inputs = detailed.vin.map(Input.init(from:))

@@ -5,6 +5,23 @@ import Testing
 @testable import SwiftFulcrum
 
 extension FulcrumMethodRequestEncodingValidator {
+    @Test("Encodes block.header without a checkpoint proof by sending cp_height zero")
+    func encodeBlockHeaderWithoutCheckpointProof() throws {
+        try assertRequest(
+            .blockchain(.block(.header(height: 100, checkpointHeight: nil))),
+            expectedPath: SwiftFulcrum.RPC.Method.blockchain(.block(.header(height: 0, checkpointHeight: nil))).path,
+            expectedParameters: [100, 0]
+        )
+
+        let overflowHeaderObject = try requestObject(
+            for: .blockchain(.block(.header(height: UInt.max, checkpointHeight: nil)))
+        )
+        let overflowHeaderParameters = try #require(overflowHeaderObject["params"] as? [Any])
+        #expect(overflowHeaderParameters.count == 2)
+        #expect((overflowHeaderParameters[0] as? NSNumber)?.uint64Value == UInt64.max)
+        #expect((overflowHeaderParameters[1] as? NSNumber)?.uint64Value == 0)
+    }
+
     @Test("Encodes remaining blockchain request variants")
     func encodeRemainingBlockchainRequests() throws {
         try assertRequest(
@@ -20,7 +37,7 @@ extension FulcrumMethodRequestEncodingValidator {
         try assertRequest(
             .blockchain(.block(.header(height: 100, checkpointHeight: nil))),
             expectedPath: SwiftFulcrum.RPC.Method.blockchain(.block(.header(height: 0, checkpointHeight: nil))).path,
-            expectedParameters: [100, 101]
+            expectedParameters: [100, 0]
         )
         try assertRequest(
             .blockchain(.block(.header(height: 100, checkpointHeight: 500))),
@@ -37,7 +54,7 @@ extension FulcrumMethodRequestEncodingValidator {
         let overflowHeaderParameters = try #require(overflowHeaderObject["params"] as? [Any])
         #expect(overflowHeaderParameters.count == 2)
         #expect((overflowHeaderParameters[0] as? NSNumber)?.uint64Value == UInt64.max)
-        #expect((overflowHeaderParameters[1] as? NSNumber)?.uint64Value == UInt64.max)
+        #expect((overflowHeaderParameters[1] as? NSNumber)?.uint64Value == 0)
         try assertRequest(
             .blockchain(.block(.headers(startHeight: 200, count: 10, checkpointHeight: nil))),
             expectedPath: SwiftFulcrum.RPC.Method.blockchain(.block(.headers(startHeight: 0, count: 0, checkpointHeight: nil))).path,

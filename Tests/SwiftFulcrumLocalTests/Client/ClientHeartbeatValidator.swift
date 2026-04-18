@@ -62,9 +62,105 @@ struct ClientHeartbeatValidator {
 
         await client.stop()
     }
+
+    @Test("Heartbeat reconnect failure terminates active subscriptions", .timeLimit(.minutes(1)))
+    func failActiveSubscriptionsWhenHeartbeatReconnectFails() async throws {
+        let transport = TransportTestActor()
+        await transport.configureReconnectFailure(SwiftFulcrum.Client.Error.transport(.reconnectFailed))
+
+        let client = FulcrumNetworkClient(
+            transport: transport,
+            heartbeatInterval: .milliseconds(20),
+            heartbeatTimeout: .milliseconds(20),
+            protocolNegotiation: .init()
+        )
+        try await startAndNegotiate(client: client, transport: transport)
+
+        let subscribeTask = Task {
+            try await client.subscribe(
+                method: .blockchain(.headers(.subscribe))
+            ) as (
+                UUID,
+                SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe,
+                AsyncThrowingStream<SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification, Swift.Error>
+            )
+        }
+
+        let subscribeRequest = try TransportTestActor.decodeJSONObject(from: await transport.dequeueOutgoing())
+        #expect(subscribeRequest["method"] as? String == SwiftFulcrum.RPC.Method.blockchain(.headers(.subscribe)).path)
+        let subscribeIdentifier = try #require(subscribeRequest["id"] as? String)
+        let subscribePayload = try TransportTestActor.encodeResponsePayload(
+            identifier: subscribeIdentifier,
+            result: ["height": 900_000, "hex": String(repeating: "a", count: 160)]
+        )
+        await transport.enqueueIncoming(.data(subscribePayload))
+
+        let (_, _, updates) = try await subscribeTask.value
+
+        let terminated = await NetworkTestClient.detectStreamTermination(
+            updates,
+            within: .milliseconds(250)
+        )
+        #expect(terminated)
+        #expect((await client.listSubscriptions()).isEmpty)
+        #expect(await transport.makeReconnectAttempts() > 0)
+
+        await client.stop()
+    }
+
+    @Test("stop() completes while heartbeat reconnect negotiation is waiting", .timeLimit(.minutes(1)))
+    func stopCompletesWhileHeartbeatReconnectNegotiationIsWaiting() async throws {
+        let transport = TransportTestActor()
+        let client = FulcrumNetworkClient(
+            transport: transport,
+            heartbeatInterval: .milliseconds(20),
+            heartbeatTimeout: .milliseconds(20),
+            protocolNegotiation: .init()
+        )
+
+        try await startAndNegotiate(client: client, transport: transport)
+
+        let didBeginReconnectNegotiation = await waitUntil(timeout: .seconds(2)) {
+            let versionCount = (try? await countSentMethodOccurrences("server.version", transport: transport)) ?? 0
+            return versionCount >= 2
+        }
+        #expect(didBeginReconnectNegotiation)
+
+        let completion = TaskCompletionState()
+        let stopTask = Task {
+            await client.stop()
+            await completion.markCompleted()
+        }
+
+        let stopCompleted = await waitUntil(timeout: .milliseconds(250)) {
+            await completion.isCompleted
+        }
+
+        if !stopCompleted {
+            await client.resetNegotiatedSession()
+        }
+
+        #expect(stopCompleted)
+        _ = await waitUntil(timeout: .seconds(2)) {
+            await completion.isCompleted
+        }
+        _ = await stopTask.result
+    }
 }
 
 private extension ClientHeartbeatValidator {
+    actor TaskCompletionState {
+        private var completed = false
+
+        func markCompleted() {
+            completed = true
+        }
+
+        var isCompleted: Bool {
+            completed
+        }
+    }
+
     func startAndNegotiate(client: FulcrumNetworkClient, transport: TransportTestActor) async throws {
         let startTask = Task { try await client.start() }
 
@@ -91,5 +187,37 @@ private extension ClientHeartbeatValidator {
         await transport.enqueueIncoming(.data(featuresPayload))
 
         _ = try await startTask.value
+    }
+
+    func countSentMethodOccurrences(
+        _ methodPath: String,
+        transport: TransportTestActor
+    ) async throws -> Int {
+        let messages = await transport.sentMessages
+        return try messages.reduce(into: 0) { count, message in
+            guard let data = message.dataPayload else { return }
+            guard let object = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { return }
+            if object["method"] as? String == methodPath {
+                count += 1
+            }
+        }
+    }
+
+    func waitUntil(
+        timeout: Duration,
+        pollingInterval: Duration = .milliseconds(25),
+        _ condition: @Sendable @escaping () async -> Bool
+    ) async -> Bool {
+        let clock = ContinuousClock()
+        let deadline = clock.now + timeout
+
+        while clock.now < deadline {
+            if await condition() {
+                return true
+            }
+            try? await Task.sleep(for: pollingInterval)
+        }
+
+        return await condition()
     }
 }

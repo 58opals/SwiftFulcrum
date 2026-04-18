@@ -5,6 +5,7 @@ import Foundation
 actor WebSocketModel {
     var url: URL
     var task: URLSessionWebSocketTask?
+    var lastCloseInformation: (code: URLSessionWebSocketTask.CloseCode, reason: String?)
     var connectionStateTracker: ConnectionStateTracker
     let network: SwiftFulcrum.Client.Configuration.Network
     
@@ -16,7 +17,8 @@ actor WebSocketModel {
     
     var reconnectAttemptCount = 0
     var reconnectSuccessCount = 0
-    
+
+    var connectTask: Task<Void, Swift.Error>?
     var isConnectionInFlight = false
     var connectWaiters = [CheckedContinuation<Bool, Error>]()
     var isConnected: Bool { get async { await connectionStateTracker.state == .connected } }
@@ -48,6 +50,7 @@ actor WebSocketModel {
          jitter: @escaping @Sendable (ClosedRange<Double>) -> Double = { range in .random(in: range) }) {
         self.url = url
         self.task = nil
+        self.lastCloseInformation = (.invalid, nil)
         self.connectionStateTracker = .init()
         self.reconnector = Reconnector(
             reconnectConfiguration,

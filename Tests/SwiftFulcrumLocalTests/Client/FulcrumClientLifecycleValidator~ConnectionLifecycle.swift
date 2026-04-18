@@ -6,6 +6,24 @@ import SwiftFulcrumTestSupport
 @testable import SwiftFulcrum
 
 extension FulcrumClientLifecycleValidator {
+    @Test("stop() keeps an idle client idle", .timeLimit(.minutes(1)))
+    func stopKeepsIdleClientIdle() async {
+        let transport = TransportTestActor()
+        let client = FulcrumNetworkClient(transport: transport, protocolNegotiation: .init())
+        let fulcrum = await SwiftFulcrum.Client(client: client)
+
+        let stream = await fulcrum.makeConnectionStateStream()
+        let collector = Task {
+            await collectConnectionStates(from: stream, count: 2, timeout: .milliseconds(200))
+        }
+
+        await fulcrum.stop()
+
+        let states = await collector.value
+        #expect(states == [.idle])
+        #expect(await fulcrum.connectionState == .idle)
+    }
+
     @Test("connection state stream multicasts idle/connected/disconnected to every subscriber", .timeLimit(.minutes(1)))
     func multicastConnectionStateLifecycleToMultipleSubscribers() async throws {
         let transport = TransportTestActor()

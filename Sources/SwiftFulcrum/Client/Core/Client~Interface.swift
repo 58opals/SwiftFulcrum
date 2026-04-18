@@ -28,10 +28,8 @@ extension SwiftFulcrum.Client {
                 options: try makeClientOptions(from: options, constrainedBy: deadline)
             )
             return result
-        } catch let fulcrumError as SwiftFulcrum.Client.Error {
-            throw remapTimeoutErrorIfNeeded(fulcrumError, originalLimit: deadline?.limit)
         } catch {
-            throw SwiftFulcrum.Client.Error.client(.unknown(error))
+            throw adaptClientFacingError(error, originalLimit: deadline?.limit)
         }
     }
     
@@ -150,10 +148,8 @@ extension SwiftFulcrum.Client {
                 updates: updates,
                 cancellationHandler: { await token.cancel() }
             )
-        } catch let fulcrumError as SwiftFulcrum.Client.Error {
-            throw remapTimeoutErrorIfNeeded(fulcrumError, originalLimit: deadline?.limit)
         } catch {
-            throw SwiftFulcrum.Client.Error.client(.unknown(error))
+            throw adaptClientFacingError(error, originalLimit: deadline?.limit)
         }
     }
 
@@ -216,6 +212,22 @@ extension SwiftFulcrum.Client {
         }
 
         return error
+    }
+
+    private func adaptClientFacingError(
+        _ error: Swift.Error,
+        originalLimit: Duration?
+    ) -> SwiftFulcrum.Client.Error {
+        let fulcrumError: SwiftFulcrum.Client.Error
+        if let fulcrumErrorValue = error as? SwiftFulcrum.Client.Error {
+            fulcrumError = fulcrumErrorValue
+        } else if error is ResponseResultDecodeError || error is JSONRPCResponseDecodeError || error is DecodingError {
+            fulcrumError = .coding(.decode(error))
+        } else {
+            fulcrumError = .client(.unknown(error))
+        }
+
+        return remapTimeoutErrorIfNeeded(fulcrumError, originalLimit: originalLimit)
     }
     
     private func executeWithTimeout<T: Sendable>(

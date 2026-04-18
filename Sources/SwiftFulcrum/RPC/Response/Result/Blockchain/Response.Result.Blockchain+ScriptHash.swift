@@ -129,6 +129,11 @@ extension SwiftFulcrum.RPC.Response.Result.Blockchain {
                 let payloadModel = try SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.ScriptHash.Subscribe(from: decoder)
                 switch payloadModel {
                 case .scripthashAndStatus(let pair):
+                    guard (1 ... 2).contains(pair.count) else {
+                        throw ResponseResultDecodeError.unexpectedFormat(
+                            "Expected scripthash notification payload to contain [scripthash] or [scripthash, status]; got \(pair.description)"
+                        )
+                    }
                     guard let first = pair.first, let scripthash = first else { throw ResponseResultDecodeError.missingField("subscriptionIdentifier") }
                     self.subscriptionIdentifier = scripthash
                     self.status = (pair.count > 1) ? pair[1] : nil

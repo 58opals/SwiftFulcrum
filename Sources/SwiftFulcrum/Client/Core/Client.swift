@@ -87,21 +87,37 @@ extension SwiftFulcrum {
         /// This call is idempotent and deterministic. It cancels any in-flight ``start()`` and always
         /// performs teardown so the client is not left running.
         public func stop() async {
+            let networkConnectionState = await client.connectionState
+            let inFlightStartTask = startTask
+            let shouldPreserveIdleState =
+                !isRunning &&
+                inFlightStartTask == nil &&
+                currentConnectionState == .idle &&
+                networkConnectionState == .idle
+
             desiredRunning = false
             self.isRunning = false
 
-            if let startTask {
-                startTask.cancel()
-                _ = try? await startTask.value
+            if let inFlightStartTask {
+                inFlightStartTask.cancel()
                 self.startTask = nil
             }
 
+            if shouldPreserveIdleState {
+                await stopConnectionStateObservation()
+            }
+
             await self.client.stop()
+            if let inFlightStartTask {
+                _ = try? await inFlightStartTask.value
+            }
             desiredRunning = false
 
-            connectionStateObservationTask?.cancel()
-            await connectionStateObservationTask?.value
-            connectionStateObservationTask = nil
+            if !shouldPreserveIdleState {
+                await stopConnectionStateObservation()
+            } else {
+                currentConnectionState = .idle
+            }
             await resetConnectionStateStream()
         }
 
@@ -141,11 +157,13 @@ private extension SwiftFulcrum.Client {
             fallback: configuration.bootstrapServers ?? .init()
         )
 
-        guard let server = serverList.randomElement() else {
+        let validServers = serverList.compactMap { try? validate(endpoint: $0) }
+
+        guard let server = validServers.randomElement() else {
             throw Error.transport(.setupFailed)
         }
 
-        return try validate(endpoint: server)
+        return server
     }
 
     static func makeWebSocket(connectingTo endpoint: URL, configuration: Configuration) throws -> WebSocketModel {
@@ -160,8 +178,10 @@ private extension SwiftFulcrum.Client {
     }
 
     static func validate(endpoint: URL) throws -> URL {
-        guard ["ws", "wss"].contains(endpoint.scheme?.lowercased()) else {
-            throw Error.transport(.setupFailed)
+        guard ["ws", "wss"].contains(endpoint.scheme?.lowercased()),
+              let host = endpoint.host,
+              !host.isEmpty else {
+            throw Error.client(.invalidURL(endpoint.absoluteString))
         }
 
         return endpoint

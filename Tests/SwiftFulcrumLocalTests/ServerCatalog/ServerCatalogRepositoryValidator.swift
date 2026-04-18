@@ -38,6 +38,7 @@ struct ServerCatalogRepositoryValidator {
     func sanitizeFallbackCatalog() async throws {
         let fallbackServers = [
             URL(string: "http://invalid.fulcrum.example")!,
+            URL(string: "ws:///missing-host")!,
             URL(string: "wss://valid.fulcrum.example")!
         ]
         let loader = SwiftFulcrum.ServerCatalog.Repository { _, fallback in
@@ -134,5 +135,34 @@ struct ServerCatalogRepositoryValidator {
         let endpoint = await transport.endpoint
 
         #expect(endpoint == expectedServer)
+    }
+
+    @Test("Client initialization ignores invalid custom catalog entries when a valid endpoint exists")
+    func clientInitializationIgnoresInvalidCustomCatalogEntries() async throws {
+        let expectedServer = URL(string: "wss://valid.fulcrum.example")!
+        let invalidServers = (0 ..< 32).map { index in
+            URL(string: "http://invalid-\(index).fulcrum.example")!
+        }
+        let loader = SwiftFulcrum.ServerCatalog.Repository { _, _ in
+            invalidServers + [expectedServer]
+        }
+        let configuration = SwiftFulcrum.Client.Configuration(serverCatalogLoader: loader)
+
+        for attempt in 0 ..< 8 {
+            do {
+                let clientInterface = try await SwiftFulcrum.Client(configuration: configuration)
+                let client = await clientInterface.client
+                let transport = await client.transport
+                let endpoint = await transport.endpoint
+
+                #expect(endpoint == expectedServer)
+                await clientInterface.stop()
+            } catch {
+                Issue.record(
+                    "Attempt \(attempt) should have selected the valid endpoint instead of failing: \(error)"
+                )
+                return
+            }
+        }
     }
 }

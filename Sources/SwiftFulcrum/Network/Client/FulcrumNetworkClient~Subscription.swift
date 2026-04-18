@@ -3,6 +3,36 @@
 import Foundation
 
 extension FulcrumNetworkClient {
+    struct SubscriptionCancellationRegistration: Sendable {
+        let token: FulcrumNetworkClient.Call.Token
+        let registrationID: FulcrumNetworkClient.Call.Token.RegistrationID
+    }
+}
+
+extension FulcrumNetworkClient {
+    func dropAllStoredSubscriptions() async {
+        let setupTasks = Array(subscriptionSetupTasks.values)
+        subscriptionSetupRequestIdentifiers.removeAll(keepingCapacity: false)
+        subscriptionSetupTasks.removeAll(keepingCapacity: false)
+        for task in setupTasks {
+            task.cancel()
+        }
+
+        subscriptionCleanupTasks.removeAll(keepingCapacity: false)
+
+        let cancellationRegistrations = Array(subscriptionCancellationRegistrations.values)
+        subscriptionCancellationRegistrations.removeAll(keepingCapacity: false)
+        for cancellationRegistration in cancellationRegistrations {
+            await cancellationRegistration.token.unregister(cancellationRegistration.registrationID)
+        }
+
+        guard !subscriptionMethods.isEmpty else { return }
+        subscriptionMethods.removeAll(keepingCapacity: false)
+        await publishSubscriptionRegistry()
+    }
+}
+
+extension FulcrumNetworkClient {
     func makeUnsubscribeMethod(for key: SubscriptionKey) -> SwiftFulcrum.RPC.Method? {
         switch key.methodPath {
         case .scriptHash:
@@ -41,6 +71,11 @@ extension FulcrumNetworkClient {
 }
 
 extension FulcrumNetworkClient {
+    func shouldSendUnsubscribeOnCancellation(for subscriptionKey: SubscriptionKey) -> Bool {
+        subscriptionMethods[subscriptionKey] != nil
+            && subscriptionSetupRequestIdentifiers[subscriptionKey] == nil
+    }
+
     func resubscribeStoredMethods() async {
         await awaitPendingSubscriptionCleanups()
         let methods = Array(subscriptionMethods)
@@ -160,6 +195,30 @@ extension FulcrumNetworkClient {
         for task in tasks {
             _ = await task.value
         }
+    }
+}
+
+extension FulcrumNetworkClient {
+    func recordSubscriptionCancellationRegistration(
+        _ cancellationRegistration: SubscriptionCancellationRegistration?,
+        for subscriptionKey: SubscriptionKey
+    ) async {
+        guard let cancellationRegistration else { return }
+
+        if let existingRegistration = subscriptionCancellationRegistrations.updateValue(
+            cancellationRegistration,
+            forKey: subscriptionKey
+        ) {
+            await existingRegistration.token.unregister(existingRegistration.registrationID)
+        }
+    }
+
+    func clearSubscriptionCancellationRegistration(for subscriptionKey: SubscriptionKey) async {
+        guard let cancellationRegistration = subscriptionCancellationRegistrations.removeValue(forKey: subscriptionKey) else {
+            return
+        }
+
+        await cancellationRegistration.token.unregister(cancellationRegistration.registrationID)
     }
 }
 
@@ -285,6 +344,7 @@ extension FulcrumNetworkClient {
             }
         }
         await router.cancel(identifier: .string(subscriptionKey.string), error: error)
+        await clearSubscriptionCancellationRegistration(for: subscriptionKey)
 
         let didRemove = await removeStoredSubscriptionMethod(for: subscriptionKey)
 

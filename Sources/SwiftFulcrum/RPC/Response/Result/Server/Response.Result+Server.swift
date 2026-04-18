@@ -51,6 +51,11 @@ extension SwiftFulcrum.RPC.Response.Result {
                 guard let maxVersion = SwiftFulcrum.ProtocolVersion(string: payloadModel.protocol_max) else {
                     throw ResponseResultDecodeError.unexpectedFormat("Maximum protocol version is invalid: \(payloadModel.protocol_max)")
                 }
+                guard SwiftFulcrum.ProtocolVersion.Range(min: minVersion, max: maxVersion) != nil else {
+                    throw ResponseResultDecodeError.unexpectedFormat(
+                        "Server feature protocol range is invalid: \(payloadModel.protocol_min)...\(payloadModel.protocol_max)"
+                    )
+                }
                 
                 self.genesisHash = payloadModel.genesis_hash
                 self.hashFunction = payloadModel.hash_function

@@ -53,8 +53,13 @@ extension SwiftFulcrum.ServerCatalog.Repository {
 
     public static func sanitizeServers(_ servers: [URL]) -> [URL] {
         servers.filter { server in
-            guard let scheme = server.scheme?.lowercased() else { return false }
-            return scheme == "ws" || scheme == "wss"
+            guard let scheme = server.scheme?.lowercased(),
+                  scheme == "ws" || scheme == "wss",
+                  let host = server.host,
+                  !host.isEmpty else {
+                return false
+            }
+            return true
         }
     }
 }

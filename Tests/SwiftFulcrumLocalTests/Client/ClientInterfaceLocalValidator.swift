@@ -9,6 +9,26 @@ import SwiftFulcrumTestSupport
 struct ClientInterfaceLocalValidator {
     private static let testAddress = "bitcoincash:qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a"
 
+    @Test("Client initialization rejects hostless WebSocket endpoints")
+    func rejectHostlessWebSocketEndpoint() async throws {
+        let invalidEndpoint = try #require(URL(string: "ws:///missing-host"))
+
+        do {
+            let client = try await SwiftFulcrum.Client(connectingTo: invalidEndpoint)
+            await client.stop()
+            Issue.record("Expected hostless WebSocket endpoint to be rejected during initialization")
+        } catch let error as SwiftFulcrum.Client.Error {
+            switch error {
+            case .client(.invalidURL(let value)):
+                #expect(value == invalidEndpoint.absoluteString)
+            default:
+                Issue.record("Unexpected SwiftFulcrum.Client.Error: \(error)")
+            }
+        } catch {
+            Issue.record("Unexpected non-SwiftFulcrum.Client error: \(error)")
+        }
+    }
+
     @Test("Unary request rejects subscription methods", .timeLimit(.minutes(1)))
     func rejectSubscriptionMethodsOnRequest() async throws {
         // No network dependency: request() should reject before attempting to connect.
@@ -134,6 +154,69 @@ struct ClientInterfaceLocalValidator {
         await cancellation.cancel()
 
         #expect(await cancellation.isCancelled)
+    }
+
+    @Test("Unary request surfaces malformed payloads as decode errors", .timeLimit(.minutes(1)))
+    func requestSurfacesMalformedPayloadAsDecodeError() async throws {
+        let transport = TransportTestActor()
+        let networkClient = FulcrumNetworkClient(transport: transport, protocolNegotiation: .init())
+        let client = await SwiftFulcrum.Client(client: networkClient)
+
+        let requestTask = Task<SwiftFulcrum.Client.Error, Never> {
+            do {
+                _ = try await client.request(
+                    method: .blockchain(.headers(.getTip)),
+                    responseType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.GetTip.self,
+                    options: .init(timeout: .seconds(30))
+                )
+                Issue.record("request() should surface malformed payloads as decode errors")
+                return .client(.unknown(nil))
+            } catch let error as SwiftFulcrum.Client.Error {
+                return error
+            } catch {
+                return .client(.unknown(error))
+            }
+        }
+
+        let versionRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
+        let versionIdentifier = try requestIdentifier(from: versionRequest)
+        let versionPayload = try TransportTestActor.encodeResponsePayload(
+            identifier: versionIdentifier,
+            result: ["SwiftFulcrum.Client 2.0", "1.5.3"]
+        )
+        await transport.enqueueIncoming(.data(versionPayload))
+
+        let featuresRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
+        let featuresIdentifier = try requestIdentifier(from: featuresRequest)
+        let featuresPayload = try TransportTestActor.encodeResponsePayload(
+            identifier: featuresIdentifier,
+            result: [
+                "genesis_hash": String(repeating: "0", count: 64),
+                "hash_function": "sha256",
+                "server_version": "SwiftFulcrum.Client 2.0",
+                "protocol_max": "1.6.0",
+                "protocol_min": "1.4.0"
+            ]
+        )
+        await transport.enqueueIncoming(.data(featuresPayload))
+
+        let unaryRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
+        let unaryIdentifier = try requestIdentifier(from: unaryRequest)
+        let malformedPayload = try TransportTestActor.encodeResponsePayload(
+            identifier: unaryIdentifier,
+            result: ["height": "not-a-height", "hex": 7]
+        )
+        await transport.enqueueIncoming(.data(malformedPayload))
+
+        let error = await requestTask.value
+        guard case .coding(.decode(let underlyingError?)) = error else {
+            Issue.record("Expected request() to surface a decode error, got \(error)")
+            await client.stop()
+            return
+        }
+        #expect(underlyingError is ResponseResultDecodeError || underlyingError is DecodingError)
+
+        await client.stop()
     }
 }
 

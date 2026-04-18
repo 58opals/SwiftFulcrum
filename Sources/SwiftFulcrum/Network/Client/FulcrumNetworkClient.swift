@@ -14,11 +14,13 @@ actor FulcrumNetworkClient {
     var state: State
     
     var subscriptionMethods: [SubscriptionKey: SwiftFulcrum.RPC.Method]
+    var subscriptionCancellationRegistrations: [SubscriptionKey: SubscriptionCancellationRegistration]
     var subscriptionCleanupTasks: [SubscriptionKey: Task<Bool, Never>]
     var subscriptionSetupRequestIdentifiers: [SubscriptionKey: UUID]
     var subscriptionSetupTasks: [SubscriptionKey: Task<Void, Swift.Error>]
     
     var receiveTask: Task<Void, Never>?
+    private var startupTask: Task<Void, Swift.Error>?
     private var reconnectTask: Task<Void, Swift.Error>?
     private var lifecycleTask: Task<Void, Never>?
     private var diagnosticsStateTask: Task<Void, Never>?
@@ -41,6 +43,7 @@ actor FulcrumNetworkClient {
         self.router = .init()
         self.metrics = metrics
         self.subscriptionMethods = .init()
+        self.subscriptionCancellationRegistrations = .init()
         self.subscriptionCleanupTasks = .init()
         self.subscriptionSetupRequestIdentifiers = .init()
         self.subscriptionSetupTasks = .init()
@@ -54,9 +57,25 @@ actor FulcrumNetworkClient {
     }
     
     func start() async throws {
-        resetNegotiatedSession()
-        
+        if let startupTask {
+            return try await startupTask.value
+        }
+
+        let startupTask = Task<Void, Swift.Error> { [weak self] in
+            guard let self else { throw CancellationError() }
+            try await self.performStart()
+        }
+        self.startupTask = startupTask
+        defer {
+            self.startupTask = nil
+        }
+
+        try await startupTask.value
+    }
+
+    private func performStart() async throws {
         guard receiveTask == nil else { return }
+        resetNegotiatedSession()
         
         try await self.transport.connect()
         startReceivingTask()
@@ -75,7 +94,14 @@ actor FulcrumNetworkClient {
     }
     
     func stop() async {
+        if let startupTask {
+            startupTask.cancel()
+            _ = try? await startupTask.value
+            self.startupTask = nil
+        }
+
         if let reconnectTask {
+            resetNegotiatedSession()
             reconnectTask.cancel()
             _ = try? await reconnectTask.value
             self.reconnectTask = nil

@@ -10,6 +10,7 @@ extension WebSocketModel {
         
         if shouldCancelReceiver { await cancelReceiverTask() }
         if let task {
+            lastCloseInformation = closeInformation
             await connectionEventTracker?.stopTracking(taskIdentifier: task.taskIdentifier)
         }
         task?.cancel(with: .goingAway, reason: "Recreating task.".data(using: .utf8))
@@ -27,9 +28,13 @@ extension WebSocketModel {
     }
     
     var closeInformation: (code: URLSessionWebSocketTask.CloseCode, reason: String?) {
-        let code = task?.closeCode ?? .invalid
-        let reason = task?.closeReason.flatMap { String(data: $0, encoding: .utf8) }
-        return (code, reason)
+        if let task {
+            let code = task.closeCode
+            let reason = task.closeReason.flatMap { String(data: $0, encoding: .utf8) }
+            return (code, reason)
+        }
+
+        return lastCloseInformation
     }
     
     var connectionState: ConnectionState { get async { await connectionStateTracker.state } }

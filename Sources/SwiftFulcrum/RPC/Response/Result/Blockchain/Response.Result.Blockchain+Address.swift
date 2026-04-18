@@ -136,6 +136,11 @@ extension SwiftFulcrum.RPC.Response.Result.Blockchain {
                 let payloadModel = try SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Address.Subscribe(from: decoder)
                 switch payloadModel {
                 case .addressAndStatus(let pair):
+                    guard (1 ... 2).contains(pair.count) else {
+                        throw ResponseResultDecodeError.unexpectedFormat(
+                            "Expected address notification payload to contain [address] or [address, status]; got \(pair.description)"
+                        )
+                    }
                     guard let first = pair.first, let address = first else { throw ResponseResultDecodeError.missingField("subscriptionIdentifier") }
                     self.subscriptionIdentifier = address
                     self.status = (pair.count > 1) ? pair[1] : nil

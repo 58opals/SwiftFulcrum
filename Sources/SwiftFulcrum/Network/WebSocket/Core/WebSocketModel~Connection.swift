@@ -8,6 +8,31 @@ extension WebSocketModel {
         shouldAllowFailover: Bool = true,
         shouldCancelReceiver: Bool = true
     ) async throws {
+        if let existingConnectTask = self.connectTask {
+            return try await existingConnectTask.value
+        }
+
+        let connectTask = Task<Void, Swift.Error> { [weak self] in
+            guard let self else { throw CancellationError() }
+            try await self.performConnect(
+                shouldEmitLifecycle: shouldEmitLifecycle,
+                shouldAllowFailover: shouldAllowFailover,
+                shouldCancelReceiver: shouldCancelReceiver
+            )
+        }
+        self.connectTask = connectTask
+        defer {
+            self.connectTask = nil
+        }
+
+        try await connectTask.value
+    }
+
+    func performConnect(
+        shouldEmitLifecycle: Bool = true,
+        shouldAllowFailover: Bool = true,
+        shouldCancelReceiver: Bool = true
+    ) async throws {
         guard await !self.isConnected else { return }
         await updateConnectionState(.connecting)
         
@@ -28,14 +53,16 @@ extension WebSocketModel {
                 if shouldEmitLifecycle { emitLifecycle(.connected(isReconnect: false)) }
                 ensureAutomaticReceiving()
             } else {
+                let timeoutReason = "Connection timed out."
+                let timeoutFailure = SwiftFulcrum.Client.Error.transport(
+                    .connectionClosed(.goingAway, timeoutReason)
+                )
                 await updateConnectionState(.disconnected)
-                task.cancel(with: .goingAway, reason: "Connection timed out.".data(using: .utf8))
+                task.cancel(with: .goingAway, reason: timeoutReason.data(using: .utf8))
                 emitLog(.error, "connect.timeout")
                 try await performInitialFailoverIfNeeded(
                     shouldAllowFailover: shouldAllowFailover,
-                    failure: SwiftFulcrum.Client.Error.transport(
-                        .connectionClosed(closeInformation.code, closeInformation.reason)
-                    )
+                    failure: timeoutFailure
                 )
             }
         } catch let networkError as SwiftFulcrum.Client.Error.Network {
@@ -99,25 +126,42 @@ extension WebSocketModel {
     func disconnect(with reason: String? = nil) async {
         await cancelReceiverTask()
         
-        let information = closeInformation
+        let existingInformation = closeInformation
         if let task {
             await connectionEventTracker?.stopTracking(taskIdentifier: task.taskIdentifier)
         }
         
         task?.cancel(with: .goingAway, reason: reason?.data(using: .utf8))
         task = nil
+
+        let finalInformation: (code: URLSessionWebSocketTask.CloseCode, reason: String?)
+        if let reason {
+            finalInformation = (.goingAway, reason)
+        } else {
+            finalInformation = existingInformation
+        }
+        lastCloseInformation = finalInformation
+
         await updateConnectionState(.disconnected)
-        
-        finishConnectWaiters(.failure(SwiftFulcrum.Client.Error.transport(.connectionClosed(information.code, information.reason))))
-        
-        messageContinuation?.finish(
-            throwing: SwiftFulcrum.Client.Error.transport(.connectionClosed(information.code, information.reason))
+
+        let closedError = SwiftFulcrum.Client.Error.transport(
+            .connectionClosed(finalInformation.code, finalInformation.reason)
         )
         
-        await metrics?.recordDisconnect(url: url, closeCode: information.code, reason: reason)
+        finishConnectWaiters(.failure(closedError))
+        
+        messageContinuation?.finish(throwing: closedError)
+        
+        await metrics?.recordDisconnect(
+            url: url,
+            closeCode: finalInformation.code,
+            reason: finalInformation.reason
+        )
         await resetMessageStreamAndReader()
-        emitLog(.info, "disconnect", metadata: ["reason": reason ?? "nil",
-                                                "code": String(information.code.rawValue)])
-        emitLifecycle(.disconnected(code: information.code, reason: reason))
+        emitLog(.info, "disconnect", metadata: [
+            "reason": finalInformation.reason ?? "nil",
+            "code": String(finalInformation.code.rawValue)
+        ])
+        emitLifecycle(.disconnected(code: finalInformation.code, reason: finalInformation.reason))
     }
 }
