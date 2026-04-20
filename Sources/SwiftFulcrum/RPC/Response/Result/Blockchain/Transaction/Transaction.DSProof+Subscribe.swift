@@ -1,0 +1,21 @@
+// Transaction.DSProof+Subscribe.swift
+
+import Foundation
+
+extension SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction.DSProof {
+    public struct Subscribe: Decodable, Sendable {
+        public let proof: Get?
+
+        public init(from decoder: Decoder) throws {
+            let payloadModel = try SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Transaction.DSProof.Subscribe(from: decoder)
+            switch payloadModel {
+            case .dsProof(let proof):
+                self.proof = proof.map { Get(from: $0) }
+            case .transactionHashAndDSProof(let pairs):
+                throw ResponseResultDecodeError.unexpectedFormat(
+                    "Expected DSProof or nil for DSProof.Subscribe initial response; got [txHash, DSProof]: \(pairs)"
+                )
+            }
+        }
+    }
+}

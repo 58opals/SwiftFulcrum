@@ -6,14 +6,6 @@ import Testing
 
 @Suite(.tags(.local))
 struct ClientErrorEquatableValidator {
-    private struct SameMessageOne: LocalizedError {
-        var errorDescription: String? { "shared failure" }
-    }
-
-    private struct SameMessageTwo: LocalizedError {
-        var errorDescription: String? { "shared failure" }
-    }
-
     @Test("Unknown wrapped errors compare by identity, not localized text")
     func compareUnknownWrappedErrorsByIdentity() {
         let left = SwiftFulcrum.Client.Error.client(.unknown(SameMessageOne()))

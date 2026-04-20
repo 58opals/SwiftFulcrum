@@ -2,7 +2,7 @@
 
 import Foundation
 
-extension WebSocketModel.Reconnector {
+extension WebSocketConnection.Reconnector {
     func buildCandidateRotation(preferredURL: URL?, currentURL: URL) async throws -> [URL] {
         var fallbacks = [currentURL]
         if let preferredURL { fallbacks.append(preferredURL) }

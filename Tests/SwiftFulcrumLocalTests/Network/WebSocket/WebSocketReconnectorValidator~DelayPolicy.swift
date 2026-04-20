@@ -7,14 +7,14 @@ import Testing
 extension WebSocketReconnectorValidator {
     @Test("Reconnector calculates deterministic backoff", .timeLimit(.minutes(1)))
     func calculateDeterministicBackoff() async throws {
-        let configuration = WebSocketModel.Reconnector.Configuration(
+        let configuration = WebSocketConnection.Reconnector.Configuration(
             maximumReconnectionAttempts: 5,
             reconnectionDelay: 1.5,
             maximumDelay: 30,
             jitterRange: 0.8 ... 1.3
         )
 
-        let reconnector = WebSocketModel.Reconnector(
+        let reconnector = WebSocketConnection.Reconnector(
             configuration,
             network: .mainnet,
             jitter: { _ in 1 }
@@ -36,20 +36,20 @@ extension WebSocketReconnectorValidator {
 
     @Test("Reconnector applies jitter bounds", .timeLimit(.minutes(1)))
     func applyJitterBounds() async throws {
-        let configuration = WebSocketModel.Reconnector.Configuration(
+        let configuration = WebSocketConnection.Reconnector.Configuration(
             maximumReconnectionAttempts: 3,
             reconnectionDelay: 1.5,
             maximumDelay: 30,
             jitterRange: 0.8 ... 1.3
         )
 
-        let minimumJitterReconnector = WebSocketModel.Reconnector(
+        let minimumJitterReconnector = WebSocketConnection.Reconnector(
             configuration,
             network: .mainnet,
             jitter: { _ in configuration.jitterRange.lowerBound }
         )
 
-        let maximumJitterReconnector = WebSocketModel.Reconnector(
+        let maximumJitterReconnector = WebSocketConnection.Reconnector(
             configuration,
             network: .mainnet,
             jitter: { _ in configuration.jitterRange.upperBound }

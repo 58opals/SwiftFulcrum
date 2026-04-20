@@ -2,7 +2,7 @@
 
 import Foundation
 
-extension WebSocketModel.Reconnector {
+extension WebSocketConnection.Reconnector {
     func makeDelay(for attempt: Int) -> Duration? {
         guard attempt > 0 else { return nil }
 

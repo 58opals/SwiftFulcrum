@@ -5,6 +5,42 @@ import Testing
 @testable import SwiftFulcrum
 
 extension FulcrumMethodRequestEncodingValidator {
+    @Test("Preserves protocol-aligned get* Fulcrum method path strings")
+    func preserveProtocolAlignedGetMethodPaths() {
+        #expect(
+            SwiftFulcrum.RPC.Method.blockchain(.header(.get(blockHash: "abc"))).path
+            == "blockchain.header.get"
+        )
+        #expect(
+            SwiftFulcrum.RPC.Method.blockchain(.headers(.getTip)).path
+            == "blockchain.headers.get_tip"
+        )
+        #expect(
+            SwiftFulcrum.RPC.Method.blockchain(.address(.getBalance(address: "addr", tokenFilter: nil))).path
+            == "blockchain.address.get_balance"
+        )
+        #expect(
+            SwiftFulcrum.RPC.Method.blockchain(.scripthash(.getHistory(
+                scripthash: "hash",
+                fromHeight: nil,
+                toHeight: nil,
+                shouldIncludeUnconfirmed: false
+            ))).path
+            == "blockchain.scripthash.get_history"
+        )
+        #expect(
+            SwiftFulcrum.RPC.Method.blockchain(.transaction(.get(transactionHash: "tx", isVerbose: false))).path
+            == "blockchain.transaction.get"
+        )
+        #expect(
+            SwiftFulcrum.RPC.Method.blockchain(.transaction(.getConfirmedBlockHash(
+                transactionHash: "tx",
+                shouldIncludeHeader: false
+            ))).path
+            == "blockchain.transaction.get_confirmed_blockhash"
+        )
+    }
+
     @Test("Encodes block.header without a checkpoint proof by sending cp_height zero")
     func encodeBlockHeaderWithoutCheckpointProof() throws {
         try assertRequest(

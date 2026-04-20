@@ -33,7 +33,7 @@ extension SwiftFulcrum.Logging {
                         line: UInt) {
             guard LoggingBehaviorState.behavior == .normal else { return }
             guard allowLogging(for: level) else { return }
-            let entry = LoggingConsoleEntryModel(
+            let entry = LoggingConsoleEntry(
                 level: level,
                 timestamp: Self.dateFormatter.string(from: dateProvider()),
                 message: message(),
@@ -54,7 +54,7 @@ extension SwiftFulcrum.Logging {
             return level.priority >= minimumLevel.priority
         }
 
-        private func compose(_ entry: LoggingConsoleEntryModel) -> String {
+        private func compose(_ entry: LoggingConsoleEntry) -> String {
             let component = makeComponentTag(from: entry.metadata)
             let scope = makeScopeTag(file: entry.file, function: entry.function, line: entry.line)
             let metadata = makeMetadataDescription(entry.metadata)
@@ -102,7 +102,7 @@ extension SwiftFulcrum.Logging {
             return "{\(pairs)}"
         }
 
-        private func makeSignature(for entry: LoggingConsoleEntryModel) -> String {
+        private func makeSignature(for entry: LoggingConsoleEntry) -> String {
             [
                 entry.level.name,
                 entry.message,

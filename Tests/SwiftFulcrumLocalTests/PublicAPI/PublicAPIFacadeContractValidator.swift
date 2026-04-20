@@ -207,15 +207,4 @@ private extension PublicAPIFacadeContractValidator {
         return values.contentModificationDate ?? .distantPast
     }
 
-    struct SymbolGraphModel: Decodable {
-        let symbols: [SymbolModel]
-    }
-
-    struct SymbolModel: Decodable {
-        let pathComponents: [String]
-    }
-
-    enum SupportError: Swift.Error {
-        case missingGeneratedSymbolGraph(String)
-    }
 }

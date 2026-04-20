@@ -87,7 +87,7 @@ extension FulcrumClientLifecycleValidator {
         count: Int,
         timeout: Duration
     ) async -> [SwiftFulcrum.Client.ConnectionState] {
-        let collector = ConnectionStateCollectorModel(targetCount: count)
+        let collector = ConnectionStateCollector(targetCount: count)
 
         await withTaskGroup(of: Void.self) { group in
             group.addTask {

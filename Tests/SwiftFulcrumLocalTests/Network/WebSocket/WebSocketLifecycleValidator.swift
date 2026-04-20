@@ -9,7 +9,7 @@ import SwiftFulcrumTestSupport
 struct WebSocketLifecycleValidator {
     @Test("WebSocket lifecycle stream multicasts events to each subscriber", .timeLimit(.minutes(1)))
     func multicastLifecycleEventsToAllSubscribers() async {
-        let webSocket = WebSocketModel(url: URL(string: "wss://example.invalid")!)
+        let webSocket = WebSocketConnection(url: URL(string: "wss://example.invalid")!)
         let firstStream = await webSocket.makeLifecycleEvents()
         let secondStream = await webSocket.makeLifecycleEvents()
         
@@ -33,11 +33,11 @@ struct WebSocketLifecycleValidator {
 
 extension WebSocketLifecycleValidator {
     private func collectLifecycleEventSignatures(
-        from stream: AsyncStream<WebSocketModel.Lifecycle.Event>,
+        from stream: AsyncStream<WebSocketConnection.Lifecycle.Event>,
         count: Int,
         timeout: Duration
     ) async -> [String] {
-        let collector = LifecycleEventSignatureCollectorModel(targetCount: count)
+        let collector = LifecycleEventSignatureCollector(targetCount: count)
         
         await withTaskGroup(of: Void.self) { group in
             group.addTask {

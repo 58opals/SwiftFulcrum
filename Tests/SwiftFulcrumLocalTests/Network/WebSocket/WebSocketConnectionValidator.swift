@@ -7,9 +7,9 @@ import Testing
 
 @Suite(.tags(.local))
 struct WebSocketConnectionValidator {
-    @Test("WebSocketModel internal session preserves default timeout intervals", .timeLimit(.minutes(1)))
+    @Test("WebSocketConnection internal session preserves default timeout intervals", .timeLimit(.minutes(1)))
     func preserveDefaultTimeoutIntervals() async {
-        let webSocket = WebSocketModel(
+        let webSocket = WebSocketConnection(
             url: URL(string: "wss://example.invalid")!,
             connectionTimeout: 0.05
         )
@@ -145,7 +145,7 @@ struct WebSocketConnectionValidator {
 
     @Test("disconnect() preserves close information after clearing the task", .timeLimit(.minutes(1)))
     func disconnectPreservesCloseInformationAfterClearingTask() async {
-        let webSocket = WebSocketModel(url: URL(string: "wss://example.invalid")!)
+        let webSocket = WebSocketConnection(url: URL(string: "wss://example.invalid")!)
 
         await webSocket.disconnect(with: "unit-test shutdown")
 
@@ -163,7 +163,7 @@ struct WebSocketConnectionValidator {
         let endpoint = try await hangingServer.start()
         defer { hangingServer.stop() }
 
-        let webSocket = WebSocketModel(
+        let webSocket = WebSocketConnection(
             url: endpoint,
             connectionTimeout: 5
         )
@@ -192,7 +192,7 @@ struct WebSocketConnectionValidator {
         let endpoint = try await hangingServer.start()
         defer { hangingServer.stop() }
 
-        let webSocket = WebSocketModel(
+        let webSocket = WebSocketConnection(
             url: endpoint,
             connectionTimeout: 0.05
         )
@@ -217,7 +217,7 @@ struct WebSocketConnectionValidator {
 
 private extension WebSocketConnectionValidator {
     func waitForCurrentTaskIdentifier(
-        on webSocket: WebSocketModel,
+        on webSocket: WebSocketConnection,
         timeout: Duration = .seconds(1)
     ) async throws -> Int {
         let clock = ContinuousClock()
@@ -251,82 +251,4 @@ private extension WebSocketConnectionValidator {
         }
     }
 
-    enum TimeoutError: Swift.Error {
-        case missingSocketTask
-    }
-}
-
-private final class LocalHangingTCPServer: @unchecked Sendable {
-    private let listener: NWListener
-    private let queue = DispatchQueue(label: "SwiftFulcrumLocalHangingTCPServer")
-    private let lock = NSLock()
-    private var connections: [NWConnection] = .init()
-    private var startContinuation: CheckedContinuation<URL, Swift.Error>?
-
-    init() throws {
-        listener = try NWListener(using: .tcp, on: .any)
-    }
-
-    func start() async throws -> URL {
-        try await withCheckedThrowingContinuation {
-            (continuation: CheckedContinuation<URL, Swift.Error>) in
-            lock.lock()
-            startContinuation = continuation
-            lock.unlock()
-
-            listener.stateUpdateHandler = { [weak self] state in
-                self?.handleStateUpdate(state)
-            }
-
-            listener.newConnectionHandler = { [weak self] connection in
-                self?.accept(connection)
-            }
-
-            listener.start(queue: queue)
-        }
-    }
-
-    func stop() {
-        lock.lock()
-        let activeConnections = connections
-        connections.removeAll(keepingCapacity: false)
-        let continuation = startContinuation
-        startContinuation = nil
-        lock.unlock()
-
-        for connection in activeConnections {
-            connection.cancel()
-        }
-        continuation?.resume(throwing: CancellationError())
-        listener.cancel()
-    }
-
-    private func handleStateUpdate(_ state: NWListener.State) {
-        switch state {
-        case .ready:
-            guard let port = listener.port else { return }
-            resolveStart(with: .success(URL(string: "ws://127.0.0.1:\(port.rawValue)")!))
-        case .failed(let error):
-            resolveStart(with: .failure(error))
-        default:
-            break
-        }
-    }
-
-    private func accept(_ connection: NWConnection) {
-        lock.lock()
-        connections.append(connection)
-        lock.unlock()
-        connection.start(queue: queue)
-    }
-
-    private func resolveStart(with result: Result<URL, Swift.Error>) {
-        lock.lock()
-        let continuation = startContinuation
-        startContinuation = nil
-        lock.unlock()
-
-        guard let continuation else { return }
-        continuation.resume(with: result)
-    }
 }

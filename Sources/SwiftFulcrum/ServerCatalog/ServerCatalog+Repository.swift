@@ -31,7 +31,7 @@ extension SwiftFulcrum.ServerCatalog {
 extension SwiftFulcrum.ServerCatalog.Repository {
     public static let bundled = Self(load: { network, fallback in
         try await Task.detached(priority: .utility) {
-            if let bundled = try? WebSocketModel.Server.decodeBundledServers(for: network), !bundled.isEmpty {
+            if let bundled = try? WebSocketConnection.Server.decodeBundledServers(for: network), !bundled.isEmpty {
                 return bundled
             }
 

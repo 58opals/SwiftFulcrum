@@ -3,11 +3,6 @@
 import Foundation
 
 actor WebSocketConnectionEventTracker {
-    private struct Entry {
-        var result: Result<Void, Swift.Error>?
-        var waitersByIdentifier: [UUID: CheckedContinuation<Void, Swift.Error>] = .init()
-    }
-
     private var entriesByTaskIdentifier: [Int: Entry] = .init()
 
     func beginTracking(taskIdentifier: Int) {

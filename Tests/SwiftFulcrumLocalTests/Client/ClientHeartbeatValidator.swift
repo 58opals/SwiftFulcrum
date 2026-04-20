@@ -149,18 +149,6 @@ struct ClientHeartbeatValidator {
 }
 
 private extension ClientHeartbeatValidator {
-    actor TaskCompletionState {
-        private var completed = false
-
-        func markCompleted() {
-            completed = true
-        }
-
-        var isCompleted: Bool {
-            completed
-        }
-    }
-
     func startAndNegotiate(client: FulcrumNetworkClient, transport: TransportTestActor) async throws {
         let startTask = Task { try await client.start() }
 

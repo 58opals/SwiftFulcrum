@@ -18,12 +18,8 @@ struct FulcrumRequest {
 }
 
 extension FulcrumRequest: Encodable {
-    private enum CodingKeysModel: String, CodingKey {
-        case jsonrpc, id, method, params
-    }
-    
     func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeysModel.self)
+        var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(jsonrpc, forKey: .jsonrpc)
         try container.encode(id, forKey: .id)
         try container.encode(method, forKey: .method)

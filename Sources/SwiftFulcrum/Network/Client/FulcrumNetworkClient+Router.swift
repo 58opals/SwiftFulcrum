@@ -4,12 +4,7 @@ import Foundation
 
 extension FulcrumNetworkClient {
     actor Router {
-        private enum PendingModel {
-            case unary(AsyncThrowingStream<Data, Swift.Error>.Continuation)
-            case stream(AsyncThrowingStream<Data, Swift.Error>.Continuation)
-        }
-        
-        private var table: [SwiftFulcrum.RPC.Response.Identifier: PendingModel] = .init()
+        private var table: [SwiftFulcrum.RPC.Response.Identifier: PendingEntry] = .init()
         
         
         private var inflightUnaryCallCount = 0

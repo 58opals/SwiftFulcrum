@@ -2,9 +2,9 @@
 
 import Foundation
 
-extension WebSocketModel.Reconnector {
+extension WebSocketConnection.Reconnector {
     func attemptReconnection(
-        for webSocket: WebSocketModel,
+        for webSocket: WebSocketConnection,
         with url: URL? = nil,
         shouldCancelReceiver: Bool = true,
         isInitialConnection: Bool = false
