@@ -2,20 +2,23 @@
 
 import Foundation
 
-final class DataStreamIterator<Failure: Swift.Error>: @unchecked Sendable {
-    private var iterator: AsyncThrowingStream<Data, Failure>.AsyncIterator
+actor DataStreamIterator<Failure: Swift.Error> {
+    private let nextChunk: () async throws -> Data?
     private let onTermination: (@Sendable () -> Void)?
 
     init(
         stream: AsyncThrowingStream<Data, Failure>,
         onTermination: (@Sendable () -> Void)? = nil
     ) {
-        self.iterator = stream.makeAsyncIterator()
+        var iterator = stream.makeAsyncIterator()
+        self.nextChunk = {
+            try await iterator.next()
+        }
         self.onTermination = onTermination
     }
 
     func next() async throws -> Data? {
-        try await iterator.next()
+        try await nextChunk()
     }
 
     deinit {

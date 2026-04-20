@@ -15,13 +15,9 @@ extension WebSocketReconnectorValidator {
         )
 
         let unreachable = URL(string: "wss://127.0.0.1:9")!
-        let networkSession = URLSession(configuration: .ephemeral)
-        defer { networkSession.invalidateAndCancel() }
-
         let webSocket = WebSocketConnection(
             url: unreachable,
             configuration: .init(
-                session: networkSession,
                 serverCatalogLoader: .makeConstant([unreachable])
             ),
             reconnectConfiguration: configuration,
@@ -65,13 +61,9 @@ extension WebSocketReconnectorValidator {
         let alternate = URL(string: "wss://127.0.0.1:10")!
         let injectedCatalog = [current, alternate]
 
-        let networkSession = URLSession(configuration: .ephemeral)
-        defer { networkSession.invalidateAndCancel() }
-
         let webSocket = WebSocketConnection(
             url: current,
             configuration: .init(
-                session: networkSession,
                 serverCatalogLoader: .makeConstant(injectedCatalog)
             ),
             reconnectConfiguration: configuration,
@@ -116,13 +108,9 @@ extension WebSocketReconnectorValidator {
             return
         }
 
-        let networkSession = URLSession(configuration: .ephemeral)
-        defer { networkSession.invalidateAndCancel() }
-
         let webSocket = WebSocketConnection(
             url: current,
             configuration: .init(
-                session: networkSession,
                 serverCatalogLoader: .makeConstant(injectedCatalog)
             ),
             reconnectConfiguration: configuration,
@@ -167,13 +155,9 @@ extension WebSocketReconnectorValidator {
             return
         }
 
-        let networkSession = URLSession(configuration: .ephemeral)
-        defer { networkSession.invalidateAndCancel() }
-
         let webSocket = WebSocketConnection(
             url: current,
             configuration: .init(
-                session: networkSession,
                 serverCatalogLoader: .makeConstant(injectedCatalog)
             ),
             reconnectConfiguration: configuration,
@@ -210,13 +194,9 @@ extension WebSocketReconnectorValidator {
         )
 
         let unreachable = URL(string: "wss://127.0.0.1:9")!
-        let networkSession = URLSession(configuration: .ephemeral)
-        defer { networkSession.invalidateAndCancel() }
-
         let webSocket = WebSocketConnection(
             url: unreachable,
             configuration: .init(
-                session: networkSession,
                 serverCatalogLoader: .makeConstant([unreachable])
             ),
             reconnectConfiguration: configuration,

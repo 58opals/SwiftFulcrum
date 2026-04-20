@@ -111,11 +111,11 @@ extension FulcrumNetworkClient {
             }
             return
         }
-        let restoreTask = Task<Void, Swift.Error> { [weak self] in
-            guard let self else { throw CancellationError() }
+        let owner = self
+        let restoreTask = Task<Void, Swift.Error> {
 
-            let rawResponseStream = try await self.registerUnaryResponse(for: requestIdentifier)
-            guard await self.isCurrentSubscriptionSetupRequestIdentifier(
+            let rawResponseStream = try await owner.registerUnaryResponse(for: requestIdentifier)
+            guard await owner.isCurrentSubscriptionSetupRequestIdentifier(
                 requestIdentifier,
                 for: subscriptionKey
             ) else {
@@ -123,16 +123,16 @@ extension FulcrumNetworkClient {
             }
 
             try Task.checkCancellation()
-            try await self.send(data: requestData)
-            guard await self.isCurrentSubscriptionSetupRequestIdentifier(
+            try await owner.send(data: requestData)
+            guard await owner.isCurrentSubscriptionSetupRequestIdentifier(
                 requestIdentifier,
                 for: subscriptionKey
             ) else {
                 return
             }
 
-            let rawResponse = try await self.awaitUnaryResponse(from: rawResponseStream)
-            guard await self.isCurrentSubscriptionSetupRequestIdentifier(
+            let rawResponse = try await owner.awaitUnaryResponse(from: rawResponseStream)
+            guard await owner.isCurrentSubscriptionSetupRequestIdentifier(
                 requestIdentifier,
                 for: subscriptionKey
             ) else {
@@ -141,8 +141,8 @@ extension FulcrumNetworkClient {
 
             switch try SwiftFulcrum.RPC.Response.JSONRPC.classifyErasedResponse(from: rawResponse) {
             case .regular:
-                await self.clearSubscriptionSetupRequestIdentifier(requestIdentifier, for: subscriptionKey)
-                await self.emitLog(.info,
+                await owner.clearSubscriptionSetupRequestIdentifier(requestIdentifier, for: subscriptionKey)
+                await owner.emitLog(.info,
                                    "subscription_registry.restored",
                                    metadata: [
                                        "identifier": subscriptionKey.identifier ?? "",
@@ -313,26 +313,27 @@ extension FulcrumNetworkClient {
         requestIdentifier: UUID,
         error: Swift.Error? = nil,
         sendUnsubscribe: Bool = false,
+        preferCurrentSetupRequest: Bool = false,
         requireMatchingActiveRequestIdentifier: Bool = false
     ) async -> Bool {
         if let task = subscriptionCleanupTasks[subscriptionKey] {
             return await task.value
         }
 
-        let task = Task<Bool, Never> { [weak self] in
-            guard let self else { return false }
+        let owner = self
+        let task = Task<Bool, Never> {
 
-            let didRemove = await self.cleanUpSubscriptionSetup(
+            let didRemove = await owner.cleanUpSubscriptionSetup(
                 for: subscriptionKey,
                 requestIdentifier: requestIdentifier,
                 error: error,
-                preferCurrentSetupRequest: false,
+                preferCurrentSetupRequest: preferCurrentSetupRequest,
                 requireMatchingActiveRequestIdentifier: requireMatchingActiveRequestIdentifier
             )
 
             guard sendUnsubscribe,
                   didRemove,
-                  let method = await self.makeUnsubscribeMethod(for: subscriptionKey) else {
+                  let method = await owner.makeUnsubscribeMethod(for: subscriptionKey) else {
                 return didRemove
             }
 
@@ -342,11 +343,11 @@ extension FulcrumNetworkClient {
             }
 
             await Task.yield()
-            guard await self.shouldSendDeferredUnsubscribe(for: subscriptionKey) else {
+            guard await owner.shouldSendDeferredUnsubscribe(for: subscriptionKey) else {
                 return didRemove
             }
 
-            try? await self.send(data: requestData)
+            try? await owner.send(data: requestData)
             return didRemove
         }
 
@@ -495,6 +496,7 @@ extension FulcrumNetworkClient {
                     for: subscriptionKey,
                     requestIdentifier: requestIdentifier,
                     sendUnsubscribe: true,
+                    preferCurrentSetupRequest: true,
                     requireMatchingActiveRequestIdentifier: true
                 )
             }

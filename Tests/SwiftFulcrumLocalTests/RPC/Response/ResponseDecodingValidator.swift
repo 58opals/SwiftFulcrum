@@ -199,6 +199,42 @@ struct ResponseDecodingValidator {
         #expect(dsProofUpdate.proof?.transactionID == "abc123")
     }
 
+    @Test("Dropping a decoded stream fires the decode termination hook")
+    func droppingDecodedStreamFiresTerminationHook() async throws {
+        actor TerminationState {
+            private(set) var isTerminated = false
+
+            func markTerminated() {
+                isTerminated = true
+            }
+        }
+
+        let terminationState = TerminationState()
+        let rawStream = AsyncThrowingStream<Data, Swift.Error> { _ in }
+        var decodedStream: AsyncThrowingStream<String, Swift.Error>? = rawStream.decode(
+            String.self,
+            onTermination: {
+                Task {
+                    await terminationState.markTerminated()
+                }
+            }
+        )
+        #expect(decodedStream != nil)
+
+        decodedStream = nil
+
+        let clock = ContinuousClock()
+        let deadline = clock.now.advanced(by: .seconds(1))
+        while clock.now < deadline {
+            if await terminationState.isTerminated {
+                return
+            }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+
+        Issue.record("Expected the decode termination hook after dropping the decoded stream")
+    }
+
     @Test("Rejects oversized address and scripthash notification payloads")
     func rejectOversizedAddressAndScriptHashNotifications() throws {
         let addressPayload = try jsonData(

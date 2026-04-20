@@ -21,12 +21,9 @@ struct ServerCatalogRepositoryValidator {
     @Test("Falls back when bundled catalog is unavailable")
     func loadFallbackBootstrapList() async throws {
         let fallbackServers = [URL(string: "wss://fallback.fulcrum.example")!]
+        let fallbackLoader = FallbackLoader()
         let loader = SwiftFulcrum.ServerCatalog.Repository { _, fallback in
-            try await Task.detached(priority: .utility) {
-                let sanitized = SwiftFulcrum.ServerCatalog.Repository.sanitizeServers(fallback)
-                guard !sanitized.isEmpty else { throw SwiftFulcrum.Client.Error.transport(.setupFailed) }
-                return sanitized
-            }.value
+            try await fallbackLoader.load(fallback)
         }
 
         let servers = try await loader.loadServers(for: .mainnet, fallback: fallbackServers)
@@ -41,12 +38,9 @@ struct ServerCatalogRepositoryValidator {
             URL(string: "ws:///missing-host")!,
             URL(string: "wss://valid.fulcrum.example")!
         ]
+        let fallbackLoader = FallbackLoader()
         let loader = SwiftFulcrum.ServerCatalog.Repository { _, fallback in
-            try await Task.detached(priority: .utility) {
-                let sanitized = SwiftFulcrum.ServerCatalog.Repository.sanitizeServers(fallback)
-                guard !sanitized.isEmpty else { throw SwiftFulcrum.Client.Error.transport(.setupFailed) }
-                return sanitized
-            }.value
+            try await fallbackLoader.load(fallback)
         }
 
         let servers = try await loader.loadServers(for: .mainnet, fallback: fallbackServers)
@@ -95,13 +89,9 @@ struct ServerCatalogRepositoryValidator {
 
     @Test("Throws when both bundled and fallback catalogs are empty")
     func throwWhenCatalogCannotBeBuilt() async {
+        let fallbackLoader = FallbackLoader()
         let loader = SwiftFulcrum.ServerCatalog.Repository { _, _ in
-            try await Task.detached(priority: .utility) { () -> [URL] in
-                let fallback: [URL] = .init()
-                let sanitized = SwiftFulcrum.ServerCatalog.Repository.sanitizeServers(fallback)
-                guard !sanitized.isEmpty else { throw SwiftFulcrum.Client.Error.transport(.setupFailed) }
-                return sanitized
-            }.value
+            try await fallbackLoader.load(.init())
         }
 
         do {

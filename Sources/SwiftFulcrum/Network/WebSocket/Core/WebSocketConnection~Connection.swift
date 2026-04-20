@@ -12,9 +12,9 @@ extension WebSocketConnection {
             return try await existingConnectTask.value
         }
 
-        let connectTask = Task<Void, Swift.Error> { [weak self] in
-            guard let self else { throw CancellationError() }
-            try await self.performConnect(
+        let connection = self
+        let connectTask = Task<Void, Swift.Error> {
+            try await connection.performConnect(
                 shouldEmitLifecycle: shouldEmitLifecycle,
                 shouldAllowFailover: shouldAllowFailover,
                 shouldCancelReceiver: shouldCancelReceiver
@@ -128,7 +128,7 @@ extension WebSocketConnection {
         
         let existingInformation = closeInformation
         if let task {
-            await connectionEventTracker?.stopTracking(taskIdentifier: task.taskIdentifier)
+            await connectionEventTracker.stopTracking(taskIdentifier: task.taskIdentifier)
         }
         
         task?.cancel(with: .goingAway, reason: reason?.data(using: .utf8))

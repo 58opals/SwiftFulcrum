@@ -27,10 +27,7 @@ struct WebSocketConnectionValidator {
     @Test("WebSocketSessionDelegateProxy resolves tracked open events", .timeLimit(.minutes(1)))
     func resolveTrackedOpenEvents() async throws {
         let tracker = WebSocketConnectionEventTracker()
-        let proxy = WebSocketSessionDelegateProxy(
-            connectionEventTracker: tracker,
-            baseDelegate: nil
-        )
+        let proxy = WebSocketSessionDelegateProxy(connectionEventTracker: tracker)
         let session = URLSession(configuration: .ephemeral)
         defer { session.invalidateAndCancel() }
 
@@ -48,10 +45,7 @@ struct WebSocketConnectionValidator {
     @Test("WebSocketSessionDelegateProxy resolves tracked completion failures", .timeLimit(.minutes(1)))
     func resolveTrackedCompletionFailures() async {
         let tracker = WebSocketConnectionEventTracker()
-        let proxy = WebSocketSessionDelegateProxy(
-            connectionEventTracker: tracker,
-            baseDelegate: nil
-        )
+        let proxy = WebSocketSessionDelegateProxy(connectionEventTracker: tracker)
         let session = URLSession(configuration: .ephemeral)
         defer { session.invalidateAndCancel() }
 
@@ -81,14 +75,10 @@ struct WebSocketConnectionValidator {
         }
     }
 
-    @Test("WebSocketSessionDelegateProxy forwards delegate challenge and lifecycle callbacks", .timeLimit(.minutes(1)))
-    func forwardDelegateChallengeAndLifecycleCallbacks() async {
+    @Test("WebSocketSessionDelegateProxy uses default challenge handling", .timeLimit(.minutes(1)))
+    func useDefaultChallengeHandling() async {
         let tracker = WebSocketConnectionEventTracker()
-        let recorder = SessionDelegateRecorder()
-        let proxy = WebSocketSessionDelegateProxy(
-            connectionEventTracker: tracker,
-            baseDelegate: recorder
-        )
+        let proxy = WebSocketSessionDelegateProxy(connectionEventTracker: tracker)
         let session = URLSession(configuration: .ephemeral)
         defer { session.invalidateAndCancel() }
 
@@ -124,23 +114,10 @@ struct WebSocketConnectionValidator {
             }
         }
 
-        proxy.urlSession(session, webSocketTask: task, didOpenWithProtocol: "fulcrum")
-        proxy.urlSession(
-            session,
-            webSocketTask: task,
-            didCloseWith: .normalClosure,
-            reason: "closed".data(using: .utf8)
-        )
-
         #expect(sessionChallengeResult.0 == URLSession.AuthChallengeDisposition.performDefaultHandling)
         #expect(sessionChallengeResult.1 == nil)
-        #expect(taskChallengeResult.0 == URLSession.AuthChallengeDisposition.useCredential)
-        #expect(taskChallengeResult.1 == "swiftfulcrum")
-        #expect(recorder.sessionChallengeCount == 1)
-        #expect(recorder.taskChallengeCount == 1)
-        #expect(recorder.openProtocols == ["fulcrum"])
-        #expect(recorder.closeCodes == [.normalClosure])
-        #expect(recorder.closeReasons == ["closed"])
+        #expect(taskChallengeResult.0 == URLSession.AuthChallengeDisposition.performDefaultHandling)
+        #expect(taskChallengeResult.1 == nil)
     }
 
     @Test("disconnect() preserves close information after clearing the task", .timeLimit(.minutes(1)))
@@ -161,7 +138,10 @@ struct WebSocketConnectionValidator {
     func concurrentConnectCallsShareOneInflightSocketTask() async throws {
         let hangingServer = try LocalHangingTCPServer()
         let endpoint = try await hangingServer.start()
-        defer { hangingServer.stop() }
+        defer {
+            let server = hangingServer
+            Task { await server.stop() }
+        }
 
         let webSocket = WebSocketConnection(
             url: endpoint,
@@ -190,7 +170,10 @@ struct WebSocketConnectionValidator {
     func connectTimeoutPreservesTimeoutCloseReason() async throws {
         let hangingServer = try LocalHangingTCPServer()
         let endpoint = try await hangingServer.start()
-        defer { hangingServer.stop() }
+        defer {
+            let server = hangingServer
+            Task { await server.stop() }
+        }
 
         let webSocket = WebSocketConnection(
             url: endpoint,

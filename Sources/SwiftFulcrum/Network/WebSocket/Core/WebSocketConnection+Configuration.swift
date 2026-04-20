@@ -7,7 +7,6 @@ extension WebSocketConnection {
     struct Configuration: Sendable {
         static let defaultMaximumMessageSize = 64 * 1024 * 1024
         
-        let session: URLSession?
         let tlsDescriptor: TLSDescriptor?
         let metrics: SwiftFulcrum.Metrics.MetricsClient?
         let logger: SwiftFulcrum.Logging.Adapter?
@@ -15,14 +14,12 @@ extension WebSocketConnection {
         let serverCatalogLoader: SwiftFulcrum.ServerCatalog.Repository
         let network: SwiftFulcrum.Client.Configuration.Network
         
-        init(session: URLSession? = nil,
-             tlsDescriptor: TLSDescriptor? = nil,
+        init(tlsDescriptor: TLSDescriptor? = nil,
              metrics: SwiftFulcrum.Metrics.MetricsClient? = nil,
              logger: SwiftFulcrum.Logging.Adapter? = nil,
              maximumMessageSize: Int = defaultMaximumMessageSize,
              serverCatalogLoader: SwiftFulcrum.ServerCatalog.Repository = .bundled,
              network: SwiftFulcrum.Client.Configuration.Network = .mainnet) {
-            self.session = session
             self.tlsDescriptor = tlsDescriptor
             self.metrics = metrics
             self.logger = logger

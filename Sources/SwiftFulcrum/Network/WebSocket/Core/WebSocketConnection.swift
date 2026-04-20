@@ -36,8 +36,8 @@ actor WebSocketConnection {
     let session: URLSession
     let connectionTimeout: TimeInterval
     let maximumMessageSize: Int
-    let connectionEventTracker: WebSocketConnectionEventTracker?
-    let sessionDelegateProxy: WebSocketSessionDelegateProxy?
+    let connectionEventTracker: WebSocketConnectionEventTracker
+    let sessionDelegateProxy: WebSocketSessionDelegateProxy
     
     private let tlsDescriptor: TLSDescriptor?
     var metrics: SwiftFulcrum.Metrics.MetricsClient?
@@ -67,25 +67,18 @@ actor WebSocketConnection {
         self.tlsDescriptor = configuration.tlsDescriptor
         self.maximumMessageSize = configuration.maximumMessageSize
         
-        if let session = configuration.session {
-            self.session = session
-            self.connectionEventTracker = nil
-            self.sessionDelegateProxy = nil
-        } else {
-            let sessionConfiguration = URLSessionConfiguration.default
-            let connectionEventTracker = WebSocketConnectionEventTracker()
-            let sessionDelegateProxy = WebSocketSessionDelegateProxy(
-                connectionEventTracker: connectionEventTracker,
-                baseDelegate: configuration.tlsDescriptor?.delegate
-            )
-            
-            self.connectionEventTracker = connectionEventTracker
-            self.sessionDelegateProxy = sessionDelegateProxy
-            self.session = URLSession(
-                configuration: sessionConfiguration,
-                delegate: sessionDelegateProxy,
-                delegateQueue: nil
-            )
-        }
+        let sessionConfiguration = URLSessionConfiguration.default
+        let connectionEventTracker = WebSocketConnectionEventTracker()
+        let sessionDelegateProxy = WebSocketSessionDelegateProxy(
+            connectionEventTracker: connectionEventTracker
+        )
+        
+        self.connectionEventTracker = connectionEventTracker
+        self.sessionDelegateProxy = sessionDelegateProxy
+        self.session = URLSession(
+            configuration: sessionConfiguration,
+            delegate: sessionDelegateProxy,
+            delegateQueue: nil
+        )
     }
 }

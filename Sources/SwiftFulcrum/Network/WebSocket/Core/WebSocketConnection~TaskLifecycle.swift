@@ -11,13 +11,13 @@ extension WebSocketConnection {
         if shouldCancelReceiver { await cancelReceiverTask() }
         if let task {
             lastCloseInformation = closeInformation
-            await connectionEventTracker?.stopTracking(taskIdentifier: task.taskIdentifier)
+            await connectionEventTracker.stopTracking(taskIdentifier: task.taskIdentifier)
         }
         task?.cancel(with: .goingAway, reason: "Recreating task.".data(using: .utf8))
         task = session.webSocketTask(with: self.url)
         task?.maximumMessageSize = maximumMessageSize
         if let task {
-            await connectionEventTracker?.beginTracking(taskIdentifier: task.taskIdentifier)
+            await connectionEventTracker.beginTracking(taskIdentifier: task.taskIdentifier)
         }
     }
     

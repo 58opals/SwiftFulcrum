@@ -40,15 +40,11 @@ extension WebSocketConnection {
             throw SwiftFulcrum.Client.Error.transport(.connectionClosed(closeInformation.code, closeInformation.reason))
         }
 
-        if let connectionEventTracker {
-            return try await waitForConnectionOpenEvent(
-                taskIdentifier: task.taskIdentifier,
-                timeout: timeout,
-                connectionEventTracker: connectionEventTracker
-            )
-        }
-        
-        return try await waitForConnectionPong(task: task, timeout: timeout)
+        return try await waitForConnectionOpenEvent(
+            taskIdentifier: task.taskIdentifier,
+            timeout: timeout,
+            connectionEventTracker: connectionEventTracker
+        )
     }
     
     private func waitForConnectionOpenEvent(

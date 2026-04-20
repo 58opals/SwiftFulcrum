@@ -188,7 +188,8 @@ extension FulcrumNetworkClient {
                         for: cleanupKey,
                         requestIdentifier: id,
                         error: cancellationError,
-                        sendUnsubscribe: shouldSendUnsubscribe
+                        sendUnsubscribe: shouldSendUnsubscribe,
+                        preferCurrentSetupRequest: true
                     )
                 }
             }

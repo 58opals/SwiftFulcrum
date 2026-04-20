@@ -5,9 +5,9 @@ import Foundation
 extension WebSocketConnection {
     private func startReader() {
         guard receivedTask == nil else { return }
-        receivedTask = Task { [weak self] in
-            guard let self else { return }
-            await self.receiveContinuously()
+        let connection = self
+        receivedTask = Task {
+            await connection.receiveContinuously()
         }
     }
     

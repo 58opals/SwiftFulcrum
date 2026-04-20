@@ -33,11 +33,12 @@ extension SwiftFulcrum.Client {
 extension SwiftFulcrum.Client {
     func startConnectionStateObservation() {
         connectionStateObservationTask?.cancel()
-        connectionStateObservationTask = Task { [weak self] in
-            guard let self else { return }
-            let stream = await self.client.makeConnectionStateEvents()
+        let client = self.client
+        let owner = self
+        connectionStateObservationTask = Task {
+            let stream = await client.makeConnectionStateEvents()
             for await state in stream {
-                await self.updateConnectionState(state)
+                await owner.updateConnectionState(state)
             }
         }
     }
