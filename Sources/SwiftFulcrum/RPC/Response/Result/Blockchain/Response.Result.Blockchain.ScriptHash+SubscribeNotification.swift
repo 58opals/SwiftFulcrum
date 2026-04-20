@@ -1,0 +1,29 @@
+// Response.Result.Blockchain.ScriptHash+SubscribeNotification.swift
+
+import Foundation
+
+extension SwiftFulcrum.RPC.Response.Result.Blockchain.ScriptHash {
+    public struct SubscribeNotification: Decodable, Sendable {
+        public let subscriptionIdentifier: String
+        public let status: String?
+
+        public init(from decoder: Decoder) throws {
+            let payloadModel = try SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.ScriptHash.Subscribe(from: decoder)
+            switch payloadModel {
+            case .scripthashAndStatus(let pair):
+                guard (1 ... 2).contains(pair.count) else {
+                    throw ResponseResultDecodeError.unexpectedFormat(
+                        "Expected scripthash notification payload to contain [scripthash] or [scripthash, status]; got \(pair.description)"
+                    )
+                }
+                guard let first = pair.first, let scripthash = first else {
+                    throw ResponseResultDecodeError.missingField("subscriptionIdentifier")
+                }
+                self.subscriptionIdentifier = scripthash
+                self.status = (pair.count > 1) ? pair[1] : nil
+            case .status(let statusString):
+                throw ResponseResultDecodeError.unexpectedFormat("Expected scripthash and status pair; got single status: \(statusString)")
+            }
+        }
+    }
+}

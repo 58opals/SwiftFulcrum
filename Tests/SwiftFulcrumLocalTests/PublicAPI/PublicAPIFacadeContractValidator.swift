@@ -14,6 +14,10 @@ struct PublicAPIFacadeContractValidator {
         let configurationType: SwiftFulcrum.Client.Configuration.Type = SwiftFulcrum.Client.Configuration.self
         _ = configurationType
 
+        let tlsDescriptorType: SwiftFulcrum.Client.Configuration.TLSDescriptor.Type =
+            SwiftFulcrum.Client.Configuration.TLSDescriptor.self
+        _ = tlsDescriptorType
+
         let callOptionsType: SwiftFulcrum.Client.Call.Options.Type = SwiftFulcrum.Client.Call.Options.self
         _ = callOptionsType
 
@@ -53,6 +57,12 @@ struct PublicAPIFacadeContractValidator {
         let loggingType: SwiftFulcrum.Logging.Type = SwiftFulcrum.Logging.self
         _ = loggingType
 
+        let tlsDescriptor = SwiftFulcrum.Client.Configuration.TLSDescriptor()
+        _ = tlsDescriptor
+
+        let configuration = SwiftFulcrum.Client.Configuration(tlsDescriptor: tlsDescriptor)
+        _ = configuration
+
         let unaryRequest: @Sendable (SwiftFulcrum.Client) async throws -> SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.GetTip = { client in
             try await client.request(
                 method: .blockchain(.headers(.getTip)),
@@ -81,6 +91,9 @@ struct PublicAPIFacadeContractValidator {
         let requiredSymbols = [
             "SwiftFulcrum.Client",
             "SwiftFulcrum.Client.Configuration",
+            "SwiftFulcrum.Client.Configuration.TLSDescriptor",
+            "SwiftFulcrum.Client.Configuration.TLSDescriptor.init(options:)",
+            "SwiftFulcrum.Client.Configuration.init(tlsDescriptor:reconnect:metrics:logger:isLoggingEnabled:connectionTimeout:maximumMessageSize:bootstrapServers:serverCatalogLoader:network:protocolNegotiation:)",
             "SwiftFulcrum.Client.Call.Options",
             "SwiftFulcrum.Client.Subscription",
             "SwiftFulcrum.Client.Diagnostics",
@@ -115,7 +128,11 @@ struct PublicAPIFacadeContractValidator {
             "SwiftFulcrum.RPC.NilAcceptingResponseAdapter",
             "SwiftFulcrum.RPC.Response.JSONRPC",
             "SwiftFulcrum.RPC.Response.JSONRPC.Generic",
-            "SwiftFulcrum.RPC.Response.JSONRPC.Result"
+            "SwiftFulcrum.RPC.Response.JSONRPC.Result",
+            "SwiftFulcrum.Client.Configuration.urlSession",
+            "SwiftFulcrum.Client.Configuration.TLSDescriptor.delegate",
+            "SwiftFulcrum.Client.Configuration.TLSDescriptor.init(options:delegate:)",
+            "SwiftFulcrum.Client.Configuration.init(tlsDescriptor:reconnect:metrics:logger:isLoggingEnabled:urlSession:connectionTimeout:maximumMessageSize:bootstrapServers:serverCatalogLoader:network:protocolNegotiation:)"
         ]
 
         for symbol in hiddenSymbols {
@@ -207,15 +224,4 @@ private extension PublicAPIFacadeContractValidator {
         return values.contentModificationDate ?? .distantPast
     }
 
-    struct SymbolGraphModel: Decodable {
-        let symbols: [SymbolModel]
-    }
-
-    struct SymbolModel: Decodable {
-        let pathComponents: [String]
-    }
-
-    enum SupportError: Swift.Error {
-        case missingGeneratedSymbolGraph(String)
-    }
 }

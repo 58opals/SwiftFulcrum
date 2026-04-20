@@ -1,0 +1,14 @@
+// Response.Result.Blockchain.ScriptHash+ListUnspent.swift
+
+import Foundation
+
+extension SwiftFulcrum.RPC.Response.Result.Blockchain.ScriptHash {
+    public struct ListUnspent: Decodable, Sendable {
+        public let items: [Item]
+
+        public init(from decoder: Decoder) throws {
+            let payloadModel = try [SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.ScriptHash.ListUnspentItem](from: decoder)
+            self.items = payloadModel.map(Item.init(from:))
+        }
+    }
+}

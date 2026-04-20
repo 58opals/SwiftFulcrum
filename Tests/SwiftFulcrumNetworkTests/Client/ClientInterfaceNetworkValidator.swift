@@ -5,7 +5,7 @@ import Testing
 import SwiftFulcrumTestSupport
 @testable import SwiftFulcrum
 
-extension SwiftFulcrumNetworkValidators {
+extension SwiftFulcrumNetworkValidator {
 @Suite(.serialized, .tags(.network))
 struct ClientInterfaceNetworkValidator {
     private static let testAddress = "bitcoincash:qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a"

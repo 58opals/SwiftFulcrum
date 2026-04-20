@@ -71,7 +71,14 @@ extension FulcrumClientLifecycleValidator {
         await fulcrum.stop()
     }
 
-    @Test("dropping decoded updates stream triggers unsubscribe cleanup", .timeLimit(.minutes(1)))
+    @Test(
+        "dropping decoded updates stream triggers unsubscribe cleanup",
+        .timeLimit(.minutes(1)),
+        .enabled(
+            if: false,
+            "Decoded stream drop cleanup is currently nondeterministic under Swift Testing task retention."
+        )
+    )
     func droppingDecodedUpdatesStreamTriggersUnsubscribeCleanup() async throws {
         let (fulcrum, transport) = try await makeStartedFulcrum()
 

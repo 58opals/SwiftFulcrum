@@ -7,9 +7,9 @@ import Testing
 
 @Suite(.tags(.local))
 struct WebSocketConnectionValidator {
-    @Test("WebSocketModel internal session preserves default timeout intervals", .timeLimit(.minutes(1)))
+    @Test("WebSocketConnection internal session preserves default timeout intervals", .timeLimit(.minutes(1)))
     func preserveDefaultTimeoutIntervals() async {
-        let webSocket = WebSocketModel(
+        let webSocket = WebSocketConnection(
             url: URL(string: "wss://example.invalid")!,
             connectionTimeout: 0.05
         )
@@ -27,10 +27,7 @@ struct WebSocketConnectionValidator {
     @Test("WebSocketSessionDelegateProxy resolves tracked open events", .timeLimit(.minutes(1)))
     func resolveTrackedOpenEvents() async throws {
         let tracker = WebSocketConnectionEventTracker()
-        let proxy = WebSocketSessionDelegateProxy(
-            connectionEventTracker: tracker,
-            baseDelegate: nil
-        )
+        let proxy = WebSocketSessionDelegateProxy(connectionEventTracker: tracker)
         let session = URLSession(configuration: .ephemeral)
         defer { session.invalidateAndCancel() }
 
@@ -48,10 +45,7 @@ struct WebSocketConnectionValidator {
     @Test("WebSocketSessionDelegateProxy resolves tracked completion failures", .timeLimit(.minutes(1)))
     func resolveTrackedCompletionFailures() async {
         let tracker = WebSocketConnectionEventTracker()
-        let proxy = WebSocketSessionDelegateProxy(
-            connectionEventTracker: tracker,
-            baseDelegate: nil
-        )
+        let proxy = WebSocketSessionDelegateProxy(connectionEventTracker: tracker)
         let session = URLSession(configuration: .ephemeral)
         defer { session.invalidateAndCancel() }
 
@@ -81,14 +75,10 @@ struct WebSocketConnectionValidator {
         }
     }
 
-    @Test("WebSocketSessionDelegateProxy forwards delegate challenge and lifecycle callbacks", .timeLimit(.minutes(1)))
-    func forwardDelegateChallengeAndLifecycleCallbacks() async {
+    @Test("WebSocketSessionDelegateProxy uses default challenge handling", .timeLimit(.minutes(1)))
+    func useDefaultChallengeHandling() async {
         let tracker = WebSocketConnectionEventTracker()
-        let recorder = SessionDelegateRecorder()
-        let proxy = WebSocketSessionDelegateProxy(
-            connectionEventTracker: tracker,
-            baseDelegate: recorder
-        )
+        let proxy = WebSocketSessionDelegateProxy(connectionEventTracker: tracker)
         let session = URLSession(configuration: .ephemeral)
         defer { session.invalidateAndCancel() }
 
@@ -124,28 +114,15 @@ struct WebSocketConnectionValidator {
             }
         }
 
-        proxy.urlSession(session, webSocketTask: task, didOpenWithProtocol: "fulcrum")
-        proxy.urlSession(
-            session,
-            webSocketTask: task,
-            didCloseWith: .normalClosure,
-            reason: "closed".data(using: .utf8)
-        )
-
         #expect(sessionChallengeResult.0 == URLSession.AuthChallengeDisposition.performDefaultHandling)
         #expect(sessionChallengeResult.1 == nil)
-        #expect(taskChallengeResult.0 == URLSession.AuthChallengeDisposition.useCredential)
-        #expect(taskChallengeResult.1 == "swiftfulcrum")
-        #expect(recorder.sessionChallengeCount == 1)
-        #expect(recorder.taskChallengeCount == 1)
-        #expect(recorder.openProtocols == ["fulcrum"])
-        #expect(recorder.closeCodes == [.normalClosure])
-        #expect(recorder.closeReasons == ["closed"])
+        #expect(taskChallengeResult.0 == URLSession.AuthChallengeDisposition.performDefaultHandling)
+        #expect(taskChallengeResult.1 == nil)
     }
 
     @Test("disconnect() preserves close information after clearing the task", .timeLimit(.minutes(1)))
     func disconnectPreservesCloseInformationAfterClearingTask() async {
-        let webSocket = WebSocketModel(url: URL(string: "wss://example.invalid")!)
+        let webSocket = WebSocketConnection(url: URL(string: "wss://example.invalid")!)
 
         await webSocket.disconnect(with: "unit-test shutdown")
 
@@ -161,9 +138,12 @@ struct WebSocketConnectionValidator {
     func concurrentConnectCallsShareOneInflightSocketTask() async throws {
         let hangingServer = try LocalHangingTCPServer()
         let endpoint = try await hangingServer.start()
-        defer { hangingServer.stop() }
+        defer {
+            let server = hangingServer
+            Task { await server.stop() }
+        }
 
-        let webSocket = WebSocketModel(
+        let webSocket = WebSocketConnection(
             url: endpoint,
             connectionTimeout: 5
         )
@@ -190,9 +170,12 @@ struct WebSocketConnectionValidator {
     func connectTimeoutPreservesTimeoutCloseReason() async throws {
         let hangingServer = try LocalHangingTCPServer()
         let endpoint = try await hangingServer.start()
-        defer { hangingServer.stop() }
+        defer {
+            let server = hangingServer
+            Task { await server.stop() }
+        }
 
-        let webSocket = WebSocketModel(
+        let webSocket = WebSocketConnection(
             url: endpoint,
             connectionTimeout: 0.05
         )
@@ -217,7 +200,7 @@ struct WebSocketConnectionValidator {
 
 private extension WebSocketConnectionValidator {
     func waitForCurrentTaskIdentifier(
-        on webSocket: WebSocketModel,
+        on webSocket: WebSocketConnection,
         timeout: Duration = .seconds(1)
     ) async throws -> Int {
         let clock = ContinuousClock()
@@ -251,82 +234,4 @@ private extension WebSocketConnectionValidator {
         }
     }
 
-    enum TimeoutError: Swift.Error {
-        case missingSocketTask
-    }
-}
-
-private final class LocalHangingTCPServer: @unchecked Sendable {
-    private let listener: NWListener
-    private let queue = DispatchQueue(label: "SwiftFulcrumLocalHangingTCPServer")
-    private let lock = NSLock()
-    private var connections: [NWConnection] = .init()
-    private var startContinuation: CheckedContinuation<URL, Swift.Error>?
-
-    init() throws {
-        listener = try NWListener(using: .tcp, on: .any)
-    }
-
-    func start() async throws -> URL {
-        try await withCheckedThrowingContinuation {
-            (continuation: CheckedContinuation<URL, Swift.Error>) in
-            lock.lock()
-            startContinuation = continuation
-            lock.unlock()
-
-            listener.stateUpdateHandler = { [weak self] state in
-                self?.handleStateUpdate(state)
-            }
-
-            listener.newConnectionHandler = { [weak self] connection in
-                self?.accept(connection)
-            }
-
-            listener.start(queue: queue)
-        }
-    }
-
-    func stop() {
-        lock.lock()
-        let activeConnections = connections
-        connections.removeAll(keepingCapacity: false)
-        let continuation = startContinuation
-        startContinuation = nil
-        lock.unlock()
-
-        for connection in activeConnections {
-            connection.cancel()
-        }
-        continuation?.resume(throwing: CancellationError())
-        listener.cancel()
-    }
-
-    private func handleStateUpdate(_ state: NWListener.State) {
-        switch state {
-        case .ready:
-            guard let port = listener.port else { return }
-            resolveStart(with: .success(URL(string: "ws://127.0.0.1:\(port.rawValue)")!))
-        case .failed(let error):
-            resolveStart(with: .failure(error))
-        default:
-            break
-        }
-    }
-
-    private func accept(_ connection: NWConnection) {
-        lock.lock()
-        connections.append(connection)
-        lock.unlock()
-        connection.start(queue: queue)
-    }
-
-    private func resolveStart(with result: Result<URL, Swift.Error>) {
-        lock.lock()
-        let continuation = startContinuation
-        startContinuation = nil
-        lock.unlock()
-
-        guard let continuation else { return }
-        continuation.resume(with: result)
-    }
 }

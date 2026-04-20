@@ -5,19 +5,19 @@ import Foundation
 extension FulcrumNetworkClient {
     func startRPCHeartbeat() {
         rpcHeartbeatTask?.cancel()
-        rpcHeartbeatTask = Task { [weak self] in
-            guard let self else { return }
+        let owner = self
+        rpcHeartbeatTask = Task {
             
             while !Task.isCancelled {
                 do {
-                    try await Task.sleep(for: rpcHeartbeatInterval)
+                    try await Task.sleep(for: owner.rpcHeartbeatInterval)
                     try Task.checkCancellation()
                     
                     let (_, _): (UUID, SwiftFulcrum.RPC.Response.Result.Server.Ping) =
                     try await SwiftFulcrum.Logging.perform(withBehavior: .quiet) {
-                        try await self.call(
+                        try await owner.call(
                             method: .server(.ping),
-                            options: .init(timeout: rpcHeartbeatTimeout),
+                            options: .init(timeout: owner.rpcHeartbeatTimeout),
                             suppressTransportLogging: true
                         )
                     }
@@ -28,19 +28,19 @@ extension FulcrumNetworkClient {
                     // If we were cancelled while handling an error, bail out.
                     if Task.isCancelled { break }
                     
-                    await self.emitLog(.warning, "client.heartbeat.rpc_timeout",
+                    await owner.emitLog(.warning, "client.heartbeat.rpc_timeout",
                                        metadata: ["error": error.localizedDescription])
                     
                     do {
                         try Task.checkCancellation()
-                        try await self.reconnect()
+                        try await owner.reconnect()
                     } catch is CancellationError {
                         break
                     } catch {
                         let heartbeatTimeoutError = SwiftFulcrum.Client.Error.transport(.heartbeatTimeout)
-                        let inflightCount = await self.router.failAll(with: heartbeatTimeoutError)
-                        await self.dropAllStoredSubscriptions()
-                        await self.publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightCount)
+                        let inflightCount = await owner.router.failAll(with: heartbeatTimeoutError)
+                        await owner.dropAllStoredSubscriptions()
+                        await owner.publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightCount)
                         break
                     }
                 }

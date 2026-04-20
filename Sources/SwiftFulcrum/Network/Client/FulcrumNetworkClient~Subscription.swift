@@ -12,6 +12,7 @@ extension FulcrumNetworkClient {
 extension FulcrumNetworkClient {
     func dropAllStoredSubscriptions() async {
         let setupTasks = Array(subscriptionSetupTasks.values)
+        pendingSubscriptionRequestIdentifiers.removeAll(keepingCapacity: false)
         subscriptionSetupRequestIdentifiers.removeAll(keepingCapacity: false)
         subscriptionSetupTasks.removeAll(keepingCapacity: false)
         for task in setupTasks {
@@ -28,6 +29,7 @@ extension FulcrumNetworkClient {
 
         guard !subscriptionMethods.isEmpty else { return }
         subscriptionMethods.removeAll(keepingCapacity: false)
+        activeSubscriptionRequestIdentifiers.removeAll(keepingCapacity: false)
         await publishSubscriptionRegistry()
     }
 }
@@ -109,11 +111,11 @@ extension FulcrumNetworkClient {
             }
             return
         }
-        let restoreTask = Task<Void, Swift.Error> { [weak self] in
-            guard let self else { throw CancellationError() }
+        let owner = self
+        let restoreTask = Task<Void, Swift.Error> {
 
-            let rawResponseStream = try await self.registerUnaryResponse(for: requestIdentifier)
-            guard await self.isCurrentSubscriptionSetupRequestIdentifier(
+            let rawResponseStream = try await owner.registerUnaryResponse(for: requestIdentifier)
+            guard await owner.isCurrentSubscriptionSetupRequestIdentifier(
                 requestIdentifier,
                 for: subscriptionKey
             ) else {
@@ -121,16 +123,16 @@ extension FulcrumNetworkClient {
             }
 
             try Task.checkCancellation()
-            try await self.send(data: requestData)
-            guard await self.isCurrentSubscriptionSetupRequestIdentifier(
+            try await owner.send(data: requestData)
+            guard await owner.isCurrentSubscriptionSetupRequestIdentifier(
                 requestIdentifier,
                 for: subscriptionKey
             ) else {
                 return
             }
 
-            let rawResponse = try await self.awaitUnaryResponse(from: rawResponseStream)
-            guard await self.isCurrentSubscriptionSetupRequestIdentifier(
+            let rawResponse = try await owner.awaitUnaryResponse(from: rawResponseStream)
+            guard await owner.isCurrentSubscriptionSetupRequestIdentifier(
                 requestIdentifier,
                 for: subscriptionKey
             ) else {
@@ -139,8 +141,8 @@ extension FulcrumNetworkClient {
 
             switch try SwiftFulcrum.RPC.Response.JSONRPC.classifyErasedResponse(from: rawResponse) {
             case .regular:
-                await self.clearSubscriptionSetupRequestIdentifier(requestIdentifier, for: subscriptionKey)
-                await self.emitLog(.info,
+                await owner.clearSubscriptionSetupRequestIdentifier(requestIdentifier, for: subscriptionKey)
+                await owner.emitLog(.info,
                                    "subscription_registry.restored",
                                    metadata: [
                                        "identifier": subscriptionKey.identifier ?? "",
@@ -223,6 +225,46 @@ extension FulcrumNetworkClient {
 }
 
 extension FulcrumNetworkClient {
+    func recordActiveSubscriptionRequestIdentifier(
+        _ requestIdentifier: UUID,
+        for subscriptionKey: SubscriptionKey
+    ) {
+        activeSubscriptionRequestIdentifiers[subscriptionKey] = requestIdentifier
+    }
+
+    func isCurrentActiveSubscriptionRequestIdentifier(
+        _ requestIdentifier: UUID,
+        for subscriptionKey: SubscriptionKey
+    ) -> Bool {
+        activeSubscriptionRequestIdentifiers[subscriptionKey] == requestIdentifier
+    }
+}
+
+extension FulcrumNetworkClient {
+    func recordPendingSubscriptionRequestIdentifier(
+        _ requestIdentifier: UUID,
+        for subscriptionKey: SubscriptionKey
+    ) {
+        pendingSubscriptionRequestIdentifiers[subscriptionKey] = requestIdentifier
+    }
+
+    func isCurrentPendingSubscriptionRequestIdentifier(
+        _ requestIdentifier: UUID,
+        for subscriptionKey: SubscriptionKey
+    ) -> Bool {
+        pendingSubscriptionRequestIdentifiers[subscriptionKey] == requestIdentifier
+    }
+
+    func clearPendingSubscriptionRequestIdentifier(
+        _ requestIdentifier: UUID,
+        for subscriptionKey: SubscriptionKey
+    ) {
+        guard pendingSubscriptionRequestIdentifiers[subscriptionKey] == requestIdentifier else { return }
+        pendingSubscriptionRequestIdentifiers.removeValue(forKey: subscriptionKey)
+    }
+}
+
+extension FulcrumNetworkClient {
     func recordSubscriptionSetupRequestIdentifier(
         _ requestIdentifier: UUID,
         for subscriptionKey: SubscriptionKey
@@ -270,30 +312,42 @@ extension FulcrumNetworkClient {
         for subscriptionKey: SubscriptionKey,
         requestIdentifier: UUID,
         error: Swift.Error? = nil,
-        sendUnsubscribe: Bool = false
+        sendUnsubscribe: Bool = false,
+        preferCurrentSetupRequest: Bool = false,
+        requireMatchingActiveRequestIdentifier: Bool = false
     ) async -> Bool {
         if let task = subscriptionCleanupTasks[subscriptionKey] {
             return await task.value
         }
 
-        let task = Task<Bool, Never> { [weak self] in
-            guard let self else { return false }
+        let owner = self
+        let task = Task<Bool, Never> {
 
-            let didRemove = await self.cleanUpSubscriptionSetup(
+            let didRemove = await owner.cleanUpSubscriptionSetup(
                 for: subscriptionKey,
                 requestIdentifier: requestIdentifier,
                 error: error,
-                preferCurrentSetupRequest: true
+                preferCurrentSetupRequest: preferCurrentSetupRequest,
+                requireMatchingActiveRequestIdentifier: requireMatchingActiveRequestIdentifier
             )
 
             guard sendUnsubscribe,
                   didRemove,
-                  let method = await self.makeUnsubscribeMethod(for: subscriptionKey) else {
+                  let method = await owner.makeUnsubscribeMethod(for: subscriptionKey) else {
                 return didRemove
             }
 
             let request = method.createRequest(with: UUID())
-            try? await self.send(request: request)
+            guard let requestData = request.data else {
+                return didRemove
+            }
+
+            await Task.yield()
+            guard await owner.shouldSendDeferredUnsubscribe(for: subscriptionKey) else {
+                return didRemove
+            }
+
+            try? await owner.send(data: requestData)
             return didRemove
         }
 
@@ -305,8 +359,26 @@ extension FulcrumNetworkClient {
 }
 
 extension FulcrumNetworkClient {
+    func shouldSendDeferredUnsubscribe(for subscriptionKey: SubscriptionKey) -> Bool {
+        pendingSubscriptionRequestIdentifiers[subscriptionKey] == nil
+            && subscriptionSetupRequestIdentifiers[subscriptionKey] == nil
+            && activeSubscriptionRequestIdentifiers[subscriptionKey] == nil
+            && subscriptionMethods[subscriptionKey] == nil
+    }
+}
+
+extension FulcrumNetworkClient {
     @discardableResult
-    func removeStoredSubscriptionMethod(for key: SubscriptionKey) async -> Bool {
+    func removeStoredSubscriptionMethod(
+        for key: SubscriptionKey,
+        requestIdentifier: UUID,
+        requireMatchingActiveRequestIdentifier: Bool
+    ) async -> Bool {
+        if requireMatchingActiveRequestIdentifier,
+           activeSubscriptionRequestIdentifiers[key] != requestIdentifier {
+            return false
+        }
+        activeSubscriptionRequestIdentifiers.removeValue(forKey: key)
         guard subscriptionMethods.removeValue(forKey: key) != nil else { return false }
         return true
     }
@@ -315,7 +387,8 @@ extension FulcrumNetworkClient {
     func cleanUpSubscriptionSetup(for subscriptionKey: SubscriptionKey,
                                   requestIdentifier: UUID,
                                   error: Swift.Error? = nil,
-                                  preferCurrentSetupRequest: Bool = false) async -> Bool {
+                                  preferCurrentSetupRequest: Bool = false,
+                                  requireMatchingActiveRequestIdentifier: Bool = false) async -> Bool {
         let inflightCount: Int?
         if preferCurrentSetupRequest {
             if let currentInflightCount = await cancelCurrentSubscriptionSetupRequest(
@@ -343,10 +416,23 @@ extension FulcrumNetworkClient {
                 inflightCount = await router.cancel(identifier: .uuid(requestIdentifier), error: error)
             }
         }
-        await router.cancel(identifier: .string(subscriptionKey.string), error: error)
-        await clearSubscriptionCancellationRegistration(for: subscriptionKey)
+        let isCurrentActiveSubscription = isCurrentActiveSubscriptionRequestIdentifier(
+            requestIdentifier,
+            for: subscriptionKey
+        )
 
-        let didRemove = await removeStoredSubscriptionMethod(for: subscriptionKey)
+        let shouldRemoveCurrentSubscription = !requireMatchingActiveRequestIdentifier || isCurrentActiveSubscription
+
+        if shouldRemoveCurrentSubscription {
+            await router.cancel(identifier: .string(subscriptionKey.string), error: error)
+            await clearSubscriptionCancellationRegistration(for: subscriptionKey)
+        }
+
+        let didRemove = await removeStoredSubscriptionMethod(
+            for: subscriptionKey,
+            requestIdentifier: requestIdentifier,
+            requireMatchingActiveRequestIdentifier: requireMatchingActiveRequestIdentifier
+        )
 
         if didRemove {
             emitLog(.info,
@@ -373,13 +459,22 @@ extension FulcrumNetworkClient {
         method: SwiftFulcrum.RPC.Method,
         requestIdentifier: UUID
     ) async throws {
+        recordPendingSubscriptionRequestIdentifier(requestIdentifier, for: subscriptionKey)
+        defer {
+            clearPendingSubscriptionRequestIdentifier(requestIdentifier, for: subscriptionKey)
+        }
+
         await awaitPendingSubscriptionCleanup(for: subscriptionKey)
         try Task.checkCancellation()
+        guard isCurrentPendingSubscriptionRequestIdentifier(requestIdentifier, for: subscriptionKey) else {
+            throw CancellationError()
+        }
         recordSubscriptionSetupRequestIdentifier(requestIdentifier, for: subscriptionKey)
         try await router.addStream(
             key: subscriptionKey.string,
             continuation: rawContinuation
         )
+        recordActiveSubscriptionRequestIdentifier(requestIdentifier, for: subscriptionKey)
         subscriptionMethods[subscriptionKey] = method
 
         emitLog(.info,
@@ -400,7 +495,9 @@ extension FulcrumNetworkClient {
                 _ = await self.scheduleSubscriptionCleanup(
                     for: subscriptionKey,
                     requestIdentifier: requestIdentifier,
-                    sendUnsubscribe: true
+                    sendUnsubscribe: true,
+                    preferCurrentSetupRequest: true,
+                    requireMatchingActiveRequestIdentifier: true
                 )
             }
         }

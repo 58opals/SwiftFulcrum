@@ -51,7 +51,7 @@ extension SwiftFulcrum {
             startConnectionStateObservation()
         }
 
-        /// Establishes the WebSocketModel connection and prepares automatic subscription restoration.
+        /// Establishes the WebSocketConnection connection and prepares automatic subscription restoration.
         ///
         /// This call is idempotent and safe to invoke from concurrent tasks. It suspends until the
         /// underlying socket is connected or fails. If ``stop()`` is called while ``start()`` is in
@@ -82,7 +82,7 @@ extension SwiftFulcrum {
             }
         }
 
-        /// Cancels outstanding requests, closes the WebSocketModel, and resets subscription state.
+        /// Cancels outstanding requests, closes the WebSocketConnection, and resets subscription state.
         ///
         /// This call is idempotent and deterministic. It cancels any in-flight ``start()`` and always
         /// performs teardown so the client is not left running.
@@ -144,7 +144,7 @@ private extension SwiftFulcrum.Client {
         let webSocket = try makeWebSocket(connectingTo: endpoint, configuration: configuration)
 
         return .init(
-            transport: WebSocketTransportModel(webSocket: webSocket),
+            transport: WebSocketTransport(webSocket: webSocket),
             metrics: configuration.metrics,
             logger: configuration.resolvedLogger,
             protocolNegotiation: configuration.protocolNegotiation
@@ -166,10 +166,10 @@ private extension SwiftFulcrum.Client {
         return server
     }
 
-    static func makeWebSocket(connectingTo endpoint: URL, configuration: Configuration) throws -> WebSocketModel {
+    static func makeWebSocket(connectingTo endpoint: URL, configuration: Configuration) throws -> WebSocketConnection {
         let endpoint = try validate(endpoint: endpoint)
 
-        return WebSocketModel(
+        return WebSocketConnection(
             url: endpoint,
             configuration: configuration.convertToWebSocketConfiguration(),
             reconnectConfiguration: configuration.reconnect.reconnectorConfiguration,

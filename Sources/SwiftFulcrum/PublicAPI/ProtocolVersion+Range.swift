@@ -2,10 +2,6 @@
 
 extension SwiftFulcrum.ProtocolVersion {
     public struct Range: Equatable, Sendable {
-        public enum Error: Swift.Error, Equatable {
-            case unsupportedVersionRange
-        }
-        
         public let min: SwiftFulcrum.ProtocolVersion
         public let max: SwiftFulcrum.ProtocolVersion
         

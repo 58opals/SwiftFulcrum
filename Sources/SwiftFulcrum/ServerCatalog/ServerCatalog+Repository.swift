@@ -30,15 +30,7 @@ extension SwiftFulcrum.ServerCatalog {
 
 extension SwiftFulcrum.ServerCatalog.Repository {
     public static let bundled = Self(load: { network, fallback in
-        try await Task.detached(priority: .utility) {
-            if let bundled = try? WebSocketModel.Server.decodeBundledServers(for: network), !bundled.isEmpty {
-                return bundled
-            }
-
-            let sanitizedFallback = sanitizeServers(fallback)
-            guard !sanitizedFallback.isEmpty else { throw SwiftFulcrum.Client.Error.transport(.setupFailed) }
-            return sanitizedFallback
-        }.value
+        try await BundledCatalogLoader.shared.loadServers(for: network, fallback: fallback)
     }, usesBundledCatalog: true)
 
     public static func makeConstant(_ servers: [URL]) -> Self {

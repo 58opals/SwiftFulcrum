@@ -138,28 +138,13 @@ extension FulcrumNetworkClient {
                     )
                     clearSubscriptionSetupRequestIdentifier(id, for: subscriptionKey)
                     
-                    let decodedStream = rawStream.decode(
+                    let typedStream = rawStream.decode(
                         Notification.self,
-                        context: .init(methodPath: method.path)
-                    )
-                    let typedStream = AsyncThrowingStream<Notification, Swift.Error> { continuation in
-                        Task {
-                            do {
-                                for try await value in decodedStream {
-                                    if case .terminated = continuation.yield(value) {
-                                        break
-                                    }
-                                }
-                                continuation.finish()
-                            } catch {
-                                continuation.finish(throwing: error)
-                            }
-                        }
-                        
-                        continuation.onTermination = { @Sendable _ in
+                        context: .init(methodPath: method.path),
+                        onTermination: { @Sendable in
                             rawContinuation.finish()
                         }
-                    }
+                    )
                     
                     return (id, initial, typedStream)
                 } onCancel: {
@@ -198,12 +183,15 @@ extension FulcrumNetworkClient {
                 )
                 let cancellationError = await self.makeRequestCancellationError(using: timeoutState)
                 let shouldSendUnsubscribe = await self.shouldSendUnsubscribeOnCancellation(for: cleanupKey)
-                await self.scheduleSubscriptionCleanup(
-                    for: cleanupKey,
-                    requestIdentifier: id,
-                    error: cancellationError,
-                    sendUnsubscribe: shouldSendUnsubscribe
-                )
+                Task {
+                    _ = await self.scheduleSubscriptionCleanup(
+                        for: cleanupKey,
+                        requestIdentifier: id,
+                        error: cancellationError,
+                        sendUnsubscribe: shouldSendUnsubscribe,
+                        preferCurrentSetupRequest: true
+                    )
+                }
             }
         } else {
             cancellationRegistrationID = nil

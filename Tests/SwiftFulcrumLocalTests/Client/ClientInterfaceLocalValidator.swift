@@ -233,7 +233,4 @@ private extension ClientInterfaceLocalValidator {
         return identifier
     }
 
-    enum SupportError: Swift.Error {
-        case missingRequestIdentifier
-    }
 }

@@ -14,6 +14,8 @@ actor FulcrumNetworkClient {
     var state: State
     
     var subscriptionMethods: [SubscriptionKey: SwiftFulcrum.RPC.Method]
+    var activeSubscriptionRequestIdentifiers: [SubscriptionKey: UUID]
+    var pendingSubscriptionRequestIdentifiers: [SubscriptionKey: UUID]
     var subscriptionCancellationRegistrations: [SubscriptionKey: SubscriptionCancellationRegistration]
     var subscriptionCleanupTasks: [SubscriptionKey: Task<Bool, Never>]
     var subscriptionSetupRequestIdentifiers: [SubscriptionKey: UUID]
@@ -43,6 +45,8 @@ actor FulcrumNetworkClient {
         self.router = .init()
         self.metrics = metrics
         self.subscriptionMethods = .init()
+        self.activeSubscriptionRequestIdentifiers = .init()
+        self.pendingSubscriptionRequestIdentifiers = .init()
         self.subscriptionCancellationRegistrations = .init()
         self.subscriptionCleanupTasks = .init()
         self.subscriptionSetupRequestIdentifiers = .init()
@@ -61,9 +65,9 @@ actor FulcrumNetworkClient {
             return try await startupTask.value
         }
 
-        let startupTask = Task<Void, Swift.Error> { [weak self] in
-            guard let self else { throw CancellationError() }
-            try await self.performStart()
+        let owner = self
+        let startupTask = Task<Void, Swift.Error> {
+            try await owner.performStart()
         }
         self.startupTask = startupTask
         defer {
@@ -123,26 +127,25 @@ actor FulcrumNetworkClient {
             return try await reconnectTask.value
         }
 
-        let reconnectTask = Task<Void, Swift.Error> { [weak self] in
-            guard let self else { throw CancellationError() }
-
-            await self.cancelBackgroundTasks()
-            await self.resetNegotiatedSession()
-            try await self.transport.reconnect(with: url)
-            await self.startReceivingTask()
+        let owner = self
+        let reconnectTask = Task<Void, Swift.Error> {
+            await owner.cancelBackgroundTasks()
+            await owner.resetNegotiatedSession()
+            try await owner.transport.reconnect(with: url)
+            await owner.startReceivingTask()
 
             do {
-                _ = try await self.ensureNegotiatedProtocol()
-                await self.emitLog(.info, "client.reconnect_resubscribe.begin")
-                await self.resubscribeStoredMethods()
-                await self.emitLog(.info,
+                _ = try await owner.ensureNegotiatedProtocol()
+                await owner.emitLog(.info, "client.reconnect_resubscribe.begin")
+                await owner.resubscribeStoredMethods()
+                await owner.emitLog(.info,
                                    "client.reconnect_resubscribe.end",
-                                   metadata: ["count": String(self.subscriptionMethods.count)])
-                await self.startLifecycleObservationTasks()
-                await self.publishDiagnosticsSnapshot()
+                                   metadata: ["count": String(owner.subscriptionMethods.count)])
+                await owner.startLifecycleObservationTasks()
+                await owner.publishDiagnosticsSnapshot()
             } catch {
-                await self.cancelBackgroundTasks()
-                await self.transport.disconnect(with: "FulcrumNetworkClient.reconnect() negotiation failed")
+                await owner.cancelBackgroundTasks()
+                await owner.transport.disconnect(with: "FulcrumNetworkClient.reconnect() negotiation failed")
                 throw error
             }
         }
@@ -170,38 +173,37 @@ actor FulcrumNetworkClient {
     
     private func startLifecycleObservationTasks() {
         lifecycleTask?.cancel()
-        lifecycleTask = Task { [weak self] in
-            guard let self else { return }
-            for await event in await self.transport.makeLifecycleEvents() {
-                await self.publishDiagnosticsSnapshot()
+        let owner = self
+        lifecycleTask = Task {
+            for await event in await owner.transport.makeLifecycleEvents() {
+                await owner.publishDiagnosticsSnapshot()
                 switch event {
                 case .connected(let isReconnect) where isReconnect:
-                    await self.resetNegotiatedSession()
-                    await self.emitLog(.info, "client.autoresubscribe.begin")
+                    await owner.resetNegotiatedSession()
+                    await owner.emitLog(.info, "client.autoresubscribe.begin")
                     do {
-                        _ = try await self.ensureNegotiatedProtocol()
-                        await self.resubscribeStoredMethods()
-                        await self.emitLog(.info,
+                        _ = try await owner.ensureNegotiatedProtocol()
+                        await owner.resubscribeStoredMethods()
+                        await owner.emitLog(.info,
                                            "client.autoresubscribe.end",
-                                           metadata: ["count": String(self.subscriptionMethods.count)])
+                                           metadata: ["count": String(owner.subscriptionMethods.count)])
                     } catch {
-                        await self.emitLog(.error,
+                        await owner.emitLog(.error,
                                            "client.protocol_negotiation.failed",
                                            metadata: ["error": error.localizedDescription])
                     }
                 case .disconnected:
-                    await self.resetNegotiatedSession()
+                    await owner.resetNegotiatedSession()
                 default: break
                 }
             }
         }
         
         diagnosticsStateTask?.cancel()
-        diagnosticsStateTask = Task { [weak self] in
-            guard let self else { return }
-            let stream = await self.transport.makeConnectionStateEvents()
+        diagnosticsStateTask = Task {
+            let stream = await owner.transport.makeConnectionStateEvents()
             for await _ in stream {
-                await self.publishDiagnosticsSnapshot()
+                await owner.publishDiagnosticsSnapshot()
             }
         }
     }

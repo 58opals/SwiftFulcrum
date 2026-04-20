@@ -7,7 +7,7 @@ import Testing
 extension WebSocketReconnectorValidator {
     @Test("Reconnector exhaustion reports a concrete close reason", .timeLimit(.minutes(1)))
     func reportConcreteCloseReasonWhenAttemptsAreExhausted() async throws {
-        let configuration = WebSocketModel.Reconnector.Configuration(
+        let configuration = WebSocketConnection.Reconnector.Configuration(
             maximumReconnectionAttempts: 1,
             reconnectionDelay: 0.01,
             maximumDelay: 0.01,
@@ -15,13 +15,9 @@ extension WebSocketReconnectorValidator {
         )
 
         let unreachable = URL(string: "wss://127.0.0.1:9")!
-        let networkSession = URLSession(configuration: .ephemeral)
-        defer { networkSession.invalidateAndCancel() }
-
-        let webSocket = WebSocketModel(
+        let webSocket = WebSocketConnection(
             url: unreachable,
             configuration: .init(
-                session: networkSession,
                 serverCatalogLoader: .makeConstant([unreachable])
             ),
             reconnectConfiguration: configuration,
@@ -54,7 +50,7 @@ extension WebSocketReconnectorValidator {
 
     @Test("Reconnector cycles through full rotation before repeating candidates", .timeLimit(.minutes(1)))
     func cycleThroughFullRotationBeforeRepeat() async throws {
-        let configuration = WebSocketModel.Reconnector.Configuration(
+        let configuration = WebSocketConnection.Reconnector.Configuration(
             maximumReconnectionAttempts: 2,
             reconnectionDelay: 0.01,
             maximumDelay: 0.01,
@@ -65,13 +61,9 @@ extension WebSocketReconnectorValidator {
         let alternate = URL(string: "wss://127.0.0.1:10")!
         let injectedCatalog = [current, alternate]
 
-        let networkSession = URLSession(configuration: .ephemeral)
-        defer { networkSession.invalidateAndCancel() }
-
-        let webSocket = WebSocketModel(
+        let webSocket = WebSocketConnection(
             url: current,
             configuration: .init(
-                session: networkSession,
                 serverCatalogLoader: .makeConstant(injectedCatalog)
             ),
             reconnectConfiguration: configuration,
@@ -99,7 +91,7 @@ extension WebSocketReconnectorValidator {
 
     @Test("Reconnector exhausts after maximum attempts", .timeLimit(.minutes(1)))
     func exhaustAfterMaximumAttempts() async throws {
-        let configuration = WebSocketModel.Reconnector.Configuration(
+        let configuration = WebSocketConnection.Reconnector.Configuration(
             maximumReconnectionAttempts: 2,
             reconnectionDelay: 0.05,
             maximumDelay: 0.05,
@@ -116,13 +108,9 @@ extension WebSocketReconnectorValidator {
             return
         }
 
-        let networkSession = URLSession(configuration: .ephemeral)
-        defer { networkSession.invalidateAndCancel() }
-
-        let webSocket = WebSocketModel(
+        let webSocket = WebSocketConnection(
             url: current,
             configuration: .init(
-                session: networkSession,
                 serverCatalogLoader: .makeConstant(injectedCatalog)
             ),
             reconnectConfiguration: configuration,
@@ -149,7 +137,7 @@ extension WebSocketReconnectorValidator {
 
     @Test("Reconnector stops after configured attempts with injected catalog", .timeLimit(.minutes(1)))
     func stopAfterConfiguredAttemptsWithInjectedCatalog() async throws {
-        let configuration = WebSocketModel.Reconnector.Configuration(
+        let configuration = WebSocketConnection.Reconnector.Configuration(
             maximumReconnectionAttempts: 2,
             reconnectionDelay: 0.01,
             maximumDelay: 0.01,
@@ -167,13 +155,9 @@ extension WebSocketReconnectorValidator {
             return
         }
 
-        let networkSession = URLSession(configuration: .ephemeral)
-        defer { networkSession.invalidateAndCancel() }
-
-        let webSocket = WebSocketModel(
+        let webSocket = WebSocketConnection(
             url: current,
             configuration: .init(
-                session: networkSession,
                 serverCatalogLoader: .makeConstant(injectedCatalog)
             ),
             reconnectConfiguration: configuration,
@@ -202,7 +186,7 @@ extension WebSocketReconnectorValidator {
     func resetExhaustedAttemptsForNewSessions() async throws {
         let counter = SleepCountActor()
 
-        let configuration = WebSocketModel.Reconnector.Configuration(
+        let configuration = WebSocketConnection.Reconnector.Configuration(
             maximumReconnectionAttempts: 2,
             reconnectionDelay: 0.01,
             maximumDelay: 0.01,
@@ -210,13 +194,9 @@ extension WebSocketReconnectorValidator {
         )
 
         let unreachable = URL(string: "wss://127.0.0.1:9")!
-        let networkSession = URLSession(configuration: .ephemeral)
-        defer { networkSession.invalidateAndCancel() }
-
-        let webSocket = WebSocketModel(
+        let webSocket = WebSocketConnection(
             url: unreachable,
             configuration: .init(
-                session: networkSession,
                 serverCatalogLoader: .makeConstant([unreachable])
             ),
             reconnectConfiguration: configuration,

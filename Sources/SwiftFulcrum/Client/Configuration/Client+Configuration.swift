@@ -5,62 +5,11 @@ import Network
 
 extension SwiftFulcrum.Client {
     public struct Configuration: Sendable {
-        public enum Network: Sendable {
-            case mainnet
-            case testnet
-            
-            var resourceName: String {
-                switch self {
-                case .mainnet: return "servers.mainnet"
-                case .testnet: return "servers.testnet"
-                }
-            }
-        }
-        
-        public struct TLSDescriptor: Sendable {
-            public let delegate: URLSessionDelegate?
-            public let options: NWProtocolTLS.Options
-            
-            public init(options: NWProtocolTLS.Options = .init(), delegate: URLSessionDelegate? = nil) {
-                self.options = options
-                self.delegate = delegate
-            }
-        }
-        
-        public struct ReconnectPolicy: Sendable {
-            public var maximumReconnectionAttempts: Int
-            public var reconnectionDelay: TimeInterval
-            public var maximumDelay: TimeInterval
-            public var jitterRange: ClosedRange<TimeInterval>
-            
-            public var isUnlimited: Bool { maximumReconnectionAttempts <= 0 }
-            
-            public static let basic = Self(
-                maximumReconnectionAttempts: 1,
-                reconnectionDelay: 1.5,
-                maximumDelay: 30,
-                jitterRange: 0.8 ... 1.3
-            )
-            
-            public init(
-                maximumReconnectionAttempts: Int,
-                reconnectionDelay: TimeInterval,
-                maximumDelay: TimeInterval,
-                jitterRange: ClosedRange<TimeInterval>
-            ) {
-                self.maximumReconnectionAttempts = maximumReconnectionAttempts
-                self.reconnectionDelay = reconnectionDelay
-                self.maximumDelay = maximumDelay
-                self.jitterRange = jitterRange
-            }
-        }
-        
         public var tlsDescriptor: TLSDescriptor?
         public var reconnect: ReconnectPolicy
         public var metrics: SwiftFulcrum.Metrics.MetricsClient?
         public var logger: SwiftFulcrum.Logging.Adapter?
         public var isLoggingEnabled: Bool
-        public var urlSession: URLSession?
         public var connectionTimeout: TimeInterval
         public var maximumMessageSize: Int
         public var bootstrapServers: [URL]?
@@ -76,7 +25,6 @@ extension SwiftFulcrum.Client {
             metrics: SwiftFulcrum.Metrics.MetricsClient? = nil,
             logger: SwiftFulcrum.Logging.Adapter? = nil,
             isLoggingEnabled: Bool = true,
-            urlSession: URLSession? = nil,
             connectionTimeout: TimeInterval = 10,
             maximumMessageSize: Int = 64 * 1024 * 1024,
             bootstrapServers: [URL]? = nil,
@@ -89,7 +37,6 @@ extension SwiftFulcrum.Client {
             self.metrics = metrics
             self.logger = logger
             self.isLoggingEnabled = isLoggingEnabled
-            self.urlSession = urlSession
             self.connectionTimeout = connectionTimeout
             self.maximumMessageSize = maximumMessageSize
             self.bootstrapServers = bootstrapServers
@@ -101,11 +48,10 @@ extension SwiftFulcrum.Client {
 }
 
 extension SwiftFulcrum.Client.Configuration {
-    func convertToWebSocketConfiguration() -> WebSocketModel.Configuration {
-        let socketTLSDescriptor = tlsDescriptor.map { WebSocketModel.TLSDescriptor($0) }
+    func convertToWebSocketConfiguration() -> WebSocketConnection.Configuration {
+        let socketTLSDescriptor = tlsDescriptor.map { WebSocketConnection.TLSDescriptor($0) }
         
-        return WebSocketModel.Configuration(
-            session: urlSession,
+        return WebSocketConnection.Configuration(
             tlsDescriptor: socketTLSDescriptor,
             metrics: metrics,
             logger: resolvedLogger,
@@ -118,16 +64,5 @@ extension SwiftFulcrum.Client.Configuration {
     var resolvedLogger: SwiftFulcrum.Logging.Adapter? {
         guard isLoggingEnabled else { return SwiftFulcrum.Logging.NoOperationAdapter() }
         return logger
-    }
-}
-
-extension SwiftFulcrum.Client.Configuration.ReconnectPolicy {
-    var reconnectorConfiguration: WebSocketModel.Reconnector.Configuration {
-        .init(
-            maximumReconnectionAttempts: maximumReconnectionAttempts,
-            reconnectionDelay: reconnectionDelay,
-            maximumDelay: maximumDelay,
-            jitterRange: jitterRange
-        )
     }
 }

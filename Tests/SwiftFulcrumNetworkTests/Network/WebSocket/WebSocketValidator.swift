@@ -5,17 +5,17 @@ import Testing
 import SwiftFulcrumTestSupport
 @testable import SwiftFulcrum
 
-extension SwiftFulcrumNetworkValidators {
+extension SwiftFulcrumNetworkValidator {
 @Suite(.serialized, .tags(.network))
 struct WebSocketValidator {
     @Test(
-        "WebSocketModel connects and exchanges a unary request",
+        "WebSocketConnection connects and exchanges a unary request",
         .timeLimit(.minutes(1)),
         .enabled(if: TestExecutionPolicy.shouldRunNetwork, "Network tests are opt-in. Set SWIFTFULCRUM_RUN_NETWORK=1 to enable them.")
     )
     func connectAndExchangeUnaryRequest() async throws {
         let url = try await NetworkTestClient.pickServerURL()
-        let webSocket = WebSocketModel(url: url)
+        let webSocket = WebSocketConnection(url: url)
         let stream = await webSocket.makeMessageStream()
 
         try await webSocket.connect()
@@ -62,13 +62,13 @@ struct WebSocketValidator {
     }
 
     @Test(
-        "WebSocketModel message stream ends after disconnect",
+        "WebSocketConnection message stream ends after disconnect",
         .timeLimit(.minutes(1)),
         .enabled(if: TestExecutionPolicy.shouldRunNetwork, "Network tests are opt-in. Set SWIFTFULCRUM_RUN_NETWORK=1 to enable them.")
     )
     func terminateMessageStreamAfterDisconnect() async throws {
         let url = try await NetworkTestClient.pickServerURL()
-        let webSocket = WebSocketModel(url: url)
+        let webSocket = WebSocketConnection(url: url)
         let stream = await webSocket.makeMessageStream()
 
         try await webSocket.connect()

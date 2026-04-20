@@ -5,19 +5,19 @@ import Testing
 import SwiftFulcrumTestSupport
 @testable import SwiftFulcrum
 
-extension SwiftFulcrumNetworkValidators {
+extension SwiftFulcrumNetworkValidator {
 @Suite(.serialized, .tags(.network))
 struct ClientWebSocketValidator {
     @Test(
-        "FulcrumNetworkClient.start() relays unary responses over WebSocketModel",
+        "FulcrumNetworkClient.start() relays unary responses over WebSocketConnection",
         .timeLimit(.minutes(1)),
         .enabled(if: TestExecutionPolicy.shouldRunNetwork, "Network tests are opt-in. Set SWIFTFULCRUM_RUN_NETWORK=1 to enable them.")
     )
     func startClientAndReceiveUnaryResponses() async throws {
         let url = try await NetworkTestClient.pickServerURL()
-        let webSocket = WebSocketModel(url: url)
+        let webSocket = WebSocketConnection(url: url)
         let client = FulcrumNetworkClient(
-            transport: WebSocketTransportModel(webSocket: webSocket),
+            transport: WebSocketTransport(webSocket: webSocket),
             protocolNegotiation: .init()
         )
 
@@ -42,9 +42,9 @@ struct ClientWebSocketValidator {
     )
     func stopClientAndTerminateSubscriptions() async throws {
         let url = try await NetworkTestClient.pickServerURL()
-        let webSocket = WebSocketModel(url: url)
+        let webSocket = WebSocketConnection(url: url)
         let client = FulcrumNetworkClient(
-            transport: WebSocketTransportModel(webSocket: webSocket),
+            transport: WebSocketTransport(webSocket: webSocket),
             protocolNegotiation: .init()
         )
 

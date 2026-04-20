@@ -1,0 +1,25 @@
+// RPCRequestParametersModel+HistoryModel.swift
+
+import Foundation
+
+extension RPCRequestParametersModel {
+    struct HistoryModel: Encodable {
+        let identifier: String
+        let fromHeight: UInt?
+        let toHeight: UInt?
+        let shouldIncludeUnconfirmed: Bool
+
+        func encode(to encoder: Encoder) throws {
+            var container = encoder.unkeyedContainer()
+            try container.encode(identifier)
+            try container.encode(fromHeight ?? 0)
+            if shouldIncludeUnconfirmed {
+                try container.encode(Int(-1))
+            } else if let toHeight {
+                try container.encode(toHeight)
+            } else {
+                try container.encode(UInt.max)
+            }
+        }
+    }
+}

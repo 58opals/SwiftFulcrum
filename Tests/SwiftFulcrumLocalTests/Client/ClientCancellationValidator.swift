@@ -5,24 +5,6 @@ import Testing
 import SwiftFulcrumTestSupport
 @testable import SwiftFulcrum
 
-private actor CancellationCompletionState {
-    private var completed = false
-    private var error: SwiftFulcrum.Client.Error?
-
-    func finish(with error: SwiftFulcrum.Client.Error) {
-        completed = true
-        self.error = error
-    }
-
-    var isCompleted: Bool {
-        completed
-    }
-
-    var recordedError: SwiftFulcrum.Client.Error? {
-        error
-    }
-}
-
 @Suite(.tags(.local))
 struct ClientCancellationValidator {
     @Test("Shared cancellation cancels every in-flight unary call", .timeLimit(.minutes(1)))
@@ -548,7 +530,4 @@ extension ClientCancellationValidator {
         return await condition()
     }
     
-    private enum SupportError: Swift.Error {
-        case missingRequestIdentifier
-    }
 }

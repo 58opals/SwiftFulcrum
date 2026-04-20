@@ -27,9 +27,10 @@ extension SwiftFulcrum.Logging.ConsoleAdapter {
 
         private func scheduleFlush() {
             debounceTask?.cancel()
-            debounceTask = Task { [weak self] in
+            let outputSink = self
+            debounceTask = Task {
                 try? await Task.sleep(for: .milliseconds(150))
-                await self?.flushRepeatsIfNeeded()
+                await outputSink.flushRepeatsIfNeeded()
             }
         }
 
