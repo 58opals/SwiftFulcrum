@@ -67,7 +67,14 @@ Task {
 }
 ```
 
-`request(...)` starts the client automatically when idle. `SwiftFulcrum.Client()` uses the bundled mainnet server catalog by default; pass `url:` or `configuration:` when you need a fixed endpoint or different network settings.
+`request(...)` starts the client automatically when idle. `SwiftFulcrum.Client()` uses the bundled mainnet server catalog by default; pass `url:` or `configuration:` when you need a fixed endpoint or different network settings. Bundled catalogs are available for `mainnet`, `testnet`, and `chipnet`.
+
+```swift
+let configuration = SwiftFulcrum.Client.Configuration(network: .chipnet)
+let chipnetClient = try await SwiftFulcrum.Client(
+    configuration: configuration
+)
+```
 
 ## Core Capabilities
 
@@ -75,6 +82,7 @@ Task {
 - Typed RPC methods via `SwiftFulcrum.RPC.Method`
 - Typed response models under `SwiftFulcrum.RPC.Response.Result.*`
 - Automatic protocol negotiation plus reconnect and failover with subscription recovery
+- Bundled public server catalogs for `mainnet`, `testnet`, and `chipnet`
 - Connection-state streams and diagnostics snapshots for observability
 
 ## Testing

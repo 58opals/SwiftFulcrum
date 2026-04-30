@@ -6,6 +6,10 @@ extension SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction.DSProof {
     public struct Subscribe: Decodable, Sendable {
         public let proof: Get?
 
+        init(proof: Get?) {
+            self.proof = proof
+        }
+
         public init(from decoder: Decoder) throws {
             let payloadModel = try SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Transaction.DSProof.Subscribe(from: decoder)
             switch payloadModel {
@@ -18,4 +22,8 @@ extension SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction.DSProof {
             }
         }
     }
+}
+
+extension SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction.DSProof.Subscribe: JSONRPCResponseDecodeModel.NilValueModel {
+    static var nilValue: Self { .init(proof: nil) }
 }

@@ -5,10 +5,15 @@ import Foundation
 extension SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Transaction.SubscribeParameters {
     enum TransactionHashAndHeight: Decodable, Sendable {
         case transactionHash(String)
-        case height(UInt)
+        case height(UInt?)
 
         init(from decoder: Decoder) throws {
             let container = try decoder.singleValueContainer()
+
+            if container.decodeNil() {
+                self = .height(nil)
+                return
+            }
 
             if let stringResult = try? container.decode(String.self) {
                 self = .transactionHash(stringResult)

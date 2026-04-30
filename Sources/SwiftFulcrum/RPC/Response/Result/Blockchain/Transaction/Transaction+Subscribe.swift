@@ -4,7 +4,11 @@ import Foundation
 
 extension SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction {
     public struct Subscribe: Decodable, Sendable {
-        public let height: UInt
+        public let height: UInt?
+
+        init(height: UInt?) {
+            self.height = height
+        }
 
         public init(from decoder: Decoder) throws {
             let payloadModel = try SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Transaction.Subscribe(from: decoder)
@@ -16,4 +20,8 @@ extension SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction {
             }
         }
     }
+}
+
+extension SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction.Subscribe: JSONRPCResponseDecodeModel.NilValueModel {
+    static var nilValue: Self { .init(height: nil) }
 }

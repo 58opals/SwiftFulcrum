@@ -46,7 +46,14 @@ extension WebSocketConnection.Reconnector {
         return serverCatalog.firstIndex { Self.canonicalize($0) == key }
     }
 
-    static func canonicalize(_ url: URL) -> String { url.absoluteString }
+    static func canonicalize(_ url: URL) -> String {
+        guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+            return url.absoluteString
+        }
+        components.scheme = components.scheme?.lowercased()
+        components.host = components.host?.lowercased()
+        return components.url?.absoluteString ?? url.absoluteString
+    }
 
     static func deduplicate(_ urls: [URL]) -> [URL] {
         var seen = Set<String>()

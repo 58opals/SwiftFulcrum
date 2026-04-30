@@ -14,6 +14,9 @@ struct PublicAPIFacadeContractValidator {
         let configurationType: SwiftFulcrum.Client.Configuration.Type = SwiftFulcrum.Client.Configuration.self
         _ = configurationType
 
+        let network: SwiftFulcrum.Client.Configuration.Network = .chipnet
+        _ = network
+
         let tlsDescriptorType: SwiftFulcrum.Client.Configuration.TLSDescriptor.Type =
             SwiftFulcrum.Client.Configuration.TLSDescriptor.self
         _ = tlsDescriptorType

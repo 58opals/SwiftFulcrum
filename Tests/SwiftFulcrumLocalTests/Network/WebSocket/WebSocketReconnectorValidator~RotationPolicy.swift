@@ -28,4 +28,13 @@ extension WebSocketReconnectorValidator {
         #expect(rotationKeys.dropLast().allSatisfy { $0 != currentKey })
         #expect(Set(rotationKeys.dropLast()) == Set(serverKeys.filter { $0 != currentKey }))
     }
+
+    @Test("Reconnector canonicalizes case-insensitive URL components")
+    func canonicalizeCaseInsensitiveURLComponents() throws {
+        let uppercased = try #require(URL(string: "WSS://Fulcrum.Example:50004"))
+        let lowercased = try #require(URL(string: "wss://fulcrum.example:50004"))
+
+        #expect(WebSocketConnection.Reconnector.canonicalize(uppercased) == WebSocketConnection.Reconnector.canonicalize(lowercased))
+        #expect(WebSocketConnection.Reconnector.deduplicate([uppercased, lowercased]).count == 1)
+    }
 }
