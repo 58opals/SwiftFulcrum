@@ -6,6 +6,8 @@ extension WebSocketConnection.Reconnector {
     func buildCandidateRotation(preferredURL: URL?, currentURL: URL) async throws -> [URL] {
         var fallbacks = [currentURL]
         if let preferredURL { fallbacks.append(preferredURL) }
+        fallbacks.append(contentsOf: bootstrapServers)
+        fallbacks = Self.deduplicate(fallbacks)
 
         if serverCatalog.isEmpty {
             serverCatalog = Self.deduplicate(

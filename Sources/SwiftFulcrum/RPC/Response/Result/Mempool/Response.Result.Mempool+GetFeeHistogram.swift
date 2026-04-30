@@ -14,7 +14,7 @@ extension SwiftFulcrum.RPC.Response.Result.Mempool {
                 } catch {
                     throw ResponseResultDecodeError.unexpectedFormat("Malformed entry at index \(index): \(error)")
                 }
-            }.sorted { $0.fee < $1.fee }
+            }
         }
     }
 }

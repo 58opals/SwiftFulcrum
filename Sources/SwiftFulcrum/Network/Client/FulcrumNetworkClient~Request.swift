@@ -75,6 +75,9 @@ extension FulcrumNetworkClient {
                 }
             }
         } catch {
+            if suppressTransportLogging {
+                await transport.unregisterQuietResponse(for: id)
+            }
             if let token, let cancellationRegistrationID {
                 await token.unregister(cancellationRegistrationID)
             }
@@ -86,6 +89,9 @@ extension FulcrumNetworkClient {
 
         if let token, let cancellationRegistrationID {
             await token.unregister(cancellationRegistrationID)
+        }
+        if suppressTransportLogging {
+            await transport.unregisterQuietResponse(for: id)
         }
 
         return try (id, raw.decode(ResponsePayload.self, context: .init(methodPath: method.path)))

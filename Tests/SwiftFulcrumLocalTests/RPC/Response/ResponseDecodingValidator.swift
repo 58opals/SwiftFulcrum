@@ -365,10 +365,10 @@ struct ResponseDecodingValidator {
             context: .init(methodPath: "mempool.get_fee_histogram")
         )
         #expect(histogram.histogram.count == 2)
-        #expect(histogram.histogram[0].fee == 1.0)
-        #expect(histogram.histogram[0].virtualSize == 1000)
-        #expect(histogram.histogram[1].fee == 2.5)
-        #expect(histogram.histogram[1].virtualSize == 2000)
+        #expect(histogram.histogram[0].fee == 2.5)
+        #expect(histogram.histogram[0].virtualSize == 2000)
+        #expect(histogram.histogram[1].fee == 1.0)
+        #expect(histogram.histogram[1].virtualSize == 1000)
     }
 
     @Test("Decodes transaction.id_from_pos without a merkle proof")

@@ -56,6 +56,7 @@ actor WebSocketConnection {
             reconnectConfiguration,
             network: configuration.network,
             serverCatalogLoader: configuration.serverCatalogLoader,
+            bootstrapServers: configuration.bootstrapServers,
             sleep: sleep,
             jitter: jitter
         )

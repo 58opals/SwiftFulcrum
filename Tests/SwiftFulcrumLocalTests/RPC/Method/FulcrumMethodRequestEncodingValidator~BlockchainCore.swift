@@ -142,9 +142,9 @@ extension FulcrumMethodRequestEncodingValidator {
             expectedParameters: ["aa"]
         )
         try assertRequest(
-            .blockchain(.transaction(.getMerkle(transactionHash: "aa"))),
-            expectedPath: SwiftFulcrum.RPC.Method.blockchain(.transaction(.getMerkle(transactionHash: ""))).path,
-            expectedParameters: ["aa"]
+            .blockchain(.transaction(.getMerkle(transactionHash: "aa", height: 123))),
+            expectedPath: SwiftFulcrum.RPC.Method.blockchain(.transaction(.getMerkle(transactionHash: "", height: 0))).path,
+            expectedParameters: ["aa", 123]
         )
         try assertRequest(
             .blockchain(.transaction(.idFromPos(blockHeight: 2, transactionPosition: 3, shouldIncludeMerkleProof: false))),

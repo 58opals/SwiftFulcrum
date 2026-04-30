@@ -8,6 +8,7 @@ extension WebSocketConnection {
         var reconnectionAttempts: Int
         let network: SwiftFulcrum.Client.Configuration.Network
         let serverCatalogLoader: SwiftFulcrum.ServerCatalog.Repository
+        let bootstrapServers: [URL]
         var serverCatalog: [URL]
         var nextServerIndex: Int
 
@@ -20,12 +21,14 @@ extension WebSocketConnection {
              reconnectionAttempts: Int = 0,
              network: SwiftFulcrum.Client.Configuration.Network,
              serverCatalogLoader: SwiftFulcrum.ServerCatalog.Repository = .bundled,
+             bootstrapServers: [URL] = .init(),
              sleep: @escaping @Sendable (Duration) async throws -> Void = { duration in try await Task.sleep(for: duration) },
              jitter: @escaping @Sendable (ClosedRange<Double>) -> Double = { range in .random(in: range) }) {
             self.configuration = configuration
             self.reconnectionAttempts = reconnectionAttempts
             self.network = network
             self.serverCatalogLoader = serverCatalogLoader
+            self.bootstrapServers = bootstrapServers
             self.serverCatalog = .init()
             self.nextServerIndex = 0
             self.sleep = sleep

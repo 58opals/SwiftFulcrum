@@ -25,4 +25,5 @@ protocol TransportAdapter: Sendable {
     func updateLogger(_ handler: SwiftFulcrum.Logging.Adapter?) async
     
     func registerQuietResponse(for identifier: UUID) async
+    func unregisterQuietResponse(for identifier: UUID) async
 }

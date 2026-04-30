@@ -26,7 +26,7 @@ extension SwiftFulcrum {
         }
 
         public init?(string: String) {
-            let components = string.split(separator: ".").map(String.init)
+            let components = string.split(separator: ".", omittingEmptySubsequences: false).map(String.init)
             guard (2 ... 3).contains(components.count) else { return nil }
 
             let integers = components.compactMap { Int($0) }

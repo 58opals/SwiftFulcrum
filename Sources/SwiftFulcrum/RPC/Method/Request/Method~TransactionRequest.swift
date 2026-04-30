@@ -31,10 +31,13 @@ extension SwiftFulcrum.RPC.Method {
                                   method: self,
                                   params: RPCRequestParametersModel.SingleValueModel(value: transactionHash))
 
-        case .getMerkle(let transactionHash):
+        case .getMerkle(let transactionHash, let height):
             return FulcrumRequest(id: uuid,
                                   method: self,
-                                  params: RPCRequestParametersModel.SingleValueModel(value: transactionHash))
+                                  params: RPCRequestParametersModel.PairModel(
+                                      first: transactionHash,
+                                      second: height
+                                  ))
 
         case .idFromPos(let blockHeight, let transactionPosition, let shouldIncludeMerkleProof):
             return FulcrumRequest(id: uuid,

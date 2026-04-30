@@ -28,6 +28,7 @@ actor TransportTestActor: TransportAdapter {
     var shouldPauseOutgoingSend = false
     var pendingOutgoingSendGateContinuations: [CheckedContinuation<Void, Never>] = .init()
     var outgoingSendFailuresByMethodPath: [String: Swift.Error] = .init()
+    private var quietResponseIdentifiers: Set<UUID> = .init()
 
     var reconnectFailure: Swift.Error?
     var reconnectAttempts = 0
@@ -132,7 +133,17 @@ actor TransportTestActor: TransportAdapter {
 
     func updateLogger(_ handler: SwiftFulcrum.Logging.Adapter?) async { _ = handler }
 
-    func registerQuietResponse(for identifier: UUID) async { _ = identifier }
+    func registerQuietResponse(for identifier: UUID) async {
+        quietResponseIdentifiers.insert(identifier)
+    }
+
+    func unregisterQuietResponse(for identifier: UUID) async {
+        quietResponseIdentifiers.remove(identifier)
+    }
+
+    func makeQuietResponseIdentifierCount() -> Int {
+        quietResponseIdentifiers.count
+    }
 
     func enqueueIncoming(_ message: URLSessionWebSocketTask.Message) {
         incomingBuffer.append(.success(message))
