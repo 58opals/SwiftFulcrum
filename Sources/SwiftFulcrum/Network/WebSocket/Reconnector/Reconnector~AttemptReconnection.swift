@@ -71,7 +71,8 @@ extension WebSocketConnection.Reconnector {
                 try await webSocket.performConnect(
                     shouldEmitLifecycle: false,
                     shouldAllowFailover: false,
-                    shouldCancelReceiver: shouldCancelReceiver
+                    shouldCancelReceiver: shouldCancelReceiver,
+                    failureState: .reconnecting
                 )
                 await webSocket.recordReconnectSuccess()
                 let successSnapshot = await webSocket.makeDiagnosticsSnapshot()

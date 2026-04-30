@@ -81,6 +81,9 @@ extension SwiftFulcrum.Client {
 
         switch state {
         case .connected:
+            try await executeBeforeDeadline(deadline) {
+                try await self.client.awaitReconnectReadiness()
+            }
             return
         case .connecting:
             try await executeBeforeDeadline(deadline) {

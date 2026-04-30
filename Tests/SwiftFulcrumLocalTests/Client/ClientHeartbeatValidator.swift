@@ -63,6 +63,32 @@ struct ClientHeartbeatValidator {
         await client.stop()
     }
 
+    @Test("Heartbeat reconnect failure marks transport disconnected", .timeLimit(.minutes(1)))
+    func heartbeatReconnectFailureMarksTransportDisconnected() async throws {
+        let transport = TransportTestActor()
+        await transport.configureReconnectFailure(SwiftFulcrum.Client.Error.transport(.reconnectFailed))
+
+        let client = FulcrumNetworkClient(
+            transport: transport,
+            heartbeatInterval: .milliseconds(20),
+            heartbeatTimeout: .milliseconds(20),
+            protocolNegotiation: .init()
+        )
+        try await startAndNegotiate(client: client, transport: transport)
+
+        let didAttemptReconnect = await waitUntil(timeout: .seconds(2)) {
+            await transport.makeReconnectAttempts() > 0
+        }
+        #expect(didAttemptReconnect)
+
+        let didDisconnect = await waitUntil(timeout: .milliseconds(250)) {
+            await client.connectionState == .disconnected
+        }
+        #expect(didDisconnect)
+
+        await client.stop()
+    }
+
     @Test("Heartbeat reconnect failure terminates active subscriptions", .timeLimit(.minutes(1)))
     func failActiveSubscriptionsWhenHeartbeatReconnectFails() async throws {
         let transport = TransportTestActor()

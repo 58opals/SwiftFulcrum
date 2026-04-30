@@ -17,8 +17,8 @@ actor TransportTestActor: TransportAdapter {
     private var lifecycleContinuation: AsyncStream<SwiftFulcrum.Transport.State.Event>.Continuation?
 
     private var connectionStateBuffer: [SwiftFulcrum.Client.ConnectionState] = .init()
-    private var connectionStateStream: AsyncStream<SwiftFulcrum.Client.ConnectionState>?
-    private var connectionStateContinuation: AsyncStream<SwiftFulcrum.Client.ConnectionState>.Continuation?
+    private var connectionStateContinuationsBySubscriberIdentifier:
+        [UUID: AsyncStream<SwiftFulcrum.Client.ConnectionState>.Continuation] = .init()
 
     private var outgoingQueue: [URLSessionWebSocketTask.Message] = .init()
     private var pendingOutgoingContinuations: [CheckedContinuation<URLSessionWebSocketTask.Message, Never>] = .init()
@@ -110,17 +110,16 @@ actor TransportTestActor: TransportAdapter {
     }
 
     func makeConnectionStateEvents() async -> AsyncStream<SwiftFulcrum.Client.ConnectionState> {
-        if let connectionStateStream { return connectionStateStream }
+        let subscriberIdentifier = UUID()
         var continuation: AsyncStream<SwiftFulcrum.Client.ConnectionState>.Continuation!
         let stream = AsyncStream<SwiftFulcrum.Client.ConnectionState> { innerContinuation in
             continuation = innerContinuation
             innerContinuation.yield(connectionStateValue)
             innerContinuation.onTermination = { @Sendable [weak self] _ in
-                Task { await self?.resetConnectionStateStream() }
+                Task { await self?.removeConnectionStateContinuation(for: subscriberIdentifier) }
             }
         }
-        connectionStateStream = stream
-        connectionStateContinuation = continuation
+        connectionStateContinuationsBySubscriberIdentifier[subscriberIdentifier] = continuation
         flushConnectionStateBuffer()
         return stream
     }
@@ -208,7 +207,7 @@ actor TransportTestActor: TransportAdapter {
         }
     }
 
-    private func updateConnectionState(to newState: SwiftFulcrum.Client.ConnectionState) {
+    func updateConnectionState(to newState: SwiftFulcrum.Client.ConnectionState) {
         guard connectionStateValue != newState else { return }
         connectionStateValue = newState
         connectionStateBuffer.append(newState)
@@ -248,9 +247,11 @@ actor TransportTestActor: TransportAdapter {
     }
 
     private func flushConnectionStateBuffer() {
-        guard let connectionStateContinuation else { return }
+        guard !connectionStateContinuationsBySubscriberIdentifier.isEmpty else { return }
         for state in connectionStateBuffer {
-            connectionStateContinuation.yield(state)
+            for continuation in connectionStateContinuationsBySubscriberIdentifier.values {
+                continuation.yield(state)
+            }
         }
         connectionStateBuffer.removeAll()
     }
@@ -265,8 +266,7 @@ actor TransportTestActor: TransportAdapter {
         lifecycleContinuation = nil
     }
 
-    private func resetConnectionStateStream() async {
-        connectionStateStream = nil
-        connectionStateContinuation = nil
+    private func removeConnectionStateContinuation(for subscriberIdentifier: UUID) {
+        connectionStateContinuationsBySubscriberIdentifier.removeValue(forKey: subscriberIdentifier)
     }
 }
