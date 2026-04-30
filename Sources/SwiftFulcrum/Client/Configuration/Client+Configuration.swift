@@ -56,6 +56,7 @@ extension SwiftFulcrum.Client.Configuration {
             metrics: metrics,
             logger: resolvedLogger,
             maximumMessageSize: maximumMessageSize,
+            bootstrapServers: bootstrapServers ?? .init(),
             serverCatalogLoader: serverCatalogLoader,
             network: network
         )

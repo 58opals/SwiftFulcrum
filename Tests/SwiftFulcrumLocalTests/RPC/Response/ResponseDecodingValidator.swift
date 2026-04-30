@@ -143,6 +143,95 @@ struct ResponseDecodingValidator {
         #expect(subscribe.status == nil)
     }
 
+    @Test("Decodes unknown transaction height status")
+    func decodeUnknownTransactionHeightStatus() throws {
+        let getHeightPayload = try jsonData(
+            ["jsonrpc": "2.0", "id": UUID().uuidString, "result": NSNull()]
+        )
+        let getHeight = try getHeightPayload.decode(
+            SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction.GetHeight.self,
+            context: .init(methodPath: "blockchain.transaction.get_height")
+        )
+        #expect(getHeight.height == nil)
+
+        let subscribePayload = try jsonData(
+            ["jsonrpc": "2.0", "id": UUID().uuidString, "result": NSNull()]
+        )
+        let subscribe = try subscribePayload.decode(
+            SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction.Subscribe.self,
+            context: .init(methodPath: "blockchain.transaction.subscribe")
+        )
+        #expect(subscribe.height == nil)
+
+        let notificationPayload = try jsonData(
+            ["jsonrpc": "2.0", "method": "blockchain.transaction.subscribe", "params": ["abc123", NSNull()]]
+        )
+        let notification = try notificationPayload.decode(
+            SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction.SubscribeNotification.self,
+            context: .init(methodPath: "blockchain.transaction.subscribe")
+        )
+        #expect(notification.transactionHash == "abc123")
+        #expect(notification.height == nil)
+    }
+
+    @Test("Decodes missing UTXO info as not found")
+    func decodeMissingUTXOInfoAsNotFound() throws {
+        let payload = try jsonData(
+            ["jsonrpc": "2.0", "id": UUID().uuidString, "result": NSNull()]
+        )
+
+        let result = try payload.decode(
+            SwiftFulcrum.RPC.Response.Result.Blockchain.UTXO.GetInfo.self,
+            context: .init(methodPath: "blockchain.utxo.get_info")
+        )
+
+        #expect(result.isFound == false)
+        #expect(result.confirmedHeight == nil)
+        #expect(result.scriptHash == nil)
+        #expect(result.value == nil)
+        #expect(result.tokenData == nil)
+    }
+
+    @Test("Decodes missing double-spend proof as not found")
+    func decodeMissingDSProofAsNotFound() throws {
+        let getPayload = try jsonData(
+            ["jsonrpc": "2.0", "id": UUID().uuidString, "result": NSNull()]
+        )
+        let get = try getPayload.decode(
+            SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction.DSProof.Get.self,
+            context: .init(methodPath: "blockchain.transaction.dsproof.get")
+        )
+        #expect(get.isFound == false)
+        #expect(get.dsProofID == nil)
+        #expect(get.transactionID == nil)
+        #expect(get.hex == nil)
+        #expect(get.outpoint == nil)
+        #expect(get.descendants.isEmpty)
+
+        let subscribePayload = try jsonData(
+            ["jsonrpc": "2.0", "id": UUID().uuidString, "result": NSNull()]
+        )
+        let subscribe = try subscribePayload.decode(
+            SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction.DSProof.Subscribe.self,
+            context: .init(methodPath: "blockchain.transaction.dsproof.subscribe")
+        )
+        #expect(subscribe.proof == nil)
+
+        let notificationPayload = try jsonData(
+            [
+                "jsonrpc": "2.0",
+                "method": "blockchain.transaction.dsproof.subscribe",
+                "params": ["abc123", NSNull()]
+            ]
+        )
+        let notification = try notificationPayload.decode(
+            SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction.DSProof.SubscribeNotification.self,
+            context: .init(methodPath: "blockchain.transaction.dsproof.subscribe")
+        )
+        #expect(notification.transactionHash == "abc123")
+        #expect(notification.proof == nil)
+    }
+
     @Test("Decodes headers/address/transaction/dsproof notifications")
     func decodeSubscriptionNotifications() throws {
         let headerPayload = try jsonData(
@@ -276,10 +365,10 @@ struct ResponseDecodingValidator {
             context: .init(methodPath: "mempool.get_fee_histogram")
         )
         #expect(histogram.histogram.count == 2)
-        #expect(histogram.histogram[0].fee == 1.0)
-        #expect(histogram.histogram[0].virtualSize == 1000)
-        #expect(histogram.histogram[1].fee == 2.5)
-        #expect(histogram.histogram[1].virtualSize == 2000)
+        #expect(histogram.histogram[0].fee == 2.5)
+        #expect(histogram.histogram[0].virtualSize == 2000)
+        #expect(histogram.histogram[1].fee == 1.0)
+        #expect(histogram.histogram[1].virtualSize == 1000)
     }
 
     @Test("Decodes transaction.id_from_pos without a merkle proof")

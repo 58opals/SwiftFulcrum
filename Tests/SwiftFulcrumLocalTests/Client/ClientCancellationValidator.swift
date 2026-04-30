@@ -198,6 +198,30 @@ struct ClientCancellationValidator {
         await fulcrum.stop()
     }
 
+    @Test("request(timeout:) unregisters quiet response identifiers", .timeLimit(.minutes(1)))
+    func requestTimeoutUnregistersQuietResponseIdentifier() async throws {
+        let (fulcrum, transport) = try await makeStartedFulcrum()
+        let networkClient = await fulcrum.client
+        let timeout: Duration = .milliseconds(50)
+
+        do {
+            let _: (UUID, SwiftFulcrum.RPC.Response.Result.Server.Ping) = try await networkClient.call(
+                method: .server(.ping),
+                options: .init(timeout: timeout),
+                suppressTransportLogging: true
+            )
+            Issue.record("Quiet request should time out without a response.")
+        } catch let error as SwiftFulcrum.Client.Error {
+            #expect(error == .client(.timeout(timeout)))
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+
+        #expect(await transport.makeQuietResponseIdentifierCount() == 0)
+
+        await fulcrum.stop()
+    }
+
     @Test("request(timeout:) uses one end-to-end budget when starting from idle", .timeLimit(.minutes(1)))
     func requestTimeoutUsesSingleBudgetWhenStartingFromIdle() async throws {
         let transport = TransportTestActor()

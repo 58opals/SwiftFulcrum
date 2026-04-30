@@ -125,7 +125,10 @@ extension MethodAssortmentValidator {
                     .getHeight(transactionHash: "1452186edb3b7f8a0e64fefaf3c3879272e52bdccdbc329de8987e44f3f5bfd1"))),
             .blockchain(
                 .transaction(
-                    .getMerkle(transactionHash: "1452186edb3b7f8a0e64fefaf3c3879272e52bdccdbc329de8987e44f3f5bfd1"))),
+                    .getMerkle(
+                        transactionHash: "1452186edb3b7f8a0e64fefaf3c3879272e52bdccdbc329de8987e44f3f5bfd1",
+                        height: 800_000
+                    ))),
             .blockchain(
                 .transaction(
                     .idFromPos(blockHeight: 1,

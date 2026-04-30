@@ -4,11 +4,26 @@ import Foundation
 
 extension SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction.DSProof {
     public struct Get: Decodable, Sendable {
-        public let dsProofID: String
-        public let transactionID: String
-        public let hex: String
-        public let outpoint: Outpoint
+        public let dsProofID: String?
+        public let transactionID: String?
+        public let hex: String?
+        public let outpoint: Outpoint?
         public let descendants: [String]
+        public var isFound: Bool { dsProofID != nil }
+
+        init(
+            dsProofID: String?,
+            transactionID: String?,
+            hex: String?,
+            outpoint: Outpoint?,
+            descendants: [String]
+        ) {
+            self.dsProofID = dsProofID
+            self.transactionID = transactionID
+            self.hex = hex
+            self.outpoint = outpoint
+            self.descendants = descendants
+        }
 
         init(from payloadModel: SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Transaction.DSProof.Get) {
             self.dsProofID = payloadModel.dspid
@@ -22,5 +37,11 @@ extension SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction.DSProof {
             let payloadModel = try SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Transaction.DSProof.Get(from: decoder)
             self.init(from: payloadModel)
         }
+    }
+}
+
+extension SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction.DSProof.Get: JSONRPCResponseDecodeModel.NilValueModel {
+    static var nilValue: Self {
+        .init(dsProofID: nil, transactionID: nil, hex: nil, outpoint: nil, descendants: .init())
     }
 }

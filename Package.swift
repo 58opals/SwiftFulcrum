@@ -21,7 +21,8 @@ let package = Package(
             name: "SwiftFulcrum",
             resources: [
                 .process("Network/WebSocket/servers.mainnet.json"),
-                .process("Network/WebSocket/servers.testnet.json")
+                .process("Network/WebSocket/servers.testnet.json"),
+                .process("Network/WebSocket/servers.chipnet.json")
             ]
         ),
         .target(

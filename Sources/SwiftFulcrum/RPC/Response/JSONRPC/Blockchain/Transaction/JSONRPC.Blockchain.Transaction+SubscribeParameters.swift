@@ -4,11 +4,16 @@ import Foundation
 
 extension SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Transaction {
     enum SubscribeParameters: Decodable, Sendable {
-        case height(UInt)
+        case height(UInt?)
         case transactionHashAndHeight([TransactionHashAndHeight])
 
         init(from decoder: Decoder) throws {
             let container = try decoder.singleValueContainer()
+
+            if container.decodeNil() {
+                self = .height(nil)
+                return
+            }
 
             if let uintResult = try? container.decode(UInt.self) {
                 self = .height(uintResult)

@@ -25,6 +25,9 @@ struct ProtocolVersionValidator {
     func rejectMalformedVersions() {
         #expect(SwiftFulcrum.ProtocolVersion(string: "1") == nil)
         #expect(SwiftFulcrum.ProtocolVersion(string: "1.2.3.4") == nil)
+        #expect(SwiftFulcrum.ProtocolVersion(string: "1..6") == nil)
+        #expect(SwiftFulcrum.ProtocolVersion(string: ".1.6") == nil)
+        #expect(SwiftFulcrum.ProtocolVersion(string: "1.6.") == nil)
         #expect(SwiftFulcrum.ProtocolVersion(string: "1.a") == nil)
         #expect(SwiftFulcrum.ProtocolVersion(string: "-1.0") == nil)
     }

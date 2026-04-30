@@ -66,7 +66,7 @@ struct MethodAssortmentValidator {
                 case .get(_, _): return
                 case .getConfirmedBlockHash(_, _): return
                 case .getHeight(_): return
-                case .getMerkle(_): return
+                case .getMerkle(_, _): return
                 case .idFromPos(_, _, _): return
                 case .subscribe(_): return
                 case .unsubscribe(_): return

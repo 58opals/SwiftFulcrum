@@ -67,6 +67,8 @@ actor WebSocketTransport: TransportAdapter {
     func updateLogger(_ handler: SwiftFulcrum.Logging.Adapter?) async { await webSocket.updateLogger(handler) }
     
     func registerQuietResponse(for identifier: UUID) async { await webSocket.registerQuietResponse(for: identifier) }
+
+    func unregisterQuietResponse(for identifier: UUID) async { await webSocket.unregisterQuietResponse(for: identifier) }
     
     private func mapConnectionState(_ state: WebSocketConnection.ConnectionState) -> SwiftFulcrum.Client.ConnectionState {
         switch state {

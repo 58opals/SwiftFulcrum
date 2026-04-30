@@ -11,6 +11,7 @@ extension WebSocketConnection {
         let metrics: SwiftFulcrum.Metrics.MetricsClient?
         let logger: SwiftFulcrum.Logging.Adapter?
         let maximumMessageSize: Int
+        let bootstrapServers: [URL]
         let serverCatalogLoader: SwiftFulcrum.ServerCatalog.Repository
         let network: SwiftFulcrum.Client.Configuration.Network
         
@@ -18,12 +19,14 @@ extension WebSocketConnection {
              metrics: SwiftFulcrum.Metrics.MetricsClient? = nil,
              logger: SwiftFulcrum.Logging.Adapter? = nil,
              maximumMessageSize: Int = defaultMaximumMessageSize,
+             bootstrapServers: [URL] = .init(),
              serverCatalogLoader: SwiftFulcrum.ServerCatalog.Repository = .bundled,
              network: SwiftFulcrum.Client.Configuration.Network = .mainnet) {
             self.tlsDescriptor = tlsDescriptor
             self.metrics = metrics
             self.logger = logger
             self.maximumMessageSize = maximumMessageSize
+            self.bootstrapServers = bootstrapServers
             self.serverCatalogLoader = serverCatalogLoader
             self.network = network
         }

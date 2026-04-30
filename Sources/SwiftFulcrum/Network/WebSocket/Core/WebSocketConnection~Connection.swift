@@ -31,7 +31,8 @@ extension WebSocketConnection {
     func performConnect(
         shouldEmitLifecycle: Bool = true,
         shouldAllowFailover: Bool = true,
-        shouldCancelReceiver: Bool = true
+        shouldCancelReceiver: Bool = true,
+        failureState: ConnectionState = .disconnected
     ) async throws {
         guard await !self.isConnected else { return }
         await updateConnectionState(.connecting)
@@ -57,7 +58,7 @@ extension WebSocketConnection {
                 let timeoutFailure = SwiftFulcrum.Client.Error.transport(
                     .connectionClosed(.goingAway, timeoutReason)
                 )
-                await updateConnectionState(.disconnected)
+                await updateConnectionState(failureState)
                 task.cancel(with: .goingAway, reason: timeoutReason.data(using: .utf8))
                 emitLog(.error, "connect.timeout")
                 try await performInitialFailoverIfNeeded(
@@ -66,14 +67,14 @@ extension WebSocketConnection {
                 )
             }
         } catch let networkError as SwiftFulcrum.Client.Error.Network {
-            await updateConnectionState(.disconnected)
+            await updateConnectionState(failureState)
             task.cancel(with: .goingAway, reason: "Network error during connect.".data(using: .utf8))
             try await performInitialFailoverIfNeeded(
                 shouldAllowFailover: shouldAllowFailover,
                 failure: SwiftFulcrum.Client.Error.transport(.network(networkError))
             )
         } catch {
-            await updateConnectionState(.disconnected)
+            await updateConnectionState(failureState)
             task.cancel(with: .goingAway, reason: "Connect failed.".data(using: .utf8))
             try await performInitialFailoverIfNeeded(
                 shouldAllowFailover: shouldAllowFailover,

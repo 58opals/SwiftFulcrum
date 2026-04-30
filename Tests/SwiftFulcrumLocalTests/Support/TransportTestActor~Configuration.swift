@@ -31,6 +31,10 @@ extension TransportTestActor {
         connectDelay = delay
     }
 
+    func configureConnectionState(_ state: SwiftFulcrum.Client.ConnectionState) {
+        updateConnectionState(to: state)
+    }
+
     func makeReconnectAttempts() -> Int {
         reconnectAttempts
     }

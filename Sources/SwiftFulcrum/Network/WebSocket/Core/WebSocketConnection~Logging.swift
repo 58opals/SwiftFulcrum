@@ -25,6 +25,10 @@ extension WebSocketConnection {
     func registerQuietResponse(for identifier: UUID) {
         quietResponseIdentifiers.insert(identifier)
     }
+
+    func unregisterQuietResponse(for identifier: UUID) {
+        quietResponseIdentifiers.remove(identifier)
+    }
     
     func consumeQuietResponseIdentifier(for message: URLSessionWebSocketTask.Message) -> Bool {
         let data: Data

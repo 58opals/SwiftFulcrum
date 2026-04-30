@@ -25,7 +25,7 @@ It owns:
 - Typed JSON-RPC request and response modeling through `SwiftFulcrum.RPC.Method` and `SwiftFulcrum.RPC.Response.Result.*`
 - Actor-isolated client lifecycle via `SwiftFulcrum.Client`
 - Protocol negotiation, reconnect handling, and best-effort subscription recovery
-- Bundled public server catalogs for `mainnet` and `testnet`
+- Bundled public server catalogs for `mainnet`, `testnet`, and `chipnet`
 - Connection-state and diagnostics surfaces for downstream observability
 
 It does not own:
@@ -41,7 +41,7 @@ Use `SwiftFulcrum.Client` as the primary entry point.
 
 - Construct `SwiftFulcrum.Client()` to use the bundled mainnet catalog by default
 - Pass `url:` when a consumer needs a fixed Fulcrum endpoint
-- Pass `configuration:` when a consumer needs testnet selection, custom TLS or URL session behavior, reconnect tuning, logging, metrics, bootstrap servers, or a custom server catalog loader
+- Pass `configuration:` when a consumer needs testnet or chipnet selection, custom TLS or URL session behavior, reconnect tuning, logging, metrics, bootstrap servers, or a custom server catalog loader
 
 Use the client surface according to interaction style:
 

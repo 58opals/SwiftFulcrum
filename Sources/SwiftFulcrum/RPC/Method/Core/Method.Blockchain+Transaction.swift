@@ -8,7 +8,7 @@ extension SwiftFulcrum.RPC.Method.Blockchain {
         case get(transactionHash: String, isVerbose: Bool)
         case getConfirmedBlockHash(transactionHash: String, shouldIncludeHeader: Bool)
         case getHeight(transactionHash: String)
-        case getMerkle(transactionHash: String)
+        case getMerkle(transactionHash: String, height: UInt)
         case idFromPos(blockHeight: UInt, transactionPosition: UInt, shouldIncludeMerkleProof: Bool)
         case subscribe(transactionHash: String)
         case unsubscribe(transactionHash: String)
