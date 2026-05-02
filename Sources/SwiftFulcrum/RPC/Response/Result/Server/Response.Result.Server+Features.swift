@@ -1,8 +1,8 @@
-// Response.Result.Server+Features.swift
+// Response.Server+Features.swift
 
 import Foundation
 
-extension SwiftFulcrum.RPC.Response.Result.Server {
+extension SwiftFulcrum.Response.Server {
     public struct Features: Decodable, Sendable {
         public let genesisHash: String
         public let hashFunction: String

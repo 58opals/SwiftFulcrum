@@ -1,11 +1,11 @@
-// Response.Result.Blockchain.Address.ListUnspent+Item.swift
+// Response.Blockchain.Address.ListUnspent+Item.swift
 
 import Foundation
 
-extension SwiftFulcrum.RPC.Response.Result.Blockchain.Address.ListUnspent {
+extension SwiftFulcrum.Response.Blockchain.Address.ListUnspent {
     public struct Item: Decodable, Sendable {
         public let height: UInt
-        public let tokenData: SwiftFulcrum.RPC.Method.Blockchain.CashTokens.JSON?
+        public let tokenData: SwiftFulcrum.CashTokens.TokenData?
         public let transactionHash: String
         public let transactionPosition: UInt
         public let value: UInt64

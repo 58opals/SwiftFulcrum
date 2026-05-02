@@ -22,7 +22,7 @@ SwiftFulcrum is the network and protocol layer for Fulcrum-backed BCH integratio
 It owns:
 
 - WebSocket transport setup for `ws` and `wss` Fulcrum endpoints
-- Typed JSON-RPC request and response modeling through `SwiftFulcrum.RPC.Method` and `SwiftFulcrum.RPC.Response.Result.*`
+- Typed endpoint and response modeling through `SwiftFulcrum.API` and `SwiftFulcrum.Response.*`
 - Actor-isolated client lifecycle via `SwiftFulcrum.Client`
 - Protocol negotiation, reconnect handling, and best-effort subscription recovery
 - Bundled public server catalogs for `mainnet`, `testnet`, and `chipnet`
@@ -45,8 +45,8 @@ Use `SwiftFulcrum.Client` as the primary entry point.
 
 Use the client surface according to interaction style:
 
-- `request(...)` for unary RPC calls that return one decoded result
-- `subscribe(...)` for streaming Fulcrum notifications with an initial response plus an async updates stream
+- `request(_:)` for unary typed endpoints that return one decoded result
+- `subscribe(_:)` for streaming typed endpoints with an initial response plus an async updates stream
 - `makeConnectionStateStream()` when the consumer needs transport-state visibility
 - `makeDiagnosticsSnapshot()` and `listSubscriptions()` when the consumer needs lightweight runtime diagnostics
 

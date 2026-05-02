@@ -1,8 +1,8 @@
-// Response.Result.Blockchain.Address+SubscribeNotification.swift
+// Response.Blockchain.Address+SubscribeNotification.swift
 
 import Foundation
 
-extension SwiftFulcrum.RPC.Response.Result.Blockchain.Address {
+extension SwiftFulcrum.Response.Blockchain.Address {
     public struct SubscribeNotification: Decodable, Sendable {
         public let subscriptionIdentifier: String
         public let status: String?
@@ -11,9 +11,9 @@ extension SwiftFulcrum.RPC.Response.Result.Blockchain.Address {
             let payloadModel = try SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Address.Subscribe(from: decoder)
             switch payloadModel {
             case .addressAndStatus(let pair):
-                guard (1 ... 2).contains(pair.count) else {
+                guard pair.count == 2 else {
                     throw ResponseResultDecodeError.unexpectedFormat(
-                        "Expected address notification payload to contain [address] or [address, status]; got \(pair.description)"
+                        "Expected address notification payload to contain [address, status]; got \(pair.description)"
                     )
                 }
                 guard let first = pair.first, let address = first else {

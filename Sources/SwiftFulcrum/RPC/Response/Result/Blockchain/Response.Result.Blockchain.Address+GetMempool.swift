@@ -1,8 +1,8 @@
-// Response.Result.Blockchain.Address+GetMempool.swift
+// Response.Blockchain.Address+GetMempool.swift
 
 import Foundation
 
-extension SwiftFulcrum.RPC.Response.Result.Blockchain.Address {
+extension SwiftFulcrum.Response.Blockchain.Address {
     public struct GetMempool: Decodable, Sendable {
         public let transactions: [Transaction]
 

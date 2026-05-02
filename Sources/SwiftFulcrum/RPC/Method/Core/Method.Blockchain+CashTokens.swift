@@ -3,5 +3,5 @@
 import Foundation
 
 extension SwiftFulcrum.RPC.Method.Blockchain {
-    public struct CashTokens: Sendable {}
+    struct CashTokens: Sendable {}
 }

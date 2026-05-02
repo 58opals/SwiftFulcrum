@@ -1,8 +1,8 @@
-// Response.Result.Server+Version.swift
+// Response.Server+Version.swift
 
 import Foundation
 
-extension SwiftFulcrum.RPC.Response.Result.Server {
+extension SwiftFulcrum.Response.Server {
     public struct Version: Decodable, Sendable {
         public let serverVersion: String
         public let negotiatedProtocolVersion: SwiftFulcrum.ProtocolVersion

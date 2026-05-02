@@ -2,7 +2,7 @@
 
 import Foundation
 
-extension SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction.DSProof {
+extension SwiftFulcrum.Response.Blockchain.Transaction.DSProof {
     public struct List: Decodable, Sendable {
         public let transactionHashes: [String]
 

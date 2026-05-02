@@ -2,7 +2,7 @@
 
 import Foundation
 
-extension SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction.DSProof {
+extension SwiftFulcrum.Response.Blockchain.Transaction.DSProof {
     public struct Get: Decodable, Sendable {
         public let dsProofID: String?
         public let transactionID: String?
@@ -40,7 +40,7 @@ extension SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction.DSProof {
     }
 }
 
-extension SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction.DSProof.Get: JSONRPCResponseDecodeModel.NilValueModel {
+extension SwiftFulcrum.Response.Blockchain.Transaction.DSProof.Get: JSONRPCResponseDecodeModel.NilValueModel {
     static var nilValue: Self {
         .init(dsProofID: nil, transactionID: nil, hex: nil, outpoint: nil, descendants: .init())
     }

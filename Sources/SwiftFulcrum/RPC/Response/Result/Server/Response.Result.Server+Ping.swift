@@ -1,8 +1,8 @@
-// Response.Result.Server+Ping.swift
+// Response.Server+Ping.swift
 
 import Foundation
 
-extension SwiftFulcrum.RPC.Response.Result.Server {
+extension SwiftFulcrum.Response.Server {
     public struct Ping: Decodable, Sendable {
         init() {}
 
@@ -13,6 +13,6 @@ extension SwiftFulcrum.RPC.Response.Result.Server {
     }
 }
 
-extension SwiftFulcrum.RPC.Response.Result.Server.Ping: JSONRPCResponseDecodeModel.NilValueModel {
+extension SwiftFulcrum.Response.Server.Ping: JSONRPCResponseDecodeModel.NilValueModel {
     static var nilValue: Self { .init() }
 }

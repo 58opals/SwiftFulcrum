@@ -1,7 +1,7 @@
-// Response.Result+Server.swift
+// Response+Server.swift
 
 import Foundation
 
-extension SwiftFulcrum.RPC.Response.Result {
+extension SwiftFulcrum.Response {
     public struct Server {}
 }

@@ -2,7 +2,7 @@
 
 import Foundation
 
-extension SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction {
+extension SwiftFulcrum.Response.Blockchain.Transaction {
     public struct IDFromPos: Decodable, Sendable {
         public let merkle: [String]
         public let transactionHash: String

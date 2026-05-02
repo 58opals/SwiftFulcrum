@@ -2,7 +2,7 @@
 
 import Foundation
 
-extension SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction {
+extension SwiftFulcrum.Response.Blockchain.Transaction {
     public struct Unsubscribe: Decodable, Sendable {
         public let isSuccess: Bool
 

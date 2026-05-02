@@ -1,8 +1,8 @@
-// Response.Result.Blockchain.ScriptHash+GetHistory.swift
+// Response.Blockchain.ScriptHash+GetHistory.swift
 
 import Foundation
 
-extension SwiftFulcrum.RPC.Response.Result.Blockchain.ScriptHash {
+extension SwiftFulcrum.Response.Blockchain.ScriptHash {
     public struct GetHistory: Decodable, Sendable {
         public let transactions: [Transaction]
 

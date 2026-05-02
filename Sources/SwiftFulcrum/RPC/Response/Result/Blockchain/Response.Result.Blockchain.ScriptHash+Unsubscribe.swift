@@ -1,8 +1,8 @@
-// Response.Result.Blockchain.ScriptHash+Unsubscribe.swift
+// Response.Blockchain.ScriptHash+Unsubscribe.swift
 
 import Foundation
 
-extension SwiftFulcrum.RPC.Response.Result.Blockchain.ScriptHash {
+extension SwiftFulcrum.Response.Blockchain.ScriptHash {
     public struct Unsubscribe: Decodable, Sendable {
         public let isSuccess: Bool
 

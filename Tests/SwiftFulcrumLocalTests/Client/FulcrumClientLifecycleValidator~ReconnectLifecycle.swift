@@ -18,13 +18,13 @@ private actor ReconnectCompletionState {
 }
 
 private typealias HeadersSubscription = SwiftFulcrum.Client.Subscription<
-    SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe,
-    SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification
+    SwiftFulcrum.Response.Blockchain.Headers.Subscribe,
+    SwiftFulcrum.Response.Blockchain.Headers.SubscribeNotification
 >
 
 private typealias ScriptHashSubscription = SwiftFulcrum.Client.Subscription<
-    SwiftFulcrum.RPC.Response.Result.Blockchain.ScriptHash.Subscribe,
-    SwiftFulcrum.RPC.Response.Result.Blockchain.ScriptHash.SubscribeNotification
+    SwiftFulcrum.Response.Blockchain.ScriptHash.Subscribe,
+    SwiftFulcrum.Response.Blockchain.ScriptHash.SubscribeNotification
 >
 
 extension FulcrumClientLifecycleValidator {
@@ -95,6 +95,12 @@ extension FulcrumClientLifecycleValidator {
         await transport.enqueueIncoming(.data(reconnectResubscribePayload))
 
         await initialSubscription.cancel()
+        #expect(await NetworkTestClient.detectStreamTermination(updates, within: .seconds(5)))
+
+        let didClearInitialSubscription = await waitUntil(timeout: .seconds(5)) {
+            (await fulcrum.listSubscriptions()).isEmpty
+        }
+        #expect(didClearInitialSubscription)
 
         let postReconnectSubscribeCount = try await countSentMethodOccurrences(subscribeMethod.path, transport: transport)
         let replacementSubscribeTask = Task<HeadersSubscription, Swift.Error> {
@@ -108,9 +114,17 @@ extension FulcrumClientLifecycleValidator {
             )) ?? 0
             return subscribeCount == postReconnectSubscribeCount + 1
         }
-        #expect(didSendReplacementSubscribe)
+        try #require(didSendReplacementSubscribe)
 
-        let replacementSubscribeRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
+        var pendingReplacementSubscribeRequest: [String: Any]?
+        for _ in 0..<3 {
+            let outgoingRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
+            if outgoingRequest["method"] as? String == subscribeMethod.path {
+                pendingReplacementSubscribeRequest = outgoingRequest
+                break
+            }
+        }
+        let replacementSubscribeRequest = try #require(pendingReplacementSubscribeRequest)
         let replacementSubscribeIdentifier = try requestIdentifier(from: replacementSubscribeRequest)
         let replacementSubscribePayload = try TransportTestActor.encodeResponsePayload(
             identifier: replacementSubscribeIdentifier,
@@ -121,7 +135,6 @@ extension FulcrumClientLifecycleValidator {
         let replacementSubscription = try await replacementSubscribeTask.value
         #expect(replacementSubscription.initial.height == 940_001)
         #expect((await fulcrum.listSubscriptions()).count == 1)
-        #expect(await NetworkTestClient.detectStreamTermination(updates, within: .seconds(5)))
 
         await replacementSubscription.cancel()
         #expect(await NetworkTestClient.detectStreamTermination(replacementSubscription.updates, within: .seconds(5)))
@@ -559,7 +572,7 @@ extension FulcrumClientLifecycleValidator {
         let requestTask = Task {
             try await fulcrum.request(
                 method: requestMethod,
-                responseType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.GetTip.self,
+                responseType: SwiftFulcrum.Response.Blockchain.Headers.GetTip.self,
                 options: .init(timeout: .seconds(30))
             )
         }
@@ -611,7 +624,7 @@ extension FulcrumClientLifecycleValidator {
         let requestTask = Task {
             try await fulcrum.request(
                 method: requestMethod,
-                responseType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.GetTip.self,
+                responseType: SwiftFulcrum.Response.Blockchain.Headers.GetTip.self,
                 options: .init(timeout: .seconds(30))
             )
         }
@@ -687,7 +700,7 @@ extension FulcrumClientLifecycleValidator {
         let requestTask = Task {
             try await fulcrum.request(
                 method: requestMethod,
-                responseType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.GetTip.self,
+                responseType: SwiftFulcrum.Response.Blockchain.Headers.GetTip.self,
                 options: .init(timeout: .seconds(30))
             )
         }
@@ -801,7 +814,7 @@ extension FulcrumClientLifecycleValidator {
             do {
                 _ = try await fulcrum.request(
                     method: requestMethod,
-                    responseType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.GetTip.self,
+                    responseType: SwiftFulcrum.Response.Blockchain.Headers.GetTip.self,
                     options: .init(timeout: timeout)
                 )
                 Issue.record("request() should time out after spending the single reconnect-readiness budget.")

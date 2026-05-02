@@ -3,7 +3,7 @@
 import Foundation
 
 extension SwiftFulcrum.RPC.Method {
-    public enum Server: Sendable {
+    enum Server: Sendable {
         case ping
         case version(
             clientName: String,

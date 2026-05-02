@@ -55,10 +55,7 @@ Task {
     do {
         let client = try await SwiftFulcrum.Client()
 
-        let tip = try await client.request(
-            method: .blockchain(.headers(.getTip)),
-            responseType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.GetTip.self
-        )
+        let tip = try await client.request(.blockchain.headers.getTip)
         print("Best header height: \(tip.height)")
         await client.stop()
     } catch {
@@ -79,8 +76,8 @@ let chipnetClient = try await SwiftFulcrum.Client(
 ## Core Capabilities
 
 - Actor-isolated `SwiftFulcrum.Client` entrypoint for unary requests and streaming subscriptions
-- Typed RPC methods via `SwiftFulcrum.RPC.Method`
-- Typed response models under `SwiftFulcrum.RPC.Response.Result.*`
+- Typed endpoints via `SwiftFulcrum.API`
+- Typed response models under `SwiftFulcrum.Response.*`
 - Automatic protocol negotiation plus reconnect and failover with subscription recovery
 - Bundled public server catalogs for `mainnet`, `testnet`, and `chipnet`
 - Connection-state streams and diagnostics snapshots for observability

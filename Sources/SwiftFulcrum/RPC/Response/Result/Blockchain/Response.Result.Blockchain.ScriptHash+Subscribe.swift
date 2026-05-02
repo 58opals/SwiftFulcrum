@@ -1,8 +1,8 @@
-// Response.Result.Blockchain.ScriptHash+Subscribe.swift
+// Response.Blockchain.ScriptHash+Subscribe.swift
 
 import Foundation
 
-extension SwiftFulcrum.RPC.Response.Result.Blockchain.ScriptHash {
+extension SwiftFulcrum.Response.Blockchain.ScriptHash {
     public struct Subscribe: Decodable, Sendable {
         public let status: String?
 
@@ -23,6 +23,6 @@ extension SwiftFulcrum.RPC.Response.Result.Blockchain.ScriptHash {
     }
 }
 
-extension SwiftFulcrum.RPC.Response.Result.Blockchain.ScriptHash.Subscribe: JSONRPCResponseDecodeModel.NilValueModel {
+extension SwiftFulcrum.Response.Blockchain.ScriptHash.Subscribe: JSONRPCResponseDecodeModel.NilValueModel {
     static var nilValue: Self { .init(status: nil) }
 }

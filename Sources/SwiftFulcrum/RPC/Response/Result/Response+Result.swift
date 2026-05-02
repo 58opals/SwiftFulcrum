@@ -2,6 +2,6 @@
 
 import Foundation
 
-extension SwiftFulcrum.RPC.Response {
-    public struct Result {}
+extension SwiftFulcrum {
+    public struct Response {}
 }

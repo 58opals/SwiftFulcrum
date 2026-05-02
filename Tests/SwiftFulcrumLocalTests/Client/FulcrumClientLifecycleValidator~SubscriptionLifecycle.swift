@@ -9,13 +9,12 @@ extension FulcrumClientLifecycleValidator {
     @Test("cancel() allows immediate same-key resubscribe", .timeLimit(.minutes(1)))
     func cancellingSubscriptionAllowsImmediateSameKeyResubscribe() async throws {
         let (fulcrum, transport) = try await makeStartedFulcrum()
-        let subscribeMethod = SwiftFulcrum.RPC.Method.blockchain(.headers(.subscribe))
+        let subscribeEndpoint = SwiftFulcrum.API.blockchain.headers.subscribe
+        let subscribeMethod = subscribeEndpoint.method
 
         let firstSubscribeTask = Task {
             try await fulcrum.subscribe(
-                method: subscribeMethod,
-                initial: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe.self,
-                notifications: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification.self,
+                subscribeEndpoint,
                 options: .init(timeout: .seconds(30))
             )
         }
@@ -36,9 +35,7 @@ extension FulcrumClientLifecycleValidator {
 
         let secondSubscribeTask = Task {
             try await fulcrum.subscribe(
-                method: subscribeMethod,
-                initial: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe.self,
-                notifications: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification.self,
+                subscribeEndpoint,
                 options: .init(timeout: .seconds(30))
             )
         }
@@ -52,7 +49,15 @@ extension FulcrumClientLifecycleValidator {
         }
         #expect(didSendSecondSubscribe)
 
-        let secondSubscribeRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
+        var pendingSecondSubscribeRequest: [String: Any]?
+        for _ in 0..<3 {
+            let outgoingRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
+            if outgoingRequest["method"] as? String == subscribeMethod.path {
+                pendingSecondSubscribeRequest = outgoingRequest
+                break
+            }
+        }
+        let secondSubscribeRequest = try #require(pendingSecondSubscribeRequest)
         let secondSubscribeIdentifier = try requestIdentifier(from: secondSubscribeRequest)
         let secondSubscribePayload = try TransportTestActor.encodeResponsePayload(
             identifier: secondSubscribeIdentifier,
@@ -84,15 +89,15 @@ extension FulcrumClientLifecycleValidator {
 
         var subscribeTask: Task<
             SwiftFulcrum.Client.Subscription<
-                SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe,
-                SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification
+                SwiftFulcrum.Response.Blockchain.Headers.Subscribe,
+                SwiftFulcrum.Response.Blockchain.Headers.SubscribeNotification
             >,
             Swift.Error
         >? = Task {
             try await fulcrum.subscribe(
                 method: .blockchain(.headers(.subscribe)),
-                initial: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe.self,
-                notifications: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification.self,
+                initial: SwiftFulcrum.Response.Blockchain.Headers.Subscribe.self,
+                notifications: SwiftFulcrum.Response.Blockchain.Headers.SubscribeNotification.self,
                 options: .init(timeout: .seconds(30))
             )
         }
@@ -105,7 +110,7 @@ extension FulcrumClientLifecycleValidator {
         )
         await transport.enqueueIncoming(.data(subscribePayload))
         var updatesStream: AsyncThrowingStream<
-            SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification,
+            SwiftFulcrum.Response.Blockchain.Headers.SubscribeNotification,
             Swift.Error
         >?
         do {
@@ -138,7 +143,7 @@ extension FulcrumClientLifecycleValidator {
         updatesStream = nil
 
         var consumeFirstUpdateTask: Task<
-            SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification?,
+            SwiftFulcrum.Response.Blockchain.Headers.SubscribeNotification?,
             Swift.Error
         >? = Task { [transientUpdatesStream] in
             guard let stream = transientUpdatesStream else { return nil }
@@ -184,8 +189,8 @@ extension FulcrumClientLifecycleValidator {
         let subscribeTask = Task {
             try await fulcrum.subscribe(
                 method: .blockchain(.headers(.subscribe)),
-                initial: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe.self,
-                notifications: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification.self,
+                initial: SwiftFulcrum.Response.Blockchain.Headers.Subscribe.self,
+                notifications: SwiftFulcrum.Response.Blockchain.Headers.SubscribeNotification.self,
                 options: .init(timeout: .seconds(30))
             )
         }
@@ -226,8 +231,8 @@ extension FulcrumClientLifecycleValidator {
         let subscribeTask = Task {
             try await fulcrum.subscribe(
                 method: subscribeMethod,
-                initial: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe.self,
-                notifications: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification.self,
+                initial: SwiftFulcrum.Response.Blockchain.Headers.Subscribe.self,
+                notifications: SwiftFulcrum.Response.Blockchain.Headers.SubscribeNotification.self,
                 options: .init(timeout: .seconds(30))
             )
         }

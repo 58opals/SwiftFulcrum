@@ -5,7 +5,7 @@ import Foundation
 extension RPCRequestParametersModel {
     struct OptionalTokenFilterModel: Encodable {
         let identifier: String
-        let tokenFilter: SwiftFulcrum.RPC.Method.Blockchain.CashTokens.TokenFilter?
+        let tokenFilter: SwiftFulcrum.CashTokens.TokenFilter?
 
         func encode(to encoder: Encoder) throws {
             var container = encoder.unkeyedContainer()

@@ -1,7 +1,7 @@
-// Response.Result+Mempool.swift
+// Response+Mempool.swift
 
 import Foundation
 
-extension SwiftFulcrum.RPC.Response.Result {
+extension SwiftFulcrum.Response {
     public struct Mempool {}
 }

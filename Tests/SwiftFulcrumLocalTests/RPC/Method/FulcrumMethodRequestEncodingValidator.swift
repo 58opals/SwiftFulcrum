@@ -21,6 +21,30 @@ struct FulcrumMethodRequestEncodingValidator {
         #expect(actualJSON == expectedJSON)
     }
 
+    func assertEndpoint<ResponsePayload>(
+        _ endpoint: SwiftFulcrum.API.Request<ResponsePayload>,
+        expectedPath: String,
+        expectedParameters: [Any]
+    ) throws {
+        try assertRequest(
+            endpoint.method,
+            expectedPath: expectedPath,
+            expectedParameters: expectedParameters
+        )
+    }
+
+    func assertEndpoint<Initial, Update>(
+        _ endpoint: SwiftFulcrum.API.Subscription<Initial, Update>,
+        expectedPath: String,
+        expectedParameters: [Any]
+    ) throws {
+        try assertRequest(
+            endpoint.method,
+            expectedPath: expectedPath,
+            expectedParameters: expectedParameters
+        )
+    }
+
     func requestObject(for method: SwiftFulcrum.RPC.Method) throws -> [String: Any] {
         let request = method.createRequest(with: UUID())
         let payload = try #require(request.data)

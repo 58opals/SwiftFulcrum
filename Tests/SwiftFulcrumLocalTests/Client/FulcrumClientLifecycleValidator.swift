@@ -124,7 +124,7 @@ struct FulcrumClientLifecycleValidator {
         let requestTask = Task {
             try await client.call(
                 method: .blockchain(.headers(.getTip))
-            ) as (UUID, SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.GetTip)
+            ) as (UUID, SwiftFulcrum.Response.Blockchain.Headers.GetTip)
         }
 
         let firstOutgoing = try await decodeRequestObject(await transport.dequeueOutgoing())
@@ -186,7 +186,7 @@ struct FulcrumClientLifecycleValidator {
             do {
                 _ = try await fulcrum.request(
                     method: .blockchain(.headers(.getTip)),
-                    responseType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.GetTip.self,
+                    responseType: SwiftFulcrum.Response.Blockchain.Headers.GetTip.self,
                     options: .init(timeout: .milliseconds(100))
                 )
                 Issue.record("request() should time out when response is missing")
@@ -216,7 +216,7 @@ struct FulcrumClientLifecycleValidator {
             do {
                 _ = try await fulcrum.request(
                     method: .blockchain(.headers(.getTip)),
-                    responseType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.GetTip.self,
+                    responseType: SwiftFulcrum.Response.Blockchain.Headers.GetTip.self,
                     options: .init(timeout: .seconds(30), cancellation: cancellation)
                 )
                 Issue.record("request() should throw cancelled")
@@ -245,8 +245,8 @@ struct FulcrumClientLifecycleValidator {
             do {
                 _ = try await fulcrum.subscribe(
                     method: .blockchain(.headers(.subscribe)),
-                    initial: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe.self,
-                    notifications: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification.self,
+                    initial: SwiftFulcrum.Response.Blockchain.Headers.Subscribe.self,
+                    notifications: SwiftFulcrum.Response.Blockchain.Headers.SubscribeNotification.self,
                     options: .init(timeout: .milliseconds(100))
                 )
                 Issue.record("subscribe() should time out when initial response is missing")

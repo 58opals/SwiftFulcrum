@@ -1,7 +1,7 @@
-// Response.Result.Blockchain+Block.swift
+// Response.Blockchain+Block.swift
 
 import Foundation
 
-extension SwiftFulcrum.RPC.Response.Result.Blockchain {
+extension SwiftFulcrum.Response.Blockchain {
     public struct Block {}
 }

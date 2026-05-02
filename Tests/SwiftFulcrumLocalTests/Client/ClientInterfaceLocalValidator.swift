@@ -29,9 +29,9 @@ struct ClientInterfaceLocalValidator {
         }
     }
 
-    @Test("Unary request rejects subscription methods", .timeLimit(.minutes(1)))
+    @Test("Internal unary request bridge rejects subscription methods", .timeLimit(.minutes(1)))
     func rejectSubscriptionMethodsOnRequest() async throws {
-        // No network dependency: request() should reject before attempting to connect.
+        // No network dependency: the internal RPC bridge should reject before attempting to connect.
         let client = try await SwiftFulcrum.Client(connectingTo: try #require(URL(string: "ws://example.com")))
 
         let subscriptionMethods: [SwiftFulcrum.RPC.Method] = [
@@ -43,7 +43,7 @@ struct ClientInterfaceLocalValidator {
             do {
                 _ = try await client.request(
                     method: method,
-                    responseType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.GetTip.self
+                    responseType: SwiftFulcrum.Response.Blockchain.Headers.GetTip.self
                 )
                 Issue.record("request() should reject subscription methods (method: \(method))")
             } catch let error as SwiftFulcrum.Client.Error {
@@ -67,8 +67,7 @@ struct ClientInterfaceLocalValidator {
 
         let requestTask = Task {
             try await client.request(
-                method: .blockchain(.headers(.getTip)),
-                responseType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.GetTip.self,
+                .blockchain.headers.getTip,
                 options: .init(timeout: .seconds(30))
             )
         }
@@ -114,9 +113,9 @@ struct ClientInterfaceLocalValidator {
         await client.stop()
     }
 
-    @Test("subscribe rejects unary methods", .timeLimit(.minutes(1)))
+    @Test("Internal subscribe bridge rejects unary methods", .timeLimit(.minutes(1)))
     func rejectUnaryMethodsOnSubscribe() async throws {
-        // No network dependency: subscribe() should reject before attempting to connect.
+        // No network dependency: the internal RPC bridge should reject before attempting to connect.
         let client = try await SwiftFulcrum.Client(connectingTo: try #require(URL(string: "ws://example.com")))
 
         let unaryMethods: [SwiftFulcrum.RPC.Method] = [
@@ -128,8 +127,8 @@ struct ClientInterfaceLocalValidator {
             do {
                 _ = try await client.subscribe(
                     method: method,
-                    initial: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe.self,
-                    notifications: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification.self
+                    initial: SwiftFulcrum.Response.Blockchain.Headers.Subscribe.self,
+                    notifications: SwiftFulcrum.Response.Blockchain.Headers.SubscribeNotification.self
                 )
                 Issue.record("subscribe() should reject unary methods (method: \(method))")
             } catch let error as SwiftFulcrum.Client.Error {
@@ -165,8 +164,7 @@ struct ClientInterfaceLocalValidator {
         let requestTask = Task<SwiftFulcrum.Client.Error, Never> {
             do {
                 _ = try await client.request(
-                    method: .blockchain(.headers(.getTip)),
-                    responseType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.GetTip.self,
+                    .blockchain.headers.getTip,
                     options: .init(timeout: .seconds(30))
                 )
                 Issue.record("request() should surface malformed payloads as decode errors")

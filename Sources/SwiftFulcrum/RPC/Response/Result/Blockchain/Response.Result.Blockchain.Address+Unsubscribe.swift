@@ -1,8 +1,8 @@
-// Response.Result.Blockchain.Address+Unsubscribe.swift
+// Response.Blockchain.Address+Unsubscribe.swift
 
 import Foundation
 
-extension SwiftFulcrum.RPC.Response.Result.Blockchain.Address {
+extension SwiftFulcrum.Response.Blockchain.Address {
     public struct Unsubscribe: Decodable, Sendable {
         public let isSuccess: Bool
 

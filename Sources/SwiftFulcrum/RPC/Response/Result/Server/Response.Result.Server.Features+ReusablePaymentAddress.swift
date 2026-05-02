@@ -1,8 +1,8 @@
-// Response.Result.Server.Features+ReusablePaymentAddress.swift
+// Response.Server.Features+ReusablePaymentAddress.swift
 
 import Foundation
 
-extension SwiftFulcrum.RPC.Response.Result.Server.Features {
+extension SwiftFulcrum.Response.Server.Features {
     public struct ReusablePaymentAddress: Decodable, Sendable {
         public let historyBlockLimit: Int?
         public let maximumHistoryItems: Int?

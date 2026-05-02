@@ -1,8 +1,8 @@
-// Response.Result.Blockchain.ScriptHash+ListUnspent.swift
+// Response.Blockchain.ScriptHash+ListUnspent.swift
 
 import Foundation
 
-extension SwiftFulcrum.RPC.Response.Result.Blockchain.ScriptHash {
+extension SwiftFulcrum.Response.Blockchain.ScriptHash {
     public struct ListUnspent: Decodable, Sendable {
         public let items: [Item]
 

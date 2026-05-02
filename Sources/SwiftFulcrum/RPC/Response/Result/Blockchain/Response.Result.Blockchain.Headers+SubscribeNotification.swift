@@ -1,8 +1,8 @@
-// Response.Result.Blockchain.Headers+SubscribeNotification.swift
+// Response.Blockchain.Headers+SubscribeNotification.swift
 
 import Foundation
 
-extension SwiftFulcrum.RPC.Response.Result.Blockchain.Headers {
+extension SwiftFulcrum.Response.Blockchain.Headers {
     public struct SubscribeNotification: Decodable, Sendable {
         public let subscriptionIdentifier: String
         public let blocks: [Block]
