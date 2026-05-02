@@ -1,8 +1,8 @@
-// Response.Result.Mempool+GetFeeHistogram.swift
+// Response.Mempool+GetFeeHistogram.swift
 
 import Foundation
 
-extension SwiftFulcrum.RPC.Response.Result.Mempool {
+extension SwiftFulcrum.Response.Mempool {
     public struct GetFeeHistogram: Decodable, Sendable {
         public let histogram: [Result]
 

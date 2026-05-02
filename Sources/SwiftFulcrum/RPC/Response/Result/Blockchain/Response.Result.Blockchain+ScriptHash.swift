@@ -1,7 +1,7 @@
-// Response.Result.Blockchain+ScriptHash.swift
+// Response.Blockchain+ScriptHash.swift
 
 import Foundation
 
-extension SwiftFulcrum.RPC.Response.Result.Blockchain {
+extension SwiftFulcrum.Response.Blockchain {
     public struct ScriptHash {}
 }

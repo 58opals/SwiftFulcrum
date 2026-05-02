@@ -1,8 +1,8 @@
-// Response.Result.Blockchain.ScriptHash+GetMempool.swift
+// Response.Blockchain.ScriptHash+GetMempool.swift
 
 import Foundation
 
-extension SwiftFulcrum.RPC.Response.Result.Blockchain.ScriptHash {
+extension SwiftFulcrum.Response.Blockchain.ScriptHash {
     public struct GetMempool: Decodable, Sendable {
         public let transactions: [Transaction]
 

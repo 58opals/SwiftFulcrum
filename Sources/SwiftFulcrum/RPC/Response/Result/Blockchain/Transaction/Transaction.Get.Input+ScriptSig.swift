@@ -2,7 +2,7 @@
 
 import Foundation
 
-extension SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction.Get.Input {
+extension SwiftFulcrum.Response.Blockchain.Transaction.Get.Input {
     public struct ScriptSig: Decodable, Sendable {
         public let assemblyScriptLanguage: String
         public let hex: String

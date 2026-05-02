@@ -1,8 +1,8 @@
-// Response.Result.Blockchain+EstimateFee.swift
+// Response.Blockchain+EstimateFee.swift
 
 import Foundation
 
-extension SwiftFulcrum.RPC.Response.Result.Blockchain {
+extension SwiftFulcrum.Response.Blockchain {
     public struct EstimateFee: Decodable, Sendable {
         public let fee: Double
 

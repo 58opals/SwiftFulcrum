@@ -2,7 +2,7 @@
 
 import Foundation
 
-extension SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction.Get {
+extension SwiftFulcrum.Response.Blockchain.Transaction.Get {
     public struct Input: Decodable, Sendable {
         public let coinbase: String?
         public let scriptSig: ScriptSig?

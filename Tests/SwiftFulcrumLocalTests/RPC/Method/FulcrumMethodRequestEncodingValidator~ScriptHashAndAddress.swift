@@ -21,7 +21,7 @@ extension FulcrumMethodRequestEncodingValidator {
                           expectedParameters: [scriptHash])
         try assertRequest(.blockchain(.scripthash(.getHistory(scripthash: scriptHash, fromHeight: 5, toHeight: 10, shouldIncludeUnconfirmed: true))),
                           expectedPath: SwiftFulcrum.RPC.Method.blockchain(.scripthash(.getHistory(scripthash: "", fromHeight: nil, toHeight: nil, shouldIncludeUnconfirmed: false))).path,
-                          expectedParameters: [scriptHash, 5, -1])
+                          expectedParameters: [scriptHash, 5, 10])
         try assertHistoryDefaultUpperBound(
             for: .blockchain(.scripthash(.getHistory(scripthash: scriptHash, fromHeight: nil, toHeight: nil, shouldIncludeUnconfirmed: false))),
             identifier: scriptHash
@@ -56,7 +56,7 @@ extension FulcrumMethodRequestEncodingValidator {
                           expectedParameters: [address])
         try assertRequest(.blockchain(.address(.getHistory(address: address, fromHeight: 7, toHeight: 9, shouldIncludeUnconfirmed: true))),
                           expectedPath: SwiftFulcrum.RPC.Method.blockchain(.address(.getHistory(address: "", fromHeight: nil, toHeight: nil, shouldIncludeUnconfirmed: false))).path,
-                          expectedParameters: [address, 7, -1])
+                          expectedParameters: [address, 7, 9])
         try assertHistoryDefaultUpperBound(
             for: .blockchain(.address(.getHistory(address: address, fromHeight: nil, toHeight: nil, shouldIncludeUnconfirmed: false))),
             identifier: address

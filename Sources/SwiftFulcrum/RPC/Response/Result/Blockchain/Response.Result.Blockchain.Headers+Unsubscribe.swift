@@ -1,8 +1,8 @@
-// Response.Result.Blockchain.Headers+Unsubscribe.swift
+// Response.Blockchain.Headers+Unsubscribe.swift
 
 import Foundation
 
-extension SwiftFulcrum.RPC.Response.Result.Blockchain.Headers {
+extension SwiftFulcrum.Response.Blockchain.Headers {
     public struct Unsubscribe: Decodable, Sendable {
         public let isSuccess: Bool
 

@@ -56,7 +56,7 @@ struct ResponseDecodingValidator {
             ["jsonrpc": "2.0", "id": UUID().uuidString, "result": ["Fulcrum 2.0", "1.5.3"]]
         )
         let version = try versionPayload.decode(
-            SwiftFulcrum.RPC.Response.Result.Server.Version.self,
+            SwiftFulcrum.Response.Server.Version.self,
             context: .init(methodPath: "server.version")
         )
         #expect(version.serverVersion == "Fulcrum 2.0")
@@ -78,7 +78,7 @@ struct ResponseDecodingValidator {
             ]
         )
         let features = try featuresPayload.decode(
-            SwiftFulcrum.RPC.Response.Result.Server.Features.self,
+            SwiftFulcrum.Response.Server.Features.self,
             context: .init(methodPath: "server.features")
         )
         #expect(features.maximumProtocolVersion == SwiftFulcrum.ProtocolVersion(string: "1.6.0"))
@@ -105,7 +105,7 @@ struct ResponseDecodingValidator {
 
         #expect(throws: ResponseResultDecodeError.self) {
             _ = try payload.decode(
-                SwiftFulcrum.RPC.Response.Result.Server.Features.self,
+                SwiftFulcrum.Response.Server.Features.self,
                 context: .init(methodPath: "server.features")
             )
         }
@@ -117,7 +117,7 @@ struct ResponseDecodingValidator {
             ["jsonrpc": "2.0", "id": UUID().uuidString, "result": NSNull()]
         )
         _ = try pingPayload.decode(
-            SwiftFulcrum.RPC.Response.Result.Server.Ping.self,
+            SwiftFulcrum.Response.Server.Ping.self,
             context: .init(methodPath: "server.ping")
         )
 
@@ -125,7 +125,7 @@ struct ResponseDecodingValidator {
             ["jsonrpc": "2.0", "id": UUID().uuidString, "result": NSNull()]
         )
         let firstUse = try firstUsePayload.decode(
-            SwiftFulcrum.RPC.Response.Result.Blockchain.Address.GetFirstUse.self,
+            SwiftFulcrum.Response.Blockchain.Address.GetFirstUse.self,
             context: .init(methodPath: "blockchain.address.get_first_use")
         )
         #expect(firstUse.isFound == false)
@@ -137,7 +137,7 @@ struct ResponseDecodingValidator {
             ["jsonrpc": "2.0", "id": UUID().uuidString, "result": NSNull()]
         )
         let subscribe = try subscribePayload.decode(
-            SwiftFulcrum.RPC.Response.Result.Blockchain.Address.Subscribe.self,
+            SwiftFulcrum.Response.Blockchain.Address.Subscribe.self,
             context: .init(methodPath: "blockchain.address.subscribe")
         )
         #expect(subscribe.status == nil)
@@ -149,7 +149,7 @@ struct ResponseDecodingValidator {
             ["jsonrpc": "2.0", "id": UUID().uuidString, "result": NSNull()]
         )
         let getHeight = try getHeightPayload.decode(
-            SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction.GetHeight.self,
+            SwiftFulcrum.Response.Blockchain.Transaction.GetHeight.self,
             context: .init(methodPath: "blockchain.transaction.get_height")
         )
         #expect(getHeight.height == nil)
@@ -158,7 +158,7 @@ struct ResponseDecodingValidator {
             ["jsonrpc": "2.0", "id": UUID().uuidString, "result": NSNull()]
         )
         let subscribe = try subscribePayload.decode(
-            SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction.Subscribe.self,
+            SwiftFulcrum.Response.Blockchain.Transaction.Subscribe.self,
             context: .init(methodPath: "blockchain.transaction.subscribe")
         )
         #expect(subscribe.height == nil)
@@ -167,11 +167,25 @@ struct ResponseDecodingValidator {
             ["jsonrpc": "2.0", "method": "blockchain.transaction.subscribe", "params": ["abc123", NSNull()]]
         )
         let notification = try notificationPayload.decode(
-            SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction.SubscribeNotification.self,
+            SwiftFulcrum.Response.Blockchain.Transaction.SubscribeNotification.self,
             context: .init(methodPath: "blockchain.transaction.subscribe")
         )
         #expect(notification.transactionHash == "abc123")
         #expect(notification.height == nil)
+    }
+
+    @Test("Rejects reversed transaction subscribe notification payloads")
+    func rejectReversedTransactionSubscribeNotificationPayload() throws {
+        let payload = try jsonData(
+            ["jsonrpc": "2.0", "method": "blockchain.transaction.subscribe", "params": [42, "abc123"]]
+        )
+
+        #expect(throws: ResponseResultDecodeError.self) {
+            _ = try payload.decode(
+                SwiftFulcrum.Response.Blockchain.Transaction.SubscribeNotification.self,
+                context: .init(methodPath: "blockchain.transaction.subscribe")
+            )
+        }
     }
 
     @Test("Decodes missing UTXO info as not found")
@@ -181,7 +195,7 @@ struct ResponseDecodingValidator {
         )
 
         let result = try payload.decode(
-            SwiftFulcrum.RPC.Response.Result.Blockchain.UTXO.GetInfo.self,
+            SwiftFulcrum.Response.Blockchain.UTXO.GetInfo.self,
             context: .init(methodPath: "blockchain.utxo.get_info")
         )
 
@@ -198,7 +212,7 @@ struct ResponseDecodingValidator {
             ["jsonrpc": "2.0", "id": UUID().uuidString, "result": NSNull()]
         )
         let get = try getPayload.decode(
-            SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction.DSProof.Get.self,
+            SwiftFulcrum.Response.Blockchain.Transaction.DSProof.Get.self,
             context: .init(methodPath: "blockchain.transaction.dsproof.get")
         )
         #expect(get.isFound == false)
@@ -212,7 +226,7 @@ struct ResponseDecodingValidator {
             ["jsonrpc": "2.0", "id": UUID().uuidString, "result": NSNull()]
         )
         let subscribe = try subscribePayload.decode(
-            SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction.DSProof.Subscribe.self,
+            SwiftFulcrum.Response.Blockchain.Transaction.DSProof.Subscribe.self,
             context: .init(methodPath: "blockchain.transaction.dsproof.subscribe")
         )
         #expect(subscribe.proof == nil)
@@ -225,11 +239,38 @@ struct ResponseDecodingValidator {
             ]
         )
         let notification = try notificationPayload.decode(
-            SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction.DSProof.SubscribeNotification.self,
+            SwiftFulcrum.Response.Blockchain.Transaction.DSProof.SubscribeNotification.self,
             context: .init(methodPath: "blockchain.transaction.dsproof.subscribe")
         )
         #expect(notification.transactionHash == "abc123")
         #expect(notification.proof == nil)
+    }
+
+    @Test("Rejects reversed DSProof subscribe notification payloads")
+    func rejectReversedDSProofSubscribeNotificationPayload() throws {
+        let payload = try jsonData(
+            [
+                "jsonrpc": "2.0",
+                "method": "blockchain.transaction.dsproof.subscribe",
+                "params": [
+                    [
+                        "dspid": "proof-id",
+                        "txid": "abc123",
+                        "hex": "00",
+                        "outpoint": ["txid": "prev", "vout": 1],
+                        "descendants": []
+                    ],
+                    "abc123"
+                ]
+            ]
+        )
+
+        #expect(throws: ResponseResultDecodeError.self) {
+            _ = try payload.decode(
+                SwiftFulcrum.Response.Blockchain.Transaction.DSProof.SubscribeNotification.self,
+                context: .init(methodPath: "blockchain.transaction.dsproof.subscribe")
+            )
+        }
     }
 
     @Test("Decodes headers/address/transaction/dsproof notifications")
@@ -238,7 +279,7 @@ struct ResponseDecodingValidator {
             ["jsonrpc": "2.0", "method": "blockchain.headers.subscribe", "params": [["height": 1, "hex": String(repeating: "a", count: 160)]]]
         )
         let headerUpdate = try headerPayload.decode(
-            SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification.self,
+            SwiftFulcrum.Response.Blockchain.Headers.SubscribeNotification.self,
             context: .init(methodPath: "blockchain.headers.subscribe")
         )
         #expect(headerUpdate.subscriptionIdentifier == "blockchain.headers.subscribe")
@@ -248,7 +289,7 @@ struct ResponseDecodingValidator {
             ["jsonrpc": "2.0", "method": "blockchain.address.subscribe", "params": ["bitcoincash:qtest", "status"]]
         )
         let addressUpdate = try addressPayload.decode(
-            SwiftFulcrum.RPC.Response.Result.Blockchain.Address.SubscribeNotification.self,
+            SwiftFulcrum.Response.Blockchain.Address.SubscribeNotification.self,
             context: .init(methodPath: "blockchain.address.subscribe")
         )
         #expect(addressUpdate.subscriptionIdentifier == "bitcoincash:qtest")
@@ -258,7 +299,7 @@ struct ResponseDecodingValidator {
             ["jsonrpc": "2.0", "method": "blockchain.transaction.subscribe", "params": ["abc123", 42]]
         )
         let transactionUpdate = try transactionPayload.decode(
-            SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction.SubscribeNotification.self,
+            SwiftFulcrum.Response.Blockchain.Transaction.SubscribeNotification.self,
             context: .init(methodPath: "blockchain.transaction.subscribe")
         )
         #expect(transactionUpdate.subscriptionIdentifier == "abc123")
@@ -281,7 +322,7 @@ struct ResponseDecodingValidator {
             ]
         )
         let dsProofUpdate = try dsProofPayload.decode(
-            SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction.DSProof.SubscribeNotification.self,
+            SwiftFulcrum.Response.Blockchain.Transaction.DSProof.SubscribeNotification.self,
             context: .init(methodPath: "blockchain.transaction.dsproof.subscribe")
         )
         #expect(dsProofUpdate.subscriptionIdentifier == "abc123")
@@ -335,7 +376,7 @@ struct ResponseDecodingValidator {
         )
         #expect(throws: ResponseResultDecodeError.self) {
             _ = try addressPayload.decode(
-                SwiftFulcrum.RPC.Response.Result.Blockchain.Address.SubscribeNotification.self,
+                SwiftFulcrum.Response.Blockchain.Address.SubscribeNotification.self,
                 context: .init(methodPath: "blockchain.address.subscribe")
             )
         }
@@ -349,7 +390,38 @@ struct ResponseDecodingValidator {
         )
         #expect(throws: ResponseResultDecodeError.self) {
             _ = try scripthashPayload.decode(
-                SwiftFulcrum.RPC.Response.Result.Blockchain.ScriptHash.SubscribeNotification.self,
+                SwiftFulcrum.Response.Blockchain.ScriptHash.SubscribeNotification.self,
+                context: .init(methodPath: "blockchain.scripthash.subscribe")
+            )
+        }
+    }
+
+    @Test("Rejects undersized address and scripthash notification payloads")
+    func rejectUndersizedAddressAndScriptHashNotifications() throws {
+        let addressPayload = try jsonData(
+            [
+                "jsonrpc": "2.0",
+                "method": "blockchain.address.subscribe",
+                "params": ["bitcoincash:qtest"]
+            ]
+        )
+        #expect(throws: ResponseResultDecodeError.self) {
+            _ = try addressPayload.decode(
+                SwiftFulcrum.Response.Blockchain.Address.SubscribeNotification.self,
+                context: .init(methodPath: "blockchain.address.subscribe")
+            )
+        }
+
+        let scripthashPayload = try jsonData(
+            [
+                "jsonrpc": "2.0",
+                "method": "blockchain.scripthash.subscribe",
+                "params": [String(repeating: "b", count: 64)]
+            ]
+        )
+        #expect(throws: ResponseResultDecodeError.self) {
+            _ = try scripthashPayload.decode(
+                SwiftFulcrum.Response.Blockchain.ScriptHash.SubscribeNotification.self,
                 context: .init(methodPath: "blockchain.scripthash.subscribe")
             )
         }
@@ -361,7 +433,7 @@ struct ResponseDecodingValidator {
             ["jsonrpc": "2.0", "id": UUID().uuidString, "result": [[2.5, 2000], [1, 1000]]]
         )
         let histogram = try payload.decode(
-            SwiftFulcrum.RPC.Response.Result.Mempool.GetFeeHistogram.self,
+            SwiftFulcrum.Response.Mempool.GetFeeHistogram.self,
             context: .init(methodPath: "mempool.get_fee_histogram")
         )
         #expect(histogram.histogram.count == 2)
@@ -369,6 +441,20 @@ struct ResponseDecodingValidator {
         #expect(histogram.histogram[0].virtualSize == 2000)
         #expect(histogram.histogram[1].fee == 1.0)
         #expect(histogram.histogram[1].virtualSize == 1000)
+    }
+
+    @Test("Rejects oversized mempool fee histogram virtual sizes")
+    func rejectOversizedMempoolFeeHistogramVirtualSize() throws {
+        let payload = try jsonData(
+            ["jsonrpc": "2.0", "id": UUID().uuidString, "result": [[1, "18446744073709551616"]]]
+        )
+
+        #expect(throws: ResponseResultDecodeError.self) {
+            _ = try payload.decode(
+                SwiftFulcrum.Response.Mempool.GetFeeHistogram.self,
+                context: .init(methodPath: "mempool.get_fee_histogram")
+            )
+        }
     }
 
     @Test("Decodes transaction.id_from_pos without a merkle proof")
@@ -379,7 +465,7 @@ struct ResponseDecodingValidator {
         )
 
         let result = try payload.decode(
-            SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction.IDFromPos.self,
+            SwiftFulcrum.Response.Blockchain.Transaction.IDFromPos.self,
             context: .init(methodPath: "blockchain.transaction.id_from_pos")
         )
 
@@ -427,7 +513,7 @@ struct ResponseDecodingValidator {
         )
 
         let transaction = try payload.decode(
-            SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction.Get.self,
+            SwiftFulcrum.Response.Blockchain.Transaction.Get.self,
             context: .init(methodPath: "blockchain.transaction.get")
         )
 
@@ -479,7 +565,7 @@ struct ResponseDecodingValidator {
         )
 
         let transaction = try payload.decode(
-            SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction.Get.self,
+            SwiftFulcrum.Response.Blockchain.Transaction.Get.self,
             context: .init(methodPath: "blockchain.transaction.get")
         )
 
@@ -532,7 +618,7 @@ struct ResponseDecodingValidator {
         )
 
         let transaction = try payload.decode(
-            SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction.Get.self,
+            SwiftFulcrum.Response.Blockchain.Transaction.Get.self,
             context: .init(methodPath: "blockchain.transaction.get")
         )
 
@@ -556,7 +642,31 @@ struct ResponseDecodingValidator {
 
         #expect(throws: ResponseResultDecodeError.self) {
             _ = try payload.decode(
-                SwiftFulcrum.RPC.Response.Result.Blockchain.Block.Headers.self,
+                SwiftFulcrum.Response.Blockchain.Block.Headers.self,
+                context: .init(methodPath: "blockchain.block.headers")
+            )
+        }
+    }
+
+    @Test("Rejects block.headers counts larger than Int.max")
+    func rejectBlockHeaderCountLargerThanIntMax() throws {
+        let payload = Data(
+            """
+            {
+                "jsonrpc": "2.0",
+                "id": "\(UUID().uuidString)",
+                "result": {
+                    "count": 9223372036854775808,
+                    "hex": "",
+                    "max": 2016
+                }
+            }
+            """.utf8
+        )
+
+        #expect(throws: ResponseResultDecodeError.self) {
+            _ = try payload.decode(
+                SwiftFulcrum.Response.Blockchain.Block.Headers.self,
                 context: .init(methodPath: "blockchain.block.headers")
             )
         }
@@ -578,7 +688,7 @@ struct ResponseDecodingValidator {
 
         #expect(throws: ResponseResultDecodeError.self) {
             _ = try payload.decode(
-                SwiftFulcrum.RPC.Response.Result.Blockchain.Block.Headers.self,
+                SwiftFulcrum.Response.Blockchain.Block.Headers.self,
                 context: .init(methodPath: "blockchain.block.headers")
             )
         }
@@ -601,7 +711,7 @@ struct ResponseDecodingValidator {
 
         #expect(throws: ResponseResultDecodeError.self) {
             _ = try payload.decode(
-                SwiftFulcrum.RPC.Response.Result.Blockchain.Block.Headers.self,
+                SwiftFulcrum.Response.Blockchain.Block.Headers.self,
                 context: .init(methodPath: "blockchain.block.headers")
             )
         }
@@ -615,7 +725,7 @@ struct ResponseDecodingValidator {
 
         do {
             _ = try payload.decode(
-                SwiftFulcrum.RPC.Response.Result.Server.Version.self,
+                SwiftFulcrum.Response.Server.Version.self,
                 context: .init(methodPath: "server.version")
             )
             Issue.record("Expected decode to fail with unexpected format")

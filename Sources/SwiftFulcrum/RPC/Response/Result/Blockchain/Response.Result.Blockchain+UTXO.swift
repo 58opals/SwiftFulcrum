@@ -1,7 +1,7 @@
-// Response.Result.Blockchain+UTXO.swift
+// Response.Blockchain+UTXO.swift
 
 import Foundation
 
-extension SwiftFulcrum.RPC.Response.Result.Blockchain {
+extension SwiftFulcrum.Response.Blockchain {
     public struct UTXO {}
 }

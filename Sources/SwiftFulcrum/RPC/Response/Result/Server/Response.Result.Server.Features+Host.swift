@@ -1,8 +1,8 @@
-// Response.Result.Server.Features+Host.swift
+// Response.Server.Features+Host.swift
 
 import Foundation
 
-extension SwiftFulcrum.RPC.Response.Result.Server.Features {
+extension SwiftFulcrum.Response.Server.Features {
     public struct Host: Decodable, Sendable {
         public let sslPort: Int?
         public let tcpPort: Int?

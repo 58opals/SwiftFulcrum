@@ -2,7 +2,7 @@
 
 import Foundation
 
-extension SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction {
+extension SwiftFulcrum.Response.Blockchain.Transaction {
     public struct GetConfirmedBlockHash: Decodable, Sendable {
         public let blockHash: String
         public let blockHeader: String?

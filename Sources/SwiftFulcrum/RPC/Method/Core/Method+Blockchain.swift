@@ -3,7 +3,7 @@
 import Foundation
 
 extension SwiftFulcrum.RPC.Method {
-    public enum Blockchain: Sendable {
+    enum Blockchain: Sendable {
         case estimateFee(numberOfBlocks: Int)
         case relayFee
         case scripthash(ScriptHash)

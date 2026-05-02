@@ -2,7 +2,7 @@
 
 import Foundation
 
-extension SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction {
+extension SwiftFulcrum.Response.Blockchain.Transaction {
     public struct GetHeight: Decodable, Sendable {
         public let height: UInt?
 
@@ -17,6 +17,6 @@ extension SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction {
     }
 }
 
-extension SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction.GetHeight: JSONRPCResponseDecodeModel.NilValueModel {
+extension SwiftFulcrum.Response.Blockchain.Transaction.GetHeight: JSONRPCResponseDecodeModel.NilValueModel {
     static var nilValue: Self { .init(height: nil) }
 }

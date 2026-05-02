@@ -67,8 +67,8 @@ struct ClientSubscriptionValidator {
                 options: .init(timeout: .seconds(30), token: cancellationToken)
             ) as (
                 UUID,
-                SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe,
-                AsyncThrowingStream<SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification, Swift.Error>
+                SwiftFulcrum.Response.Blockchain.Headers.Subscribe,
+                AsyncThrowingStream<SwiftFulcrum.Response.Blockchain.Headers.SubscribeNotification, Swift.Error>
             )
         }
 

@@ -1,8 +1,8 @@
-// Response.Result.Blockchain.Address+GetScriptHash.swift
+// Response.Blockchain.Address+GetScriptHash.swift
 
 import Foundation
 
-extension SwiftFulcrum.RPC.Response.Result.Blockchain.Address {
+extension SwiftFulcrum.Response.Blockchain.Address {
     public struct GetScriptHash: Decodable, Sendable {
         public let scriptHash: String
 

@@ -13,10 +13,10 @@ extension RPCRequestParametersModel {
             var container = encoder.unkeyedContainer()
             try container.encode(identifier)
             try container.encode(fromHeight ?? 0)
-            if shouldIncludeUnconfirmed {
-                try container.encode(Int(-1))
-            } else if let toHeight {
+            if let toHeight {
                 try container.encode(toHeight)
+            } else if shouldIncludeUnconfirmed {
+                try container.encode(Int(-1))
             } else {
                 try container.encode(UInt.max)
             }

@@ -23,7 +23,7 @@ struct ClientWebSocketValidator {
 
         try await client.start()
 
-        let (_, tip): (UUID, SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.GetTip) = try await client.call(
+        let (_, tip): (UUID, SwiftFulcrum.Response.Blockchain.Headers.GetTip) = try await client.call(
             method: .blockchain(.headers(.getTip)),
             options: .init(timeout: .seconds(30))
         )
@@ -52,8 +52,8 @@ struct ClientWebSocketValidator {
 
         let (_, initial, updates): (
             UUID,
-            SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe,
-            AsyncThrowingStream<SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification, Swift.Error>
+            SwiftFulcrum.Response.Blockchain.Headers.Subscribe,
+            AsyncThrowingStream<SwiftFulcrum.Response.Blockchain.Headers.SubscribeNotification, Swift.Error>
         ) = try await client.subscribe(
             method: .blockchain(.headers(.subscribe)),
             options: .init(timeout: .seconds(30))

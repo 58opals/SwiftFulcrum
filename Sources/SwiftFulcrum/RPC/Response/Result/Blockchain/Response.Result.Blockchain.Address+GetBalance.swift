@@ -1,8 +1,8 @@
-// Response.Result.Blockchain.Address+GetBalance.swift
+// Response.Blockchain.Address+GetBalance.swift
 
 import Foundation
 
-extension SwiftFulcrum.RPC.Response.Result.Blockchain.Address {
+extension SwiftFulcrum.Response.Blockchain.Address {
     public struct GetBalance: Decodable, Sendable {
         public let confirmed: UInt64
         public let unconfirmed: Int64

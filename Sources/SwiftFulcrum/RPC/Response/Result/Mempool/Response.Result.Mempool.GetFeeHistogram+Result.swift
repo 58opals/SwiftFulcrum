@@ -1,8 +1,8 @@
-// Response.Result.Mempool.GetFeeHistogram+Result.swift
+// Response.Mempool.GetFeeHistogram+Result.swift
 
 import Foundation
 
-extension SwiftFulcrum.RPC.Response.Result.Mempool.GetFeeHistogram {
+extension SwiftFulcrum.Response.Mempool.GetFeeHistogram {
     public struct Result: Decodable, Sendable {
         public let fee: Double
         public let virtualSize: UInt
@@ -16,12 +16,16 @@ extension SwiftFulcrum.RPC.Response.Result.Mempool.GetFeeHistogram {
             guard feeValue.isFinite, feeValue >= 0 else {
                 throw ResponseResultDecodeError.unexpectedFormat("Invalid fee: \(feeValue)")
             }
-            guard virtualSizeValue.isFinite, virtualSizeValue >= 0, virtualSizeValue <= Double(UInt.max) else {
+            let truncatedVirtualSizeValue = virtualSizeValue.rounded(.towardZero)
+            let maximumConvertibleVirtualSize = Double(UInt.max).nextDown
+            guard truncatedVirtualSizeValue.isFinite,
+                  truncatedVirtualSizeValue >= 0,
+                  truncatedVirtualSizeValue <= maximumConvertibleVirtualSize else {
                 throw ResponseResultDecodeError.unexpectedFormat("Invalid vsize: \(virtualSizeValue)")
             }
 
             self.fee = feeValue
-            self.virtualSize = UInt(virtualSizeValue.rounded(.towardZero))
+            self.virtualSize = UInt(truncatedVirtualSizeValue)
         }
     }
 }

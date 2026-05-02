@@ -2,7 +2,7 @@
 
 import Foundation
 
-extension SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction.DSProof.Get {
+extension SwiftFulcrum.Response.Blockchain.Transaction.DSProof.Get {
     public struct Outpoint: Decodable, Sendable {
         public let transactionID: String
         public let outputIndex: UInt

@@ -1,7 +1,7 @@
-// Response.Result.Blockchain+Header.swift
+// Response.Blockchain+Header.swift
 
 import Foundation
 
-extension SwiftFulcrum.RPC.Response.Result.Blockchain {
+extension SwiftFulcrum.Response.Blockchain {
     public struct Header {}
 }

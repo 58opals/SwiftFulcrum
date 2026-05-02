@@ -1,8 +1,8 @@
-// Response.Result.Blockchain.Address+ListUnspent.swift
+// Response.Blockchain.Address+ListUnspent.swift
 
 import Foundation
 
-extension SwiftFulcrum.RPC.Response.Result.Blockchain.Address {
+extension SwiftFulcrum.Response.Blockchain.Address {
     public struct ListUnspent: Decodable, Sendable {
         public let items: [Item]
 

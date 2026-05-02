@@ -1,14 +1,14 @@
-// Response.Result.Blockchain.Block+Headers.swift
+// Response.Blockchain.Block+Headers.swift
 
 import Foundation
 
-extension SwiftFulcrum.RPC.Response.Result.Blockchain.Block {
+extension SwiftFulcrum.Response.Blockchain.Block {
     public struct Headers: Decodable, Sendable {
         public let count: UInt
         public let headers: [String]
         public let hex: String
         public let max: UInt
-        public let proof: SwiftFulcrum.RPC.Response.Result.Blockchain.Block.Header.Proof?
+        public let proof: SwiftFulcrum.Response.Blockchain.Block.Header.Proof?
 
         public init(from decoder: Decoder) throws {
             let payloadModel = try SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Block.Headers(from: decoder)
@@ -18,7 +18,7 @@ extension SwiftFulcrum.RPC.Response.Result.Blockchain.Block {
             self.max = payloadModel.max
             switch (payloadModel.branch, payloadModel.root) {
             case let (.some(branch), .some(root)):
-                self.proof = SwiftFulcrum.RPC.Response.Result.Blockchain.Block.Header.Proof(branch: branch, root: root)
+                self.proof = SwiftFulcrum.Response.Blockchain.Block.Header.Proof(branch: branch, root: root)
             case (nil, nil):
                 self.proof = nil
             case (.some, nil), (nil, .some):
@@ -37,6 +37,12 @@ extension SwiftFulcrum.RPC.Response.Result.Blockchain.Block {
                 try validateHeaderLengths(headers)
             } else {
                 headers = try splitHeaders(hex: payloadModel.hex)
+            }
+
+            guard payloadModel.count <= UInt(Int.max) else {
+                throw ResponseResultDecodeError.unexpectedFormat(
+                    "Block header count exceeds platform maximum: \(payloadModel.count)"
+                )
             }
 
             guard headers.count == Int(payloadModel.count) else {

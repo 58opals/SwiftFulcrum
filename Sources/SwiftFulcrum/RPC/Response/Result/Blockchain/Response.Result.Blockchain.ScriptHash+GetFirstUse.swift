@@ -1,8 +1,8 @@
-// Response.Result.Blockchain.ScriptHash+GetFirstUse.swift
+// Response.Blockchain.ScriptHash+GetFirstUse.swift
 
 import Foundation
 
-extension SwiftFulcrum.RPC.Response.Result.Blockchain.ScriptHash {
+extension SwiftFulcrum.Response.Blockchain.ScriptHash {
     public struct GetFirstUse: Decodable, Sendable {
         public let blockHash: String?
         public let height: UInt?
@@ -24,6 +24,6 @@ extension SwiftFulcrum.RPC.Response.Result.Blockchain.ScriptHash {
     }
 }
 
-extension SwiftFulcrum.RPC.Response.Result.Blockchain.ScriptHash.GetFirstUse: JSONRPCResponseDecodeModel.NilValueModel {
+extension SwiftFulcrum.Response.Blockchain.ScriptHash.GetFirstUse: JSONRPCResponseDecodeModel.NilValueModel {
     static var nilValue: Self { .init(blockHash: nil, height: nil, transactionHash: nil) }
 }

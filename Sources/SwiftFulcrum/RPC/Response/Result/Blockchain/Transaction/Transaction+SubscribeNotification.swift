@@ -2,7 +2,7 @@
 
 import Foundation
 
-extension SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction {
+extension SwiftFulcrum.Response.Blockchain.Transaction {
     public struct SubscribeNotification: Decodable, Sendable {
         public let subscriptionIdentifier: String
         public let transactionHash: String
@@ -12,24 +12,17 @@ extension SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction {
             let payloadModel = try SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Transaction.Subscribe(from: decoder)
             switch payloadModel {
             case .transactionHashAndHeight(let pairs):
-                var hashValue: String?
-                var heightValue: UInt?
-                var hasHeight = false
-
-                for pair in pairs {
-                    switch pair {
-                    case .transactionHash(let transactionHash):
-                        guard hashValue == nil else { throw ResponseResultDecodeError.unexpectedFormat("Duplicate transaction hash in notification payload") }
-                        hashValue = transactionHash
-                    case .height(let height):
-                        guard !hasHeight else { throw ResponseResultDecodeError.unexpectedFormat("Duplicate height in notification payload") }
-                        heightValue = height
-                        hasHeight = true
-                    }
+                guard pairs.count == 2 else {
+                    throw ResponseResultDecodeError.unexpectedFormat(
+                        "Expected transaction notification payload to contain [txid, height]; got \(pairs.count) values"
+                    )
                 }
-
-                guard let transactionHash = hashValue else { throw ResponseResultDecodeError.missingField("transactionHash") }
-                guard hasHeight else { throw ResponseResultDecodeError.missingField("height") }
+                guard case .transactionHash(let transactionHash) = pairs[0] else {
+                    throw ResponseResultDecodeError.unexpectedFormat("Expected transaction hash as first notification value")
+                }
+                guard case .height(let heightValue) = pairs[1] else {
+                    throw ResponseResultDecodeError.unexpectedFormat("Expected height as second notification value")
+                }
 
                 self.subscriptionIdentifier = transactionHash
                 self.transactionHash = transactionHash

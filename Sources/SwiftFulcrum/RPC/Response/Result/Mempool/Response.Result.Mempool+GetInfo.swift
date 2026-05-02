@@ -1,8 +1,8 @@
-// Response.Result.Mempool+GetInfo.swift
+// Response.Mempool+GetInfo.swift
 
 import Foundation
 
-extension SwiftFulcrum.RPC.Response.Result.Mempool {
+extension SwiftFulcrum.Response.Mempool {
     public struct GetInfo: Decodable, Sendable {
         public let mempoolMinimumFee: Double?
         public let minimumRelayTransactionFee: Double?

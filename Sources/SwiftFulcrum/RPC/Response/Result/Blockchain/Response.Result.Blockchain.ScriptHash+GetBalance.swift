@@ -1,8 +1,8 @@
-// Response.Result.Blockchain.ScriptHash+GetBalance.swift
+// Response.Blockchain.ScriptHash+GetBalance.swift
 
 import Foundation
 
-extension SwiftFulcrum.RPC.Response.Result.Blockchain.ScriptHash {
+extension SwiftFulcrum.Response.Blockchain.ScriptHash {
     public struct GetBalance: Decodable, Sendable {
         public let confirmed: UInt64
         public let unconfirmed: Int64

@@ -1,8 +1,8 @@
-// Response.Result.Blockchain.Headers+GetTip.swift
+// Response.Blockchain.Headers+GetTip.swift
 
 import Foundation
 
-extension SwiftFulcrum.RPC.Response.Result.Blockchain.Headers {
+extension SwiftFulcrum.Response.Blockchain.Headers {
     public struct GetTip: Decodable, Sendable {
         public let height: UInt
         public let hex: String

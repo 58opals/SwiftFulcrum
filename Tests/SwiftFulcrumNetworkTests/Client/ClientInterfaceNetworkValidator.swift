@@ -22,7 +22,7 @@ struct ClientInterfaceNetworkValidator {
         try await NetworkTestClient.runWithClient(url) { client in
             let tip = try await client.request(
                 method: .blockchain(.headers(.getTip)),
-                responseType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.GetTip.self,
+                responseType: SwiftFulcrum.Response.Blockchain.Headers.GetTip.self,
                 options: .init(timeout: .seconds(30))
             )
 
@@ -43,7 +43,7 @@ struct ClientInterfaceNetworkValidator {
         // Avoid calling start() directly to exercise prepareClientForRequests.
         let tip = try await client.request(
             method: .blockchain(.headers(.getTip)),
-            responseType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.GetTip.self,
+            responseType: SwiftFulcrum.Response.Blockchain.Headers.GetTip.self,
             options: .init(timeout: .seconds(30))
         )
 
@@ -65,8 +65,8 @@ struct ClientInterfaceNetworkValidator {
 
         try await NetworkTestClient.runWithClient(url) { client in
             let subscription: SwiftFulcrum.Client.Subscription<
-                SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe,
-                SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification
+                SwiftFulcrum.Response.Blockchain.Headers.Subscribe,
+                SwiftFulcrum.Response.Blockchain.Headers.SubscribeNotification
             > = try await client.subscribe(
                 method: .blockchain(.headers(.subscribe)),
                 options: .init(timeout: .seconds(30), cancellation: cancellation)
@@ -99,8 +99,8 @@ struct ClientInterfaceNetworkValidator {
 
         try await NetworkTestClient.runWithClient(url) { client in
             let subscription: SwiftFulcrum.Client.Subscription<
-                SwiftFulcrum.RPC.Response.Result.Blockchain.Address.Subscribe,
-                SwiftFulcrum.RPC.Response.Result.Blockchain.Address.SubscribeNotification
+                SwiftFulcrum.Response.Blockchain.Address.Subscribe,
+                SwiftFulcrum.Response.Blockchain.Address.SubscribeNotification
             > = try await client.subscribe(
                 method: .blockchain(.address(.subscribe(address: Self.testAddress))),
                 options: .init(timeout: .seconds(30))
@@ -131,8 +131,8 @@ struct ClientInterfaceNetworkValidator {
 
         try await NetworkTestClient.runWithClient(url) { client in
             let subscription: SwiftFulcrum.Client.Subscription<
-                SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe,
-                SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification
+                SwiftFulcrum.Response.Blockchain.Headers.Subscribe,
+                SwiftFulcrum.Response.Blockchain.Headers.SubscribeNotification
             > = try await client.subscribe(
                 method: .blockchain(.headers(.subscribe)),
                 options: .init(timeout: .seconds(30))
@@ -190,7 +190,7 @@ struct ClientInterfaceNetworkValidator {
         try await NetworkTestClient.runWithClient(url) { client in
             let scriptHashResult = try await client.request(
                 method: .blockchain(.address(.getScriptHash(address: Self.testAddress))),
-                responseType: SwiftFulcrum.RPC.Response.Result.Blockchain.Address.GetScriptHash.self,
+                responseType: SwiftFulcrum.Response.Blockchain.Address.GetScriptHash.self,
                 options: .init(timeout: .seconds(15))
             )
 
@@ -198,7 +198,7 @@ struct ClientInterfaceNetworkValidator {
 
             let balanceResult = try await client.request(
                 method: .blockchain(.address(.getBalance(address: Self.testAddress, tokenFilter: nil))),
-                responseType: SwiftFulcrum.RPC.Response.Result.Blockchain.Address.GetBalance.self,
+                responseType: SwiftFulcrum.Response.Blockchain.Address.GetBalance.self,
                 options: .init(timeout: .seconds(15))
             )
 
@@ -220,7 +220,7 @@ struct ClientInterfaceNetworkValidator {
             do {
                 _ = try await client.request(
                     method: .blockchain(.transaction(.broadcast(rawTransaction: "00"))),
-                    responseType: SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction.Broadcast.self,
+                    responseType: SwiftFulcrum.Response.Blockchain.Transaction.Broadcast.self,
                     options: .init(timeout: .seconds(15))
                 )
                 Issue.record("Expected broadcast to fail for invalid raw transaction")

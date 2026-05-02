@@ -2,7 +2,7 @@
 
 import Foundation
 
-extension SwiftFulcrum.RPC.Response.Result.Blockchain.Transaction.Get.Output {
+extension SwiftFulcrum.Response.Blockchain.Transaction.Get.Output {
     public struct ScriptPubKey: Decodable, Sendable {
         public let addresses: [String]
         public let assemblyScriptLanguage: String

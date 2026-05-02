@@ -25,8 +25,8 @@ struct PublicAPIFacadeContractValidator {
         _ = callOptionsType
 
         let subscriptionType: SwiftFulcrum.Client.Subscription<
-            SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe,
-            SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification
+            SwiftFulcrum.Response.Blockchain.Headers.Subscribe,
+            SwiftFulcrum.Response.Blockchain.Headers.SubscribeNotification
         >.Type = SwiftFulcrum.Client.Subscription.self
         _ = subscriptionType
 
@@ -39,12 +39,28 @@ struct PublicAPIFacadeContractValidator {
         let clientErrorType: SwiftFulcrum.Client.Error.Type = SwiftFulcrum.Client.Error.self
         _ = clientErrorType
 
-        let method: SwiftFulcrum.RPC.Method = .blockchain(.headers(.getTip))
-        _ = method
+        let apiType: SwiftFulcrum.API.Type = SwiftFulcrum.API.self
+        _ = apiType
 
-        let responseType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.GetTip.Type =
-            SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.GetTip.self
+        let endpoint = SwiftFulcrum.API.blockchain.headers.getTip
+        _ = endpoint
+
+        let responseType: SwiftFulcrum.Response.Blockchain.Headers.GetTip.Type =
+            SwiftFulcrum.Response.Blockchain.Headers.GetTip.self
         _ = responseType
+
+        let tokenFilter: SwiftFulcrum.CashTokens.TokenFilter = .include
+        _ = tokenFilter
+
+        let tokenDataType: SwiftFulcrum.CashTokens.TokenData.Type = SwiftFulcrum.CashTokens.TokenData.self
+        _ = tokenDataType
+
+        let tokenNFTType: SwiftFulcrum.CashTokens.TokenData.NFT.Type = SwiftFulcrum.CashTokens.TokenData.NFT.self
+        _ = tokenNFTType
+
+        let nft = SwiftFulcrum.CashTokens.TokenData.NFT(capability: .mutable, commitment: "abcd")
+        let tokenData = SwiftFulcrum.CashTokens.TokenData(amount: "42", category: "token-category", nft: nft)
+        _ = tokenData
 
         let protocolVersionType: SwiftFulcrum.ProtocolVersion.Type = SwiftFulcrum.ProtocolVersion.self
         _ = protocolVersionType
@@ -66,21 +82,29 @@ struct PublicAPIFacadeContractValidator {
         let configuration = SwiftFulcrum.Client.Configuration(tlsDescriptor: tlsDescriptor)
         _ = configuration
 
-        let unaryRequest: @Sendable (SwiftFulcrum.Client) async throws -> SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.GetTip = { client in
-            try await client.request(
-                method: .blockchain(.headers(.getTip)),
-                responseType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.GetTip.self
-            )
+        let unaryRequest: @Sendable (SwiftFulcrum.Client) async throws -> SwiftFulcrum.Response.Blockchain.Headers.GetTip = { client in
+            try await client.request(.blockchain.headers.getTip)
         }
         _ = unaryRequest
 
         let streamingRequest: @Sendable (SwiftFulcrum.Client) async throws -> SwiftFulcrum.Client.Subscription<
-            SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe,
-            SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification
+            SwiftFulcrum.Response.Blockchain.Headers.Subscribe,
+            SwiftFulcrum.Response.Blockchain.Headers.SubscribeNotification
         > = { client in
-            try await client.subscribe(method: .blockchain(.headers(.subscribe)))
+            try await client.subscribe(.blockchain.headers.subscribe)
         }
         _ = streamingRequest
+
+        let rawTransactionRequest: @Sendable (SwiftFulcrum.Client) async throws -> String = { client in
+            try await client.request(.blockchain.transaction.get(transactionHash: "00"))
+        }
+        _ = rawTransactionRequest
+
+        let verboseTransactionRequest:
+            @Sendable (SwiftFulcrum.Client) async throws -> SwiftFulcrum.Response.Blockchain.Transaction.Get = { client in
+                try await client.request(.blockchain.transaction.getVerbose(transactionHash: "00"))
+            }
+        _ = verboseTransactionRequest
     }
 
     @Test(
@@ -102,9 +126,15 @@ struct PublicAPIFacadeContractValidator {
             "SwiftFulcrum.Client.Diagnostics",
             "SwiftFulcrum.Client.ConnectionState",
             "SwiftFulcrum.Client.Error",
-            "SwiftFulcrum.RPC.Method",
-            "SwiftFulcrum.RPC.Response.Result",
-            "SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.GetTip",
+            "SwiftFulcrum.API",
+            "SwiftFulcrum.API.Request",
+            "SwiftFulcrum.API.Subscription",
+            "SwiftFulcrum.Response",
+            "SwiftFulcrum.Response.Blockchain.Headers.GetTip",
+            "SwiftFulcrum.CashTokens",
+            "SwiftFulcrum.CashTokens.TokenFilter",
+            "SwiftFulcrum.CashTokens.TokenData",
+            "SwiftFulcrum.CashTokens.TokenData.NFT",
             "SwiftFulcrum.ProtocolVersion",
             "SwiftFulcrum.Transport.State",
             "SwiftFulcrum.ServerCatalog.Repository",
@@ -129,9 +159,16 @@ struct PublicAPIFacadeContractValidator {
             "SwiftFulcrum.RPC.Response.Identifier",
             "SwiftFulcrum.RPC.JSONRPCResponseAdapter",
             "SwiftFulcrum.RPC.NilAcceptingResponseAdapter",
+            "SwiftFulcrum.RPC",
+            "SwiftFulcrum.RPC.Response",
             "SwiftFulcrum.RPC.Response.JSONRPC",
             "SwiftFulcrum.RPC.Response.JSONRPC.Generic",
             "SwiftFulcrum.RPC.Response.JSONRPC.Result",
+            "SwiftFulcrum.RPC.Method",
+            "SwiftFulcrum.RPC.Response.Result",
+            "SwiftFulcrum.RPC.Method.Blockchain.CashTokens.JSON",
+            "SwiftFulcrum.Client.request(method:responseType:options:)",
+            "SwiftFulcrum.Client.subscribe(method:initial:notifications:options:)",
             "SwiftFulcrum.Client.Configuration.urlSession",
             "SwiftFulcrum.Client.Configuration.TLSDescriptor.delegate",
             "SwiftFulcrum.Client.Configuration.TLSDescriptor.init(options:delegate:)",

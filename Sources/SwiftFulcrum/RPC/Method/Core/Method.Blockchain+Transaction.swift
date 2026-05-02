@@ -3,7 +3,7 @@
 import Foundation
 
 extension SwiftFulcrum.RPC.Method.Blockchain {
-    public enum Transaction: Sendable {
+    enum Transaction: Sendable {
         case broadcast(rawTransaction: String)
         case get(transactionHash: String, isVerbose: Bool)
         case getConfirmedBlockHash(transactionHash: String, shouldIncludeHeader: Bool)

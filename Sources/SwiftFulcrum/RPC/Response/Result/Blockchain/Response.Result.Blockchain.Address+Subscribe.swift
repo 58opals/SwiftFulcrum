@@ -1,8 +1,8 @@
-// Response.Result.Blockchain.Address+Subscribe.swift
+// Response.Blockchain.Address+Subscribe.swift
 
 import Foundation
 
-extension SwiftFulcrum.RPC.Response.Result.Blockchain.Address {
+extension SwiftFulcrum.Response.Blockchain.Address {
     public struct Subscribe: Decodable, Sendable {
         public let status: String?
 
@@ -22,6 +22,6 @@ extension SwiftFulcrum.RPC.Response.Result.Blockchain.Address {
     }
 }
 
-extension SwiftFulcrum.RPC.Response.Result.Blockchain.Address.Subscribe: JSONRPCResponseDecodeModel.NilValueModel {
+extension SwiftFulcrum.Response.Blockchain.Address.Subscribe: JSONRPCResponseDecodeModel.NilValueModel {
     static var nilValue: Self { .init(status: nil) }
 }

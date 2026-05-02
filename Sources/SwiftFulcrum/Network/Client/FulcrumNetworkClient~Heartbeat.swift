@@ -13,7 +13,7 @@ extension FulcrumNetworkClient {
                     try await Task.sleep(for: owner.rpcHeartbeatInterval)
                     try Task.checkCancellation()
                     
-                    let (_, _): (UUID, SwiftFulcrum.RPC.Response.Result.Server.Ping) =
+                    let (_, _): (UUID, SwiftFulcrum.Response.Server.Ping) =
                     try await SwiftFulcrum.Logging.perform(withBehavior: .quiet) {
                         try await owner.call(
                             method: .server(.ping),

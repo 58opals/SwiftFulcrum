@@ -20,7 +20,7 @@ struct ClientCancellationValidator {
             do {
                 _ = try await fulcrum.request(
                     method: .blockchain(.headers(.getTip)),
-                    responseType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.GetTip.self,
+                    responseType: SwiftFulcrum.Response.Blockchain.Headers.GetTip.self,
                     options: options
                 )
                 Issue.record("First request should throw cancelled.")
@@ -36,7 +36,7 @@ struct ClientCancellationValidator {
             do {
                 _ = try await fulcrum.request(
                     method: .mempool(.getInfo),
-                    responseType: SwiftFulcrum.RPC.Response.Result.Mempool.GetInfo.self,
+                    responseType: SwiftFulcrum.Response.Mempool.GetInfo.self,
                     options: options
                 )
                 Issue.record("Second request should throw cancelled.")
@@ -61,6 +61,35 @@ struct ClientCancellationValidator {
         await fulcrum.stop()
     }
 
+    @Test("Pre-cancelled call options do not start an idle client", .timeLimit(.minutes(1)))
+    func preCancelledCallOptionsDoNotStartIdleClient() async throws {
+        let transport = TransportTestActor()
+        let networkClient = FulcrumNetworkClient(transport: transport, protocolNegotiation: .init())
+        let client = await SwiftFulcrum.Client(client: networkClient)
+        let cancellation = SwiftFulcrum.Client.Call.Cancellation()
+        await cancellation.cancel()
+
+        let requestError = await captureClientError {
+            _ = try await client.request(
+                .blockchain.headers.getTip,
+                options: .init(timeout: .milliseconds(250), cancellation: cancellation)
+            )
+        }
+        #expect(isCancelledError(requestError))
+        #expect(await transport.sentMessages.isEmpty)
+
+        let subscribeError = await captureClientError {
+            _ = try await client.subscribe(
+                .blockchain.headers.subscribe,
+                options: .init(timeout: .milliseconds(250), cancellation: cancellation)
+            )
+        }
+        #expect(isCancelledError(subscribeError))
+        #expect(await transport.sentMessages.isEmpty)
+
+        await client.stop()
+    }
+
     @Test("Completed subscriptions unregister shared cancellation handlers", .timeLimit(.minutes(1)))
     func completedSubscriptionsUnregisterSharedCancellationHandlers() async throws {
         let (fulcrum, transport) = try await makeStartedFulcrum()
@@ -74,8 +103,8 @@ struct ClientCancellationValidator {
         let firstSubscribeTask = Task {
             try await fulcrum.subscribe(
                 method: subscribeMethod,
-                initial: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe.self,
-                notifications: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification.self,
+                initial: SwiftFulcrum.Response.Blockchain.Headers.Subscribe.self,
+                notifications: SwiftFulcrum.Response.Blockchain.Headers.SubscribeNotification.self,
                 options: sharedOptions
             )
         }
@@ -109,8 +138,8 @@ struct ClientCancellationValidator {
         let secondSubscribeTask = Task {
             try await fulcrum.subscribe(
                 method: subscribeMethod,
-                initial: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe.self,
-                notifications: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification.self,
+                initial: SwiftFulcrum.Response.Blockchain.Headers.Subscribe.self,
+                notifications: SwiftFulcrum.Response.Blockchain.Headers.SubscribeNotification.self,
                 options: .init(timeout: .seconds(30))
             )
         }
@@ -143,7 +172,7 @@ struct ClientCancellationValidator {
         await transport.enqueueIncoming(.data(notificationPayload))
 
         let update = try await withThrowingTaskGroup(
-            of: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification?.self
+            of: SwiftFulcrum.Response.Blockchain.Headers.SubscribeNotification?.self
         ) { group in
             group.addTask {
                 var iterator = secondSubscription.updates.makeAsyncIterator()
@@ -164,6 +193,36 @@ struct ClientCancellationValidator {
         await secondSubscription.cancel()
         await fulcrum.stop()
     }
+
+    @Test("Subscription cancel does not cancel shared call cancellation", .timeLimit(.minutes(1)))
+    func subscriptionCancelDoesNotCancelSharedCallCancellation() async throws {
+        let (fulcrum, transport) = try await makeStartedFulcrum()
+        let sharedCancellation = SwiftFulcrum.Client.Call.Cancellation()
+
+        let subscribeTask = Task {
+            try await fulcrum.subscribe(
+                .blockchain.headers.subscribe,
+                options: .init(timeout: .seconds(30), cancellation: sharedCancellation)
+            )
+        }
+
+        let subscribeRequest = try TransportTestActor.decodeJSONObject(from: await transport.dequeueOutgoing())
+        let subscribeIdentifier = try requestIdentifier(from: subscribeRequest)
+        let subscribePayload = try TransportTestActor.encodeResponsePayload(
+            identifier: subscribeIdentifier,
+            result: ["height": 940_000, "hex": String(repeating: "a", count: 160)]
+        )
+        await transport.enqueueIncoming(.data(subscribePayload))
+
+        let subscription = try await subscribeTask.value
+
+        await subscription.cancel()
+
+        #expect(await sharedCancellation.isCancelled == false)
+        #expect(await NetworkTestClient.detectStreamTermination(subscription.updates, within: .seconds(5)))
+
+        await fulcrum.stop()
+    }
     
     @Test("request(timeout:) does not emit a late request after timeout", .timeLimit(.minutes(1)))
     func requestTimeoutDoesNotEmitLateRequest() async throws {
@@ -176,7 +235,7 @@ struct ClientCancellationValidator {
             do {
                 _ = try await fulcrum.request(
                     method: .blockchain(.headers(.getTip)),
-                    responseType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.GetTip.self,
+                    responseType: SwiftFulcrum.Response.Blockchain.Headers.GetTip.self,
                     options: .init(timeout: .milliseconds(100))
                 )
                 Issue.record("request() should time out when send is delayed.")
@@ -205,7 +264,7 @@ struct ClientCancellationValidator {
         let timeout: Duration = .milliseconds(50)
 
         do {
-            let _: (UUID, SwiftFulcrum.RPC.Response.Result.Server.Ping) = try await networkClient.call(
+            let _: (UUID, SwiftFulcrum.Response.Server.Ping) = try await networkClient.call(
                 method: .server(.ping),
                 options: .init(timeout: timeout),
                 suppressTransportLogging: true
@@ -235,7 +294,7 @@ struct ClientCancellationValidator {
             do {
                 _ = try await client.request(
                     method: .blockchain(.headers(.getTip)),
-                    responseType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.GetTip.self,
+                    responseType: SwiftFulcrum.Response.Blockchain.Headers.GetTip.self,
                     options: .init(timeout: timeout)
                 )
                 Issue.record("request() should time out after spending the single end-to-end budget.")
@@ -291,7 +350,7 @@ struct ClientCancellationValidator {
             do {
                 _ = try await fulcrum.request(
                     method: .blockchain(.headers(.getTip)),
-                    responseType: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.GetTip.self,
+                    responseType: SwiftFulcrum.Response.Blockchain.Headers.GetTip.self,
                     options: .init(timeout: .seconds(30))
                 )
                 Issue.record("request() should throw cancelled when the calling task is cancelled.")
@@ -338,8 +397,8 @@ struct ClientCancellationValidator {
             do {
                 _ = try await fulcrum.subscribe(
                     method: .blockchain(.headers(.subscribe)),
-                    initial: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe.self,
-                    notifications: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification.self,
+                    initial: SwiftFulcrum.Response.Blockchain.Headers.Subscribe.self,
+                    notifications: SwiftFulcrum.Response.Blockchain.Headers.SubscribeNotification.self,
                     options: .init(timeout: .milliseconds(100))
                 )
                 Issue.record("subscribe() should time out when send is delayed.")
@@ -377,8 +436,8 @@ struct ClientCancellationValidator {
             do {
                 _ = try await client.subscribe(
                     method: .blockchain(.headers(.subscribe)),
-                    initial: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe.self,
-                    notifications: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification.self,
+                    initial: SwiftFulcrum.Response.Blockchain.Headers.Subscribe.self,
+                    notifications: SwiftFulcrum.Response.Blockchain.Headers.SubscribeNotification.self,
                     options: .init(timeout: timeout)
                 )
                 Issue.record("subscribe() should time out after spending the single end-to-end budget.")
@@ -436,8 +495,8 @@ struct ClientCancellationValidator {
             do {
                 _ = try await fulcrum.subscribe(
                     method: .blockchain(.headers(.subscribe)),
-                    initial: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.Subscribe.self,
-                    notifications: SwiftFulcrum.RPC.Response.Result.Blockchain.Headers.SubscribeNotification.self,
+                    initial: SwiftFulcrum.Response.Blockchain.Headers.Subscribe.self,
+                    notifications: SwiftFulcrum.Response.Blockchain.Headers.SubscribeNotification.self,
                     options: .init(timeout: .seconds(30))
                 )
                 Issue.record("subscribe() should throw cancelled when the calling task is cancelled.")
@@ -476,6 +535,21 @@ struct ClientCancellationValidator {
 }
 
 extension ClientCancellationValidator {
+    private func captureClientError(
+        operation: () async throws -> Void
+    ) async -> SwiftFulcrum.Client.Error {
+        do {
+            try await operation()
+            Issue.record("Operation should throw a SwiftFulcrum.Client.Error.")
+            return .client(.unknown(nil))
+        } catch let error as SwiftFulcrum.Client.Error {
+            return error
+        } catch {
+            Issue.record("Unexpected non-SwiftFulcrum.Client error: \(error)")
+            return .client(.unknown(error))
+        }
+    }
+
     private func isCancelledError(_ error: SwiftFulcrum.Client.Error) -> Bool {
         if case .client(.cancelled) = error {
             return true
