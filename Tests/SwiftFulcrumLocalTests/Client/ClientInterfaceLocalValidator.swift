@@ -29,6 +29,26 @@ struct ClientInterfaceLocalValidator {
         }
     }
 
+    @Test("Client initialization rejects whitespace-only WebSocket hosts")
+    func rejectWhitespaceOnlyWebSocketHost() async throws {
+        let invalidEndpoint = try #require(URL(string: "wss://%20"))
+
+        do {
+            let client = try await SwiftFulcrum.Client(connectingTo: invalidEndpoint)
+            await client.stop()
+            Issue.record("Expected whitespace-only WebSocket host to be rejected during initialization")
+        } catch let error as SwiftFulcrum.Client.Error {
+            switch error {
+            case .client(.invalidURL(let value)):
+                #expect(value == invalidEndpoint.absoluteString)
+            default:
+                Issue.record("Unexpected SwiftFulcrum.Client.Error: \(error)")
+            }
+        } catch {
+            Issue.record("Unexpected non-SwiftFulcrum.Client error: \(error)")
+        }
+    }
+
     @Test("Internal unary request bridge rejects subscription methods", .timeLimit(.minutes(1)))
     func rejectSubscriptionMethodsOnRequest() async throws {
         // No network dependency: the internal RPC bridge should reject before attempting to connect.

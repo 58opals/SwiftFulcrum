@@ -50,6 +50,31 @@ struct ResponseDecodingValidator {
         }
     }
 
+    @Test("Rejects non-JSON-RPC-2.0 envelopes")
+    func rejectNonJSONRPC2Envelope() throws {
+        let payload = try jsonData(["jsonrpc": "1.0", "id": UUID().uuidString, "result": "ok"])
+
+        #expect(throws: DecodingError.self) {
+            _ = try payload.decode(String.self, context: .init(methodPath: "server.banner"))
+        }
+    }
+
+    @Test("Rejects envelopes that contain both result and error")
+    func rejectEnvelopeWithResultAndError() throws {
+        let payload = try jsonData(
+            [
+                "jsonrpc": "2.0",
+                "id": UUID().uuidString,
+                "result": "ok",
+                "error": ["code": -1, "message": "boom"]
+            ]
+        )
+
+        #expect(throws: JSONRPCResponseDecodeError.self) {
+            _ = try payload.decode(String.self, context: .init(methodPath: "server.banner"))
+        }
+    }
+
     @Test("Decodes server.version and server.features")
     func decodeServerMetadataResponses() throws {
         let versionPayload = try jsonData(
@@ -447,6 +472,20 @@ struct ResponseDecodingValidator {
     func rejectOversizedMempoolFeeHistogramVirtualSize() throws {
         let payload = try jsonData(
             ["jsonrpc": "2.0", "id": UUID().uuidString, "result": [[1, "18446744073709551616"]]]
+        )
+
+        #expect(throws: ResponseResultDecodeError.self) {
+            _ = try payload.decode(
+                SwiftFulcrum.Response.Mempool.GetFeeHistogram.self,
+                context: .init(methodPath: "mempool.get_fee_histogram")
+            )
+        }
+    }
+
+    @Test("Rejects fractional mempool fee histogram virtual sizes")
+    func rejectFractionalMempoolFeeHistogramVirtualSize() throws {
+        let payload = try jsonData(
+            ["jsonrpc": "2.0", "id": UUID().uuidString, "result": [[1, 2000.75]]]
         )
 
         #expect(throws: ResponseResultDecodeError.self) {

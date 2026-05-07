@@ -25,7 +25,15 @@ extension SwiftFulcrum.RPC.Response.JSONRPC {
             let methodKey = JSONRPCResponseDecodeModel.CodingKeyModel("method")
             let paramsKey = JSONRPCResponseDecodeModel.CodingKeyModel("params")
 
-            self.jsonrpc = try container.decode(String.self, forKey: jsonrpcKey)
+            let jsonrpc = try container.decode(String.self, forKey: jsonrpcKey)
+            guard jsonrpc == "2.0" else {
+                throw DecodingError.dataCorruptedError(
+                    forKey: jsonrpcKey,
+                    in: container,
+                    debugDescription: "JSON-RPC version must be 2.0."
+                )
+            }
+            self.jsonrpc = jsonrpc
             self.id = try container.decodeIfPresent(UUID.self, forKey: idKey)
             self.result = try container.decodeIfPresent(Payload.self, forKey: resultKey)
             self.error = try container.decodeIfPresent(SwiftFulcrum.RPC.Response.Error.Result.self, forKey: errorKey)
@@ -41,6 +49,10 @@ extension SwiftFulcrum.RPC.Response.JSONRPC.Generic: Sendable where Payload: Sen
 
 extension SwiftFulcrum.RPC.Response.JSONRPC.Generic {
     func determineResponseType() throws -> SwiftFulcrum.RPC.Response.Kind<Payload> {
+        if error != nil, hasResult {
+            throw JSONRPCResponseDecodeError.wrongResponseType
+        }
+
         if let id,
            error == nil,
            method == nil,

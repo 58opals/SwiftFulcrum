@@ -48,7 +48,7 @@ extension SwiftFulcrum.ServerCatalog.Repository {
             guard let scheme = server.scheme?.lowercased(),
                   scheme == "ws" || scheme == "wss",
                   let host = server.host,
-                  !host.isEmpty else {
+                  !host.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
                 return false
             }
             return true

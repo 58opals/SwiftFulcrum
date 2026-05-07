@@ -54,7 +54,8 @@ extension WebSocketConnection {
                     debugDescription: "Unable to construct URL from components: \(rawValue)"
                 ))
             }
-            guard result.host?.isEmpty == false else {
+            guard let host = result.host,
+                  !host.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
                 throw DecodingError.dataCorrupted(.init(
                     codingPath: codingPath,
                     debugDescription: "Host must not be empty."

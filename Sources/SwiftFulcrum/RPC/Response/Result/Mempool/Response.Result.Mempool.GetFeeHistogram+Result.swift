@@ -20,6 +20,7 @@ extension SwiftFulcrum.Response.Mempool.GetFeeHistogram {
             let maximumConvertibleVirtualSize = Double(UInt.max).nextDown
             guard truncatedVirtualSizeValue.isFinite,
                   truncatedVirtualSizeValue >= 0,
+                  truncatedVirtualSizeValue == virtualSizeValue,
                   truncatedVirtualSizeValue <= maximumConvertibleVirtualSize else {
                 throw ResponseResultDecodeError.unexpectedFormat("Invalid vsize: \(virtualSizeValue)")
             }

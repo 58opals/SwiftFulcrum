@@ -46,6 +46,15 @@ struct ServerCatalogRepositoryValidator {
         }
     }
 
+    @Test("Rejects whitespace-only string catalog URL hosts")
+    func rejectWhitespaceOnlyStringCatalogURLHost() throws {
+        let data = Data(#""wss://%20""#.utf8)
+
+        #expect(throws: DecodingError.self) {
+            _ = try JSONRPCCodec.Coder.decoder.decode(WebSocketConnection.Server.self, from: data)
+        }
+    }
+
     @Test("Falls back when bundled catalog is unavailable")
     func loadFallbackBootstrapList() async throws {
         let fallbackServers = [URL(string: "wss://fallback.fulcrum.example")!]
@@ -64,6 +73,7 @@ struct ServerCatalogRepositoryValidator {
         let fallbackServers = [
             URL(string: "http://invalid.fulcrum.example")!,
             URL(string: "ws:///missing-host")!,
+            URL(string: "wss://%20")!,
             URL(string: "wss://valid.fulcrum.example")!
         ]
         let fallbackLoader = FallbackLoader()

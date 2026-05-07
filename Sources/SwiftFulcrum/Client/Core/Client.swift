@@ -180,7 +180,7 @@ private extension SwiftFulcrum.Client {
     static func validate(endpoint: URL) throws -> URL {
         guard ["ws", "wss"].contains(endpoint.scheme?.lowercased()),
               let host = endpoint.host,
-              !host.isEmpty else {
+              !host.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw Error.client(.invalidURL(endpoint.absoluteString))
         }
 
