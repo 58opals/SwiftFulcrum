@@ -8,7 +8,7 @@ extension SwiftFulcrum.RPC.Method {
         case .header(let height, let checkpointHeight):
             return FulcrumRequest(id: uuid,
                                   method: self,
-                                  params: RPCRequestParametersModel.PairModel(
+                                  params: RPCRequestParametersModel.Pair(
                                       first: height,
                                       second: checkpointHeight ?? 0
                                   ))
@@ -16,7 +16,7 @@ extension SwiftFulcrum.RPC.Method {
         case .headers(let startHeight, let count, let checkpointHeight):
             return FulcrumRequest(id: uuid,
                                   method: self,
-                                  params: RPCRequestParametersModel.TripleModel(
+                                  params: RPCRequestParametersModel.Triple(
                                       first: startHeight,
                                       second: count,
                                       third: checkpointHeight ?? 0

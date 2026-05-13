@@ -8,7 +8,7 @@ extension SwiftFulcrum.RPC.Method {
         case .getInfo(let transactionHash, let outputIndex):
             return FulcrumRequest(id: uuid,
                                   method: self,
-                                  params: RPCRequestParametersModel.PairModel(
+                                  params: RPCRequestParametersModel.Pair(
                                       first: transactionHash,
                                       second: outputIndex
                                   ))

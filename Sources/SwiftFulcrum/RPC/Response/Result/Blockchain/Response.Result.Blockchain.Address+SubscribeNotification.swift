@@ -1,4 +1,4 @@
-// Response.Blockchain.Address+SubscribeNotification.swift
+// Response.Result.Blockchain.Address+SubscribeNotification.swift
 
 import Foundation
 

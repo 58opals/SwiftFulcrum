@@ -1,13 +1,13 @@
-// JSONRPCResponseDecodeModel+NilValueModel.swift
+// JSONRPCResponseDecodeModel+NilValue.swift
 
 import Foundation
 
 extension JSONRPCResponseDecodeModel {
-    protocol NilValueModel {
+    protocol NilValue {
         static var nilValue: Self { get }
     }
 }
 
-extension Optional: JSONRPCResponseDecodeModel.NilValueModel {
+extension Optional: JSONRPCResponseDecodeModel.NilValue {
     static var nilValue: Self { nil }
 }

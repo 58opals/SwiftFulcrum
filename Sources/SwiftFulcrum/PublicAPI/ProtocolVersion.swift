@@ -42,6 +42,20 @@ extension SwiftFulcrum {
             }
         }
 
+        public init(from decoder: Decoder) throws {
+            let container = try decoder.singleValueContainer()
+            let string = try container.decode(String.self)
+
+            guard let version = Self(string: string) else {
+                throw DecodingError.dataCorruptedError(
+                    in: container,
+                    debugDescription: "Protocol version must be a dotted version string."
+                )
+            }
+
+            self = version
+        }
+
         public var description: String {
             if !isPatchComponentIncluded && patch == 0 {
                 return "\(major).\(minor)"

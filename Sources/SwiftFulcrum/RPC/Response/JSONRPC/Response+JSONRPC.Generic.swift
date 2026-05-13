@@ -4,7 +4,6 @@ import Foundation
 
 extension SwiftFulcrum.RPC.Response.JSONRPC {
     struct Generic<Payload: Decodable>: Decodable {
-        let jsonrpc: String
         let id: UUID?
         let result: Payload?
         let error: SwiftFulcrum.RPC.Response.Error.Result?
@@ -18,22 +17,13 @@ extension SwiftFulcrum.RPC.Response.JSONRPC {
 
         init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: JSONRPCResponseDecodeModel.CodingKeyModel.self)
-            let jsonrpcKey = JSONRPCResponseDecodeModel.CodingKeyModel("jsonrpc")
             let idKey = JSONRPCResponseDecodeModel.CodingKeyModel("id")
             let resultKey = JSONRPCResponseDecodeModel.CodingKeyModel("result")
             let errorKey = JSONRPCResponseDecodeModel.CodingKeyModel("error")
             let methodKey = JSONRPCResponseDecodeModel.CodingKeyModel("method")
             let paramsKey = JSONRPCResponseDecodeModel.CodingKeyModel("params")
 
-            let jsonrpc = try container.decode(String.self, forKey: jsonrpcKey)
-            guard jsonrpc == "2.0" else {
-                throw DecodingError.dataCorruptedError(
-                    forKey: jsonrpcKey,
-                    in: container,
-                    debugDescription: "JSON-RPC version must be 2.0."
-                )
-            }
-            self.jsonrpc = jsonrpc
+            try JSONRPCResponseDecodeModel.validateVersion(in: container)
             self.id = try container.decodeIfPresent(UUID.self, forKey: idKey)
             self.result = try container.decodeIfPresent(Payload.self, forKey: resultKey)
             self.error = try container.decodeIfPresent(SwiftFulcrum.RPC.Response.Error.Result.self, forKey: errorKey)

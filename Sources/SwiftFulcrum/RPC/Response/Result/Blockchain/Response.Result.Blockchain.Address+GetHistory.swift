@@ -1,4 +1,4 @@
-// Response.Blockchain.Address+GetHistory.swift
+// Response.Result.Blockchain.Address+GetHistory.swift
 
 import Foundation
 

@@ -1,4 +1,4 @@
-// Response.Blockchain.Address+Unsubscribe.swift
+// Response.Result.Blockchain.Address+Unsubscribe.swift
 
 import Foundation
 

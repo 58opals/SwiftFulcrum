@@ -8,12 +8,12 @@ extension SwiftFulcrum.RPC.Method {
         case .estimateFee(let numberOfBlocks):
             return FulcrumRequest(id: uuid,
                                   method: self,
-                                  params: RPCRequestParametersModel.SingleValueModel(value: numberOfBlocks))
+                                  params: RPCRequestParametersModel.SingleValue(value: numberOfBlocks))
 
         case .relayFee:
             return FulcrumRequest(id: uuid,
                                   method: self,
-                                  params: RPCRequestParametersModel.EmptyModel())
+                                  params: RPCRequestParametersModel.Empty())
 
         case .scripthash(let scripthash):
             return createScriptHashRequest(scripthash, uuid: uuid)

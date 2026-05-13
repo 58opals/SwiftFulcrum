@@ -1,5 +1,6 @@
 // ProtocolVersionValidator.swift
 
+import Foundation
 import Testing
 import SwiftFulcrumTestSupport
 @testable import SwiftFulcrum
@@ -30,6 +31,31 @@ struct ProtocolVersionValidator {
         #expect(SwiftFulcrum.ProtocolVersion(string: "1.6.") == nil)
         #expect(SwiftFulcrum.ProtocolVersion(string: "1.a") == nil)
         #expect(SwiftFulcrum.ProtocolVersion(string: "-1.0") == nil)
+    }
+
+    @Test("Decodes dotted version strings")
+    func decodeDottedVersionStrings() throws {
+        let simple = try JSONDecoder().decode(
+            SwiftFulcrum.ProtocolVersion.self,
+            from: Data(#""1.6""#.utf8)
+        )
+        #expect(simple.description == "1.6")
+
+        let patched = try JSONDecoder().decode(
+            SwiftFulcrum.ProtocolVersion.self,
+            from: Data(#""1.6.0""#.utf8)
+        )
+        #expect(patched.description == "1.6.0")
+    }
+
+    @Test("Rejects malformed decoded version strings")
+    func rejectMalformedDecodedVersionStrings() {
+        #expect(throws: DecodingError.self) {
+            _ = try JSONDecoder().decode(
+                SwiftFulcrum.ProtocolVersion.self,
+                from: Data(#""1.a""#.utf8)
+            )
+        }
     }
 
     @Test("Compares semantic ordering")

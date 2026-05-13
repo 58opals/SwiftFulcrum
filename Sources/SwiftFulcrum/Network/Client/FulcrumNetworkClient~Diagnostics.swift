@@ -4,8 +4,18 @@ import Foundation
 
 extension FulcrumNetworkClient {
     func makeDiagnosticsSnapshot() async -> SwiftFulcrum.Client.Diagnostics.Snapshot {
+        await makeDiagnosticsSnapshot(inflightUnaryCallCount: nil)
+    }
+
+    func makeDiagnosticsSnapshot(
+        inflightUnaryCallCount: Int?
+    ) async -> SwiftFulcrum.Client.Diagnostics.Snapshot {
         let transportSnapshot = await transport.makeDiagnosticsSnapshot()
-        let inflightCount = await router.makeInflightUnaryCallCount()
+        let inflightCount = if let inflightUnaryCallCount {
+            inflightUnaryCallCount
+        } else {
+            await router.makeInflightUnaryCallCount()
+        }
         
         return .init(
             reconnectAttempts: transportSnapshot.reconnectAttempts,
@@ -24,20 +34,7 @@ extension FulcrumNetworkClient {
     func publishDiagnosticsSnapshot(inflightUnaryCallCount: Int? = nil) async {
         guard let metrics else { return }
         
-        let transportSnapshot = await transport.makeDiagnosticsSnapshot()
-        let inflightCount: Int
-        if let inflightUnaryCallCount {
-            inflightCount = inflightUnaryCallCount
-        } else {
-            inflightCount = await router.makeInflightUnaryCallCount()
-        }
-        let snapshot = SwiftFulcrum.Client.Diagnostics.Snapshot(
-            reconnectAttempts: transportSnapshot.reconnectAttempts,
-            reconnectSuccesses: transportSnapshot.reconnectSuccesses,
-            inflightUnaryCallCount: inflightCount,
-            activeSubscriptionCount: subscriptionMethods.count
-        )
-        
+        let snapshot = await makeDiagnosticsSnapshot(inflightUnaryCallCount: inflightUnaryCallCount)
         await metrics.recordDiagnosticsUpdate(url: await transport.endpoint, snapshot: snapshot)
     }
     

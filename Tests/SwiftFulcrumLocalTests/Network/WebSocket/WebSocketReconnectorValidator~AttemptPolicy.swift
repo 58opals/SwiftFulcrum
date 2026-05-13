@@ -172,7 +172,7 @@ extension WebSocketReconnectorValidator {
             },
             jitter: { _ in 1 }
         )
-        await box.set(webSocket)
+        await box.store(webSocket)
         await webSocket.updateConnectionState(.reconnecting)
 
         do {

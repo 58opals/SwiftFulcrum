@@ -32,10 +32,6 @@ extension WebSocketConnection.Reconnector {
             rotation.insert(preferredURL, at: 0)
         }
 
-        if rotation.isEmpty {
-            return [currentURL]
-        }
-
         if !rotation.contains(where: { Self.canonicalize($0) == currentKey }) {
             rotation.append(currentURL)
         }

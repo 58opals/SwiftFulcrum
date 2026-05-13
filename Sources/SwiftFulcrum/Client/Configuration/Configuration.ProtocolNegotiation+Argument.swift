@@ -8,7 +8,7 @@ extension SwiftFulcrum.Client.Configuration.ProtocolNegotiation {
         public let maximumVersion: SwiftFulcrum.ProtocolVersion
 
         public init(minimumVersion: SwiftFulcrum.ProtocolVersion, maximumVersion: SwiftFulcrum.ProtocolVersion) throws {
-            guard minimumVersion <= maximumVersion else {
+            guard let range = SwiftFulcrum.ProtocolVersion.Range(min: minimumVersion, max: maximumVersion) else {
                 throw SwiftFulcrum.Client.Error.client(
                     .invalidProtocolNegotiationRange(
                         minimumVersion: minimumVersion,
@@ -16,8 +16,7 @@ extension SwiftFulcrum.Client.Configuration.ProtocolNegotiation {
                     )
                 )
             }
-            self.minimumVersion = minimumVersion
-            self.maximumVersion = maximumVersion
+            self.init(range: range)
         }
 
         public init(range: SwiftFulcrum.ProtocolVersion.Range) {

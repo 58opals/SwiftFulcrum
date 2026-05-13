@@ -1,4 +1,4 @@
-// Response+Mempool.swift
+// Response.Result+Mempool.swift
 
 import Foundation
 

@@ -16,7 +16,7 @@ extension SwiftFulcrum.RPC.Method {
         case .getFirstUse(let address):
             return FulcrumRequest(id: uuid,
                                   method: self,
-                                  params: RPCRequestParametersModel.SingleValueModel(value: address))
+                                  params: RPCRequestParametersModel.SingleValue(value: address))
 
         case .getHistory(let address, let fromHeight, let toHeight, let shouldIncludeUnconfirmed):
             return FulcrumRequest(id: uuid,
@@ -31,12 +31,12 @@ extension SwiftFulcrum.RPC.Method {
         case .getMempool(let address):
             return FulcrumRequest(id: uuid,
                                   method: self,
-                                  params: RPCRequestParametersModel.SingleValueModel(value: address))
+                                  params: RPCRequestParametersModel.SingleValue(value: address))
 
         case .getScriptHash(let address):
             return FulcrumRequest(id: uuid,
                                   method: self,
-                                  params: RPCRequestParametersModel.SingleValueModel(value: address))
+                                  params: RPCRequestParametersModel.SingleValue(value: address))
 
         case .listUnspent(let address, let tokenFilter):
             return FulcrumRequest(id: uuid,
@@ -49,12 +49,12 @@ extension SwiftFulcrum.RPC.Method {
         case .subscribe(let address):
             return FulcrumRequest(id: uuid,
                                   method: self,
-                                  params: RPCRequestParametersModel.SingleValueModel(value: address))
+                                  params: RPCRequestParametersModel.SingleValue(value: address))
 
         case .unsubscribe(let address):
             return FulcrumRequest(id: uuid,
                                   method: self,
-                                  params: RPCRequestParametersModel.SingleValueModel(value: address))
+                                  params: RPCRequestParametersModel.SingleValue(value: address))
         }
     }
 }

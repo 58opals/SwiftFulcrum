@@ -1,4 +1,4 @@
-// Response.Blockchain.ScriptHash.ListUnspent+Item.swift
+// Response.Result.Blockchain.ScriptHash.ListUnspent+Item.swift
 
 import Foundation
 

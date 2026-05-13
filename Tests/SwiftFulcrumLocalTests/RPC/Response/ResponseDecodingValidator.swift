@@ -59,6 +59,24 @@ struct ResponseDecodingValidator {
         }
     }
 
+    @Test("Rejects non-JSON-RPC-2.0 identifier envelopes")
+    func rejectNonJSONRPC2IdentifierEnvelope() throws {
+        let payload = try jsonData(["jsonrpc": "1.0", "id": UUID().uuidString, "result": true])
+
+        #expect(throws: DecodingError.self) {
+            _ = try SwiftFulcrum.RPC.Response.JSONRPC.extractIdentifier(from: payload)
+        }
+    }
+
+    @Test("Rejects non-JSON-RPC-2.0 erased envelopes")
+    func rejectNonJSONRPC2ErasedEnvelope() throws {
+        let payload = try jsonData(["jsonrpc": "1.0", "id": UUID().uuidString, "result": true])
+
+        #expect(throws: DecodingError.self) {
+            _ = try SwiftFulcrum.RPC.Response.JSONRPC.classifyErasedResponse(from: payload)
+        }
+    }
+
     @Test("Rejects envelopes that contain both result and error")
     func rejectEnvelopeWithResultAndError() throws {
         let payload = try jsonData(
@@ -72,6 +90,22 @@ struct ResponseDecodingValidator {
 
         #expect(throws: JSONRPCResponseDecodeError.self) {
             _ = try payload.decode(String.self, context: .init(methodPath: "server.banner"))
+        }
+    }
+
+    @Test("Rejects erased envelopes that contain both result and error")
+    func rejectErasedEnvelopeWithResultAndError() throws {
+        let payload = try jsonData(
+            [
+                "jsonrpc": "2.0",
+                "id": UUID().uuidString,
+                "result": true,
+                "error": ["code": -1, "message": "boom"]
+            ]
+        )
+
+        #expect(throws: JSONRPCResponseDecodeError.self) {
+            _ = try SwiftFulcrum.RPC.Response.JSONRPC.classifyErasedResponse(from: payload)
         }
     }
 
@@ -356,14 +390,6 @@ struct ResponseDecodingValidator {
 
     @Test("Dropping a decoded stream fires the decode termination hook")
     func droppingDecodedStreamFiresTerminationHook() async throws {
-        actor TerminationState {
-            private(set) var isTerminated = false
-
-            func markTerminated() {
-                isTerminated = true
-            }
-        }
-
         let terminationState = TerminationState()
         let rawStream = AsyncThrowingStream<Data, Swift.Error> { _ in }
         var decodedStream: AsyncThrowingStream<String, Swift.Error>? = rawStream.decode(

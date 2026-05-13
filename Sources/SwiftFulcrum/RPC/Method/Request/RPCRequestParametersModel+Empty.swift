@@ -1,9 +1,9 @@
-// RPCRequestParametersModel+EmptyModel.swift
+// RPCRequestParametersModel+Empty.swift
 
 import Foundation
 
 extension RPCRequestParametersModel {
-    struct EmptyModel: Encodable {
+    struct Empty: Encodable {
         func encode(to encoder: Encoder) throws {
             _ = encoder.unkeyedContainer()
         }

@@ -1,4 +1,4 @@
-// Response.Server.Features+ReusablePaymentAddress.swift
+// Response.Result.Server.Features+ReusablePaymentAddress.swift
 
 import Foundation
 

@@ -1,4 +1,4 @@
-// Response.Blockchain+Transaction.swift
+// Response.Result.Blockchain+Transaction.swift
 
 import Foundation
 

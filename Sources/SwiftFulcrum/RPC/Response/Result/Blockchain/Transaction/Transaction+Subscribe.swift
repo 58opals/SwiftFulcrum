@@ -22,6 +22,6 @@ extension SwiftFulcrum.Response.Blockchain.Transaction {
     }
 }
 
-extension SwiftFulcrum.Response.Blockchain.Transaction.Subscribe: JSONRPCResponseDecodeModel.NilValueModel {
+extension SwiftFulcrum.Response.Blockchain.Transaction.Subscribe: JSONRPCResponseDecodeModel.NilValue {
     static var nilValue: Self { .init(height: nil) }
 }

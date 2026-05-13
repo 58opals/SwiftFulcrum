@@ -1,4 +1,4 @@
-// Response.Blockchain.Headers.SubscribeNotification+Block.swift
+// Response.Result.Blockchain.Headers.SubscribeNotification+Block.swift
 
 import Foundation
 

@@ -1,4 +1,4 @@
-// Response.Blockchain.Address+GetFirstUse.swift
+// Response.Result.Blockchain.Address+GetFirstUse.swift
 
 import Foundation
 
@@ -24,6 +24,6 @@ extension SwiftFulcrum.Response.Blockchain.Address {
     }
 }
 
-extension SwiftFulcrum.Response.Blockchain.Address.GetFirstUse: JSONRPCResponseDecodeModel.NilValueModel {
+extension SwiftFulcrum.Response.Blockchain.Address.GetFirstUse: JSONRPCResponseDecodeModel.NilValue {
     static var nilValue: Self { .init(blockHash: nil, height: nil, transactionHash: nil) }
 }

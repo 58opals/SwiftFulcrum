@@ -15,6 +15,7 @@ extension JSONRPCResponseDecodeModel {
             let resultKey = CodingKeyModel("result")
             let errorKey = CodingKeyModel("error")
 
+            try JSONRPCResponseDecodeModel.validateVersion(in: container)
             self.id = try container.decodeIfPresent(UUID.self, forKey: idKey)
             self.error = try container.decodeIfPresent(SwiftFulcrum.RPC.Response.Error.Result.self, forKey: errorKey)
             self.hasResultKey = container.contains(resultKey)

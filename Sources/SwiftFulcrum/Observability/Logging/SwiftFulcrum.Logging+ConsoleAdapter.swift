@@ -8,6 +8,8 @@ extension SwiftFulcrum.Logging {
         private let minimumLevel: Level?
 
         private let outputSink: OutputSink
+        private static let promotedMetadataKeys = ["component", "network", "url", "client_id", "messageIdentifier"]
+        private static let promotedMetadataKeySet = Set(promotedMetadataKeys)
 
         private static var dateFormatter: ISO8601DateFormatter {
             let formatter = ISO8601DateFormatter()
@@ -31,7 +33,7 @@ extension SwiftFulcrum.Logging {
                         file: String,
                         function: String,
                         line: UInt) {
-            guard LoggingBehaviorState.behavior == .normal else { return }
+            guard allowBehavior(for: level) else { return }
             guard allowLogging(for: level) else { return }
             let entry = LoggingConsoleEntry(
                 level: level,
@@ -47,6 +49,11 @@ extension SwiftFulcrum.Logging {
             let signature = makeSignature(for: entry)
 
             Task { await outputSink.enqueue(rendered: composed, signature: signature) }
+        }
+
+        private func allowBehavior(for level: Level) -> Bool {
+            guard LoggingBehaviorState.behavior == .quiet else { return true }
+            return level.priority > Level.info.priority
         }
 
         private func allowLogging(for level: Level) -> Bool {
@@ -74,8 +81,7 @@ extension SwiftFulcrum.Logging {
         private func makeComponentTag(from metadata: [String: String]?) -> String? {
             guard let metadata else { return nil }
 
-            let prioritizedKeys = ["component", "network", "url", "client_id", "messageIdentifier"]
-            let prioritized = prioritizedKeys.compactMap { key -> String? in
+            let prioritized = Self.promotedMetadataKeys.compactMap { key -> String? in
                 guard let value = metadata[key] else { return nil }
                 return "\(key)=\(value)"
             }
@@ -91,9 +97,8 @@ extension SwiftFulcrum.Logging {
         private func makeMetadataDescription(_ metadata: [String: String]?) -> String? {
             guard let metadata, !metadata.isEmpty else { return nil }
 
-            let excluded = Set(["component", "network", "url", "client_id", "messageIdentifier"])
             let pairs = metadata
-                .filter { !excluded.contains($0.key) }
+                .filter { !Self.promotedMetadataKeySet.contains($0.key) }
                 .sorted { $0.key < $1.key }
                 .map { "\($0.key)=\($0.value)" }
                 .joined(separator: " ")

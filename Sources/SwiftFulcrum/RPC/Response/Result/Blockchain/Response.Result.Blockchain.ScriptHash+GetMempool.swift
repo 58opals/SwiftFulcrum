@@ -1,4 +1,4 @@
-// Response.Blockchain.ScriptHash+GetMempool.swift
+// Response.Result.Blockchain.ScriptHash+GetMempool.swift
 
 import Foundation
 

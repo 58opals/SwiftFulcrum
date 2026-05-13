@@ -3,10 +3,8 @@
 import Foundation
 
 extension SwiftFulcrum.ServerCatalog.Repository {
-    actor BundledCatalogLoader {
-        static let shared = BundledCatalogLoader()
-
-        func loadServers(
+    enum BundledCatalogLoader {
+        static func loadServers(
             for network: SwiftFulcrum.Client.Configuration.Network,
             fallback: [URL]
         ) throws -> [URL] {

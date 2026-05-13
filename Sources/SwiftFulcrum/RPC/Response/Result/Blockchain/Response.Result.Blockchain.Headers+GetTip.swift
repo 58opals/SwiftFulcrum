@@ -1,4 +1,4 @@
-// Response.Blockchain.Headers+GetTip.swift
+// Response.Result.Blockchain.Headers+GetTip.swift
 
 import Foundation
 

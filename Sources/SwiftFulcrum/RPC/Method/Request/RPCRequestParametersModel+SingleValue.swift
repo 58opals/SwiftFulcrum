@@ -1,9 +1,9 @@
-// RPCRequestParametersModel+SingleValueModel.swift
+// RPCRequestParametersModel+SingleValue.swift
 
 import Foundation
 
 extension RPCRequestParametersModel {
-    struct SingleValueModel<Value: Encodable>: Encodable {
+    struct SingleValue<Value: Encodable>: Encodable {
         let value: Value
 
         func encode(to encoder: Encoder) throws {
