@@ -41,15 +41,7 @@ extension SwiftFulcrum.ServerCatalog.Repository {
     }
 
     public static func sanitizeServers(_ servers: [URL]) -> [URL] {
-        servers.filter { server in
-            guard let scheme = server.scheme?.lowercased(),
-                  scheme == "ws" || scheme == "wss",
-                  let host = server.host,
-                  !host.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-                return false
-            }
-            return true
-        }
+        servers.compactMap { try? SwiftFulcrum.ServerCatalog.validate(endpoint: $0) }
     }
 
     static func requireServers(_ servers: [URL]) throws -> [URL] {

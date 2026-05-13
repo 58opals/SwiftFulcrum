@@ -572,7 +572,7 @@ extension FulcrumClientLifecycleValidator {
         let requestTask = Task {
             try await fulcrum.request(
                 method: requestMethod,
-                responseType: SwiftFulcrum.Response.Blockchain.Headers.GetTip.self,
+                responseType: SwiftFulcrum.Response.Blockchain.Headers.Tip.self,
                 options: .init(timeout: .seconds(30))
             )
         }
@@ -624,7 +624,7 @@ extension FulcrumClientLifecycleValidator {
         let requestTask = Task {
             try await fulcrum.request(
                 method: requestMethod,
-                responseType: SwiftFulcrum.Response.Blockchain.Headers.GetTip.self,
+                responseType: SwiftFulcrum.Response.Blockchain.Headers.Tip.self,
                 options: .init(timeout: .seconds(30))
             )
         }
@@ -700,7 +700,7 @@ extension FulcrumClientLifecycleValidator {
         let requestTask = Task {
             try await fulcrum.request(
                 method: requestMethod,
-                responseType: SwiftFulcrum.Response.Blockchain.Headers.GetTip.self,
+                responseType: SwiftFulcrum.Response.Blockchain.Headers.Tip.self,
                 options: .init(timeout: .seconds(30))
             )
         }
@@ -814,7 +814,7 @@ extension FulcrumClientLifecycleValidator {
             do {
                 _ = try await fulcrum.request(
                     method: requestMethod,
-                    responseType: SwiftFulcrum.Response.Blockchain.Headers.GetTip.self,
+                    responseType: SwiftFulcrum.Response.Blockchain.Headers.Tip.self,
                     options: .init(timeout: timeout)
                 )
                 Issue.record("request() should time out after spending the single reconnect-readiness budget.")

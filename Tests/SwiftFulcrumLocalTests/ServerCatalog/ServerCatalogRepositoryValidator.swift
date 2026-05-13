@@ -174,6 +174,15 @@ struct ServerCatalogRepositoryValidator {
         #expect(endpoint == expectedServer)
     }
 
+    @Test("Client initialization rejects endpoints with invalid ports")
+    func clientInitializationRejectsEndpointsWithInvalidPorts() async throws {
+        let endpoint = try #require(URL(string: "wss://invalid-port.fulcrum.example:0"))
+
+        await #expect(throws: SwiftFulcrum.Client.Error.self) {
+            _ = try await SwiftFulcrum.Client(connectingTo: endpoint)
+        }
+    }
+
     @Test("Client initialization ignores invalid custom catalog entries when a valid endpoint exists")
     func clientInitializationIgnoresInvalidCustomCatalogEntries() async throws {
         let expectedServer = URL(string: "wss://valid.fulcrum.example")!

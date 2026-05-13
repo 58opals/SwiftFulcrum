@@ -63,4 +63,24 @@ extension WebSocketReconnectorValidator {
         #expect(maximumDelay == .seconds(7.8))
         #expect(cappedDelay == .seconds(30))
     }
+
+    @Test("Reconnector rejects invalid negative backoff delays", .timeLimit(.minutes(1)))
+    func rejectInvalidNegativeBackoffDelays() async throws {
+        let configuration = WebSocketConnection.Reconnector.Configuration(
+            maximumReconnectionAttempts: 3,
+            reconnectionDelay: 1.5,
+            maximumDelay: -1,
+            jitterRange: 0.8 ... 1.3
+        )
+
+        let reconnector = WebSocketConnection.Reconnector(
+            configuration,
+            network: .mainnet,
+            jitter: { _ in 1 }
+        )
+
+        let delay = await reconnector.makeDelay(for: 1)
+
+        #expect(delay == nil)
+    }
 }

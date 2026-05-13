@@ -11,8 +11,10 @@ extension SwiftFulcrum.RPC.Response.JSONRPC {
         let params: Payload?
 
         private let hasResultKey: Bool
+        private let hasErrorKey: Bool
         private let hasParamsKey: Bool
         var hasResult: Bool { hasResultKey }
+        var hasError: Bool { hasErrorKey }
         var hasParams: Bool { hasParamsKey }
 
         init(from decoder: Decoder) throws {
@@ -30,6 +32,7 @@ extension SwiftFulcrum.RPC.Response.JSONRPC {
             self.method = try container.decodeIfPresent(String.self, forKey: methodKey)
             self.params = try container.decodeIfPresent(Payload.self, forKey: paramsKey)
             self.hasResultKey = container.contains(resultKey)
+            self.hasErrorKey = container.contains(errorKey)
             self.hasParamsKey = container.contains(paramsKey)
         }
     }
@@ -40,13 +43,17 @@ extension SwiftFulcrum.RPC.Response.JSONRPC.Generic: Sendable where Payload: Sen
 extension SwiftFulcrum.RPC.Response.JSONRPC.Generic {
     func determineResponseType() throws -> SwiftFulcrum.RPC.Response.Kind<Payload> {
         if method != nil || hasParams {
-            guard id == nil, error == nil, !hasResult, let method, let params else {
+            guard id == nil, !hasError, !hasResult, let method, let params else {
                 throw JSONRPCResponseDecodeError.wrongResponseType
             }
             return .subscription(SwiftFulcrum.RPC.Response.Subscription(methodPath: method, result: params))
         }
 
-        if error != nil, hasResult {
+        if hasError, hasResult {
+            throw JSONRPCResponseDecodeError.wrongResponseType
+        }
+
+        if hasError, error == nil {
             throw JSONRPCResponseDecodeError.wrongResponseType
         }
 

@@ -12,12 +12,11 @@ extension WebSocketConnection.Reconnector {
         let roundedSeconds = Self.roundToNanosecondPrecision(jitteredSeconds)
         let finalSeconds = min(roundedSeconds, configuration.maximumDelay)
 
+        guard finalSeconds.isFinite, finalSeconds > 0 else { return nil }
         return .seconds(finalSeconds)
     }
 
     private static func roundToNanosecondPrecision(_ seconds: Double) -> Double {
-        guard seconds.isFinite else { return seconds }
-
         let nsPerSecond = 1_000_000_000.0
         return (seconds * nsPerSecond).rounded(.toNearestOrAwayFromZero) / nsPerSecond
     }

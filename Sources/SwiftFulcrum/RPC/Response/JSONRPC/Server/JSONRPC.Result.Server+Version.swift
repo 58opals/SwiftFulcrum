@@ -8,23 +8,17 @@ extension SwiftFulcrum.RPC.Response.JSONRPC.Result.Server {
         let protocolVersion: String
 
         init(from decoder: Decoder) throws {
-            var container = try decoder.unkeyedContainer()
-            guard !container.isAtEnd else {
+            let container = try decoder.singleValueContainer()
+            let values = try container.decode([String].self)
+            guard values.count == 2 else {
                 throw DecodingError.dataCorruptedError(
                     in: container,
                     debugDescription: "Expected server and protocol version pair"
                 )
             }
 
-            self.serverVersion = try container.decode(String.self)
-            guard !container.isAtEnd else {
-                throw DecodingError.dataCorruptedError(
-                    in: container,
-                    debugDescription: "Missing negotiated protocol version"
-                )
-            }
-
-            self.protocolVersion = try container.decode(String.self)
+            self.serverVersion = values[0]
+            self.protocolVersion = values[1]
         }
     }
 }

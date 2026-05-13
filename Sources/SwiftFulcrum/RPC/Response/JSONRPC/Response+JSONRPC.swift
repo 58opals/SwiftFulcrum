@@ -31,14 +31,16 @@ extension SwiftFulcrum.RPC.Response.JSONRPC {
             throw JSONRPCResponseDecodeError.wrongResponseType
         }
 
-        switch (response.id, response.error, response.hasResult) {
-        case (_, _?, true):
+        switch (response.id, response.error, response.hasError, response.hasResult) {
+        case (_, _, true, true):
             throw JSONRPCResponseDecodeError.wrongResponseType
-        case let (id?, nil, true):
+        case (_, nil, true, false):
+            throw JSONRPCResponseDecodeError.wrongResponseType
+        case let (id?, nil, false, true):
             return .regular(id)
-        case let (id?, error?, false):
+        case let (id?, error?, true, false):
             return .error(.rpc(.init(id: id, code: error.code, message: error.message)))
-        case let (id?, nil, false):
+        case let (id?, nil, false, false):
             return .empty(id)
         default:
             throw JSONRPCResponseDecodeError.cannotIdentifyResponseType(response.id)

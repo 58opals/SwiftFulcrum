@@ -37,10 +37,10 @@ extension SwiftFulcrum.Response.Server {
             self.minimumProtocolVersion = minVersion
             self.maximumProtocolVersion = maxVersion
             self.pruningLimit = payloadModel.pruning
-            self.hosts = payloadModel.hosts?.mapValues { Host(from: $0) }
+            self.hosts = try payloadModel.hosts?.mapValues { try Host(from: $0) }
             self.hasDoubleSpendProofs = payloadModel.hasDoubleSpendProofs
             self.hasCashTokens = payloadModel.hasCashTokens
-            self.reusablePaymentAddress = payloadModel.rpa.map(ReusablePaymentAddress.init(from:))
+            self.reusablePaymentAddress = try payloadModel.rpa.map { try ReusablePaymentAddress(from: $0) }
             self.hasBroadcastPackageSupport = payloadModel.hasBroadcastPackageSupport
         }
     }

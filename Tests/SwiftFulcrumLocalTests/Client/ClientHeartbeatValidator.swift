@@ -41,7 +41,7 @@ struct ClientHeartbeatValidator {
 
         let callTask = Task {
             do {
-                let _: (UUID, SwiftFulcrum.Response.Blockchain.Headers.GetTip) =
+                let _: (UUID, SwiftFulcrum.Response.Blockchain.Headers.Tip) =
                     try await client.call(method: .blockchain(.headers(.getTip)))
                 Issue.record("Expected inflight unary to fail when heartbeat reconnect fails")
             } catch let error as SwiftFulcrum.Client.Error {
