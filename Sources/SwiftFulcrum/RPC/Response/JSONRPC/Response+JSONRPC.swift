@@ -10,7 +10,7 @@ extension SwiftFulcrum.RPC.Response.JSONRPC: Sendable {}
 
 extension SwiftFulcrum.RPC.Response.JSONRPC {
     static func extractIdentifier(from data: Data) throws -> SwiftFulcrum.RPC.Response.Identifier {
-        let response = try JSONRPCCodec.Coder.decoder.decode(JSONRPCResponseDecodeModel.IdentifierEnvelopeModel.self, from: data)
+        let response = try JSONRPCCodec.Coder.decoder.decode(JSONRPCResponseDecodeModel.IdentifierEnvelope.self, from: data)
         switch (response.id, response.method) {
         case let (id?, nil):
             return .uuid(id)
@@ -23,9 +23,13 @@ extension SwiftFulcrum.RPC.Response.JSONRPC {
 
     static func classifyErasedResponse(from data: Data) throws -> ErasedResponseKind {
         let response = try JSONRPCCodec.Coder.decoder.decode(
-            JSONRPCResponseDecodeModel.ErasedResponseEnvelopeModel.self,
+            JSONRPCResponseDecodeModel.ErasedResponseEnvelope.self,
             from: data
         )
+
+        if response.hasMethod || response.hasParams {
+            throw JSONRPCResponseDecodeError.wrongResponseType
+        }
 
         switch (response.id, response.error, response.hasResult) {
         case (_, _?, true):

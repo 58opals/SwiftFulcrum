@@ -109,6 +109,39 @@ struct ResponseDecodingValidator {
         }
     }
 
+    @Test("Rejects subscription envelopes that contain an error")
+    func rejectSubscriptionEnvelopeWithError() throws {
+        let payload = try jsonData(
+            [
+                "jsonrpc": "2.0",
+                "method": "blockchain.headers.subscribe",
+                "params": "update",
+                "error": ["code": -1, "message": "boom"]
+            ]
+        )
+
+        #expect(throws: JSONRPCResponseDecodeError.self) {
+            _ = try payload.decode(String.self, context: .init(methodPath: "blockchain.headers.subscribe"))
+        }
+    }
+
+    @Test("Rejects erased setup responses that contain subscription fields")
+    func rejectErasedSetupResponseWithSubscriptionFields() throws {
+        let payload = try jsonData(
+            [
+                "jsonrpc": "2.0",
+                "id": UUID().uuidString,
+                "result": "status",
+                "method": "blockchain.headers.subscribe",
+                "params": "update"
+            ]
+        )
+
+        #expect(throws: JSONRPCResponseDecodeError.self) {
+            _ = try SwiftFulcrum.RPC.Response.JSONRPC.classifyErasedResponse(from: payload)
+        }
+    }
+
     @Test("Decodes server.version and server.features")
     func decodeServerMetadataResponses() throws {
         let versionPayload = try jsonData(
@@ -332,6 +365,39 @@ struct ResponseDecodingValidator {
         }
     }
 
+    @Test("Decodes routeable DSProof notification proof-only payloads")
+    func decodeRouteableDSProofNotificationProofOnlyPayload() throws {
+        let proof: [String: Any] = [
+            "dspid": "proof-id",
+            "txid": "abc123",
+            "hex": "00",
+            "outpoint": ["txid": "prev", "vout": 1],
+            "descendants": []
+        ]
+        let payload = try jsonData(
+            [
+                "jsonrpc": "2.0",
+                "method": "blockchain.transaction.dsproof.subscribe",
+                "params": [proof]
+            ]
+        )
+
+        #expect(
+            FulcrumNetworkClient.makeSubscriptionIdentifier(
+                methodPath: "blockchain.transaction.dsproof.subscribe",
+                data: payload
+            ) == "abc123"
+        )
+
+        let notification = try payload.decode(
+            SwiftFulcrum.Response.Blockchain.Transaction.DSProof.SubscribeNotification.self,
+            context: .init(methodPath: "blockchain.transaction.dsproof.subscribe")
+        )
+        #expect(notification.subscriptionIdentifier == "abc123")
+        #expect(notification.transactionHash == "abc123")
+        #expect(notification.proof?.transactionID == "abc123")
+    }
+
     @Test("Decodes headers/address/transaction/dsproof notifications")
     func decodeSubscriptionNotifications() throws {
         let headerPayload = try jsonData(
@@ -492,6 +558,48 @@ struct ResponseDecodingValidator {
         #expect(histogram.histogram[0].virtualSize == 2000)
         #expect(histogram.histogram[1].fee == 1.0)
         #expect(histogram.histogram[1].virtualSize == 1000)
+    }
+
+    @Test("Rejects invalid mempool info fee values")
+    func rejectInvalidMempoolInfoFeeValues() throws {
+        let payload = try jsonData(
+            [
+                "jsonrpc": "2.0",
+                "id": UUID().uuidString,
+                "result": [
+                    "mempoolminfee": "nan",
+                    "minrelaytxfee": -1,
+                    "incrementalrelayfee": "inf"
+                ]
+            ]
+        )
+
+        #expect(throws: ResponseResultDecodeError.self) {
+            _ = try payload.decode(
+                SwiftFulcrum.Response.Mempool.GetInfo.self,
+                context: .init(methodPath: "mempool.get_info")
+            )
+        }
+    }
+
+    @Test("Rejects negative mempool info unbroadcast count")
+    func rejectNegativeMempoolInfoUnbroadcastCount() throws {
+        let payload = try jsonData(
+            [
+                "jsonrpc": "2.0",
+                "id": UUID().uuidString,
+                "result": [
+                    "unbroadcastcount": -1
+                ]
+            ]
+        )
+
+        #expect(throws: ResponseResultDecodeError.self) {
+            _ = try payload.decode(
+                SwiftFulcrum.Response.Mempool.GetInfo.self,
+                context: .init(methodPath: "mempool.get_info")
+            )
+        }
     }
 
     @Test("Rejects oversized mempool fee histogram virtual sizes")

@@ -36,10 +36,7 @@ extension SwiftFulcrum.ServerCatalog.Repository {
     public static func makeConstant(_ servers: [URL]) -> Self {
         let sanitizedServers = sanitizeServers(servers)
         return Self(load: { _, _ in
-            guard !sanitizedServers.isEmpty else {
-                throw SwiftFulcrum.Client.Error.transport(.setupFailed)
-            }
-            return sanitizedServers
+            try requireServers(sanitizedServers)
         }, usesBundledCatalog: false)
     }
 
@@ -53,5 +50,12 @@ extension SwiftFulcrum.ServerCatalog.Repository {
             }
             return true
         }
+    }
+
+    static func requireServers(_ servers: [URL]) throws -> [URL] {
+        guard !servers.isEmpty else {
+            throw SwiftFulcrum.Client.Error.transport(.setupFailed)
+        }
+        return servers
     }
 }

@@ -38,6 +38,15 @@ extension WebSocketReconnectorValidator {
         #expect(WebSocketConnection.Reconnector.deduplicate([uppercased, lowercased]).count == 1)
     }
 
+    @Test("Reconnector canonicalizes empty and root URL paths")
+    func canonicalizeEmptyAndRootURLPaths() throws {
+        let emptyPath = try #require(URL(string: "wss://fulcrum.example:50004"))
+        let rootPath = try #require(URL(string: "wss://fulcrum.example:50004/"))
+
+        #expect(WebSocketConnection.Reconnector.canonicalize(emptyPath) == WebSocketConnection.Reconnector.canonicalize(rootPath))
+        #expect(WebSocketConnection.Reconnector.deduplicate([emptyPath, rootPath]).count == 1)
+    }
+
     @Test("Reconnector includes configured bootstrap servers in fallback rotation")
     func includeConfiguredBootstrapServersInFallbackRotation() async throws {
         let current = try #require(URL(string: "wss://current.fulcrum.example"))

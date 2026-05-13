@@ -68,7 +68,15 @@ extension WebSocketConnection {
         private static func normalizeURL(host: String, port: Int?, scheme: String?, codingPath: [CodingKey]) throws -> URL {
             var components = URLComponents()
             components.host = host
-            components.port = port
+            if let port {
+                guard (1 ... 65_535).contains(port) else {
+                    throw DecodingError.dataCorrupted(.init(
+                        codingPath: codingPath,
+                        debugDescription: "Port must be between 1 and 65535."
+                    ))
+                }
+                components.port = port
+            }
             components.scheme = try normalizeScheme(from: scheme, codingPath: codingPath)
             
             guard let url = components.url else {

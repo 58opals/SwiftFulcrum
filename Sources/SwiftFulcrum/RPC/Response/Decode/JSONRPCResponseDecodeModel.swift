@@ -3,8 +3,8 @@
 import Foundation
 
 enum JSONRPCResponseDecodeModel {
-    static func validateVersion(in container: KeyedDecodingContainer<CodingKeyModel>) throws {
-        let jsonrpcKey = CodingKeyModel("jsonrpc")
+    static func validateVersion(in container: KeyedDecodingContainer<CodingKey>) throws {
+        let jsonrpcKey = CodingKey("jsonrpc")
         let jsonrpc = try container.decode(String.self, forKey: jsonrpcKey)
         guard jsonrpc == "2.0" else {
             throw DecodingError.dataCorruptedError(

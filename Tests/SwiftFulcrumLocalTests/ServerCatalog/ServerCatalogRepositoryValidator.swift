@@ -55,6 +55,15 @@ struct ServerCatalogRepositoryValidator {
         }
     }
 
+    @Test("Rejects object catalog URLs with invalid ports")
+    func rejectObjectCatalogURLInvalidPort() throws {
+        let data = Data(#"{"host":"fulcrum.example","port":-1}"#.utf8)
+
+        #expect(throws: DecodingError.self) {
+            _ = try JSONRPCCodec.Coder.decoder.decode(WebSocketConnection.Server.self, from: data)
+        }
+    }
+
     @Test("Falls back when bundled catalog is unavailable")
     func loadFallbackBootstrapList() async throws {
         let fallbackServers = [URL(string: "wss://fallback.fulcrum.example")!]

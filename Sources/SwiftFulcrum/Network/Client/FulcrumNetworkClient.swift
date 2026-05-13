@@ -116,6 +116,7 @@ actor FulcrumNetworkClient {
 
         let info = await transport.closeInformation
         let closedError = await SwiftFulcrum.Client.Error.transport(.connectionClosed(info.code, info.reason))
+        await dropAllStoredSubscriptions()
         let inflightCount = await router.failAll(with: closedError)
         await publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightCount)
         

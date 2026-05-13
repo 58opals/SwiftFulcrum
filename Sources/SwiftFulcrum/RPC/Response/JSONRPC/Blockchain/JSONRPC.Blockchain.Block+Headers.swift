@@ -12,13 +12,13 @@ extension SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Block {
         let headers: [String]?
 
         init(from decoder: Decoder) throws {
-            let container = try decoder.container(keyedBy: JSONRPCResponseDecodeModel.CodingKeyModel.self)
-            let countKey = JSONRPCResponseDecodeModel.CodingKeyModel("count")
-            let hexKey = JSONRPCResponseDecodeModel.CodingKeyModel("hex")
-            let headersKey = JSONRPCResponseDecodeModel.CodingKeyModel("headers")
-            let maxKey = JSONRPCResponseDecodeModel.CodingKeyModel("max")
-            let rootKey = JSONRPCResponseDecodeModel.CodingKeyModel("root")
-            let branchKey = JSONRPCResponseDecodeModel.CodingKeyModel("branch")
+            let container = try decoder.container(keyedBy: JSONRPCResponseDecodeModel.CodingKey.self)
+            let countKey = JSONRPCResponseDecodeModel.CodingKey("count")
+            let hexKey = JSONRPCResponseDecodeModel.CodingKey("hex")
+            let headersKey = JSONRPCResponseDecodeModel.CodingKey("headers")
+            let maxKey = JSONRPCResponseDecodeModel.CodingKey("max")
+            let rootKey = JSONRPCResponseDecodeModel.CodingKey("root")
+            let branchKey = JSONRPCResponseDecodeModel.CodingKey("branch")
 
             self.count = try container.decode(UInt.self, forKey: countKey)
             self.max = try container.decode(UInt.self, forKey: maxKey)

@@ -31,6 +31,7 @@ struct ProtocolVersionValidator {
         #expect(SwiftFulcrum.ProtocolVersion(string: "1.6.") == nil)
         #expect(SwiftFulcrum.ProtocolVersion(string: "1.a") == nil)
         #expect(SwiftFulcrum.ProtocolVersion(string: "-1.0") == nil)
+        #expect(SwiftFulcrum.ProtocolVersion(string: "+1.0") == nil)
     }
 
     @Test("Decodes dotted version strings")

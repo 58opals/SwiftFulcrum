@@ -11,7 +11,7 @@ extension SwiftFulcrum.RPC.Method {
         case .getBalance(let scripthash, let tokenFilter):
             return FulcrumRequest(id: uuid,
                                   method: self,
-                                  params: RPCRequestParametersModel.OptionalTokenFilterModel(
+                                  params: RPCRequestParametersModel.OptionalTokenFilter(
                                       identifier: scripthash,
                                       tokenFilter: tokenFilter
                                   ))
@@ -24,7 +24,7 @@ extension SwiftFulcrum.RPC.Method {
         case .getHistory(let scripthash, let fromHeight, let toHeight, let shouldIncludeUnconfirmed):
             return FulcrumRequest(id: uuid,
                                   method: self,
-                                  params: RPCRequestParametersModel.HistoryModel(
+                                  params: RPCRequestParametersModel.History(
                                       identifier: scripthash,
                                       fromHeight: fromHeight,
                                       toHeight: toHeight,
@@ -39,7 +39,7 @@ extension SwiftFulcrum.RPC.Method {
         case .listUnspent(let scripthash, let tokenFilter):
             return FulcrumRequest(id: uuid,
                                   method: self,
-                                  params: RPCRequestParametersModel.OptionalTokenFilterModel(
+                                  params: RPCRequestParametersModel.OptionalTokenFilter(
                                       identifier: scripthash,
                                       tokenFilter: tokenFilter
                                   ))

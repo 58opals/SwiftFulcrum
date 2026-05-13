@@ -29,7 +29,7 @@ extension SwiftFulcrum {
             let components = string.split(separator: ".", omittingEmptySubsequences: false).map(String.init)
             guard (2 ... 3).contains(components.count) else { return nil }
 
-            let integers = components.compactMap { Int($0) }
+            let integers = components.compactMap(Self.parseComponent)
             guard integers.count == components.count else { return nil }
 
             switch integers.count {
@@ -40,6 +40,12 @@ extension SwiftFulcrum {
             default:
                 return nil
             }
+        }
+
+        private static func parseComponent(_ component: String) -> Int? {
+            guard !component.isEmpty else { return nil }
+            guard component.utf8.allSatisfy({ (48 ... 57).contains($0) }) else { return nil }
+            return Int(component)
         }
 
         public init(from decoder: Decoder) throws {

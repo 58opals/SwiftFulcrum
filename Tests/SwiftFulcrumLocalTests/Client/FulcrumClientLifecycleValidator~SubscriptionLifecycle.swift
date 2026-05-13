@@ -222,6 +222,81 @@ extension FulcrumClientLifecycleValidator {
         await fulcrum.stop()
     }
 
+    @Test("stop() clears active subscription registry", .timeLimit(.minutes(1)))
+    func stopClearsActiveSubscriptionRegistry() async throws {
+        let (fulcrum, transport) = try await makeStartedFulcrum()
+
+        let subscribeTask = Task {
+            try await fulcrum.subscribe(
+                SwiftFulcrum.API.blockchain.headers.subscribe,
+                options: .init(timeout: .seconds(30))
+            )
+        }
+
+        let request = try await decodeRequestObject(await transport.dequeueOutgoing())
+        let identifier = try requestIdentifier(from: request)
+        let payload = try TransportTestActor.encodeResponsePayload(
+            identifier: identifier,
+            result: ["height": 900_100, "hex": String(repeating: "b", count: 160)]
+        )
+        await transport.enqueueIncoming(.data(payload))
+
+        let subscription = try await subscribeTask.value
+        #expect((await fulcrum.listSubscriptions()).count == 1)
+
+        await fulcrum.stop()
+
+        let snapshot = await fulcrum.makeDiagnosticsSnapshot()
+        #expect(snapshot.activeSubscriptionCount == 0)
+        #expect((await fulcrum.listSubscriptions()).isEmpty)
+        #expect(await NetworkTestClient.detectStreamTermination(subscription.updates, within: .seconds(5)))
+    }
+
+    @Test("stop() cancels pending subscription cleanup sends", .timeLimit(.minutes(1)))
+    func stopCancelsPendingSubscriptionCleanupSends() async throws {
+        let (fulcrum, transport) = try await makeStartedFulcrum()
+        let unsubscribeMethodPath = SwiftFulcrum.RPC.Method.blockchain(.headers(.unsubscribe)).path
+
+        let subscribeTask = Task {
+            try await fulcrum.subscribe(
+                SwiftFulcrum.API.blockchain.headers.subscribe,
+                options: .init(timeout: .seconds(30))
+            )
+        }
+
+        let request = try await decodeRequestObject(await transport.dequeueOutgoing())
+        let identifier = try requestIdentifier(from: request)
+        let payload = try TransportTestActor.encodeResponsePayload(
+            identifier: identifier,
+            result: ["height": 900_200, "hex": String(repeating: "c", count: 160)]
+        )
+        await transport.enqueueIncoming(.data(payload))
+
+        let subscription = try await subscribeTask.value
+        let baselineUnsubscribeCount = try await countSentMethodOccurrences(
+            unsubscribeMethodPath,
+            transport: transport
+        )
+
+        await transport.configureOutgoingSendPaused(true)
+        await subscription.cancel()
+
+        let cleanupSendPaused = await waitUntil(timeout: .seconds(2)) {
+            await transport.makePendingOutgoingSendCount() == 1
+        }
+        #expect(cleanupSendPaused)
+
+        await fulcrum.stop()
+        await transport.configureOutgoingSendPaused(false)
+        try await Task.sleep(for: .milliseconds(150))
+
+        let finalUnsubscribeCount = try await countSentMethodOccurrences(
+            unsubscribeMethodPath,
+            transport: transport
+        )
+        #expect(finalUnsubscribeCount == baselineUnsubscribeCount)
+    }
+
     @Test("cancel() emits an unsubscribe request for active subscriptions", .timeLimit(.minutes(1)))
     func cancellingSubscriptionEmitsUnsubscribeRequest() async throws {
         let (fulcrum, transport) = try await makeStartedFulcrum()

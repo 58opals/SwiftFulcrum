@@ -50,6 +50,9 @@ extension WebSocketConnection.Reconnector {
         }
         components.scheme = components.scheme?.lowercased()
         components.host = components.host?.lowercased()
+        if components.path == "/" {
+            components.path = ""
+        }
         return components.url?.absoluteString ?? url.absoluteString
     }
 

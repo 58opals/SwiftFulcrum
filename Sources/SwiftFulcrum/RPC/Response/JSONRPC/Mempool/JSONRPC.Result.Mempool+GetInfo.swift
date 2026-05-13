@@ -11,12 +11,12 @@ extension SwiftFulcrum.RPC.Response.JSONRPC.Result.Mempool {
         let isFullReplaceByFeeEnabled: Bool?
 
         init(from decoder: Decoder) throws {
-            let container = try decoder.container(keyedBy: JSONRPCResponseDecodeModel.CodingKeyModel.self)
-            let mempoolMinimumFeeKey = JSONRPCResponseDecodeModel.CodingKeyModel("mempoolminfee")
-            let minimumRelayTransactionFeeKey = JSONRPCResponseDecodeModel.CodingKeyModel("minrelaytxfee")
-            let incrementalRelayFeeKey = JSONRPCResponseDecodeModel.CodingKeyModel("incrementalrelayfee")
-            let unbroadcastCountKey = JSONRPCResponseDecodeModel.CodingKeyModel("unbroadcastcount")
-            let fullReplaceByFeeKey = JSONRPCResponseDecodeModel.CodingKeyModel("fullrbf")
+            let container = try decoder.container(keyedBy: JSONRPCResponseDecodeModel.CodingKey.self)
+            let mempoolMinimumFeeKey = JSONRPCResponseDecodeModel.CodingKey("mempoolminfee")
+            let minimumRelayTransactionFeeKey = JSONRPCResponseDecodeModel.CodingKey("minrelaytxfee")
+            let incrementalRelayFeeKey = JSONRPCResponseDecodeModel.CodingKey("incrementalrelayfee")
+            let unbroadcastCountKey = JSONRPCResponseDecodeModel.CodingKey("unbroadcastcount")
+            let fullReplaceByFeeKey = JSONRPCResponseDecodeModel.CodingKey("fullrbf")
 
             self.mempoolminfee = try container.decodeIfPresent(FlexibleNumber.self, forKey: mempoolMinimumFeeKey)
             self.minrelaytxfee = try container.decodeIfPresent(FlexibleNumber.self, forKey: minimumRelayTransactionFeeKey)
