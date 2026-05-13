@@ -1,4 +1,4 @@
-// Response.Server+Features.swift
+// Response.Result.Server+Features.swift
 
 import Foundation
 

@@ -24,6 +24,6 @@ extension SwiftFulcrum.Response.Blockchain.Transaction.DSProof {
     }
 }
 
-extension SwiftFulcrum.Response.Blockchain.Transaction.DSProof.Subscribe: JSONRPCResponseDecodeModel.NilValueModel {
+extension SwiftFulcrum.Response.Blockchain.Transaction.DSProof.Subscribe: JSONRPCResponseDecodeModel.NilValue {
     static var nilValue: Self { .init(proof: nil) }
 }

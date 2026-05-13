@@ -1,4 +1,4 @@
-// Response.Blockchain.ScriptHash+GetHistory.swift
+// Response.Result.Blockchain.ScriptHash+GetHistory.swift
 
 import Foundation
 

@@ -8,12 +8,12 @@ extension SwiftFulcrum.RPC.Method {
         case .getInfo:
             return FulcrumRequest(id: uuid,
                                   method: self,
-                                  params: RPCRequestParametersModel.EmptyModel())
+                                  params: RPCRequestParametersModel.Empty())
 
         case .getFeeHistogram:
             return FulcrumRequest(id: uuid,
                                   method: self,
-                                  params: RPCRequestParametersModel.EmptyModel())
+                                  params: RPCRequestParametersModel.Empty())
         }
     }
 }

@@ -1,4 +1,4 @@
-// Response.Blockchain.ScriptHash+Unsubscribe.swift
+// Response.Result.Blockchain.ScriptHash+Unsubscribe.swift
 
 import Foundation
 

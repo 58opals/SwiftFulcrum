@@ -8,7 +8,7 @@ extension Data {
         context: JSONRPCCodec.DecodeContext? = nil
     ) throws -> Payload {
         let envelopeMethodPath = try? JSONRPCCodec.Coder.decoder
-            .decode(JSONRPCResponseDecodeModel.IdentifierEnvelopeModel.self, from: self)
+            .decode(JSONRPCResponseDecodeModel.IdentifierEnvelope.self, from: self)
             .method
 
         do {

@@ -1,4 +1,4 @@
-// Response.Blockchain.UTXO+GetInfo.swift
+// Response.Result.Blockchain.UTXO+GetInfo.swift
 
 import Foundation
 
@@ -32,7 +32,7 @@ extension SwiftFulcrum.Response.Blockchain.UTXO {
     }
 }
 
-extension SwiftFulcrum.Response.Blockchain.UTXO.GetInfo: JSONRPCResponseDecodeModel.NilValueModel {
+extension SwiftFulcrum.Response.Blockchain.UTXO.GetInfo: JSONRPCResponseDecodeModel.NilValue {
     static var nilValue: Self {
         .init(confirmedHeight: nil, scriptHash: nil, value: nil, tokenData: nil)
     }

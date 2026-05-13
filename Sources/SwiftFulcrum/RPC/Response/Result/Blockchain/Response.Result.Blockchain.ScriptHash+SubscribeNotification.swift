@@ -1,4 +1,4 @@
-// Response.Blockchain.ScriptHash+SubscribeNotification.swift
+// Response.Result.Blockchain.ScriptHash+SubscribeNotification.swift
 
 import Foundation
 

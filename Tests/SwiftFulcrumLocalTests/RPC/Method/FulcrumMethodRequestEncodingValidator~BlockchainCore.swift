@@ -186,5 +186,10 @@ extension FulcrumMethodRequestEncodingValidator {
             expectedPath: SwiftFulcrum.RPC.Method.blockchain(.utxo(.getInfo(transactionHash: "", outputIndex: 0))).path,
             expectedParameters: ["ee", 7]
         )
+        try assertRequest(
+            .blockchain(.utxo(.getInfo(transactionHash: "ee", outputIndex: 65_536))),
+            expectedPath: SwiftFulcrum.RPC.Method.blockchain(.utxo(.getInfo(transactionHash: "", outputIndex: 0))).path,
+            expectedParameters: ["ee", 65_536]
+        )
     }
 }

@@ -8,26 +8,16 @@ extension SwiftFulcrum.RPC.Method {
         case .get(let blockHash):
             return FulcrumRequest(id: uuid,
                                   method: self,
-                                  params: RPCRequestParametersModel.SingleValueModel(value: blockHash))
+                                  params: RPCRequestParametersModel.SingleValue(value: blockHash))
         }
     }
 
     func createHeadersRequest(_ headers: Blockchain.Headers, uuid: UUID) -> FulcrumRequest {
         switch headers {
-        case .getTip:
+        case .getTip, .subscribe, .unsubscribe:
             return FulcrumRequest(id: uuid,
                                   method: self,
-                                  params: RPCRequestParametersModel.EmptyModel())
-
-        case .subscribe:
-            return FulcrumRequest(id: uuid,
-                                  method: self,
-                                  params: RPCRequestParametersModel.EmptyModel())
-
-        case .unsubscribe:
-            return FulcrumRequest(id: uuid,
-                                  method: self,
-                                  params: RPCRequestParametersModel.EmptyModel())
+                                  params: RPCRequestParametersModel.Empty())
         }
     }
 }

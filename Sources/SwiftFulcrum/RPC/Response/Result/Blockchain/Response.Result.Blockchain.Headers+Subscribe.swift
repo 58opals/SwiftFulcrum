@@ -1,4 +1,4 @@
-// Response.Blockchain.Headers+Subscribe.swift
+// Response.Result.Blockchain.Headers+Subscribe.swift
 
 import Foundation
 

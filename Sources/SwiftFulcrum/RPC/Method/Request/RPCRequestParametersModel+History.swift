@@ -1,9 +1,9 @@
-// RPCRequestParametersModel+HistoryModel.swift
+// RPCRequestParametersModel+History.swift
 
 import Foundation
 
 extension RPCRequestParametersModel {
-    struct HistoryModel: Encodable {
+    struct History: Encodable {
         let identifier: String
         let fromHeight: UInt?
         let toHeight: UInt?

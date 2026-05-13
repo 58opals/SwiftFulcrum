@@ -11,22 +11,22 @@ extension SwiftFulcrum.RPC.Method {
         case .get(let transactionHash):
             return FulcrumRequest(id: uuid,
                                   method: self,
-                                  params: RPCRequestParametersModel.SingleValueModel(value: transactionHash))
+                                  params: RPCRequestParametersModel.SingleValue(value: transactionHash))
 
         case .list:
             return FulcrumRequest(id: uuid,
                                   method: self,
-                                  params: RPCRequestParametersModel.EmptyModel())
+                                  params: RPCRequestParametersModel.Empty())
 
         case .subscribe(let transactionHash):
             return FulcrumRequest(id: uuid,
                                   method: self,
-                                  params: RPCRequestParametersModel.SingleValueModel(value: transactionHash))
+                                  params: RPCRequestParametersModel.SingleValue(value: transactionHash))
 
         case .unsubscribe(let transactionHash):
             return FulcrumRequest(id: uuid,
                                   method: self,
-                                  params: RPCRequestParametersModel.SingleValueModel(value: transactionHash))
+                                  params: RPCRequestParametersModel.SingleValue(value: transactionHash))
         }
     }
 }

@@ -1,9 +1,9 @@
-// RPCRequestParametersModel+OptionalTokenFilterModel.swift
+// RPCRequestParametersModel+OptionalTokenFilter.swift
 
 import Foundation
 
 extension RPCRequestParametersModel {
-    struct OptionalTokenFilterModel: Encodable {
+    struct OptionalTokenFilter: Encodable {
         let identifier: String
         let tokenFilter: SwiftFulcrum.CashTokens.TokenFilter?
 

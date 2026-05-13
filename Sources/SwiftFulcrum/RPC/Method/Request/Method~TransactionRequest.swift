@@ -8,12 +8,12 @@ extension SwiftFulcrum.RPC.Method {
         case .broadcast(let rawTransaction):
             return FulcrumRequest(id: uuid,
                                   method: self,
-                                  params: RPCRequestParametersModel.SingleValueModel(value: rawTransaction))
+                                  params: RPCRequestParametersModel.SingleValue(value: rawTransaction))
 
         case .get(let transactionHash, let isVerbose):
             return FulcrumRequest(id: uuid,
                                   method: self,
-                                  params: RPCRequestParametersModel.PairModel(
+                                  params: RPCRequestParametersModel.Pair(
                                       first: transactionHash,
                                       second: isVerbose
                                   ))
@@ -21,7 +21,7 @@ extension SwiftFulcrum.RPC.Method {
         case .getConfirmedBlockHash(let transactionHash, let shouldIncludeHeader):
             return FulcrumRequest(id: uuid,
                                   method: self,
-                                  params: RPCRequestParametersModel.PairModel(
+                                  params: RPCRequestParametersModel.Pair(
                                       first: transactionHash,
                                       second: shouldIncludeHeader
                                   ))
@@ -29,12 +29,12 @@ extension SwiftFulcrum.RPC.Method {
         case .getHeight(let transactionHash):
             return FulcrumRequest(id: uuid,
                                   method: self,
-                                  params: RPCRequestParametersModel.SingleValueModel(value: transactionHash))
+                                  params: RPCRequestParametersModel.SingleValue(value: transactionHash))
 
         case .getMerkle(let transactionHash, let height):
             return FulcrumRequest(id: uuid,
                                   method: self,
-                                  params: RPCRequestParametersModel.PairModel(
+                                  params: RPCRequestParametersModel.Pair(
                                       first: transactionHash,
                                       second: height
                                   ))
@@ -42,7 +42,7 @@ extension SwiftFulcrum.RPC.Method {
         case .idFromPos(let blockHeight, let transactionPosition, let shouldIncludeMerkleProof):
             return FulcrumRequest(id: uuid,
                                   method: self,
-                                  params: RPCRequestParametersModel.TripleModel(
+                                  params: RPCRequestParametersModel.Triple(
                                       first: blockHeight,
                                       second: transactionPosition,
                                       third: shouldIncludeMerkleProof
@@ -51,12 +51,12 @@ extension SwiftFulcrum.RPC.Method {
         case .subscribe(let transactionHash):
             return FulcrumRequest(id: uuid,
                                   method: self,
-                                  params: RPCRequestParametersModel.SingleValueModel(value: transactionHash))
+                                  params: RPCRequestParametersModel.SingleValue(value: transactionHash))
 
         case .unsubscribe(let transactionHash):
             return FulcrumRequest(id: uuid,
                                   method: self,
-                                  params: RPCRequestParametersModel.SingleValueModel(value: transactionHash))
+                                  params: RPCRequestParametersModel.SingleValue(value: transactionHash))
 
         case .dsProof(let dSProof):
             return createDSProofRequest(dSProof, uuid: uuid)

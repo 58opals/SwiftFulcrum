@@ -1,4 +1,4 @@
-// Response.Blockchain+RelayFee.swift
+// Response.Result.Blockchain+RelayFee.swift
 
 import Foundation
 

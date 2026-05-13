@@ -1,4 +1,4 @@
-// Response.Server+Version.swift
+// Response.Result.Server+Version.swift
 
 import Foundation
 

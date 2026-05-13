@@ -1,4 +1,4 @@
-// Response.Blockchain.Address+GetMempool.swift
+// Response.Result.Blockchain.Address+GetMempool.swift
 
 import Foundation
 

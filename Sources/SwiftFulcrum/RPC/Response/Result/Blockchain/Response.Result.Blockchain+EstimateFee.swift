@@ -1,4 +1,4 @@
-// Response.Blockchain+EstimateFee.swift
+// Response.Result.Blockchain+EstimateFee.swift
 
 import Foundation
 

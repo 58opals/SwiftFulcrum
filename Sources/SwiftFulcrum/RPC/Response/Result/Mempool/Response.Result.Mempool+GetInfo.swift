@@ -1,4 +1,4 @@
-// Response.Mempool+GetInfo.swift
+// Response.Result.Mempool+GetInfo.swift
 
 import Foundation
 
@@ -12,11 +12,27 @@ extension SwiftFulcrum.Response.Mempool {
 
         public init(from decoder: Decoder) throws {
             let payloadModel = try SwiftFulcrum.RPC.Response.JSONRPC.Result.Mempool.GetInfo(from: decoder)
-            self.mempoolMinimumFee = payloadModel.mempoolminfee?.value
-            self.minimumRelayTransactionFee = payloadModel.minrelaytxfee?.value
-            self.incrementalRelayFee = payloadModel.incrementalrelayfee?.value
-            self.unbroadcastCount = payloadModel.unbroadcastcount
+            self.mempoolMinimumFee = try Self.validateFee(payloadModel.mempoolminfee?.value, field: "mempoolminfee")
+            self.minimumRelayTransactionFee = try Self.validateFee(payloadModel.minrelaytxfee?.value, field: "minrelaytxfee")
+            self.incrementalRelayFee = try Self.validateFee(payloadModel.incrementalrelayfee?.value, field: "incrementalrelayfee")
+            self.unbroadcastCount = try Self.validateCount(payloadModel.unbroadcastcount, field: "unbroadcastcount")
             self.isFullReplaceByFeeEnabled = payloadModel.isFullReplaceByFeeEnabled
+        }
+
+        private static func validateFee(_ value: Double?, field: String) throws -> Double? {
+            guard let value else { return nil }
+            guard value.isFinite, value >= 0 else {
+                throw ResponseResultDecodeError.unexpectedFormat("Invalid \(field): \(value)")
+            }
+            return value
+        }
+
+        private static func validateCount(_ value: Int?, field: String) throws -> Int? {
+            guard let value else { return nil }
+            guard value >= 0 else {
+                throw ResponseResultDecodeError.unexpectedFormat("Invalid \(field): \(value)")
+            }
+            return value
         }
     }
 }

@@ -1,4 +1,4 @@
-// Response.Server+Ping.swift
+// Response.Result.Server+Ping.swift
 
 import Foundation
 
@@ -13,6 +13,6 @@ extension SwiftFulcrum.Response.Server {
     }
 }
 
-extension SwiftFulcrum.Response.Server.Ping: JSONRPCResponseDecodeModel.NilValueModel {
+extension SwiftFulcrum.Response.Server.Ping: JSONRPCResponseDecodeModel.NilValue {
     static var nilValue: Self { .init() }
 }

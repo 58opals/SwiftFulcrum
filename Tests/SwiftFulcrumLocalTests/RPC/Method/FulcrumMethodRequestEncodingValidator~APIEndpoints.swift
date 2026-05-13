@@ -136,6 +136,11 @@ extension FulcrumMethodRequestEncodingValidator {
             expectedPath: "blockchain.utxo.get_info",
             expectedParameters: ["ee", 7]
         )
+        try assertEndpoint(
+            .blockchain.utxo.getInfo(transactionHash: "ee", outputIndex: 65_536),
+            expectedPath: "blockchain.utxo.get_info",
+            expectedParameters: ["ee", 65_536]
+        )
     }
 
     @Test("Typed API endpoints encode transaction requests")

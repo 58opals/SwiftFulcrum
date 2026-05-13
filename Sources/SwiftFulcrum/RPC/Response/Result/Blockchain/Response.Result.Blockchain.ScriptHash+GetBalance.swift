@@ -1,4 +1,4 @@
-// Response.Blockchain.ScriptHash+GetBalance.swift
+// Response.Result.Blockchain.ScriptHash+GetBalance.swift
 
 import Foundation
 

@@ -1,4 +1,4 @@
-// Response.Mempool+GetFeeHistogram.swift
+// Response.Result.Mempool+GetFeeHistogram.swift
 
 import Foundation
 

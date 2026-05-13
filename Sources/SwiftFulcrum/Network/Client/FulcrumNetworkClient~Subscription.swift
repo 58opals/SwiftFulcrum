@@ -19,7 +19,11 @@ extension FulcrumNetworkClient {
             task.cancel()
         }
 
+        let cleanupTasks = Array(subscriptionCleanupTasks.values)
         subscriptionCleanupTasks.removeAll(keepingCapacity: false)
+        for task in cleanupTasks {
+            task.cancel()
+        }
 
         let cancellationRegistrations = Array(subscriptionCancellationRegistrations.values)
         subscriptionCancellationRegistrations.removeAll(keepingCapacity: false)

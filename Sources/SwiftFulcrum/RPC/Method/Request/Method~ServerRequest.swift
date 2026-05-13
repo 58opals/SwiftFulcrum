@@ -8,12 +8,12 @@ extension SwiftFulcrum.RPC.Method {
         case .ping:
             return FulcrumRequest(id: uuid,
                                   method: self,
-                                  params: RPCRequestParametersModel.EmptyModel())
+                                  params: RPCRequestParametersModel.Empty())
 
         case .version(let clientName, let negotiationArgument):
             return FulcrumRequest(id: uuid,
                                   method: self,
-                                  params: RPCRequestParametersModel.PairModel(
+                                  params: RPCRequestParametersModel.Pair(
                                       first: clientName,
                                       second: negotiationArgument
                                   ))
@@ -21,7 +21,7 @@ extension SwiftFulcrum.RPC.Method {
         case .features:
             return FulcrumRequest(id: uuid,
                                   method: self,
-                                  params: RPCRequestParametersModel.EmptyModel())
+                                  params: RPCRequestParametersModel.Empty())
         }
     }
 }

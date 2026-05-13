@@ -10,6 +10,11 @@ extension SwiftFulcrum.Logging.ConsoleAdapter {
         private var lastRendered: String?
         private var repeatCount = 0
         private var debounceTask: Task<Void, Never>?
+        private let printLine: @Sendable (String) -> Void
+
+        init(printLine: @escaping @Sendable (String) -> Void = { print($0) }) {
+            self.printLine = printLine
+        }
 
         func enqueue(rendered: String, signature: String) async {
             if signature == lastSignature {
@@ -22,7 +27,7 @@ extension SwiftFulcrum.Logging.ConsoleAdapter {
 
             lastSignature = signature
             lastRendered = rendered
-            print(rendered)
+            printLine(rendered)
         }
 
         private func scheduleFlush() {
@@ -40,9 +45,9 @@ extension SwiftFulcrum.Logging.ConsoleAdapter {
             let times = repeatCount
             let repetitionDescriptor = times == 1 ? "1 more time" : "\(times) more times"
             if let lastRendered {
-                print("↑ previous line repeated \(repetitionDescriptor): \(lastRendered)")
+                printLine("↑ previous line repeated \(repetitionDescriptor): \(lastRendered)")
             } else {
-                print("↑ previous line repeated \(repetitionDescriptor)")
+                printLine("↑ previous line repeated \(repetitionDescriptor)")
             }
             repeatCount = 0
         }

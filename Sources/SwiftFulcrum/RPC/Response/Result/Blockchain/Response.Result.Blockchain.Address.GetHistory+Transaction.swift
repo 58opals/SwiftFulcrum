@@ -1,4 +1,4 @@
-// Response.Blockchain.Address.GetHistory+Transaction.swift
+// Response.Result.Blockchain.Address.GetHistory+Transaction.swift
 
 import Foundation
 
