@@ -55,7 +55,7 @@ Task {
     do {
         let client = try await SwiftFulcrum.Client()
 
-        let tip = try await client.request(.blockchain.headers.getTip)
+        let tip = try await client.request(SwiftFulcrum.API.blockchain.headers.tip)
         print("Best header height: \(tip.height)")
         await client.stop()
     } catch {

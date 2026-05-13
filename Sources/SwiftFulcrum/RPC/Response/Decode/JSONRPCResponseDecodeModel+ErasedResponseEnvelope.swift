@@ -7,9 +7,11 @@ extension JSONRPCResponseDecodeModel {
         let id: UUID?
         let error: SwiftFulcrum.RPC.Response.Error.Result?
         private let hasResultKey: Bool
+        private let hasErrorKey: Bool
         private let hasMethodKey: Bool
         private let hasParamsKey: Bool
         var hasResult: Bool { hasResultKey }
+        var hasError: Bool { hasErrorKey }
         var hasMethod: Bool { hasMethodKey }
         var hasParams: Bool { hasParamsKey }
 
@@ -25,6 +27,7 @@ extension JSONRPCResponseDecodeModel {
             self.id = try container.decodeIfPresent(UUID.self, forKey: idKey)
             self.error = try container.decodeIfPresent(SwiftFulcrum.RPC.Response.Error.Result.self, forKey: errorKey)
             self.hasResultKey = container.contains(resultKey)
+            self.hasErrorKey = container.contains(errorKey)
             self.hasMethodKey = container.contains(methodKey)
             self.hasParamsKey = container.contains(paramsKey)
         }

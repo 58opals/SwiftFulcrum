@@ -20,7 +20,7 @@ struct ClientCancellationValidator {
             do {
                 _ = try await fulcrum.request(
                     method: .blockchain(.headers(.getTip)),
-                    responseType: SwiftFulcrum.Response.Blockchain.Headers.GetTip.self,
+                    responseType: SwiftFulcrum.Response.Blockchain.Headers.Tip.self,
                     options: options
                 )
                 Issue.record("First request should throw cancelled.")
@@ -36,7 +36,7 @@ struct ClientCancellationValidator {
             do {
                 _ = try await fulcrum.request(
                     method: .mempool(.getInfo),
-                    responseType: SwiftFulcrum.Response.Mempool.GetInfo.self,
+                    responseType: SwiftFulcrum.Response.Mempool.Info.self,
                     options: options
                 )
                 Issue.record("Second request should throw cancelled.")
@@ -71,7 +71,7 @@ struct ClientCancellationValidator {
 
         let requestError = await captureClientError {
             _ = try await client.request(
-                .blockchain.headers.getTip,
+                SwiftFulcrum.API.blockchain.headers.tip,
                 options: .init(timeout: .milliseconds(250), cancellation: cancellation)
             )
         }
@@ -80,7 +80,7 @@ struct ClientCancellationValidator {
 
         let subscribeError = await captureClientError {
             _ = try await client.subscribe(
-                .blockchain.headers.subscribe,
+                SwiftFulcrum.API.blockchain.headers.subscribe,
                 options: .init(timeout: .milliseconds(250), cancellation: cancellation)
             )
         }
@@ -201,7 +201,7 @@ struct ClientCancellationValidator {
 
         let subscribeTask = Task {
             try await fulcrum.subscribe(
-                .blockchain.headers.subscribe,
+                SwiftFulcrum.API.blockchain.headers.subscribe,
                 options: .init(timeout: .seconds(30), cancellation: sharedCancellation)
             )
         }
@@ -235,7 +235,7 @@ struct ClientCancellationValidator {
             do {
                 _ = try await fulcrum.request(
                     method: .blockchain(.headers(.getTip)),
-                    responseType: SwiftFulcrum.Response.Blockchain.Headers.GetTip.self,
+                    responseType: SwiftFulcrum.Response.Blockchain.Headers.Tip.self,
                     options: .init(timeout: .milliseconds(100))
                 )
                 Issue.record("request() should time out when send is delayed.")
@@ -294,7 +294,7 @@ struct ClientCancellationValidator {
             do {
                 _ = try await client.request(
                     method: .blockchain(.headers(.getTip)),
-                    responseType: SwiftFulcrum.Response.Blockchain.Headers.GetTip.self,
+                    responseType: SwiftFulcrum.Response.Blockchain.Headers.Tip.self,
                     options: .init(timeout: timeout)
                 )
                 Issue.record("request() should time out after spending the single end-to-end budget.")
@@ -350,7 +350,7 @@ struct ClientCancellationValidator {
             do {
                 _ = try await fulcrum.request(
                     method: .blockchain(.headers(.getTip)),
-                    responseType: SwiftFulcrum.Response.Blockchain.Headers.GetTip.self,
+                    responseType: SwiftFulcrum.Response.Blockchain.Headers.Tip.self,
                     options: .init(timeout: .seconds(30))
                 )
                 Issue.record("request() should throw cancelled when the calling task is cancelled.")

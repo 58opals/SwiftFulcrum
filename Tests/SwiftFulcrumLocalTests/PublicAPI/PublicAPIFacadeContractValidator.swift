@@ -6,8 +6,8 @@ import SwiftFulcrum
 
 @Suite(.tags(.local))
 struct PublicAPIFacadeContractValidator {
-    @Test("Facade namespace aliases compile")
-    func facadeAliasesCompile() {
+    @Test("Public facade symbols compile")
+    func compilePublicFacadeSymbols() {
         let clientType: SwiftFulcrum.Client.Type = SwiftFulcrum.Client.self
         _ = clientType
 
@@ -42,11 +42,11 @@ struct PublicAPIFacadeContractValidator {
         let apiType: SwiftFulcrum.API.Type = SwiftFulcrum.API.self
         _ = apiType
 
-        let endpoint = SwiftFulcrum.API.blockchain.headers.getTip
+        let endpoint = SwiftFulcrum.API.blockchain.headers.tip
         _ = endpoint
 
-        let responseType: SwiftFulcrum.Response.Blockchain.Headers.GetTip.Type =
-            SwiftFulcrum.Response.Blockchain.Headers.GetTip.self
+        let responseType: SwiftFulcrum.Response.Blockchain.Headers.Tip.Type =
+            SwiftFulcrum.Response.Blockchain.Headers.Tip.self
         _ = responseType
 
         let tokenFilter: SwiftFulcrum.CashTokens.TokenFilter = .include
@@ -82,8 +82,8 @@ struct PublicAPIFacadeContractValidator {
         let configuration = SwiftFulcrum.Client.Configuration(tlsDescriptor: tlsDescriptor)
         _ = configuration
 
-        let unaryRequest: @Sendable (SwiftFulcrum.Client) async throws -> SwiftFulcrum.Response.Blockchain.Headers.GetTip = { client in
-            try await client.request(.blockchain.headers.getTip)
+        let unaryRequest: @Sendable (SwiftFulcrum.Client) async throws -> SwiftFulcrum.Response.Blockchain.Headers.Tip = { client in
+            try await client.request(SwiftFulcrum.API.blockchain.headers.tip)
         }
         _ = unaryRequest
 
@@ -91,18 +91,18 @@ struct PublicAPIFacadeContractValidator {
             SwiftFulcrum.Response.Blockchain.Headers.Subscribe,
             SwiftFulcrum.Response.Blockchain.Headers.SubscribeNotification
         > = { client in
-            try await client.subscribe(.blockchain.headers.subscribe)
+            try await client.subscribe(SwiftFulcrum.API.blockchain.headers.subscribe)
         }
         _ = streamingRequest
 
         let rawTransactionRequest: @Sendable (SwiftFulcrum.Client) async throws -> String = { client in
-            try await client.request(.blockchain.transaction.get(transactionHash: "00"))
+            try await client.request(SwiftFulcrum.API.blockchain.transaction.raw(transactionHash: "00"))
         }
         _ = rawTransactionRequest
 
         let verboseTransactionRequest:
-            @Sendable (SwiftFulcrum.Client) async throws -> SwiftFulcrum.Response.Blockchain.Transaction.Get = { client in
-                try await client.request(.blockchain.transaction.getVerbose(transactionHash: "00"))
+            @Sendable (SwiftFulcrum.Client) async throws -> SwiftFulcrum.Response.Blockchain.Transaction.Verbose = { client in
+                try await client.request(SwiftFulcrum.API.blockchain.transaction.verbose(transactionHash: "00"))
             }
         _ = verboseTransactionRequest
     }
@@ -111,7 +111,7 @@ struct PublicAPIFacadeContractValidator {
         "Generated public symbol graph excludes removed wrapper types",
         .enabled(if: Self.hasGeneratedPublicSymbolGraph, "Run `swift package dump-symbol-graph` to enable symbol-graph facade validation.")
     )
-    func generatedPublicSymbolGraphExcludesRemovedWrapperTypes() throws {
+    func excludeRemovedWrapperTypesFromGeneratedPublicSymbolGraph() throws {
         let symbolGraph = try loadGeneratedPublicSymbolGraph()
         let publicSymbols = Set(symbolGraph.symbols.map { $0.pathComponents.joined(separator: ".") })
 
@@ -129,8 +129,14 @@ struct PublicAPIFacadeContractValidator {
             "SwiftFulcrum.API",
             "SwiftFulcrum.API.Request",
             "SwiftFulcrum.API.Subscription",
+            "SwiftFulcrum.API.Blockchain.Headers.tip",
+            "SwiftFulcrum.API.Blockchain.Transaction.raw(transactionHash:)",
+            "SwiftFulcrum.API.Blockchain.Transaction.verbose(transactionHash:)",
             "SwiftFulcrum.Response",
-            "SwiftFulcrum.Response.Blockchain.Headers.GetTip",
+            "SwiftFulcrum.Response.Blockchain.Headers.Tip",
+            "SwiftFulcrum.Response.Blockchain.Transaction.Verbose",
+            "SwiftFulcrum.Response.Blockchain.Transaction.DSProof.Lookup",
+            "SwiftFulcrum.Response.Mempool.Info",
             "SwiftFulcrum.CashTokens",
             "SwiftFulcrum.CashTokens.TokenFilter",
             "SwiftFulcrum.CashTokens.TokenData",
@@ -172,7 +178,35 @@ struct PublicAPIFacadeContractValidator {
             "SwiftFulcrum.Client.Configuration.urlSession",
             "SwiftFulcrum.Client.Configuration.TLSDescriptor.delegate",
             "SwiftFulcrum.Client.Configuration.TLSDescriptor.init(options:delegate:)",
-            "SwiftFulcrum.Client.Configuration.init(tlsDescriptor:reconnect:metrics:logger:isLoggingEnabled:urlSession:connectionTimeout:maximumMessageSize:bootstrapServers:serverCatalogLoader:network:protocolNegotiation:)"
+            "SwiftFulcrum.Client.Configuration.init(tlsDescriptor:reconnect:metrics:logger:isLoggingEnabled:urlSession:connectionTimeout:maximumMessageSize:bootstrapServers:serverCatalogLoader:network:protocolNegotiation:)",
+            "SwiftFulcrum.API.Request.server",
+            "SwiftFulcrum.API.Request.blockchain",
+            "SwiftFulcrum.API.Request.mempool",
+            "SwiftFulcrum.API.Subscription.server",
+            "SwiftFulcrum.API.Subscription.blockchain",
+            "SwiftFulcrum.API.Subscription.mempool",
+            "SwiftFulcrum.API.Blockchain.Headers.getTip",
+            "SwiftFulcrum.API.Blockchain.Transaction.get(transactionHash:)",
+            "SwiftFulcrum.API.Blockchain.Transaction.getVerbose(transactionHash:)",
+            "SwiftFulcrum.Response.Mempool.GetInfo",
+            "SwiftFulcrum.Response.Mempool.GetFeeHistogram",
+            "SwiftFulcrum.Response.Blockchain.Headers.GetTip",
+            "SwiftFulcrum.Response.Blockchain.Header.Get",
+            "SwiftFulcrum.Response.Blockchain.Address.GetBalance",
+            "SwiftFulcrum.Response.Blockchain.Address.GetFirstUse",
+            "SwiftFulcrum.Response.Blockchain.Address.GetHistory",
+            "SwiftFulcrum.Response.Blockchain.Address.GetMempool",
+            "SwiftFulcrum.Response.Blockchain.Address.GetScriptHash",
+            "SwiftFulcrum.Response.Blockchain.ScriptHash.GetBalance",
+            "SwiftFulcrum.Response.Blockchain.ScriptHash.GetFirstUse",
+            "SwiftFulcrum.Response.Blockchain.ScriptHash.GetHistory",
+            "SwiftFulcrum.Response.Blockchain.ScriptHash.GetMempool",
+            "SwiftFulcrum.Response.Blockchain.UTXO.GetInfo",
+            "SwiftFulcrum.Response.Blockchain.Transaction.Get",
+            "SwiftFulcrum.Response.Blockchain.Transaction.GetConfirmedBlockHash",
+            "SwiftFulcrum.Response.Blockchain.Transaction.GetHeight",
+            "SwiftFulcrum.Response.Blockchain.Transaction.GetMerkle",
+            "SwiftFulcrum.Response.Blockchain.Transaction.DSProof.Get"
         ]
 
         for symbol in hiddenSymbols {

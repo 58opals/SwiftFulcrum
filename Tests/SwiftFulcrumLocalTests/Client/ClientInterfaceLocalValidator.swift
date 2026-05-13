@@ -63,7 +63,7 @@ struct ClientInterfaceLocalValidator {
             do {
                 _ = try await client.request(
                     method: method,
-                    responseType: SwiftFulcrum.Response.Blockchain.Headers.GetTip.self
+                    responseType: SwiftFulcrum.Response.Blockchain.Headers.Tip.self
                 )
                 Issue.record("request() should reject subscription methods (method: \(method))")
             } catch let error as SwiftFulcrum.Client.Error {
@@ -87,7 +87,7 @@ struct ClientInterfaceLocalValidator {
 
         let requestTask = Task {
             try await client.request(
-                .blockchain.headers.getTip,
+                SwiftFulcrum.API.blockchain.headers.tip,
                 options: .init(timeout: .seconds(30))
             )
         }
@@ -184,7 +184,7 @@ struct ClientInterfaceLocalValidator {
         let requestTask = Task<SwiftFulcrum.Client.Error, Never> {
             do {
                 _ = try await client.request(
-                    .blockchain.headers.getTip,
+                    SwiftFulcrum.API.blockchain.headers.tip,
                     options: .init(timeout: .seconds(30))
                 )
                 Issue.record("request() should surface malformed payloads as decode errors")

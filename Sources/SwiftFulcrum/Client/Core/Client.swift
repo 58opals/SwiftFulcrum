@@ -37,15 +37,6 @@ extension SwiftFulcrum {
             startConnectionStateObservation()
         }
 
-        init(servers: [URL], configuration: Configuration = .init()) async throws {
-            guard let server = servers.randomElement() else {
-                throw Error.transport(.setupFailed)
-            }
-
-            self.client = try Self.makeClient(connectingTo: server, configuration: configuration)
-            startConnectionStateObservation()
-        }
-
         init(client: FulcrumNetworkClient) async {
             self.client = client
             startConnectionStateObservation()
@@ -157,7 +148,7 @@ private extension SwiftFulcrum.Client {
             fallback: configuration.bootstrapServers ?? .init()
         )
 
-        let validServers = serverList.compactMap { try? validate(endpoint: $0) }
+        let validServers = serverList.compactMap { try? SwiftFulcrum.ServerCatalog.validate(endpoint: $0) }
 
         guard let server = validServers.randomElement() else {
             throw Error.transport(.setupFailed)
@@ -167,7 +158,7 @@ private extension SwiftFulcrum.Client {
     }
 
     static func makeWebSocket(connectingTo endpoint: URL, configuration: Configuration) throws -> WebSocketConnection {
-        let endpoint = try validate(endpoint: endpoint)
+        let endpoint = try SwiftFulcrum.ServerCatalog.validate(endpoint: endpoint)
 
         return WebSocketConnection(
             url: endpoint,
@@ -175,16 +166,6 @@ private extension SwiftFulcrum.Client {
             reconnectConfiguration: configuration.reconnect.reconnectorConfiguration,
             connectionTimeout: configuration.connectionTimeout
         )
-    }
-
-    static func validate(endpoint: URL) throws -> URL {
-        guard ["ws", "wss"].contains(endpoint.scheme?.lowercased()),
-              let host = endpoint.host,
-              !host.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            throw Error.client(.invalidURL(endpoint.absoluteString))
-        }
-
-        return endpoint
     }
 
     func makeOrReuseStartTask() -> Task<Void, Swift.Error> {

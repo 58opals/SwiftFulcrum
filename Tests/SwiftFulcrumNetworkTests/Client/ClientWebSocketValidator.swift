@@ -23,7 +23,7 @@ struct ClientWebSocketValidator {
 
         try await client.start()
 
-        let (_, tip): (UUID, SwiftFulcrum.Response.Blockchain.Headers.GetTip) = try await client.call(
+        let (_, tip): (UUID, SwiftFulcrum.Response.Blockchain.Headers.Tip) = try await client.call(
             method: .blockchain(.headers(.getTip)),
             options: .init(timeout: .seconds(30))
         )

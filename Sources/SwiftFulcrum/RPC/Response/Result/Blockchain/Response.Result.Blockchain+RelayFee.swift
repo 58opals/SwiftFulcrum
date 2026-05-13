@@ -7,7 +7,11 @@ extension SwiftFulcrum.Response.Blockchain {
         public let fee: Double
 
         public init(from decoder: Decoder) throws {
-            self.fee = try Double(from: decoder)
+            let fee = try Double(from: decoder)
+            guard fee.isFinite, fee >= 0 else {
+                throw ResponseResultDecodeError.unexpectedFormat("Invalid relay fee: \(fee)")
+            }
+            self.fee = fee
         }
     }
 }

@@ -109,6 +109,36 @@ struct ResponseDecodingValidator {
         }
     }
 
+    @Test("Rejects envelopes with null error members")
+    func rejectEnvelopeWithNullError() throws {
+        let payload = try jsonData(
+            [
+                "jsonrpc": "2.0",
+                "id": UUID().uuidString,
+                "error": NSNull()
+            ]
+        )
+
+        #expect(throws: JSONRPCResponseDecodeError.self) {
+            _ = try payload.decode(String.self, context: .init(methodPath: "server.banner"))
+        }
+    }
+
+    @Test("Rejects erased envelopes with null error members")
+    func rejectErasedEnvelopeWithNullError() throws {
+        let payload = try jsonData(
+            [
+                "jsonrpc": "2.0",
+                "id": UUID().uuidString,
+                "error": NSNull()
+            ]
+        )
+
+        #expect(throws: JSONRPCResponseDecodeError.self) {
+            _ = try SwiftFulcrum.RPC.Response.JSONRPC.classifyErasedResponse(from: payload)
+        }
+    }
+
     @Test("Rejects subscription envelopes that contain an error")
     func rejectSubscriptionEnvelopeWithError() throws {
         let payload = try jsonData(
@@ -203,6 +233,78 @@ struct ResponseDecodingValidator {
         }
     }
 
+    @Test("Rejects server.features host ports outside the valid range")
+    func rejectServerFeaturesHostPortsOutsideValidRange() throws {
+        let payload = try jsonData(
+            [
+                "jsonrpc": "2.0",
+                "id": UUID().uuidString,
+                "result": [
+                    "genesis_hash": String(repeating: "0", count: 64),
+                    "hash_function": "sha256",
+                    "server_version": "Fulcrum 2.0",
+                    "protocol_max": "1.6.0",
+                    "protocol_min": "1.4.0",
+                    "hosts": [
+                        "invalid.fulcrum.example": ["wss_port": 0]
+                    ]
+                ]
+            ]
+        )
+
+        #expect(throws: ResponseResultDecodeError.self) {
+            _ = try payload.decode(
+                SwiftFulcrum.Response.Server.Features.self,
+                context: .init(methodPath: "server.features")
+            )
+        }
+    }
+
+    @Test("Rejects server.features reusable payment address negative values")
+    func rejectServerFeaturesReusablePaymentAddressNegativeValues() throws {
+        let payload = try jsonData(
+            [
+                "jsonrpc": "2.0",
+                "id": UUID().uuidString,
+                "result": [
+                    "genesis_hash": String(repeating: "0", count: 64),
+                    "hash_function": "sha256",
+                    "server_version": "Fulcrum 2.0",
+                    "protocol_max": "1.6.0",
+                    "protocol_min": "1.4.0",
+                    "rpa": [
+                        "history_block_limit": -1,
+                        "max_history": 100,
+                        "prefix_bits": 20,
+                        "prefix_bits_min": 8,
+                        "starting_height": 0
+                    ]
+                ]
+            ]
+        )
+
+        #expect(throws: ResponseResultDecodeError.self) {
+            _ = try payload.decode(
+                SwiftFulcrum.Response.Server.Features.self,
+                context: .init(methodPath: "server.features")
+            )
+        }
+    }
+
+    @Test("Rejects server.version arrays with extra fields")
+    func rejectServerVersionArraysWithExtraFields() throws {
+        let payload = try jsonData(
+            ["jsonrpc": "2.0", "id": UUID().uuidString, "result": ["Fulcrum 2.0", "1.5.3", "extra"]]
+        )
+
+        #expect(throws: DecodingError.self) {
+            _ = try payload.decode(
+                SwiftFulcrum.Response.Server.Version.self,
+                context: .init(methodPath: "server.version")
+            )
+        }
+    }
+
     @Test("Decodes nil result payloads without wrapper adapters")
     func decodeNilResultPayloads() throws {
         let pingPayload = try jsonData(
@@ -217,7 +319,7 @@ struct ResponseDecodingValidator {
             ["jsonrpc": "2.0", "id": UUID().uuidString, "result": NSNull()]
         )
         let firstUse = try firstUsePayload.decode(
-            SwiftFulcrum.Response.Blockchain.Address.GetFirstUse.self,
+            SwiftFulcrum.Response.Blockchain.Address.FirstUse.self,
             context: .init(methodPath: "blockchain.address.get_first_use")
         )
         #expect(firstUse.isFound == false)
@@ -235,13 +337,27 @@ struct ResponseDecodingValidator {
         #expect(subscribe.status == nil)
     }
 
+    @Test("Rejects negative blockchain relay fees")
+    func rejectNegativeBlockchainRelayFee() throws {
+        let payload = try jsonData(
+            ["jsonrpc": "2.0", "id": UUID().uuidString, "result": -0.00001]
+        )
+
+        #expect(throws: ResponseResultDecodeError.self) {
+            _ = try payload.decode(
+                SwiftFulcrum.Response.Blockchain.RelayFee.self,
+                context: .init(methodPath: "blockchain.relayfee")
+            )
+        }
+    }
+
     @Test("Decodes unknown transaction height status")
     func decodeUnknownTransactionHeightStatus() throws {
         let getHeightPayload = try jsonData(
             ["jsonrpc": "2.0", "id": UUID().uuidString, "result": NSNull()]
         )
         let getHeight = try getHeightPayload.decode(
-            SwiftFulcrum.Response.Blockchain.Transaction.GetHeight.self,
+            SwiftFulcrum.Response.Blockchain.Transaction.Height.self,
             context: .init(methodPath: "blockchain.transaction.get_height")
         )
         #expect(getHeight.height == nil)
@@ -287,7 +403,7 @@ struct ResponseDecodingValidator {
         )
 
         let result = try payload.decode(
-            SwiftFulcrum.Response.Blockchain.UTXO.GetInfo.self,
+            SwiftFulcrum.Response.Blockchain.UTXO.Info.self,
             context: .init(methodPath: "blockchain.utxo.get_info")
         )
 
@@ -298,13 +414,99 @@ struct ResponseDecodingValidator {
         #expect(result.tokenData == nil)
     }
 
+    @Test("Decodes blockchain header lookup")
+    func decodeBlockchainHeaderLookup() throws {
+        let payload = try jsonData(
+            [
+                "jsonrpc": "2.0",
+                "id": UUID().uuidString,
+                "result": [
+                    "height": 1,
+                    "hex": String(repeating: "a", count: 160)
+                ]
+            ]
+        )
+
+        let header = try payload.decode(
+            SwiftFulcrum.Response.Blockchain.Header.Lookup.self,
+            context: .init(methodPath: "blockchain.header.get")
+        )
+
+        #expect(header.height == 1)
+        #expect(header.hex == String(repeating: "a", count: 160))
+    }
+
+    @Test("Rejects malformed blockchain header lookups with invalid header widths")
+    func rejectMalformedBlockchainHeaderLookupWithInvalidHeaderWidth() throws {
+        let payload = try jsonData(
+            [
+                "jsonrpc": "2.0",
+                "id": UUID().uuidString,
+                "result": [
+                    "height": 1,
+                    "hex": String(repeating: "a", count: 158)
+                ]
+            ]
+        )
+
+        #expect(throws: ResponseResultDecodeError.self) {
+            _ = try payload.decode(
+                SwiftFulcrum.Response.Blockchain.Header.Lookup.self,
+                context: .init(methodPath: "blockchain.header.get")
+            )
+        }
+    }
+
+    @Test("Decodes blockchain headers tip")
+    func decodeBlockchainHeadersTip() throws {
+        let payload = try jsonData(
+            [
+                "jsonrpc": "2.0",
+                "id": UUID().uuidString,
+                "result": [
+                    "height": 2,
+                    "hex": String(repeating: "b", count: 160)
+                ]
+            ]
+        )
+
+        let tip = try payload.decode(
+            SwiftFulcrum.Response.Blockchain.Headers.Tip.self,
+            context: .init(methodPath: "blockchain.headers.get_tip")
+        )
+
+        #expect(tip.height == 2)
+        #expect(tip.hex == String(repeating: "b", count: 160))
+    }
+
+    @Test("Rejects malformed blockchain headers tips with invalid header widths")
+    func rejectMalformedBlockchainHeadersTipWithInvalidHeaderWidth() throws {
+        let payload = try jsonData(
+            [
+                "jsonrpc": "2.0",
+                "id": UUID().uuidString,
+                "result": [
+                    "height": 2,
+                    "hex": String(repeating: "b", count: 158)
+                ]
+            ]
+        )
+
+        #expect(throws: ResponseResultDecodeError.self) {
+            _ = try payload.decode(
+                SwiftFulcrum.Response.Blockchain.Headers.Tip.self,
+                context: .init(methodPath: "blockchain.headers.get_tip")
+            )
+        }
+    }
+
     @Test("Decodes missing double-spend proof as not found")
     func decodeMissingDSProofAsNotFound() throws {
         let getPayload = try jsonData(
             ["jsonrpc": "2.0", "id": UUID().uuidString, "result": NSNull()]
         )
         let get = try getPayload.decode(
-            SwiftFulcrum.Response.Blockchain.Transaction.DSProof.Get.self,
+            SwiftFulcrum.Response.Blockchain.Transaction.DSProof.Lookup.self,
             context: .init(methodPath: "blockchain.transaction.dsproof.get")
         )
         #expect(get.isFound == false)
@@ -550,7 +752,7 @@ struct ResponseDecodingValidator {
             ["jsonrpc": "2.0", "id": UUID().uuidString, "result": [[2.5, 2000], [1, 1000]]]
         )
         let histogram = try payload.decode(
-            SwiftFulcrum.Response.Mempool.GetFeeHistogram.self,
+            SwiftFulcrum.Response.Mempool.FeeHistogram.self,
             context: .init(methodPath: "mempool.get_fee_histogram")
         )
         #expect(histogram.histogram.count == 2)
@@ -576,7 +778,7 @@ struct ResponseDecodingValidator {
 
         #expect(throws: ResponseResultDecodeError.self) {
             _ = try payload.decode(
-                SwiftFulcrum.Response.Mempool.GetInfo.self,
+                SwiftFulcrum.Response.Mempool.Info.self,
                 context: .init(methodPath: "mempool.get_info")
             )
         }
@@ -596,7 +798,7 @@ struct ResponseDecodingValidator {
 
         #expect(throws: ResponseResultDecodeError.self) {
             _ = try payload.decode(
-                SwiftFulcrum.Response.Mempool.GetInfo.self,
+                SwiftFulcrum.Response.Mempool.Info.self,
                 context: .init(methodPath: "mempool.get_info")
             )
         }
@@ -610,7 +812,7 @@ struct ResponseDecodingValidator {
 
         #expect(throws: ResponseResultDecodeError.self) {
             _ = try payload.decode(
-                SwiftFulcrum.Response.Mempool.GetFeeHistogram.self,
+                SwiftFulcrum.Response.Mempool.FeeHistogram.self,
                 context: .init(methodPath: "mempool.get_fee_histogram")
             )
         }
@@ -624,7 +826,7 @@ struct ResponseDecodingValidator {
 
         #expect(throws: ResponseResultDecodeError.self) {
             _ = try payload.decode(
-                SwiftFulcrum.Response.Mempool.GetFeeHistogram.self,
+                SwiftFulcrum.Response.Mempool.FeeHistogram.self,
                 context: .init(methodPath: "mempool.get_fee_histogram")
             )
         }
@@ -644,6 +846,30 @@ struct ResponseDecodingValidator {
 
         #expect(result.transactionHash == transactionHash)
         #expect(result.merkle.isEmpty)
+    }
+
+    @Test("Decodes transaction merkle proof")
+    func decodeTransactionMerkleProof() throws {
+        let payload = try jsonData(
+            [
+                "jsonrpc": "2.0",
+                "id": UUID().uuidString,
+                "result": [
+                    "merkle": ["a", "b"],
+                    "block_height": 3,
+                    "pos": 1
+                ]
+            ]
+        )
+
+        let result = try payload.decode(
+            SwiftFulcrum.Response.Blockchain.Transaction.Merkle.self,
+            context: .init(methodPath: "blockchain.transaction.get_merkle")
+        )
+
+        #expect(result.merkle == ["a", "b"])
+        #expect(result.blockHeight == 3)
+        #expect(result.position == 1)
     }
 
     @Test("Decodes verbose mempool transactions without confirmation metadata")
@@ -686,7 +912,7 @@ struct ResponseDecodingValidator {
         )
 
         let transaction = try payload.decode(
-            SwiftFulcrum.Response.Blockchain.Transaction.Get.self,
+            SwiftFulcrum.Response.Blockchain.Transaction.Verbose.self,
             context: .init(methodPath: "blockchain.transaction.get")
         )
 
@@ -738,7 +964,7 @@ struct ResponseDecodingValidator {
         )
 
         let transaction = try payload.decode(
-            SwiftFulcrum.Response.Blockchain.Transaction.Get.self,
+            SwiftFulcrum.Response.Blockchain.Transaction.Verbose.self,
             context: .init(methodPath: "blockchain.transaction.get")
         )
 
@@ -791,7 +1017,7 @@ struct ResponseDecodingValidator {
         )
 
         let transaction = try payload.decode(
-            SwiftFulcrum.Response.Blockchain.Transaction.Get.self,
+            SwiftFulcrum.Response.Blockchain.Transaction.Verbose.self,
             context: .init(methodPath: "blockchain.transaction.get")
         )
 
@@ -863,6 +1089,20 @@ struct ResponseDecodingValidator {
             _ = try payload.decode(
                 SwiftFulcrum.Response.Blockchain.Block.Headers.self,
                 context: .init(methodPath: "blockchain.block.headers")
+            )
+        }
+    }
+
+    @Test("Rejects malformed block.header payloads with invalid header widths")
+    func rejectMalformedBlockHeaderWithInvalidHeaderWidth() throws {
+        let payload = try jsonData(
+            ["jsonrpc": "2.0", "id": UUID().uuidString, "result": String(repeating: "a", count: 158)]
+        )
+
+        #expect(throws: ResponseResultDecodeError.self) {
+            _ = try payload.decode(
+                SwiftFulcrum.Response.Blockchain.Block.Header.self,
+                context: .init(methodPath: "blockchain.block.header")
             )
         }
     }

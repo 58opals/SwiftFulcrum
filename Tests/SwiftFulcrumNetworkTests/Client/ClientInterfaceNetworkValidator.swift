@@ -22,7 +22,7 @@ struct ClientInterfaceNetworkValidator {
         try await NetworkTestClient.runWithClient(url) { client in
             let tip = try await client.request(
                 method: .blockchain(.headers(.getTip)),
-                responseType: SwiftFulcrum.Response.Blockchain.Headers.GetTip.self,
+                responseType: SwiftFulcrum.Response.Blockchain.Headers.Tip.self,
                 options: .init(timeout: .seconds(30))
             )
 
@@ -43,7 +43,7 @@ struct ClientInterfaceNetworkValidator {
         // Avoid calling start() directly to exercise prepareClientForRequests.
         let tip = try await client.request(
             method: .blockchain(.headers(.getTip)),
-            responseType: SwiftFulcrum.Response.Blockchain.Headers.GetTip.self,
+            responseType: SwiftFulcrum.Response.Blockchain.Headers.Tip.self,
             options: .init(timeout: .seconds(30))
         )
 
@@ -190,7 +190,7 @@ struct ClientInterfaceNetworkValidator {
         try await NetworkTestClient.runWithClient(url) { client in
             let scriptHashResult = try await client.request(
                 method: .blockchain(.address(.getScriptHash(address: Self.testAddress))),
-                responseType: SwiftFulcrum.Response.Blockchain.Address.GetScriptHash.self,
+                responseType: SwiftFulcrum.Response.Blockchain.Address.ScriptHash.self,
                 options: .init(timeout: .seconds(15))
             )
 
@@ -198,7 +198,7 @@ struct ClientInterfaceNetworkValidator {
 
             let balanceResult = try await client.request(
                 method: .blockchain(.address(.getBalance(address: Self.testAddress, tokenFilter: nil))),
-                responseType: SwiftFulcrum.Response.Blockchain.Address.GetBalance.self,
+                responseType: SwiftFulcrum.Response.Blockchain.Address.Balance.self,
                 options: .init(timeout: .seconds(15))
             )
 
