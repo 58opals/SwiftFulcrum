@@ -8,8 +8,8 @@ extension WebSocketConnection {
         shouldAllowFailover: Bool = true,
         shouldCancelReceiver: Bool = true
     ) async throws {
-        if let existingConnectTask = self.connectTask {
-            return try await existingConnectTask.value
+        if self.connectTask != nil {
+            return try await waitForActiveConnectTask()
         }
 
         let connection = self
@@ -25,7 +25,13 @@ extension WebSocketConnection {
             self.connectTask = nil
         }
 
-        try await connectTask.value
+        do {
+            try await connectTask.value
+            finishConnectTaskWaiters(.success(()))
+        } catch {
+            finishConnectTaskWaiters(.failure(error))
+            throw error
+        }
     }
 
     func performConnect(

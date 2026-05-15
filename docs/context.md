@@ -64,4 +64,4 @@ Non-goals for this repository include:
 - Broadening into a general BCH application framework
 - Absorbing responsibilities that belong in Opal Base or app-level consumers
 - Mixing product or portfolio reporting into the repository context docs
-- Treating the repo as the operational runbook for Class `D` workflow policy
+- Using the package context docs as a development-process or release-management runbook

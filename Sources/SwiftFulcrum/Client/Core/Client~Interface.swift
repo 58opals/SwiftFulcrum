@@ -17,7 +17,7 @@ extension SwiftFulcrum.Client {
         let cancellationToken = options.cancellation?.token
         try await throwIfCancelled(cancellationToken)
         let deadline = makeDeadline(for: options.timeout)
-        try await ensureClientIsReadyForRequests(until: deadline)
+        try await prepareClientForRequests(until: deadline)
         try await throwIfCancelled(cancellationToken)
         
         do {
@@ -48,8 +48,6 @@ extension SwiftFulcrum.Client {
         let deadline = makeDeadline(for: options.timeout)
         return try await makeSubscription(
             method: endpoint.method,
-            initialType: Initial.self,
-            notificationType: Update.self,
             options: options,
             deadline: deadline
         )
@@ -92,10 +90,6 @@ extension SwiftFulcrum.Client {
 // MARK: -
 extension SwiftFulcrum.Client {
     private typealias TimeoutDeadline = (limit: Duration, instant: ContinuousClock.Instant)
-
-    private func ensureClientIsReadyForRequests(until deadline: TimeoutDeadline?) async throws {
-        try await prepareClientForRequests(until: deadline)
-    }
 
     private func throwIfCancelled(_ token: FulcrumNetworkClient.Call.Token?) async throws {
         guard let token, await token.isCancelled else { return }
@@ -158,8 +152,6 @@ extension SwiftFulcrum.Client {
     
     private func makeSubscription<Initial: Decodable & Sendable, Update: Decodable & Sendable>(
         method: SwiftFulcrum.RPC.Method,
-        initialType: Initial.Type,
-        notificationType: Update.Type,
         options: SwiftFulcrum.Client.Call.Options,
         deadline: TimeoutDeadline?
     ) async throws -> Subscription<Initial, Update> {
@@ -169,7 +161,7 @@ extension SwiftFulcrum.Client {
             )
         }
 
-        try await ensureClientIsReadyForRequests(until: deadline)
+        try await prepareClientForRequests(until: deadline)
         
         let token = FulcrumNetworkClient.Call.Token()
         let callerCancellationToken = options.cancellation?.token

@@ -10,6 +10,10 @@ extension SwiftFulcrum.Response.Blockchain.Transaction {
 
         public init(from decoder: Decoder) throws {
             let payloadModel = try SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Transaction.GetConfirmedBlockHash(from: decoder)
+            try SwiftFulcrum.Response.Blockchain.validateBlockHashLength(payloadModel.block_hash)
+            if let blockHeader = payloadModel.block_header {
+                try SwiftFulcrum.Response.Blockchain.validateBlockHeaderLength(blockHeader)
+            }
             self.blockHash = payloadModel.block_hash
             self.blockHeader = payloadModel.block_header
             self.blockHeight = payloadModel.block_height

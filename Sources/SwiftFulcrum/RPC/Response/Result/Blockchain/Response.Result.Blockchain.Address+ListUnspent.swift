@@ -8,7 +8,7 @@ extension SwiftFulcrum.Response.Blockchain.Address {
 
         public init(from decoder: Decoder) throws {
             let payloadModel = try [SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Address.ListUnspentItem](from: decoder)
-            self.items = payloadModel.map(Item.init(from:))
+            self.items = try payloadModel.map(Item.init(from:))
         }
     }
 }
