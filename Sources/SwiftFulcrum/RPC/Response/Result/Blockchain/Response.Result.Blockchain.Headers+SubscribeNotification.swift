@@ -16,9 +16,9 @@ extension SwiftFulcrum.Response.Blockchain.Headers {
                 guard !list.isEmpty else {
                     throw ResponseResultDecodeError.missingField("header list empty")
                 }
-                self.blocks = list.map { Block(height: $0.height, hex: $0.hex) }
+                self.blocks = try list.map { try Block(height: $0.height, hex: $0.hex) }
             case .topHeader(let tip):
-                self.blocks = [Block(height: tip.height, hex: tip.hex)]
+                self.blocks = [try Block(height: tip.height, hex: tip.hex)]
             }
         }
     }

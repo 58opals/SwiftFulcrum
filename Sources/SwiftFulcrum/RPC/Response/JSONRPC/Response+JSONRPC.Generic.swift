@@ -9,13 +9,9 @@ extension SwiftFulcrum.RPC.Response.JSONRPC {
         let error: SwiftFulcrum.RPC.Response.Error.Result?
         let method: String?
         let params: Payload?
-
-        private let hasResultKey: Bool
-        private let hasErrorKey: Bool
-        private let hasParamsKey: Bool
-        var hasResult: Bool { hasResultKey }
-        var hasError: Bool { hasErrorKey }
-        var hasParams: Bool { hasParamsKey }
+        let hasResult: Bool
+        let hasError: Bool
+        let hasParams: Bool
 
         init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: JSONRPCResponseDecodeModel.CodingKey.self)
@@ -31,9 +27,9 @@ extension SwiftFulcrum.RPC.Response.JSONRPC {
             self.error = try container.decodeIfPresent(SwiftFulcrum.RPC.Response.Error.Result.self, forKey: errorKey)
             self.method = try container.decodeIfPresent(String.self, forKey: methodKey)
             self.params = try container.decodeIfPresent(Payload.self, forKey: paramsKey)
-            self.hasResultKey = container.contains(resultKey)
-            self.hasErrorKey = container.contains(errorKey)
-            self.hasParamsKey = container.contains(paramsKey)
+            self.hasResult = container.contains(resultKey)
+            self.hasError = container.contains(errorKey)
+            self.hasParams = container.contains(paramsKey)
         }
     }
 }

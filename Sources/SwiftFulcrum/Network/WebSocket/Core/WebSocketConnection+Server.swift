@@ -61,6 +61,12 @@ extension WebSocketConnection {
                     debugDescription: "Host must not be empty."
                 ))
             }
+            guard result.port.map({ (1 ... 65_535).contains($0) }) ?? true else {
+                throw DecodingError.dataCorrupted(.init(
+                    codingPath: codingPath,
+                    debugDescription: "Port must be between 1 and 65535."
+                ))
+            }
             
             return result
         }

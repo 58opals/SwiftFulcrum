@@ -81,5 +81,11 @@ extension SwiftFulcrum {
 
             return lhs.patch < rhs.patch
         }
+
+        public static func == (lhs: SwiftFulcrum.ProtocolVersion, rhs: SwiftFulcrum.ProtocolVersion) -> Bool {
+            lhs.major == rhs.major
+            && lhs.minor == rhs.minor
+            && lhs.patch == rhs.patch
+        }
     }
 }

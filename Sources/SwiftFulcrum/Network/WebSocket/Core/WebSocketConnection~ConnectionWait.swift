@@ -3,9 +3,35 @@
 import Foundation
 
 extension WebSocketConnection {
+    func finishConnectTaskWaiters(_ result: Result<Void, Error>) {
+        let waiters = connectTaskWaitersByIdentifier.values
+        connectTaskWaitersByIdentifier.removeAll(keepingCapacity: false)
+        for continuation in waiters {
+            continuation.resume(with: result)
+        }
+    }
+
+    func cancelConnectTaskWaiter(identifier: UUID) {
+        guard let continuation = connectTaskWaitersByIdentifier.removeValue(forKey: identifier) else { return }
+        continuation.resume(throwing: CancellationError())
+    }
+
+    func waitForActiveConnectTask() async throws {
+        let waiterIdentifier = UUID()
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                connectTaskWaitersByIdentifier[waiterIdentifier] = continuation
+            }
+        } onCancel: {
+            Task {
+                await self.cancelConnectTaskWaiter(identifier: waiterIdentifier)
+            }
+        }
+    }
+
     func finishConnectWaiters(_ result: Result<Bool, Error>) {
-        let waiters = connectWaiters
-        connectWaiters.removeAll(keepingCapacity: false)
+        let waiters = connectWaitersByIdentifier.values
+        connectWaitersByIdentifier.removeAll(keepingCapacity: false)
         isConnectionInFlight = false
         for continuation in waiters {
             switch result {
@@ -14,13 +40,25 @@ extension WebSocketConnection {
             }
         }
     }
+
+    func cancelConnectWaiter(identifier: UUID) {
+        guard let continuation = connectWaitersByIdentifier.removeValue(forKey: identifier) else { return }
+        continuation.resume(throwing: CancellationError())
+    }
     
     func waitForConnection(timeout: TimeInterval) async throws -> Bool {
         if await isConnected { return true }
         
         if isConnectionInFlight {
-            return try await withCheckedThrowingContinuation { continuation in
-                connectWaiters.append(continuation)
+            let waiterIdentifier = UUID()
+            return try await withTaskCancellationHandler {
+                try await withCheckedThrowingContinuation { continuation in
+                    connectWaitersByIdentifier[waiterIdentifier] = continuation
+                }
+            } onCancel: {
+                Task {
+                    await self.cancelConnectWaiter(identifier: waiterIdentifier)
+                }
             }
         }
         
@@ -69,40 +107,4 @@ extension WebSocketConnection {
         }
     }
     
-    private func waitForConnectionPong(
-        task: URLSessionWebSocketTask,
-        timeout: TimeInterval
-    ) async throws -> Bool {
-        let (stream, continuation) = AsyncThrowingStream<Bool, Error>.makeStream()
-        let currentURL = self.url
-        let metrics = self.metrics
-        
-        task.sendPing { error in
-            if let metrics { Task { await metrics.recordPing(url: currentURL, error: error) } }
-            if let error {
-                continuation.finish(throwing: SwiftFulcrum.Client.Error.Network.tlsNegotiationFailed(error))
-            } else {
-                _ = continuation.yield(true); continuation.finish()
-            }
-        }
-        
-        return try await withThrowingTaskGroup(of: Bool.self) { group in
-            group.addTask {
-                var iterator = stream.makeAsyncIterator()
-                guard let isSuccessful = try await iterator.next() else {
-                    return false
-                }
-                return isSuccessful
-            }
-            
-            group.addTask {
-                try await Task.sleep(for: .seconds(timeout))
-                return false
-            }
-            
-            let winner = try await group.next() ?? false
-            group.cancelAll()
-            return winner
-        }
-    }
 }

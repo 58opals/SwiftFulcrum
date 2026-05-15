@@ -9,18 +9,9 @@ extension SwiftFulcrum.Response.Blockchain.Headers {
 
         public init(from decoder: Decoder) throws {
             let payloadModel = try SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Headers.Tip(from: decoder)
-            try Self.validateHeaderLength(payloadModel.hex)
+            try SwiftFulcrum.Response.Blockchain.validateBlockHeaderLength(payloadModel.hex)
             self.height = payloadModel.height
             self.hex = payloadModel.hex
-        }
-
-        private static func validateHeaderLength(_ header: String) throws {
-            let headerCharacterLength = 160
-            guard header.count == headerCharacterLength else {
-                throw ResponseResultDecodeError.unexpectedFormat(
-                    "Expected block header to be exactly \(headerCharacterLength) hex characters"
-                )
-            }
         }
     }
 }

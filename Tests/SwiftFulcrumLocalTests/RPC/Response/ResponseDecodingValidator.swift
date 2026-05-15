@@ -337,6 +337,35 @@ struct ResponseDecodingValidator {
         #expect(subscribe.status == nil)
     }
 
+    @Test("Rejects first-use responses with malformed hashes")
+    func rejectFirstUseResponsesWithMalformedHashes() throws {
+        let payload = try jsonData(
+            [
+                "jsonrpc": "2.0",
+                "id": UUID().uuidString,
+                "result": [
+                    "block_hash": String(repeating: "a", count: 63),
+                    "height": 1,
+                    "tx_hash": String(repeating: "b", count: 64)
+                ]
+            ]
+        )
+
+        #expect(throws: ResponseResultDecodeError.self) {
+            _ = try payload.decode(
+                SwiftFulcrum.Response.Blockchain.Address.FirstUse.self,
+                context: .init(methodPath: "blockchain.address.get_first_use")
+            )
+        }
+
+        #expect(throws: ResponseResultDecodeError.self) {
+            _ = try payload.decode(
+                SwiftFulcrum.Response.Blockchain.ScriptHash.FirstUse.self,
+                context: .init(methodPath: "blockchain.scripthash.get_first_use")
+            )
+        }
+    }
+
     @Test("Rejects negative blockchain relay fees")
     func rejectNegativeBlockchainRelayFee() throws {
         let payload = try jsonData(
@@ -382,6 +411,28 @@ struct ResponseDecodingValidator {
         #expect(notification.height == nil)
     }
 
+    @Test("Rejects malformed confirmed block hash payloads")
+    func rejectMalformedConfirmedBlockHashPayloads() throws {
+        let payload = try jsonData(
+            [
+                "jsonrpc": "2.0",
+                "id": UUID().uuidString,
+                "result": [
+                    "block_hash": String(repeating: "a", count: 62),
+                    "block_header": String(repeating: "b", count: 160),
+                    "block_height": 100
+                ]
+            ]
+        )
+
+        #expect(throws: ResponseResultDecodeError.self) {
+            _ = try payload.decode(
+                SwiftFulcrum.Response.Blockchain.Transaction.ConfirmedBlockHash.self,
+                context: .init(methodPath: "blockchain.transaction.get_confirmed_blockhash")
+            )
+        }
+    }
+
     @Test("Rejects reversed transaction subscribe notification payloads")
     func rejectReversedTransactionSubscribeNotificationPayload() throws {
         let payload = try jsonData(
@@ -412,6 +463,68 @@ struct ResponseDecodingValidator {
         #expect(result.scriptHash == nil)
         #expect(result.value == nil)
         #expect(result.tokenData == nil)
+    }
+
+    @Test("Rejects listunspent entries with malformed transaction hashes")
+    func rejectListUnspentEntriesWithMalformedTransactionHashes() throws {
+        let payload = try jsonData(
+            [
+                "jsonrpc": "2.0",
+                "id": UUID().uuidString,
+                "result": [
+                    [
+                        "height": 1,
+                        "tx_hash": String(repeating: "a", count: 63),
+                        "tx_pos": 0,
+                        "value": 1000
+                    ]
+                ]
+            ]
+        )
+
+        #expect(throws: ResponseResultDecodeError.self) {
+            _ = try payload.decode(
+                SwiftFulcrum.Response.Blockchain.Address.ListUnspent.self,
+                context: .init(methodPath: "blockchain.address.listunspent")
+            )
+        }
+
+        #expect(throws: ResponseResultDecodeError.self) {
+            _ = try payload.decode(
+                SwiftFulcrum.Response.Blockchain.ScriptHash.ListUnspent.self,
+                context: .init(methodPath: "blockchain.scripthash.listunspent")
+            )
+        }
+    }
+
+    @Test("Rejects history entries with malformed transaction hashes")
+    func rejectHistoryEntriesWithMalformedTransactionHashes() throws {
+        let payload = try jsonData(
+            [
+                "jsonrpc": "2.0",
+                "id": UUID().uuidString,
+                "result": [
+                    [
+                        "height": 1,
+                        "tx_hash": String(repeating: "a", count: 63)
+                    ]
+                ]
+            ]
+        )
+
+        #expect(throws: ResponseResultDecodeError.self) {
+            _ = try payload.decode(
+                SwiftFulcrum.Response.Blockchain.Address.History.self,
+                context: .init(methodPath: "blockchain.address.get_history")
+            )
+        }
+
+        #expect(throws: ResponseResultDecodeError.self) {
+            _ = try payload.decode(
+                SwiftFulcrum.Response.Blockchain.ScriptHash.History.self,
+                context: .init(methodPath: "blockchain.scripthash.get_history")
+            )
+        }
     }
 
     @Test("Decodes blockchain header lookup")
@@ -656,6 +769,20 @@ struct ResponseDecodingValidator {
         #expect(dsProofUpdate.proof?.transactionID == "abc123")
     }
 
+    @Test("Rejects malformed headers subscription notifications with invalid header widths")
+    func rejectMalformedHeadersSubscriptionNotificationWithInvalidHeaderWidth() throws {
+        let payload = try jsonData(
+            ["jsonrpc": "2.0", "method": "blockchain.headers.subscribe", "params": [["height": 1, "hex": String(repeating: "a", count: 158)]]]
+        )
+
+        #expect(throws: ResponseResultDecodeError.self) {
+            _ = try payload.decode(
+                SwiftFulcrum.Response.Blockchain.Headers.SubscribeNotification.self,
+                context: .init(methodPath: "blockchain.headers.subscribe")
+            )
+        }
+    }
+
     @Test("Dropping a decoded stream fires the decode termination hook")
     func droppingDecodedStreamFiresTerminationHook() async throws {
         let terminationState = TerminationState()
@@ -848,6 +975,38 @@ struct ResponseDecodingValidator {
         #expect(result.merkle.isEmpty)
     }
 
+    @Test("Rejects transaction.id_from_pos responses with malformed transaction hashes")
+    func rejectTransactionIDFromPosWithMalformedTransactionHashes() throws {
+        let barePayload = try jsonData(
+            ["jsonrpc": "2.0", "id": UUID().uuidString, "result": String(repeating: "f", count: 63)]
+        )
+
+        #expect(throws: ResponseResultDecodeError.self) {
+            _ = try barePayload.decode(
+                SwiftFulcrum.Response.Blockchain.Transaction.IDFromPos.self,
+                context: .init(methodPath: "blockchain.transaction.id_from_pos")
+            )
+        }
+
+        let proofPayload = try jsonData(
+            [
+                "jsonrpc": "2.0",
+                "id": UUID().uuidString,
+                "result": [
+                    "merkle": [],
+                    "tx_hash": String(repeating: "f", count: 63)
+                ]
+            ]
+        )
+
+        #expect(throws: ResponseResultDecodeError.self) {
+            _ = try proofPayload.decode(
+                SwiftFulcrum.Response.Blockchain.Transaction.IDFromPos.self,
+                context: .init(methodPath: "blockchain.transaction.id_from_pos")
+            )
+        }
+    }
+
     @Test("Decodes transaction merkle proof")
     func decodeTransactionMerkleProof() throws {
         let payload = try jsonData(
@@ -855,7 +1014,7 @@ struct ResponseDecodingValidator {
                 "jsonrpc": "2.0",
                 "id": UUID().uuidString,
                 "result": [
-                    "merkle": ["a", "b"],
+                    "merkle": [String(repeating: "a", count: 64), String(repeating: "b", count: 64)],
                     "block_height": 3,
                     "pos": 1
                 ]
@@ -867,9 +1026,49 @@ struct ResponseDecodingValidator {
             context: .init(methodPath: "blockchain.transaction.get_merkle")
         )
 
-        #expect(result.merkle == ["a", "b"])
+        #expect(result.merkle == [String(repeating: "a", count: 64), String(repeating: "b", count: 64)])
         #expect(result.blockHeight == 3)
         #expect(result.position == 1)
+    }
+
+    @Test("Rejects transaction merkle proofs with malformed branch hashes")
+    func rejectTransactionMerkleProofsWithMalformedBranchHashes() throws {
+        let proofPayload = try jsonData(
+            [
+                "jsonrpc": "2.0",
+                "id": UUID().uuidString,
+                "result": [
+                    "merkle": [String(repeating: "a", count: 63)],
+                    "block_height": 3,
+                    "pos": 1
+                ]
+            ]
+        )
+
+        #expect(throws: ResponseResultDecodeError.self) {
+            _ = try proofPayload.decode(
+                SwiftFulcrum.Response.Blockchain.Transaction.Merkle.self,
+                context: .init(methodPath: "blockchain.transaction.get_merkle")
+            )
+        }
+
+        let idFromPosPayload = try jsonData(
+            [
+                "jsonrpc": "2.0",
+                "id": UUID().uuidString,
+                "result": [
+                    "merkle": [String(repeating: "a", count: 63)],
+                    "tx_hash": String(repeating: "f", count: 64)
+                ]
+            ]
+        )
+
+        #expect(throws: ResponseResultDecodeError.self) {
+            _ = try idFromPosPayload.decode(
+                SwiftFulcrum.Response.Blockchain.Transaction.IDFromPos.self,
+                context: .init(methodPath: "blockchain.transaction.id_from_pos")
+            )
+        }
     }
 
     @Test("Decodes verbose mempool transactions without confirmation metadata")

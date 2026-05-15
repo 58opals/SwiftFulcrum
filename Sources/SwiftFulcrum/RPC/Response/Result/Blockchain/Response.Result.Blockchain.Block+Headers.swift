@@ -34,7 +34,7 @@ extension SwiftFulcrum.Response.Blockchain.Block {
             let headers: [String]
             if let providedHeaders = payloadModel.headers {
                 headers = providedHeaders
-                try validateHeaderLengths(headers)
+                try SwiftFulcrum.Response.Blockchain.validateBlockHeaderLengths(headers)
             } else {
                 headers = try splitHeaders(hex: payloadModel.hex)
             }
@@ -54,17 +54,8 @@ extension SwiftFulcrum.Response.Blockchain.Block {
             return headers
         }
 
-        private static func validateHeaderLengths(_ headers: [String]) throws {
-            let headerCharacterLength = 160
-            guard headers.allSatisfy({ $0.count == headerCharacterLength }) else {
-                throw ResponseResultDecodeError.unexpectedFormat(
-                    "Expected each block header to be exactly \(headerCharacterLength) hex characters"
-                )
-            }
-        }
-
         private static func splitHeaders(hex: String) throws -> [String] {
-            let headerCharacterLength = 160
+            let headerCharacterLength = SwiftFulcrum.Response.Blockchain.blockHeaderCharacterLength
 
             guard hex.count.isMultiple(of: headerCharacterLength) else {
                 throw ResponseResultDecodeError.unexpectedFormat(

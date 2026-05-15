@@ -17,6 +17,8 @@ extension SwiftFulcrum.Response.Blockchain.Address {
 
         public init(from decoder: Decoder) throws {
             let payloadModel = try SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Address.GetFirstUse(from: decoder)
+            try SwiftFulcrum.Response.Blockchain.validateBlockHashLength(payloadModel.block_hash)
+            try SwiftFulcrum.Response.Blockchain.validateTransactionHashLength(payloadModel.tx_hash)
             self.blockHash = payloadModel.block_hash
             self.height = payloadModel.height
             self.transactionHash = payloadModel.tx_hash

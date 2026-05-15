@@ -69,4 +69,14 @@ struct ProtocolVersionValidator {
         #expect(midpoint < maximum)
         #expect(maximum > minimum)
     }
+
+    @Test("Treats implicit and explicit zero patch versions as equal")
+    func treatImplicitAndExplicitZeroPatchVersionsAsEqual() throws {
+        let implicitPatch = try #require(SwiftFulcrum.ProtocolVersion(string: "1.6"))
+        let explicitPatch = try #require(SwiftFulcrum.ProtocolVersion(string: "1.6.0"))
+
+        #expect(implicitPatch == explicitPatch)
+        #expect(!(implicitPatch < explicitPatch))
+        #expect(!(explicitPatch < implicitPatch))
+    }
 }
