@@ -4,59 +4,61 @@ import Foundation
 import OpalDiagnostics
 
 enum SwiftFulcrumDiagnostics {
+    typealias Diagnostics = SwiftFulcrum.Client.Diagnostics
+
     enum Category {
-        static let fulcrum = OpalDiagnostics.Category.fulcrum
-        static let jsonRPC = OpalDiagnostics.Category(rawValue: "fulcrum.jsonrpc")
-        static let webSocket = OpalDiagnostics.Category(rawValue: "fulcrum.websocket")
-        static let reconnect = OpalDiagnostics.Category(rawValue: "fulcrum.reconnect")
+        static let fulcrum = Diagnostics.Category.fulcrum
+        static let jsonRPC = Diagnostics.Category.jsonRPC
+        static let webSocket = Diagnostics.Category.webSocket
+        static let reconnect = Diagnostics.Category.reconnect
     }
 
     enum Event {
-        static let jsonRPCRequestEncoded = OpalDiagnostics.Event(rawValue: "swiftfulcrum.jsonrpc.request.encoded")
-        static let jsonRPCRequestEncodeFailed = OpalDiagnostics.Event(rawValue: "swiftfulcrum.jsonrpc.request.encode_failed")
-        static let jsonRPCResponseDecoded = OpalDiagnostics.Event(rawValue: "swiftfulcrum.jsonrpc.response.decoded")
-        static let jsonRPCResponseDecodeFailed = OpalDiagnostics.Event(rawValue: "swiftfulcrum.jsonrpc.response.decode_failed")
+        static let jsonRPCRequestEncoded = Diagnostics.Event.jsonRPCRequestEncoded
+        static let jsonRPCRequestEncodeFailed = Diagnostics.Event.jsonRPCRequestEncodeFailed
+        static let jsonRPCResponseDecoded = Diagnostics.Event.jsonRPCResponseDecoded
+        static let jsonRPCResponseDecodeFailed = Diagnostics.Event.jsonRPCResponseDecodeFailed
 
-        static let clientCallBegin = OpalDiagnostics.Event(rawValue: "swiftfulcrum.client.call.begin")
-        static let clientCallSent = OpalDiagnostics.Event(rawValue: "swiftfulcrum.client.call.sent")
-        static let clientCallResponseDecoded = OpalDiagnostics.Event(rawValue: "swiftfulcrum.client.call.response_decoded")
-        static let clientCallTimeout = OpalDiagnostics.Event(rawValue: "swiftfulcrum.client.call.timeout")
-        static let clientCallCancelled = OpalDiagnostics.Event(rawValue: "swiftfulcrum.client.call.cancelled")
-        static let clientCallFailed = OpalDiagnostics.Event(rawValue: "swiftfulcrum.client.call.failed")
-        static let clientSubscribeBegin = OpalDiagnostics.Event(rawValue: "swiftfulcrum.client.subscribe.begin")
-        static let clientSubscribeSent = OpalDiagnostics.Event(rawValue: "swiftfulcrum.client.subscribe.sent")
-        static let clientSubscribeInitialDecoded = OpalDiagnostics.Event(rawValue: "swiftfulcrum.client.subscribe.initial_decoded")
-        static let clientSubscribeTimeout = OpalDiagnostics.Event(rawValue: "swiftfulcrum.client.subscribe.timeout")
-        static let clientSubscribeCancelled = OpalDiagnostics.Event(rawValue: "swiftfulcrum.client.subscribe.cancelled")
-        static let clientSubscribeFailed = OpalDiagnostics.Event(rawValue: "swiftfulcrum.client.subscribe.failed")
-        static let clientDiagnosticsUpdated = OpalDiagnostics.Event(rawValue: "swiftfulcrum.client.diagnostics.updated")
-        static let clientSubscriptionsUpdated = OpalDiagnostics.Event(rawValue: "swiftfulcrum.client.subscriptions.updated")
-        static let clientHeartbeatTimeout = OpalDiagnostics.Event(rawValue: "swiftfulcrum.client.heartbeat.timeout")
-        static let clientReconnectRecoveryBegin = OpalDiagnostics.Event(rawValue: "swiftfulcrum.client.reconnect_recovery.begin")
-        static let clientReconnectRecoverySucceeded = OpalDiagnostics.Event(rawValue: "swiftfulcrum.client.reconnect_recovery.succeeded")
-        static let clientReconnectRecoveryFailed = OpalDiagnostics.Event(rawValue: "swiftfulcrum.client.reconnect_recovery.failed")
-        static let clientSubscriptionRestored = OpalDiagnostics.Event(rawValue: "swiftfulcrum.client.subscription.restored")
-        static let clientSubscriptionRestoreFailed = OpalDiagnostics.Event(rawValue: "swiftfulcrum.client.subscription.restore_failed")
-        static let clientSubscriptionRemoved = OpalDiagnostics.Event(rawValue: "swiftfulcrum.client.subscription.removed")
-        static let clientSubscriptionAdded = OpalDiagnostics.Event(rawValue: "swiftfulcrum.client.subscription.added")
+        static let clientCallBegin = Diagnostics.Event.clientCallBegin
+        static let clientCallSent = Diagnostics.Event.clientCallSent
+        static let clientCallResponseDecoded = Diagnostics.Event.clientCallResponseDecoded
+        static let clientCallTimeout = Diagnostics.Event.clientCallTimeout
+        static let clientCallCancelled = Diagnostics.Event.clientCallCancelled
+        static let clientCallFailed = Diagnostics.Event.clientCallFailed
+        static let clientSubscribeBegin = Diagnostics.Event.clientSubscribeBegin
+        static let clientSubscribeSent = Diagnostics.Event.clientSubscribeSent
+        static let clientSubscribeInitialDecoded = Diagnostics.Event.clientSubscribeInitialDecoded
+        static let clientSubscribeTimeout = Diagnostics.Event.clientSubscribeTimeout
+        static let clientSubscribeCancelled = Diagnostics.Event.clientSubscribeCancelled
+        static let clientSubscribeFailed = Diagnostics.Event.clientSubscribeFailed
+        static let clientDiagnosticsUpdated = Diagnostics.Event.clientDiagnosticsUpdated
+        static let clientSubscriptionsUpdated = Diagnostics.Event.clientSubscriptionsUpdated
+        static let clientHeartbeatTimeout = Diagnostics.Event.clientHeartbeatTimeout
+        static let clientReconnectRecoveryBegin = Diagnostics.Event.clientReconnectRecoveryBegin
+        static let clientReconnectRecoverySucceeded = Diagnostics.Event.clientReconnectRecoverySucceeded
+        static let clientReconnectRecoveryFailed = Diagnostics.Event.clientReconnectRecoveryFailed
+        static let clientSubscriptionRestored = Diagnostics.Event.clientSubscriptionRestored
+        static let clientSubscriptionRestoreFailed = Diagnostics.Event.clientSubscriptionRestoreFailed
+        static let clientSubscriptionRemoved = Diagnostics.Event.clientSubscriptionRemoved
+        static let clientSubscriptionAdded = Diagnostics.Event.clientSubscriptionAdded
 
-        static let webSocketConnectBegin = OpalDiagnostics.Event(rawValue: "swiftfulcrum.websocket.connect.begin")
-        static let webSocketConnectSucceeded = OpalDiagnostics.Event(rawValue: "swiftfulcrum.websocket.connect.succeeded")
-        static let webSocketConnectTimeout = OpalDiagnostics.Event(rawValue: "swiftfulcrum.websocket.connect.timeout")
-        static let webSocketConnectFailover = OpalDiagnostics.Event(rawValue: "swiftfulcrum.websocket.connect.failover")
-        static let webSocketConnectFailoverExhausted = OpalDiagnostics.Event(rawValue: "swiftfulcrum.websocket.connect.failover_exhausted")
-        static let webSocketDisconnect = OpalDiagnostics.Event(rawValue: "swiftfulcrum.websocket.disconnect")
-        static let webSocketSendBegin = OpalDiagnostics.Event(rawValue: "swiftfulcrum.websocket.send.begin")
-        static let webSocketSendSucceeded = OpalDiagnostics.Event(rawValue: "swiftfulcrum.websocket.send.succeeded")
-        static let webSocketSendFailed = OpalDiagnostics.Event(rawValue: "swiftfulcrum.websocket.send.failed")
-        static let webSocketReceiveMessage = OpalDiagnostics.Event(rawValue: "swiftfulcrum.websocket.receive.message")
-        static let webSocketReceiveFailed = OpalDiagnostics.Event(rawValue: "swiftfulcrum.websocket.receive.failed")
-        static let webSocketReceiveReconnected = OpalDiagnostics.Event(rawValue: "swiftfulcrum.websocket.receive.reconnected")
+        static let webSocketConnectBegin = Diagnostics.Event.webSocketConnectBegin
+        static let webSocketConnectSucceeded = Diagnostics.Event.webSocketConnectSucceeded
+        static let webSocketConnectTimeout = Diagnostics.Event.webSocketConnectTimeout
+        static let webSocketConnectFailover = Diagnostics.Event.webSocketConnectFailover
+        static let webSocketConnectFailoverExhausted = Diagnostics.Event.webSocketConnectFailoverExhausted
+        static let webSocketDisconnect = Diagnostics.Event.webSocketDisconnect
+        static let webSocketSendBegin = Diagnostics.Event.webSocketSendBegin
+        static let webSocketSendSucceeded = Diagnostics.Event.webSocketSendSucceeded
+        static let webSocketSendFailed = Diagnostics.Event.webSocketSendFailed
+        static let webSocketReceiveMessage = Diagnostics.Event.webSocketReceiveMessage
+        static let webSocketReceiveFailed = Diagnostics.Event.webSocketReceiveFailed
+        static let webSocketReceiveReconnected = Diagnostics.Event.webSocketReceiveReconnected
 
-        static let reconnectAttempt = OpalDiagnostics.Event(rawValue: "swiftfulcrum.websocket.reconnect.attempt")
-        static let reconnectSucceeded = OpalDiagnostics.Event(rawValue: "swiftfulcrum.websocket.reconnect.succeeded")
-        static let reconnectFailed = OpalDiagnostics.Event(rawValue: "swiftfulcrum.websocket.reconnect.failed")
-        static let reconnectMaxAttempts = OpalDiagnostics.Event(rawValue: "swiftfulcrum.websocket.reconnect.max_attempts")
+        static let reconnectAttempt = Diagnostics.Event.reconnectAttempt
+        static let reconnectSucceeded = Diagnostics.Event.reconnectSucceeded
+        static let reconnectFailed = Diagnostics.Event.reconnectFailed
+        static let reconnectMaxAttempts = Diagnostics.Event.reconnectMaxAttempts
     }
 
     static func record(
@@ -116,9 +118,142 @@ enum SwiftFulcrumDiagnostics {
 
     static func errorFields(_ error: Swift.Error) -> [OpalDiagnostics.Field] {
         [
+            errorCodeField(errorCode(for: error)),
             publicField("error_type", String(reflecting: Swift.type(of: error))),
             privateField("error_message", (error as NSError).localizedDescription)
         ]
+    }
+
+    static func errorCodeField(_ errorCode: String) -> OpalDiagnostics.Field {
+        publicField(Diagnostics.Field.errorCode, errorCode)
+    }
+
+    static func errorCode(for error: Swift.Error) -> String {
+        switch error {
+        case let error as SwiftFulcrum.Client.Error:
+            return errorCode(for: error)
+        case let error as SwiftFulcrum.Client.Error.Transport:
+            return errorCode(for: error)
+        case let error as SwiftFulcrum.Client.Error.Network:
+            return errorCode(for: error)
+        case let error as SwiftFulcrum.Client.Error.Coding:
+            return errorCode(for: error)
+        case let error as SwiftFulcrum.Client.Error.ClientIssue:
+            return errorCode(for: error)
+        case is SwiftFulcrum.Client.Error.Server:
+            return Diagnostics.ErrorCode.jsonRPCServerError
+        case let error as JSONRPCCodec.Error:
+            return errorCode(for: error)
+        case is EncodingError:
+            return Diagnostics.ErrorCode.jsonRPCEncodeFailed
+        case is JSONRPCResponseDecodeError,
+             is DecodingError:
+            return Diagnostics.ErrorCode.jsonRPCDecodeFailed
+        case is ResponseResultDecodeError:
+            return Diagnostics.ErrorCode.jsonRPCUnexpectedFormat
+        case is URLError:
+            return Diagnostics.ErrorCode.networkFailure
+        case is CancellationError:
+            return Diagnostics.ErrorCode.clientCancelled
+        default:
+            let nsError = error as NSError
+            if nsError.domain == NSURLErrorDomain {
+                return Diagnostics.ErrorCode.networkFailure
+            }
+            return Diagnostics.ErrorCode.unknown
+        }
+    }
+
+    static func errorCode(for error: SwiftFulcrum.Client.Error) -> String {
+        switch error {
+        case .transport(let transport):
+            return errorCode(for: transport)
+        case .rpc:
+            return Diagnostics.ErrorCode.jsonRPCServerError
+        case .coding(let coding):
+            return errorCode(for: coding)
+        case .client(let issue):
+            return errorCode(for: issue)
+        }
+    }
+
+    static func errorCode(for error: SwiftFulcrum.Client.Error.Transport) -> String {
+        switch error {
+        case .setupFailed:
+            return Diagnostics.ErrorCode.webSocketSetupFailed
+        case .connectionClosed:
+            return Diagnostics.ErrorCode.webSocketConnectionClosed
+        case .network(let network):
+            return errorCode(for: network)
+        case .reconnectFailed:
+            return Diagnostics.ErrorCode.webSocketReconnectFailed
+        case .heartbeatTimeout:
+            return Diagnostics.ErrorCode.webSocketHeartbeatTimeout
+        }
+    }
+
+    static func errorCode(for error: SwiftFulcrum.Client.Error.Network) -> String {
+        switch error {
+        case .tlsNegotiationFailed:
+            return Diagnostics.ErrorCode.networkTLSNegotiationFailed
+        }
+    }
+
+    static func errorCode(for error: SwiftFulcrum.Client.Error.Coding) -> String {
+        switch error {
+        case .encode:
+            return Diagnostics.ErrorCode.jsonRPCEncodeFailed
+        case .decode:
+            return Diagnostics.ErrorCode.jsonRPCDecodeFailed
+        }
+    }
+
+    static func errorCode(for error: SwiftFulcrum.Client.Error.ClientIssue) -> String {
+        switch error {
+        case .urlNotFound:
+            return Diagnostics.ErrorCode.networkURLNotFound
+        case .invalidURL:
+            return Diagnostics.ErrorCode.networkInvalidURL
+        case .duplicateHandler:
+            return Diagnostics.ErrorCode.clientInvalidState
+        case .cancelled:
+            return Diagnostics.ErrorCode.clientCancelled
+        case .timeout:
+            return Diagnostics.ErrorCode.clientTimeout
+        case .emptyResponse:
+            return Diagnostics.ErrorCode.jsonRPCEmptyResponse
+        case .protocolMismatch:
+            return Diagnostics.ErrorCode.jsonRPCProtocolMismatch
+        case .invalidProtocolNegotiationRange:
+            return Diagnostics.ErrorCode.clientInvalidState
+        case .unknown(let wrappedError):
+            return wrappedError.map(errorCode(for:)) ?? Diagnostics.ErrorCode.unknown
+        }
+    }
+
+    static func errorCode(for error: JSONRPCCodec.Error) -> String {
+        switch error {
+        case .rpc:
+            return Diagnostics.ErrorCode.jsonRPCServerError
+        case .storage:
+            return Diagnostics.ErrorCode.jsonRPCUnexpectedFormat
+        case .decodingFailure(let reason, _, _):
+            return errorCode(for: reason)
+        }
+    }
+
+    static func errorCode(for reason: JSONRPCCodec.Error.DecodingFailureReason) -> String {
+        switch reason {
+        case .generic:
+            return Diagnostics.ErrorCode.jsonRPCDecodeFailed
+        case .idMissing,
+             .methodMissing,
+             .parametersMissing,
+             .errorMissing,
+             .unmatchedMethod,
+             .unexpectedFormat:
+            return Diagnostics.ErrorCode.jsonRPCUnexpectedFormat
+        }
     }
 
     static func payloadFields(payloadType: String, byteCount: Int) -> [OpalDiagnostics.Field] {

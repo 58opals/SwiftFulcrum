@@ -1,6 +1,7 @@
 // PublicAPIFacadeContractValidator.swift
 
 import Foundation
+import OpalDiagnostics
 import Testing
 import SwiftFulcrum
 
@@ -32,6 +33,18 @@ struct PublicAPIFacadeContractValidator {
 
         let diagnosticsType: SwiftFulcrum.Client.Diagnostics.Type = SwiftFulcrum.Client.Diagnostics.self
         _ = diagnosticsType
+
+        let diagnosticsCategory: OpalDiagnostics.Category = SwiftFulcrum.Client.Diagnostics.Category.fulcrum
+        _ = diagnosticsCategory
+
+        let diagnosticsEvent: OpalDiagnostics.Event = SwiftFulcrum.Client.Diagnostics.Event.clientCallBegin
+        _ = diagnosticsEvent
+
+        let diagnosticsFieldName = SwiftFulcrum.Client.Diagnostics.Field.errorCode
+        _ = diagnosticsFieldName
+
+        let diagnosticsErrorCode = SwiftFulcrum.Client.Diagnostics.ErrorCode.jsonRPCDecodeFailed
+        _ = diagnosticsErrorCode
 
         let connectionStateType: SwiftFulcrum.Client.ConnectionState.Type = SwiftFulcrum.Client.ConnectionState.self
         _ = connectionStateType

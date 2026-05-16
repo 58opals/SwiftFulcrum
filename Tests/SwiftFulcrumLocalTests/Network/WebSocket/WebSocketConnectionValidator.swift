@@ -2,6 +2,7 @@
 
 import Foundation
 import Network
+import OpalDiagnostics
 import Testing
 @testable import SwiftFulcrum
 
@@ -227,17 +228,30 @@ struct WebSocketConnectionValidator {
             connectionTimeout: 0.05
         )
 
-        do {
-            try await webSocket.connect(shouldAllowFailover: false)
-            Issue.record("Expected connect() to fail when the socket never opens")
-        } catch let error as SwiftFulcrum.Client.Error {
-            guard case .transport(.connectionClosed(let code, let reason)) = error else {
-                Issue.record("Expected connectionClosed timeout error, got \(error)")
-                return
+        try await OpalDiagnostics.withConfiguration(Self.diagnosticsConfiguration) {
+            OpalDiagnostics.clearRecentRecords()
+
+            do {
+                try await webSocket.connect(shouldAllowFailover: false)
+                Issue.record("Expected connect() to fail when the socket never opens")
+            } catch let error as SwiftFulcrum.Client.Error {
+                guard case .transport(.connectionClosed(let code, let reason)) = error else {
+                    Issue.record("Expected connectionClosed timeout error, got \(error)")
+                    return
+                }
+
+                #expect(code == .goingAway)
+                #expect(reason == "Connection timed out.")
             }
 
-            #expect(code == .goingAway)
-            #expect(reason == "Connection timed out.")
+            let timeoutRecord = try #require(
+                OpalDiagnostics.recentRecords(
+                    matching: .init(event: SwiftFulcrum.Client.Diagnostics.Event.webSocketConnectTimeout)
+                ).first
+            )
+            #expect(timeoutRecord.category == SwiftFulcrum.Client.Diagnostics.Category.webSocket)
+            #expect(findField(SwiftFulcrum.Client.Diagnostics.Field.errorCode, in: timeoutRecord)?.value == SwiftFulcrum.Client.Diagnostics.ErrorCode.clientTimeout)
+            #expect(findField("reason", in: timeoutRecord)?.value == "<redacted>")
         }
 
         let session = await webSocket.session
@@ -281,4 +295,13 @@ private extension WebSocketConnectionValidator {
         }
     }
 
+    static let diagnosticsConfiguration = OpalDiagnostics.Configuration(
+        minimumLevel: .debug,
+        categoryFilter: .enabledIncludingSubcategories([SwiftFulcrum.Client.Diagnostics.Category.fulcrum]),
+        bufferPolicy: .enabled(capacity: 1_000)
+    )
+
+    func findField(_ name: String, in record: OpalDiagnostics.Record) -> OpalDiagnostics.Field? {
+        record.fields.first { $0.name == name }
+    }
 }

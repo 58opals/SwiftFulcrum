@@ -8,6 +8,107 @@ import SwiftFulcrumTestSupport
 
 @Suite(.serialized, .tags(.local))
 struct SwiftFulcrumDiagnosticsValidator {
+    @Test("Public diagnostics catalog maps to recorded Opal diagnostics values")
+    func publicDiagnosticsCatalogMatchesRecordedCatalog() {
+        let categoryMappings = [
+            (SwiftFulcrum.Client.Diagnostics.Category.fulcrum, SwiftFulcrumDiagnostics.Category.fulcrum),
+            (SwiftFulcrum.Client.Diagnostics.Category.jsonRPC, SwiftFulcrumDiagnostics.Category.jsonRPC),
+            (SwiftFulcrum.Client.Diagnostics.Category.webSocket, SwiftFulcrumDiagnostics.Category.webSocket),
+            (SwiftFulcrum.Client.Diagnostics.Category.reconnect, SwiftFulcrumDiagnostics.Category.reconnect)
+        ]
+
+        for (publicCategory, internalCategory) in categoryMappings {
+            #expect(publicCategory == internalCategory)
+        }
+
+        let eventMappings = [
+            (SwiftFulcrum.Client.Diagnostics.Event.jsonRPCRequestEncoded, SwiftFulcrumDiagnostics.Event.jsonRPCRequestEncoded),
+            (SwiftFulcrum.Client.Diagnostics.Event.jsonRPCRequestEncodeFailed, SwiftFulcrumDiagnostics.Event.jsonRPCRequestEncodeFailed),
+            (SwiftFulcrum.Client.Diagnostics.Event.jsonRPCResponseDecoded, SwiftFulcrumDiagnostics.Event.jsonRPCResponseDecoded),
+            (SwiftFulcrum.Client.Diagnostics.Event.jsonRPCResponseDecodeFailed, SwiftFulcrumDiagnostics.Event.jsonRPCResponseDecodeFailed),
+            (SwiftFulcrum.Client.Diagnostics.Event.clientCallBegin, SwiftFulcrumDiagnostics.Event.clientCallBegin),
+            (SwiftFulcrum.Client.Diagnostics.Event.clientCallSent, SwiftFulcrumDiagnostics.Event.clientCallSent),
+            (SwiftFulcrum.Client.Diagnostics.Event.clientCallResponseDecoded, SwiftFulcrumDiagnostics.Event.clientCallResponseDecoded),
+            (SwiftFulcrum.Client.Diagnostics.Event.clientCallTimeout, SwiftFulcrumDiagnostics.Event.clientCallTimeout),
+            (SwiftFulcrum.Client.Diagnostics.Event.clientCallCancelled, SwiftFulcrumDiagnostics.Event.clientCallCancelled),
+            (SwiftFulcrum.Client.Diagnostics.Event.clientCallFailed, SwiftFulcrumDiagnostics.Event.clientCallFailed),
+            (SwiftFulcrum.Client.Diagnostics.Event.clientSubscribeBegin, SwiftFulcrumDiagnostics.Event.clientSubscribeBegin),
+            (SwiftFulcrum.Client.Diagnostics.Event.clientSubscribeSent, SwiftFulcrumDiagnostics.Event.clientSubscribeSent),
+            (SwiftFulcrum.Client.Diagnostics.Event.clientSubscribeInitialDecoded, SwiftFulcrumDiagnostics.Event.clientSubscribeInitialDecoded),
+            (SwiftFulcrum.Client.Diagnostics.Event.clientSubscribeTimeout, SwiftFulcrumDiagnostics.Event.clientSubscribeTimeout),
+            (SwiftFulcrum.Client.Diagnostics.Event.clientSubscribeCancelled, SwiftFulcrumDiagnostics.Event.clientSubscribeCancelled),
+            (SwiftFulcrum.Client.Diagnostics.Event.clientSubscribeFailed, SwiftFulcrumDiagnostics.Event.clientSubscribeFailed),
+            (SwiftFulcrum.Client.Diagnostics.Event.clientDiagnosticsUpdated, SwiftFulcrumDiagnostics.Event.clientDiagnosticsUpdated),
+            (SwiftFulcrum.Client.Diagnostics.Event.clientSubscriptionsUpdated, SwiftFulcrumDiagnostics.Event.clientSubscriptionsUpdated),
+            (SwiftFulcrum.Client.Diagnostics.Event.clientHeartbeatTimeout, SwiftFulcrumDiagnostics.Event.clientHeartbeatTimeout),
+            (SwiftFulcrum.Client.Diagnostics.Event.clientReconnectRecoveryBegin, SwiftFulcrumDiagnostics.Event.clientReconnectRecoveryBegin),
+            (SwiftFulcrum.Client.Diagnostics.Event.clientReconnectRecoverySucceeded, SwiftFulcrumDiagnostics.Event.clientReconnectRecoverySucceeded),
+            (SwiftFulcrum.Client.Diagnostics.Event.clientReconnectRecoveryFailed, SwiftFulcrumDiagnostics.Event.clientReconnectRecoveryFailed),
+            (SwiftFulcrum.Client.Diagnostics.Event.clientSubscriptionRestored, SwiftFulcrumDiagnostics.Event.clientSubscriptionRestored),
+            (SwiftFulcrum.Client.Diagnostics.Event.clientSubscriptionRestoreFailed, SwiftFulcrumDiagnostics.Event.clientSubscriptionRestoreFailed),
+            (SwiftFulcrum.Client.Diagnostics.Event.clientSubscriptionRemoved, SwiftFulcrumDiagnostics.Event.clientSubscriptionRemoved),
+            (SwiftFulcrum.Client.Diagnostics.Event.clientSubscriptionAdded, SwiftFulcrumDiagnostics.Event.clientSubscriptionAdded),
+            (SwiftFulcrum.Client.Diagnostics.Event.webSocketConnectBegin, SwiftFulcrumDiagnostics.Event.webSocketConnectBegin),
+            (SwiftFulcrum.Client.Diagnostics.Event.webSocketConnectSucceeded, SwiftFulcrumDiagnostics.Event.webSocketConnectSucceeded),
+            (SwiftFulcrum.Client.Diagnostics.Event.webSocketConnectTimeout, SwiftFulcrumDiagnostics.Event.webSocketConnectTimeout),
+            (SwiftFulcrum.Client.Diagnostics.Event.webSocketConnectFailover, SwiftFulcrumDiagnostics.Event.webSocketConnectFailover),
+            (SwiftFulcrum.Client.Diagnostics.Event.webSocketConnectFailoverExhausted, SwiftFulcrumDiagnostics.Event.webSocketConnectFailoverExhausted),
+            (SwiftFulcrum.Client.Diagnostics.Event.webSocketDisconnect, SwiftFulcrumDiagnostics.Event.webSocketDisconnect),
+            (SwiftFulcrum.Client.Diagnostics.Event.webSocketSendBegin, SwiftFulcrumDiagnostics.Event.webSocketSendBegin),
+            (SwiftFulcrum.Client.Diagnostics.Event.webSocketSendSucceeded, SwiftFulcrumDiagnostics.Event.webSocketSendSucceeded),
+            (SwiftFulcrum.Client.Diagnostics.Event.webSocketSendFailed, SwiftFulcrumDiagnostics.Event.webSocketSendFailed),
+            (SwiftFulcrum.Client.Diagnostics.Event.webSocketReceiveMessage, SwiftFulcrumDiagnostics.Event.webSocketReceiveMessage),
+            (SwiftFulcrum.Client.Diagnostics.Event.webSocketReceiveFailed, SwiftFulcrumDiagnostics.Event.webSocketReceiveFailed),
+            (SwiftFulcrum.Client.Diagnostics.Event.webSocketReceiveReconnected, SwiftFulcrumDiagnostics.Event.webSocketReceiveReconnected),
+            (SwiftFulcrum.Client.Diagnostics.Event.reconnectAttempt, SwiftFulcrumDiagnostics.Event.reconnectAttempt),
+            (SwiftFulcrum.Client.Diagnostics.Event.reconnectSucceeded, SwiftFulcrumDiagnostics.Event.reconnectSucceeded),
+            (SwiftFulcrum.Client.Diagnostics.Event.reconnectFailed, SwiftFulcrumDiagnostics.Event.reconnectFailed),
+            (SwiftFulcrum.Client.Diagnostics.Event.reconnectMaxAttempts, SwiftFulcrumDiagnostics.Event.reconnectMaxAttempts)
+        ]
+
+        for (publicEvent, internalEvent) in eventMappings {
+            #expect(publicEvent == internalEvent)
+        }
+    }
+
+    @Test("Diagnostics error code catalog maps known failures")
+    func mapDiagnosticsErrorCodeCatalogToKnownFailures() {
+        let mappings = [
+            (
+                SwiftFulcrumDiagnostics.errorCode(for: SwiftFulcrum.Client.Error.client(.cancelled)),
+                SwiftFulcrum.Client.Diagnostics.ErrorCode.clientCancelled
+            ),
+            (
+                SwiftFulcrumDiagnostics.errorCode(for: SwiftFulcrum.Client.Error.client(.timeout(.seconds(1)))),
+                SwiftFulcrum.Client.Diagnostics.ErrorCode.clientTimeout
+            ),
+            (
+                SwiftFulcrumDiagnostics.errorCode(for: SwiftFulcrum.Client.Error.coding(.decode(nil))),
+                SwiftFulcrum.Client.Diagnostics.ErrorCode.jsonRPCDecodeFailed
+            ),
+            (
+                SwiftFulcrumDiagnostics.errorCode(for: SwiftFulcrum.Client.Error.rpc(.init(id: nil, code: 1, message: "server message"))),
+                SwiftFulcrum.Client.Diagnostics.ErrorCode.jsonRPCServerError
+            ),
+            (
+                SwiftFulcrumDiagnostics.errorCode(for: SwiftFulcrum.Client.Error.transport(.connectionClosed(.goingAway, "server reason"))),
+                SwiftFulcrum.Client.Diagnostics.ErrorCode.webSocketConnectionClosed
+            ),
+            (
+                SwiftFulcrumDiagnostics.errorCode(for: SwiftFulcrum.Client.Error.transport(.heartbeatTimeout)),
+                SwiftFulcrum.Client.Diagnostics.ErrorCode.webSocketHeartbeatTimeout
+            ),
+            (
+                SwiftFulcrumDiagnostics.errorCode(for: JSONRPCCodec.Error.decodingFailure(reason: .unexpectedFormat, data: Data([0x01]), description: "payload detail")),
+                SwiftFulcrum.Client.Diagnostics.ErrorCode.jsonRPCUnexpectedFormat
+            )
+        ]
+
+        for (actual, expected) in mappings {
+            #expect(actual == expected)
+        }
+    }
+
     @Test("JSON-RPC request encoding records a traced diagnostics event")
     func requestEncodingRecordsDiagnosticsEvent() throws {
         try withDiagnosticsCapture {
@@ -16,12 +117,32 @@ struct SwiftFulcrumDiagnosticsValidator {
             let payload = try #require(request.data)
 
             let traceID = SwiftFulcrumDiagnostics.traceID(for: requestID)
-            let record = try #require(diagnosticRecord(named: SwiftFulcrumDiagnostics.Event.jsonRPCRequestEncoded, traceID: traceID))
-            #expect(record.category == SwiftFulcrumDiagnostics.Category.jsonRPC)
+            let record = try #require(diagnosticRecord(named: SwiftFulcrum.Client.Diagnostics.Event.jsonRPCRequestEncoded, traceID: traceID))
+            #expect(record.category == SwiftFulcrum.Client.Diagnostics.Category.jsonRPC)
             #expect(record.traceID == traceID)
             #expect(field("method_path", in: record)?.value == "server.ping")
             #expect(field("request_id", in: record)?.value == requestID.uuidString)
             #expect(field("byte_count", in: record)?.value == String(payload.count))
+        }
+    }
+
+    @Test("JSON-RPC request encoding failures record a stable error code")
+    func recordStableErrorCodeForRequestEncodingFailure() throws {
+        try withDiagnosticsCapture {
+            let requestID = UUID()
+            let request = FulcrumRequest(
+                id: requestID,
+                method: SwiftFulcrum.RPC.Method.server(.ping),
+                params: ThrowingParameters()
+            )
+            #expect(request.data == nil)
+
+            let traceID = SwiftFulcrumDiagnostics.traceID(for: requestID)
+            let record = try #require(diagnosticRecord(named: SwiftFulcrum.Client.Diagnostics.Event.jsonRPCRequestEncodeFailed, traceID: traceID))
+            #expect(record.category == SwiftFulcrum.Client.Diagnostics.Category.jsonRPC)
+            #expect(field("method_path", in: record)?.value == "server.ping")
+            #expect(field(SwiftFulcrum.Client.Diagnostics.Field.errorCode, in: record)?.value == SwiftFulcrum.Client.Diagnostics.ErrorCode.jsonRPCEncodeFailed)
+            #expect(field("error_message", in: record)?.value == "<redacted>")
         }
     }
 
@@ -51,6 +172,7 @@ struct SwiftFulcrumDiagnosticsValidator {
             #expect(failureRecord.category == SwiftFulcrumDiagnostics.Category.jsonRPC)
             #expect(failureRecord.traceID == traceID)
             #expect(field("method_hint", in: failureRecord)?.value == "server.banner")
+            #expect(field(SwiftFulcrum.Client.Diagnostics.Field.errorCode, in: failureRecord)?.value == SwiftFulcrum.Client.Diagnostics.ErrorCode.jsonRPCDecodeFailed)
             #expect(field("error_type", in: failureRecord)?.privacy == .public)
             #expect(field("error_message", in: failureRecord)?.value == "<redacted>")
         }
@@ -74,6 +196,8 @@ struct SwiftFulcrumDiagnosticsValidator {
             let decodedRecord = try #require(diagnosticRecord(named: SwiftFulcrumDiagnostics.Event.jsonRPCResponseDecoded, traceID: traceID))
             #expect(decodedRecord.category == SwiftFulcrumDiagnostics.Category.jsonRPC)
             #expect(field("method_hint", in: decodedRecord)?.value == "server.banner")
+            #expect(field(SwiftFulcrum.Client.Diagnostics.Field.errorCode, in: decodedRecord)?.value == SwiftFulcrum.Client.Diagnostics.ErrorCode.jsonRPCServerError)
+            #expect(field("error_message", in: decodedRecord) == nil)
             #expect(OpalDiagnostics.recentRecords(matching: .init(event: SwiftFulcrumDiagnostics.Event.jsonRPCResponseDecodeFailed)).isEmpty)
         }
     }
@@ -244,5 +368,14 @@ struct SwiftFulcrumDiagnosticsValidator {
         }
 
         return await condition()
+    }
+
+    private struct ThrowingParameters: Encodable {
+        func encode(to encoder: Encoder) throws {
+            throw EncodingError.invalidValue(
+                "secret",
+                .init(codingPath: encoder.codingPath, debugDescription: "do not expose this")
+            )
+        }
     }
 }

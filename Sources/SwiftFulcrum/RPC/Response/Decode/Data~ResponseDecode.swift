@@ -48,7 +48,13 @@ extension Data {
             recordResponseDecodeSucceeded(methodHint: methodHint, traceID: traceID)
             return subscriptionResponse.result
         case .error(let error):
-            recordResponseDecodeSucceeded(methodHint: methodHint, traceID: traceID)
+            recordResponseDecodeSucceeded(
+                methodHint: methodHint,
+                traceID: traceID,
+                fields: [
+                    SwiftFulcrumDiagnostics.errorCodeField(SwiftFulcrum.Client.Diagnostics.ErrorCode.jsonRPCServerError)
+                ]
+            )
             throw SwiftFulcrum.Client.Error.rpc(.init(id: error.id, code: error.error.code, message: error.error.message))
         case .empty(let uuid):
             let error = SwiftFulcrum.Client.Error.client(.emptyResponse(uuid))
@@ -59,13 +65,14 @@ extension Data {
 
     private func recordResponseDecodeSucceeded(
         methodHint: String?,
-        traceID: OpalDiagnostics.TraceID?
+        traceID: OpalDiagnostics.TraceID?,
+        fields: [OpalDiagnostics.Field] = []
     ) {
         SwiftFulcrumDiagnostics.record(
             SwiftFulcrumDiagnostics.Event.jsonRPCResponseDecoded,
             category: SwiftFulcrumDiagnostics.Category.jsonRPC,
             traceID: traceID,
-            fields: responseDecodeFields(methodHint: methodHint)
+            fields: responseDecodeFields(methodHint: methodHint) + fields
         )
     }
 
