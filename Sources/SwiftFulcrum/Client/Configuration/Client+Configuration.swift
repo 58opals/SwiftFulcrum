@@ -7,9 +7,6 @@ extension SwiftFulcrum.Client {
     public struct Configuration: Sendable {
         public var tlsDescriptor: TLSDescriptor?
         public var reconnect: ReconnectPolicy
-        public var metrics: SwiftFulcrum.Metrics.MetricsClient?
-        public var logger: SwiftFulcrum.Logging.Adapter?
-        public var isLoggingEnabled: Bool
         public var connectionTimeout: TimeInterval
         public var maximumMessageSize: Int
         public var bootstrapServers: [URL]?
@@ -22,9 +19,6 @@ extension SwiftFulcrum.Client {
         public init(
             tlsDescriptor: TLSDescriptor? = nil,
             reconnect: ReconnectPolicy = .basic,
-            metrics: SwiftFulcrum.Metrics.MetricsClient? = nil,
-            logger: SwiftFulcrum.Logging.Adapter? = nil,
-            isLoggingEnabled: Bool = true,
             connectionTimeout: TimeInterval = 10,
             maximumMessageSize: Int = 64 * 1024 * 1024,
             bootstrapServers: [URL]? = nil,
@@ -34,9 +28,6 @@ extension SwiftFulcrum.Client {
         ) {
             self.tlsDescriptor = tlsDescriptor
             self.reconnect = reconnect
-            self.metrics = metrics
-            self.logger = logger
-            self.isLoggingEnabled = isLoggingEnabled
             self.connectionTimeout = connectionTimeout
             self.maximumMessageSize = maximumMessageSize
             self.bootstrapServers = bootstrapServers
@@ -53,17 +44,10 @@ extension SwiftFulcrum.Client.Configuration {
         
         return WebSocketConnection.Configuration(
             tlsDescriptor: socketTLSDescriptor,
-            metrics: metrics,
-            logger: resolvedLogger,
             maximumMessageSize: maximumMessageSize,
             bootstrapServers: bootstrapServers ?? .init(),
             serverCatalogLoader: serverCatalogLoader,
             network: network
         )
-    }
-    
-    var resolvedLogger: SwiftFulcrum.Logging.Adapter? {
-        guard isLoggingEnabled else { return SwiftFulcrum.Logging.NoOperationAdapter() }
-        return logger
     }
 }

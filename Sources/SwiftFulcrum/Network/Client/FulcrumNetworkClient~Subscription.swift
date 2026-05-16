@@ -103,14 +103,15 @@ extension FulcrumNetworkClient {
                 error: error
             )
             if didRemove {
-                emitLog(.error,
-                        "subscription_registry.restore_failed",
-                        metadata: [
-                            "identifier": subscriptionKey.identifier ?? "",
-                            "method": method.path,
-                            "removed": String(didRemove),
-                            "error": error.localizedDescription
-                        ]
+                recordClientEvent(
+                    SwiftFulcrumDiagnostics.Event.clientSubscriptionRestoreFailed,
+                    level: .error,
+                    traceID: SwiftFulcrumDiagnostics.traceID(for: requestIdentifier),
+                    fields: [
+                        SwiftFulcrumDiagnostics.privateField("subscription_identifier", subscriptionKey.identifier ?? ""),
+                        SwiftFulcrumDiagnostics.methodField(method.path),
+                        SwiftFulcrumDiagnostics.publicField("removed", didRemove)
+                    ] + SwiftFulcrumDiagnostics.errorFields(error)
                 )
             }
             return
@@ -146,12 +147,14 @@ extension FulcrumNetworkClient {
             switch try SwiftFulcrum.RPC.Response.JSONRPC.classifyErasedResponse(from: rawResponse) {
             case .regular:
                 await owner.clearSubscriptionSetupRequestIdentifier(requestIdentifier, for: subscriptionKey)
-                await owner.emitLog(.info,
-                                   "subscription_registry.restored",
-                                   metadata: [
-                                       "identifier": subscriptionKey.identifier ?? "",
-                                       "method": method.path
-                                   ]
+                await owner.recordClientEvent(
+                    SwiftFulcrumDiagnostics.Event.clientSubscriptionRestored,
+                    level: .info,
+                    traceID: SwiftFulcrumDiagnostics.traceID(for: requestIdentifier),
+                    fields: [
+                        SwiftFulcrumDiagnostics.privateField("subscription_identifier", subscriptionKey.identifier ?? ""),
+                        SwiftFulcrumDiagnostics.methodField(method.path)
+                    ]
                 )
             case .error(let error):
                 throw error
@@ -177,14 +180,15 @@ extension FulcrumNetworkClient {
             )
             guard shouldLogFailure || didRemove else { return }
 
-            emitLog(.error,
-                    "subscription_registry.restore_failed",
-                    metadata: [
-                        "identifier": subscriptionKey.identifier ?? "",
-                        "method": method.path,
-                        "removed": String(didRemove),
-                        "error": error.localizedDescription
-                    ]
+            recordClientEvent(
+                SwiftFulcrumDiagnostics.Event.clientSubscriptionRestoreFailed,
+                level: .error,
+                traceID: SwiftFulcrumDiagnostics.traceID(for: requestIdentifier),
+                fields: [
+                    SwiftFulcrumDiagnostics.privateField("subscription_identifier", subscriptionKey.identifier ?? ""),
+                    SwiftFulcrumDiagnostics.methodField(method.path),
+                    SwiftFulcrumDiagnostics.publicField("removed", didRemove)
+                ] + SwiftFulcrumDiagnostics.errorFields(error)
             )
         }
     }
@@ -439,13 +443,15 @@ extension FulcrumNetworkClient {
         )
 
         if didRemove {
-            emitLog(.info,
-                    "subscription_registry.removed",
-                    metadata: [
-                        "identifier": subscriptionKey.identifier ?? "",
-                        "method": subscriptionKey.methodPath.rawValue,
-                        "subscriptionCount": String(subscriptionMethods.count)
-                    ]
+            recordClientEvent(
+                SwiftFulcrumDiagnostics.Event.clientSubscriptionRemoved,
+                level: .info,
+                traceID: SwiftFulcrumDiagnostics.traceID(for: requestIdentifier),
+                fields: [
+                    SwiftFulcrumDiagnostics.privateField("subscription_identifier", subscriptionKey.identifier ?? ""),
+                    SwiftFulcrumDiagnostics.publicField("method_path", subscriptionKey.methodPath.rawValue),
+                    SwiftFulcrumDiagnostics.publicField("subscription_count", subscriptionMethods.count)
+                ]
             )
             await publishSubscriptionRegistry()
         }
@@ -481,13 +487,15 @@ extension FulcrumNetworkClient {
         recordActiveSubscriptionRequestIdentifier(requestIdentifier, for: subscriptionKey)
         subscriptionMethods[subscriptionKey] = method
 
-        emitLog(.info,
-                "subscription_registry.added",
-                metadata: [
-                    "identifier": subscriptionKey.identifier ?? "",
-                    "method": method.path,
-                    "subscriptionCount": String(subscriptionMethods.count)
-                ]
+        recordClientEvent(
+            SwiftFulcrumDiagnostics.Event.clientSubscriptionAdded,
+            level: .info,
+            traceID: SwiftFulcrumDiagnostics.traceID(for: requestIdentifier),
+            fields: [
+                SwiftFulcrumDiagnostics.privateField("subscription_identifier", subscriptionKey.identifier ?? ""),
+                SwiftFulcrumDiagnostics.methodField(method.path),
+                SwiftFulcrumDiagnostics.publicField("subscription_count", subscriptionMethods.count)
+            ]
         )
         await publishSubscriptionRegistry()
         await publishDiagnosticsSnapshot()

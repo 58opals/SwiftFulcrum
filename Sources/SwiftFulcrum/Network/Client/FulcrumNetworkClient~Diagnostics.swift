@@ -32,16 +32,29 @@ extension FulcrumNetworkClient {
     }
     
     func publishDiagnosticsSnapshot(inflightUnaryCallCount: Int? = nil) async {
-        guard let metrics else { return }
-        
         let snapshot = await makeDiagnosticsSnapshot(inflightUnaryCallCount: inflightUnaryCallCount)
-        await metrics.recordDiagnosticsUpdate(url: await transport.endpoint, snapshot: snapshot)
+        let endpoint = await transport.endpoint
+        recordClientEvent(
+            SwiftFulcrumDiagnostics.Event.clientDiagnosticsUpdated,
+            fields: [
+                SwiftFulcrumDiagnostics.endpointField(endpoint),
+                SwiftFulcrumDiagnostics.publicField("reconnect_attempts", snapshot.reconnectAttempts),
+                SwiftFulcrumDiagnostics.publicField("reconnect_successes", snapshot.reconnectSuccesses),
+                SwiftFulcrumDiagnostics.publicField("inflight_unary_call_count", snapshot.inflightUnaryCallCount),
+                SwiftFulcrumDiagnostics.publicField("active_subscription_count", snapshot.activeSubscriptionCount)
+            ]
+        )
     }
     
     func publishSubscriptionRegistry() async {
-        guard let metrics else { return }
-        
         let subscriptions = listSubscriptions()
-        await metrics.recordSubscriptionRegistryUpdate(url: await transport.endpoint, subscriptions: subscriptions)
+        let endpoint = await transport.endpoint
+        recordClientEvent(
+            SwiftFulcrumDiagnostics.Event.clientSubscriptionsUpdated,
+            fields: [
+                SwiftFulcrumDiagnostics.endpointField(endpoint),
+                SwiftFulcrumDiagnostics.publicField("subscription_count", subscriptions.count)
+            ]
+        )
     }
 }

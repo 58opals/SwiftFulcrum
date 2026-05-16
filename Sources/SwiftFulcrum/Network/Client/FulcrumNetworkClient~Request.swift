@@ -1,12 +1,12 @@
 // FulcrumNetworkClient~Request.swift
 
 import Foundation
+import OpalDiagnostics
 
 extension FulcrumNetworkClient {
     func call<ResponsePayload: Decodable & Sendable>(
         method: SwiftFulcrum.RPC.Method,
-        options: Call.Options = .init(),
-        suppressTransportLogging: Bool = false
+        options: Call.Options = .init()
     ) async throws -> (UUID, ResponsePayload) {
         if method.isSubscription {
             throw SwiftFulcrum.Client.Error.client(
@@ -17,10 +17,11 @@ extension FulcrumNetworkClient {
         let id = UUID()
         let request = method.createRequest(with: id)
         let timeoutState = RequestTimeoutState()
-        
-        if suppressTransportLogging {
-            await transport.registerQuietResponse(for: id)
-        }
+        recordClientEvent(
+            SwiftFulcrumDiagnostics.Event.clientCallBegin,
+            traceID: SwiftFulcrumDiagnostics.traceID(for: id),
+            fields: [SwiftFulcrumDiagnostics.methodField(method.path)]
+        )
         
         let callTask = Task<Data, Swift.Error> {
             try await executeUnaryRequest(id: id, request: request, timeoutState: timeoutState)
@@ -68,33 +69,59 @@ extension FulcrumNetworkClient {
 
                 return try await callTask.value
             } onCancel: {
+                callTask.cancel()
                 Task {
                     let cancellationError = await self.makeRequestCancellationError(using: timeoutState)
-                    callTask.cancel()
                     await self.cancelUnary(id, error: cancellationError)
                 }
             }
         } catch {
-            if suppressTransportLogging {
-                await transport.unregisterQuietResponse(for: id)
-            }
             if let token, let cancellationRegistrationID {
                 await token.unregister(cancellationRegistrationID)
             }
             if error is CancellationError {
-                throw await makeRequestCancellationError(using: timeoutState)
+                let cancellationError = await makeRequestCancellationError(using: timeoutState)
+                recordRequestFailure(
+                    await callFailureEvent(for: cancellationError, timeoutState: timeoutState),
+                    requestID: id,
+                    methodPath: method.path,
+                    error: cancellationError
+                )
+                throw cancellationError
             }
+            recordRequestFailure(
+                await callFailureEvent(for: error, timeoutState: timeoutState),
+                requestID: id,
+                methodPath: method.path,
+                error: error
+            )
             throw error
         }
 
         if let token, let cancellationRegistrationID {
             await token.unregister(cancellationRegistrationID)
         }
-        if suppressTransportLogging {
-            await transport.unregisterQuietResponse(for: id)
-        }
 
-        return try (id, raw.decode(ResponsePayload.self, context: .init(methodPath: method.path)))
+        do {
+            let response = try raw.decode(ResponsePayload.self, context: .init(methodPath: method.path))
+            recordClientEvent(
+                SwiftFulcrumDiagnostics.Event.clientCallResponseDecoded,
+                traceID: SwiftFulcrumDiagnostics.traceID(for: id),
+                fields: [
+                    SwiftFulcrumDiagnostics.methodField(method.path),
+                    SwiftFulcrumDiagnostics.publicField("byte_count", raw.count)
+                ]
+            )
+            return (id, response)
+        } catch {
+            recordRequestFailure(
+                SwiftFulcrumDiagnostics.Event.clientCallFailed,
+                requestID: id,
+                methodPath: method.path,
+                error: error
+            )
+            throw error
+        }
     }
     
     func subscribe<Initial: Decodable & Sendable, Notification: Decodable & Sendable>(
@@ -119,6 +146,11 @@ extension FulcrumNetworkClient {
         )
         let timeoutState = RequestTimeoutState()
         let token = options.token
+        recordClientEvent(
+            SwiftFulcrumDiagnostics.Event.clientSubscribeBegin,
+            traceID: SwiftFulcrumDiagnostics.traceID(for: id),
+            fields: [SwiftFulcrumDiagnostics.methodField(method.path)]
+        )
         
         let subscriptionTask = Task<(UUID, Initial, AsyncThrowingStream<Notification, Swift.Error>), Swift.Error> {
             do {
@@ -141,6 +173,14 @@ extension FulcrumNetworkClient {
                     let initial = try initialRaw.decode(
                         Initial.self,
                         context: .init(methodPath: method.path)
+                    )
+                    self.recordClientEvent(
+                        SwiftFulcrumDiagnostics.Event.clientSubscribeInitialDecoded,
+                        traceID: SwiftFulcrumDiagnostics.traceID(for: id),
+                        fields: [
+                            SwiftFulcrumDiagnostics.methodField(method.path),
+                            SwiftFulcrumDiagnostics.publicField("byte_count", initialRaw.count)
+                        ]
                     )
                     clearSubscriptionSetupRequestIdentifier(id, for: subscriptionKey)
                     
@@ -170,6 +210,13 @@ extension FulcrumNetworkClient {
                 } else {
                     resolvedError = error
                 }
+                let event = await self.subscribeFailureEvent(for: resolvedError, timeoutState: timeoutState)
+                self.recordRequestFailure(
+                    event,
+                    requestID: id,
+                    methodPath: method.path,
+                    error: resolvedError
+                )
                 await self.cleanUpSubscriptionSetup(
                     for: subscriptionKey,
                     requestIdentifier: id,
@@ -249,9 +296,9 @@ extension FulcrumNetworkClient {
 
                 return try await subscriptionTask.value
             } onCancel: {
+                subscriptionTask.cancel()
                 Task {
                     let cancellationError = await self.makeRequestCancellationError(using: timeoutState)
-                    subscriptionTask.cancel()
                     await self.cleanUpSubscriptionSetup(
                         for: subscriptionKey,
                         requestIdentifier: id,
@@ -264,7 +311,14 @@ extension FulcrumNetworkClient {
                 await token.unregister(cancellationRegistrationID)
             }
             if error is CancellationError {
-                throw await makeRequestCancellationError(using: timeoutState)
+                let cancellationError = await makeRequestCancellationError(using: timeoutState)
+                recordRequestFailure(
+                    await subscribeFailureEvent(for: cancellationError, timeoutState: timeoutState),
+                    requestID: id,
+                    methodPath: method.path,
+                    error: cancellationError
+                )
+                throw cancellationError
             }
             throw error
         }
@@ -272,5 +326,54 @@ extension FulcrumNetworkClient {
         await recordSubscriptionCancellationRegistration(cancellationRegistration, for: subscriptionKey)
 
         return subscriptionResult
+    }
+}
+
+private extension FulcrumNetworkClient {
+    func callFailureEvent(
+        for error: Swift.Error,
+        timeoutState: RequestTimeoutState
+    ) async -> OpalDiagnostics.Event {
+        if await timeoutState.timeoutError != nil || isTimeoutError(error) {
+            return SwiftFulcrumDiagnostics.Event.clientCallTimeout
+        }
+
+        if isCancellationError(error) {
+            return SwiftFulcrumDiagnostics.Event.clientCallCancelled
+        }
+
+        return SwiftFulcrumDiagnostics.Event.clientCallFailed
+    }
+
+    func subscribeFailureEvent(
+        for error: Swift.Error,
+        timeoutState: RequestTimeoutState
+    ) async -> OpalDiagnostics.Event {
+        if await timeoutState.timeoutError != nil || isTimeoutError(error) {
+            return SwiftFulcrumDiagnostics.Event.clientSubscribeTimeout
+        }
+
+        if isCancellationError(error) {
+            return SwiftFulcrumDiagnostics.Event.clientSubscribeCancelled
+        }
+
+        return SwiftFulcrumDiagnostics.Event.clientSubscribeFailed
+    }
+
+    func isCancellationError(_ error: Swift.Error) -> Bool {
+        if error is CancellationError { return true }
+        if let clientError = error as? SwiftFulcrum.Client.Error,
+           clientError == .client(.cancelled) {
+            return true
+        }
+        return false
+    }
+
+    func isTimeoutError(_ error: Swift.Error) -> Bool {
+        if let clientError = error as? SwiftFulcrum.Client.Error,
+           case .client(.timeout(_)) = clientError {
+            return true
+        }
+        return false
     }
 }

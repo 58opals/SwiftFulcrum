@@ -25,16 +25,10 @@ extension WebSocketConnection {
         shouldAutomaticallyReceive = shouldEnableAutomaticResumption
         
         if let stream = sharedMessagesStream {
-            emitLog(.info,
-                    "message_stream.reuse",
-                    metadata: ["automaticResumption": String(shouldEnableAutomaticResumption)])
             if shouldEnableAutomaticResumption && receivedTask == nil { startReader() }
             return stream
         }
         
-        emitLog(.info,
-                "message_stream.create",
-                metadata: ["automaticResumption": String(shouldEnableAutomaticResumption)])
         let stream = AsyncThrowingStream<URLSessionWebSocketTask.Message, Swift.Error> { continuation in
             self.messageContinuation = continuation
             self.startReader()
@@ -50,7 +44,6 @@ extension WebSocketConnection {
     
     func resetMessageStreamAndReader() async {
         await cancelReceiverTask()
-        emitLog(.info, "message_stream.reset")
         sharedMessagesStream = nil
         messageContinuation = nil
     }
@@ -65,34 +58,6 @@ extension WebSocketConnection {
         return nextIncomingMessageIdentifier
     }
     
-    private func makePayloadMetadata(for message: URLSessionWebSocketTask.Message) -> [String: String] {
-        switch message {
-        case .data(let data):
-            var metadata = [
-                "payloadType": "data",
-                "length": String(data.count)
-            ]
-            if let preview = makePayloadPreview(from: data) {
-                metadata["payloadPreview"] = preview
-            }
-            return metadata
-        case .string(let string):
-            var metadata = [
-                "payloadType": "string",
-                "length": String(string.count)
-            ]
-            if let preview = makePayloadPreview(from: string) {
-                metadata["payloadPreview"] = preview
-            }
-            return metadata
-        @unknown default:
-            return [
-                "payloadType": "unknown",
-                "length": "0"
-            ]
-        }
-    }
-    
     private func receiveContinuously() async {
         defer { receivedTask = nil }
         
@@ -105,13 +70,13 @@ extension WebSocketConnection {
                 } onCancel: {
                     task.cancel(with: .goingAway, reason: nil)
                 }
-                var metadata = makePayloadMetadata(for: message)
-                metadata["messageIdentifier"] = String(makeIncomingMessageIdentifier())
-                if !consumeQuietResponseIdentifier(for: message) {
-                    emitLog(.info,
-                            "receive.message",
-                            metadata: metadata)
-                }
+                let messageIdentifier = makeIncomingMessageIdentifier()
+                recordWebSocketEvent(
+                    SwiftFulcrumDiagnostics.Event.webSocketReceiveMessage,
+                    fields: SwiftFulcrumDiagnostics.payloadFields(for: message) + [
+                        SwiftFulcrumDiagnostics.publicField("message_id", messageIdentifier)
+                    ]
+                )
                 switch messageContinuation?.yield(with: .success(message)) {
                 case .some(.enqueued): break
                 default:
@@ -119,17 +84,19 @@ extension WebSocketConnection {
                     messageContinuation = nil
                     break
                 }
-                await metrics?.recordReceive(url: url, message: message)
             } catch let urlError as URLError where urlError.code == .cancelled {
                 break
             } catch {
                 if Task.isCancelled { break }
-                emitLog(.warning, "receive.failed_reconnecting",
-                        metadata: ["error": (error as NSError).localizedDescription])
+                recordWebSocketEvent(
+                    SwiftFulcrumDiagnostics.Event.webSocketReceiveFailed,
+                    level: .error,
+                    fields: SwiftFulcrumDiagnostics.errorFields(error)
+                )
                 do {
                     await updateConnectionState(.reconnecting)
                     try await reconnector.attemptReconnection(for: self, shouldCancelReceiver: false)
-                    emitLog(.info, "receive.reconnected")
+                    recordWebSocketEvent(SwiftFulcrumDiagnostics.Event.webSocketReceiveReconnected, level: .info)
                     await updateConnectionState(.connected)
                     continue
                 } catch {

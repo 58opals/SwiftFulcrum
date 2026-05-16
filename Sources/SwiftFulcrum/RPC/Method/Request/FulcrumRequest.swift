@@ -39,10 +39,31 @@ extension FulcrumRequest: Hashable {
 
 extension FulcrumRequest {
     var data: Data? {
+        let traceID = SwiftFulcrumDiagnostics.traceID(for: id)
         do {
             let data = try JSONRPCCodec.Coder.encoder.encode(self)
+            SwiftFulcrumDiagnostics.record(
+                SwiftFulcrumDiagnostics.Event.jsonRPCRequestEncoded,
+                category: SwiftFulcrumDiagnostics.Category.jsonRPC,
+                traceID: traceID,
+                fields: [
+                    SwiftFulcrumDiagnostics.methodField(method),
+                    SwiftFulcrumDiagnostics.publicField("request_id", id),
+                    SwiftFulcrumDiagnostics.publicField("byte_count", data.count)
+                ]
+            )
             return data
         } catch {
+            SwiftFulcrumDiagnostics.record(
+                SwiftFulcrumDiagnostics.Event.jsonRPCRequestEncodeFailed,
+                category: SwiftFulcrumDiagnostics.Category.jsonRPC,
+                level: .error,
+                traceID: traceID,
+                fields: [
+                    SwiftFulcrumDiagnostics.methodField(method),
+                    SwiftFulcrumDiagnostics.publicField("request_id", id)
+                ] + SwiftFulcrumDiagnostics.errorFields(error)
+            )
             return nil
         }
     }

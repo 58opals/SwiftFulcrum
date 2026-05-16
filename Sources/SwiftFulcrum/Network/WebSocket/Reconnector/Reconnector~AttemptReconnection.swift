@@ -1,6 +1,7 @@
 // Reconnector~AttemptReconnection.swift
 
 import Foundation
+import OpalDiagnostics
 
 extension WebSocketConnection.Reconnector {
     func attemptReconnection(
@@ -10,6 +11,7 @@ extension WebSocketConnection.Reconnector {
         isInitialConnection: Bool = false
     ) async throws {
         resetReconnectionAttemptCount()
+        let traceID = OpalDiagnostics.TraceID()
 
         let currentURL = await webSocket.url
         let overrideURL = url
@@ -49,20 +51,19 @@ extension WebSocketConnection.Reconnector {
             let attemptSnapshot = await webSocket.makeDiagnosticsSnapshot()
 
             reconnectionAttempts += 1
-            await webSocket.emitLog(
-                .info,
-                "reconnect.attempt",
-                metadata: [
-                    "attempt": String(reconnectionAttempts),
-                    "attemptTotal": String(attemptSnapshot.reconnectAttempts),
-                    "successTotal": String(attemptSnapshot.reconnectSuccesses),
-                    "phase": isInitialConnection ? "initial" : "reconnect",
-                    "unlimited": String(configuration.isUnlimited),
-                    "url": candidateURL.absoluteString
-                ],
-                file: "",
-                function: "",
-                line: 0
+            await webSocket.recordWebSocketEvent(
+                SwiftFulcrumDiagnostics.Event.reconnectAttempt,
+                category: SwiftFulcrumDiagnostics.Category.reconnect,
+                level: .info,
+                traceID: traceID,
+                fields: [
+                    SwiftFulcrumDiagnostics.publicField("attempt", reconnectionAttempts),
+                    SwiftFulcrumDiagnostics.publicField("attempt_total", attemptSnapshot.reconnectAttempts),
+                    SwiftFulcrumDiagnostics.publicField("success_total", attemptSnapshot.reconnectSuccesses),
+                    SwiftFulcrumDiagnostics.publicField("phase", isInitialConnection ? "initial" : "reconnect"),
+                    SwiftFulcrumDiagnostics.publicField("unlimited", configuration.isUnlimited),
+                    SwiftFulcrumDiagnostics.privateField("candidate_url", candidateURL.absoluteString)
+                ]
             )
 
             do {
@@ -77,51 +78,47 @@ extension WebSocketConnection.Reconnector {
                 await webSocket.recordReconnectSuccess()
                 let successSnapshot = await webSocket.makeDiagnosticsSnapshot()
                 resetReconnectionAttemptCount()
-                await webSocket.emitLog(
-                    .info,
-                    "reconnect.succeeded",
-                    metadata: [
-                        "attemptTotal": String(successSnapshot.reconnectAttempts),
-                        "phase": isInitialConnection ? "initial" : "reconnect",
-                        "successTotal": String(successSnapshot.reconnectSuccesses),
-                        "url": candidateURL.absoluteString
-                    ],
-                    file: "",
-                    function: "",
-                    line: 0
+                await webSocket.recordWebSocketEvent(
+                    SwiftFulcrumDiagnostics.Event.reconnectSucceeded,
+                    category: SwiftFulcrumDiagnostics.Category.reconnect,
+                    level: .info,
+                    traceID: traceID,
+                    fields: [
+                        SwiftFulcrumDiagnostics.publicField("attempt_total", successSnapshot.reconnectAttempts),
+                        SwiftFulcrumDiagnostics.publicField("phase", isInitialConnection ? "initial" : "reconnect"),
+                        SwiftFulcrumDiagnostics.publicField("success_total", successSnapshot.reconnectSuccesses),
+                        SwiftFulcrumDiagnostics.privateField("candidate_url", candidateURL.absoluteString)
+                    ]
                 )
                 await webSocket.emitLifecycle(.connected(isReconnect: !isInitialConnection))
                 return
             } catch {
-                await webSocket.emitLog(
-                    .warning,
-                    "reconnect.failed",
-                    metadata: [
-                        "attempt": String(reconnectionAttempts),
-                        "attemptTotal": String(attemptSnapshot.reconnectAttempts),
-                        "error": (error as NSError).localizedDescription,
-                        "phase": isInitialConnection ? "initial" : "reconnect",
-                        "successTotal": String(attemptSnapshot.reconnectSuccesses),
-                        "url": candidateURL.absoluteString
-                    ],
-                    file: "",
-                    function: "",
-                    line: 0
+                await webSocket.recordWebSocketEvent(
+                    SwiftFulcrumDiagnostics.Event.reconnectFailed,
+                    category: SwiftFulcrumDiagnostics.Category.reconnect,
+                    level: .error,
+                    traceID: traceID,
+                    fields: [
+                        SwiftFulcrumDiagnostics.publicField("attempt", reconnectionAttempts),
+                        SwiftFulcrumDiagnostics.publicField("attempt_total", attemptSnapshot.reconnectAttempts),
+                        SwiftFulcrumDiagnostics.publicField("phase", isInitialConnection ? "initial" : "reconnect"),
+                        SwiftFulcrumDiagnostics.publicField("success_total", attemptSnapshot.reconnectSuccesses),
+                        SwiftFulcrumDiagnostics.privateField("candidate_url", candidateURL.absoluteString)
+                    ] + SwiftFulcrumDiagnostics.errorFields(error)
                 )
             }
         }
 
-        await webSocket.emitLog(
-            .error,
-            "reconnect.max_attempts_reached",
-            metadata: [
-                "phase": isInitialConnection ? "initial" : "reconnect",
-                "attemptTotal": String(await webSocket.makeDiagnosticsSnapshot().reconnectAttempts),
-                "url": currentURL.absoluteString
-            ],
-            file: "",
-            function: "",
-            line: 0
+        await webSocket.recordWebSocketEvent(
+            SwiftFulcrumDiagnostics.Event.reconnectMaxAttempts,
+            category: SwiftFulcrumDiagnostics.Category.reconnect,
+            level: .error,
+            traceID: traceID,
+            fields: [
+                SwiftFulcrumDiagnostics.publicField("phase", isInitialConnection ? "initial" : "reconnect"),
+                SwiftFulcrumDiagnostics.publicField("attempt_total", await webSocket.makeDiagnosticsSnapshot().reconnectAttempts),
+                SwiftFulcrumDiagnostics.privateField("endpoint_url", currentURL.absoluteString)
+            ]
         )
         let exhaustionReason = "Reconnection attempts exhausted."
         await webSocket.disconnect(with: exhaustionReason)

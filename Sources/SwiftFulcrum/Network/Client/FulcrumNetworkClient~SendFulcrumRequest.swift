@@ -10,6 +10,7 @@ extension FulcrumNetworkClient {
             guard let data = request.data else { throw SwiftFulcrum.Client.Error.coding(.encode(nil)) }
             try Task.checkCancellation()
             try await self.send(data: data)
+            recordRequestSent(request, byteCount: data.count)
             return
         }
 
@@ -18,6 +19,7 @@ extension FulcrumNetworkClient {
         guard let data = request.data else { throw SwiftFulcrum.Client.Error.coding(.encode(nil)) }
         try Task.checkCancellation()
         try await self.send(data: data)
+        recordRequestSent(request, byteCount: data.count)
     }
 
     func cancelUnary(_ id: UUID, error: Swift.Error? = nil) async {

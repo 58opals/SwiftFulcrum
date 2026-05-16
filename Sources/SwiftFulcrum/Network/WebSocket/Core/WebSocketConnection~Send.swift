@@ -1,53 +1,49 @@
 // WebSocketConnection~Send.swift
 
 import Foundation
+import OpalDiagnostics
 
 extension WebSocketConnection {
     func send(data: Data) async throws {
         let message = URLSessionWebSocketTask.Message.data(data)
-        var metadata = ["payloadType": "data",
-                        "byteCount": String(data.count)]
-        if let preview = makePayloadPreview(from: data) { metadata["payloadPreview"] = preview }
-        try await sendMessage(message, metadata: metadata)
+        try await sendMessage(message, fields: SwiftFulcrumDiagnostics.payloadFields(payloadType: "data", byteCount: data.count))
     }
     
     func send(string: String) async throws {
         let message = URLSessionWebSocketTask.Message.string(string)
-        var metadata = ["payloadType": "string",
-                        "characterCount": String(string.count)]
-        if let preview = makePayloadPreview(from: string) { metadata["payloadPreview"] = preview }
-        try await sendMessage(message, metadata: metadata)
+        try await sendMessage(message, fields: SwiftFulcrumDiagnostics.payloadFields(payloadType: "string", byteCount: string.utf8.count))
     }
     
     private func sendMessage(
         _ message: URLSessionWebSocketTask.Message,
-        metadata: [String: String]
+        fields: [OpalDiagnostics.Field]
     ) async throws {
-        guard let task else { throw SwiftFulcrum.Client.Error.transport(.connectionClosed(closeInformation.code, closeInformation.reason)) }
+        guard let task else {
+            let error = SwiftFulcrum.Client.Error.transport(.connectionClosed(closeInformation.code, closeInformation.reason))
+            recordWebSocketEvent(
+                SwiftFulcrumDiagnostics.Event.webSocketSendFailed,
+                level: .error,
+                fields: fields + SwiftFulcrumDiagnostics.errorFields(error)
+            )
+            throw error
+        }
         
         let messageIdentifier = makeOutgoingMessageIdentifier()
-        var metadataWithIdentifier = metadata
-        metadataWithIdentifier["messageIdentifier"] = String(messageIdentifier)
+        let eventFields = fields + [
+            SwiftFulcrumDiagnostics.publicField("message_id", messageIdentifier)
+        ]
         
-        emitLog(.info, "send.begin", metadata: metadataWithIdentifier)
-        try await task.send(message)
-        await metrics?.recordSend(url: url, message: message)
-        emitLog(.info, "send.succeeded", metadata: metadataWithIdentifier)
-    }
-    
-    func makePayloadPreview(from data: Data) -> String? {
-        guard let decoded = String(data: data, encoding: .utf8) else { return nil }
-        return makePayloadPreview(from: decoded)
-    }
-    
-    func makePayloadPreview(from string: String) -> String? {
-        let trimmed = string.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return nil }
-        
-        let maximumLength = 120
-        guard trimmed.count > maximumLength else { return trimmed }
-        
-        let endIndex = trimmed.index(trimmed.startIndex, offsetBy: maximumLength)
-        return "\(trimmed[..<endIndex])…"
+        recordWebSocketEvent(SwiftFulcrumDiagnostics.Event.webSocketSendBegin, fields: eventFields)
+        do {
+            try await task.send(message)
+            recordWebSocketEvent(SwiftFulcrumDiagnostics.Event.webSocketSendSucceeded, fields: eventFields)
+        } catch {
+            recordWebSocketEvent(
+                SwiftFulcrumDiagnostics.Event.webSocketSendFailed,
+                level: .error,
+                fields: eventFields + SwiftFulcrumDiagnostics.errorFields(error)
+            )
+            throw error
+        }
     }
 }

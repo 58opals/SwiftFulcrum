@@ -26,7 +26,7 @@ It owns:
 - Actor-isolated client lifecycle via `SwiftFulcrum.Client`
 - Protocol negotiation, reconnect handling, and best-effort subscription recovery
 - Bundled public server catalogs for `mainnet`, `testnet`, and `chipnet`
-- Connection-state and diagnostics surfaces for downstream observability
+- Connection-state streams, diagnostics snapshots, and structured OpalDiagnostics events for downstream observability
 
 It does not own:
 
@@ -34,14 +34,15 @@ It does not own:
 - UI, persistence, or application-state policy
 - Non-Fulcrum network protocols
 - Downstream-specific workaround layers that should live in consuming packages or apps
+- Package-specific logging frameworks, console logging adapters, or product metrics policy
 
 ## Integration Expectations
 
 Use `SwiftFulcrum.Client` as the primary entry point.
 
 - Construct `SwiftFulcrum.Client()` to use the bundled mainnet catalog by default
-- Pass `url:` when a consumer needs a fixed Fulcrum endpoint
-- Pass `configuration:` when a consumer needs testnet or chipnet selection, custom TLS or URL session behavior, reconnect tuning, logging, metrics, bootstrap servers, or a custom server catalog loader
+- Pass `connectingTo:` when a consumer needs a fixed Fulcrum endpoint
+- Pass `configuration:` when a consumer needs testnet or chipnet selection, custom TLS behavior, reconnect tuning, bootstrap servers, protocol negotiation settings, or a custom server catalog loader
 
 Use the client surface according to interaction style:
 
@@ -49,11 +50,13 @@ Use the client surface according to interaction style:
 - `subscribe(_:)` for streaming typed endpoints with an initial response plus an async updates stream
 - `makeConnectionStateStream()` when the consumer needs transport-state visibility
 - `makeDiagnosticsSnapshot()` and `listSubscriptions()` when the consumer needs lightweight runtime diagnostics
+- OpalDiagnostics runtime configuration when the host app needs minimum-level control, category filtering, OSLog routing, or recent-record buffer export
 
 Common integration patterns:
 
 - App or package code can issue typed unary calls such as header, transaction, block, or mempool requests without owning raw JSON-RPC plumbing
 - Long-lived consumers can subscribe to address, scripthash, transaction, or proof-related updates while letting the client manage reconnect and subscription restore attempts
+- Host apps can enable SwiftFulcrum diagnostics categories such as `fulcrum`, `fulcrum.jsonrpc`, `fulcrum.websocket`, and `fulcrum.reconnect`; SwiftFulcrum only emits structured events and does not decide app-layer diagnostics policy
 
 ## Boundaries and Non-Goals
 

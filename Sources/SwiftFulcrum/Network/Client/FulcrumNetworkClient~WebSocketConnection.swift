@@ -21,9 +21,12 @@ extension FulcrumNetworkClient {
                 if let inflightCount = await handleMessage(message) { await publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightCount) }
             }
         } catch {
-            emitLog(.warning,
-                    "client.receive.task_ended",
-                    metadata: ["error": (error as NSError).localizedDescription])
+            recordClientEvent(
+                SwiftFulcrumDiagnostics.Event.webSocketReceiveFailed,
+                category: SwiftFulcrumDiagnostics.Category.webSocket,
+                level: .error,
+                fields: SwiftFulcrumDiagnostics.errorFields(error)
+            )
             
             let info = await transport.closeInformation
             let closedError = await SwiftFulcrum.Client.Error.transport(.connectionClosed(info.code, info.reason))

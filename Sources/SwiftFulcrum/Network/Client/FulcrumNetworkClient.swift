@@ -7,8 +7,6 @@ actor FulcrumNetworkClient {
     let transport: TransportAdapter
     var jsonRPC: JSONRPCCodec
     let router: Router
-    let metrics: SwiftFulcrum.Metrics.MetricsClient?
-    let logger: SwiftFulcrum.Logging.Adapter
     let protocolNegotiation: SwiftFulcrum.Client.Configuration.ProtocolNegotiation
     
     var state: State
@@ -23,6 +21,7 @@ actor FulcrumNetworkClient {
     
     var receiveTask: Task<Void, Never>?
     private var startupTask: Task<Void, Swift.Error>?
+    private var startupWaiterCount = 0
     private var reconnectTask: Task<Void, Swift.Error>?
     private var automaticReconnectRecoveryTask: Task<Void, Swift.Error>?
     private var needsAutomaticReconnectRecovery = false
@@ -36,8 +35,6 @@ actor FulcrumNetworkClient {
     var connectionState: SwiftFulcrum.Client.ConnectionState { get async { await transport.connectionState } }
     
     init(transport: TransportAdapter,
-         metrics: SwiftFulcrum.Metrics.MetricsClient? = nil,
-         logger: SwiftFulcrum.Logging.Adapter? = nil,
          heartbeatInterval: Duration = .seconds(25),
          heartbeatTimeout: Duration = .seconds(10),
          protocolNegotiation: SwiftFulcrum.Client.Configuration.ProtocolNegotiation) {
@@ -45,7 +42,6 @@ actor FulcrumNetworkClient {
         self.transport = transport
         self.jsonRPC = .init()
         self.router = .init()
-        self.metrics = metrics
         self.subscriptionMethods = .init()
         self.activeSubscriptionRequestIdentifiers = .init()
         self.pendingSubscriptionRequestIdentifiers = .init()
@@ -53,30 +49,43 @@ actor FulcrumNetworkClient {
         self.subscriptionCleanupTasks = .init()
         self.subscriptionSetupRequestIdentifiers = .init()
         self.subscriptionSetupTasks = .init()
-        self.logger = logger ?? SwiftFulcrum.Logging.ConsoleAdapter()
         self.protocolNegotiation = protocolNegotiation
         self.state = .init()
         self.rpcHeartbeatInterval = heartbeatInterval
         self.rpcHeartbeatTimeout = heartbeatTimeout
-        if let metrics { Task { await self.transport.updateMetrics(metrics) } }
-        Task { await self.transport.updateLogger(self.logger) }
     }
     
     func start() async throws {
-        if let startupTask {
-            return try await startupTask.value
+        let startupTask: Task<Void, Swift.Error>
+        if let existingStartupTask = self.startupTask {
+            startupTask = existingStartupTask
+        } else {
+            let owner = self
+            startupTask = Task<Void, Swift.Error> {
+                try await owner.performStart()
+            }
+            self.startupTask = startupTask
         }
 
-        let owner = self
-        let startupTask = Task<Void, Swift.Error> {
-            try await owner.performStart()
-        }
-        self.startupTask = startupTask
+        startupWaiterCount += 1
         defer {
-            self.startupTask = nil
+            startupWaiterCount -= 1
+            if Task.isCancelled, startupWaiterCount == 0 {
+                startupTask.cancel()
+                self.startupTask = nil
+            }
         }
 
-        try await startupTask.value
+        do {
+            try await awaitCancellableTask(startupTask, cancelUnderlyingTask: false)
+            self.startupTask = nil
+        } catch {
+            if Task.isCancelled, error is CancellationError {
+                throw error
+            }
+            self.startupTask = nil
+            throw error
+        }
     }
 
     private func performStart() async throws {
@@ -140,11 +149,20 @@ actor FulcrumNetworkClient {
                 try await owner.transport.reconnect(with: url)
                 await owner.startReceivingTask()
                 _ = try await owner.ensureNegotiatedProtocol()
-                await owner.emitLog(.info, "client.reconnect_resubscribe.begin")
+                await owner.recordClientEvent(
+                    SwiftFulcrumDiagnostics.Event.clientReconnectRecoveryBegin,
+                    category: SwiftFulcrumDiagnostics.Category.reconnect,
+                    level: .info
+                )
                 await owner.resubscribeStoredMethods()
-                await owner.emitLog(.info,
-                                   "client.reconnect_resubscribe.end",
-                                   metadata: ["count": String(owner.subscriptionMethods.count)])
+                await owner.recordClientEvent(
+                    SwiftFulcrumDiagnostics.Event.clientReconnectRecoverySucceeded,
+                    category: SwiftFulcrumDiagnostics.Category.reconnect,
+                    level: .info,
+                    fields: [
+                        SwiftFulcrumDiagnostics.publicField("subscription_count", owner.subscriptionMethods.count)
+                    ]
+                )
                 await owner.clearAutomaticReconnectRecoveryNeed()
                 await owner.startLifecycleObservationTasks()
                 await owner.publishDiagnosticsSnapshot()
@@ -205,9 +223,12 @@ actor FulcrumNetworkClient {
                     do {
                         try await recoveryTask.value
                     } catch {
-                        await owner.emitLog(.error,
-                                           "client.protocol_negotiation.failed",
-                                           metadata: ["error": error.localizedDescription])
+                        await owner.recordClientEvent(
+                            SwiftFulcrumDiagnostics.Event.clientReconnectRecoveryFailed,
+                            category: SwiftFulcrumDiagnostics.Category.reconnect,
+                            level: .error,
+                            fields: SwiftFulcrumDiagnostics.errorFields(error)
+                        )
                         await owner.handleAutomaticReconnectRecoveryFailure(error)
                     }
                 case .disconnected:
@@ -241,19 +262,6 @@ actor FulcrumNetworkClient {
         lifecycleTask = await cancelAndNil(lifecycleTask)
         diagnosticsStateTask = await cancelAndNil(diagnosticsStateTask)
         await cancelAutomaticReconnectRecoveryTask()
-    }
-}
-
-extension FulcrumNetworkClient {
-    func emitLog(
-        _ level: SwiftFulcrum.Logging.Level,
-        _ message: @autoclosure () -> String,
-        metadata: [String: String] = .init(),
-        file: String = #fileID, function: String = #function, line: UInt = #line
-    ) {
-        var mergedMetadata = ["component": "FulcrumNetworkClient", "client_id": id.uuidString]
-        mergedMetadata.merge(metadata, uniquingKeysWith: { _, new in new })
-        logger.log(level, message(), metadata: mergedMetadata, file: file, function: function, line: line)
     }
 }
 
@@ -339,14 +347,23 @@ private extension FulcrumNetworkClient {
 
     func performAutomaticReconnectRecovery() async throws {
         resetNegotiatedSession()
-        emitLog(.info, "client.autoresubscribe.begin")
+        recordClientEvent(
+            SwiftFulcrumDiagnostics.Event.clientReconnectRecoveryBegin,
+            category: SwiftFulcrumDiagnostics.Category.reconnect,
+            level: .info
+        )
 
         _ = try await ensureNegotiatedProtocol()
         await resubscribeStoredMethods()
         needsAutomaticReconnectRecovery = false
-        emitLog(.info,
-                "client.autoresubscribe.end",
-                metadata: ["count": String(subscriptionMethods.count)])
+        recordClientEvent(
+            SwiftFulcrumDiagnostics.Event.clientReconnectRecoverySucceeded,
+            category: SwiftFulcrumDiagnostics.Category.reconnect,
+            level: .info,
+            fields: [
+                SwiftFulcrumDiagnostics.publicField("subscription_count", subscriptionMethods.count)
+            ]
+        )
     }
 
     func handleAutomaticReconnectRecoveryFailure(_ error: Swift.Error) async {

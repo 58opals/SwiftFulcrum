@@ -20,10 +20,4 @@ protocol TransportAdapter: Sendable {
     func makeLifecycleEvents() async -> AsyncStream<SwiftFulcrum.Transport.State.Event>
     func makeConnectionStateEvents() async -> AsyncStream<SwiftFulcrum.Client.ConnectionState>
     func makeDiagnosticsSnapshot() async -> ClientDiagnosticsTransportState
-    
-    func updateMetrics(_ collector: SwiftFulcrum.Metrics.MetricsClient?) async
-    func updateLogger(_ handler: SwiftFulcrum.Logging.Adapter?) async
-    
-    func registerQuietResponse(for identifier: UUID) async
-    func unregisterQuietResponse(for identifier: UUID) async
 }

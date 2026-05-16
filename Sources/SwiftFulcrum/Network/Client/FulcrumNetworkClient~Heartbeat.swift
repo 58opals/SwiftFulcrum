@@ -14,13 +14,10 @@ extension FulcrumNetworkClient {
                     try Task.checkCancellation()
                     
                     let (_, _): (UUID, SwiftFulcrum.Response.Server.Ping) =
-                    try await SwiftFulcrum.Logging.perform(withBehavior: .quiet) {
-                        try await owner.call(
-                            method: .server(.ping),
-                            options: .init(timeout: owner.rpcHeartbeatTimeout),
-                            suppressTransportLogging: true
-                        )
-                    }
+                    try await owner.call(
+                        method: .server(.ping),
+                        options: .init(timeout: owner.rpcHeartbeatTimeout)
+                    )
                 } catch is CancellationError {
                     // Expected during stop(); do not treat as timeout.
                     break
@@ -28,8 +25,11 @@ extension FulcrumNetworkClient {
                     // If we were cancelled while handling an error, bail out.
                     if Task.isCancelled { break }
                     
-                    await owner.emitLog(.warning, "client.heartbeat.rpc_timeout",
-                                       metadata: ["error": error.localizedDescription])
+                    await owner.recordClientEvent(
+                        SwiftFulcrumDiagnostics.Event.clientHeartbeatTimeout,
+                        level: .error,
+                        fields: SwiftFulcrumDiagnostics.errorFields(error)
+                    )
                     
                     do {
                         try Task.checkCancellation()

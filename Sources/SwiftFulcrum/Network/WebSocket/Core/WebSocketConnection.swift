@@ -13,7 +13,6 @@ actor WebSocketConnection {
     var messageContinuation: AsyncThrowingStream<URLSessionWebSocketTask.Message, Swift.Error>.Continuation?
     
     let reconnector: Reconnector
-    var logger: SwiftFulcrum.Logging.Adapter
     
     var reconnectAttemptCount = 0
     var reconnectSuccessCount = 0
@@ -27,8 +26,6 @@ actor WebSocketConnection {
     var nextOutgoingMessageIdentifier: UInt64 = 0
     var nextIncomingMessageIdentifier: UInt64 = 0
     
-    var quietResponseIdentifiers: Set<UUID> = .init()
-    
     var receivedTask: Task<Void, Never>?
     var shouldAutomaticallyReceive = false
     
@@ -41,7 +38,6 @@ actor WebSocketConnection {
     let sessionDelegateProxy: WebSocketSessionDelegateProxy
     
     private let tlsDescriptor: TLSDescriptor?
-    var metrics: SwiftFulcrum.Metrics.MetricsClient?
     
     init(url: URL,
          configuration: Configuration = .init(),
@@ -64,8 +60,6 @@ actor WebSocketConnection {
         self.connectionTimeout = connectionTimeout
         self.network = configuration.network
         
-        self.metrics = configuration.metrics
-        self.logger = configuration.logger ?? SwiftFulcrum.Logging.ConsoleAdapter()
         self.tlsDescriptor = configuration.tlsDescriptor
         self.maximumMessageSize = configuration.maximumMessageSize
         

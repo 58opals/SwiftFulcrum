@@ -257,30 +257,6 @@ struct ClientCancellationValidator {
         await fulcrum.stop()
     }
 
-    @Test("request(timeout:) unregisters quiet response identifiers", .timeLimit(.minutes(1)))
-    func requestTimeoutUnregistersQuietResponseIdentifier() async throws {
-        let (fulcrum, transport) = try await makeStartedFulcrum()
-        let networkClient = await fulcrum.client
-        let timeout: Duration = .milliseconds(50)
-
-        do {
-            let _: (UUID, SwiftFulcrum.Response.Server.Ping) = try await networkClient.call(
-                method: .server(.ping),
-                options: .init(timeout: timeout),
-                suppressTransportLogging: true
-            )
-            Issue.record("Quiet request should time out without a response.")
-        } catch let error as SwiftFulcrum.Client.Error {
-            #expect(error == .client(.timeout(timeout)))
-        } catch {
-            Issue.record("Unexpected error type: \(error)")
-        }
-
-        #expect(await transport.makeQuietResponseIdentifierCount() == 0)
-
-        await fulcrum.stop()
-    }
-
     @Test("request(timeout:) uses one end-to-end budget when starting from idle", .timeLimit(.minutes(1)))
     func requestTimeoutUsesSingleBudgetWhenStartingFromIdle() async throws {
         let transport = TransportTestActor()
@@ -383,6 +359,547 @@ struct ClientCancellationValidator {
         #expect(await transport.sentMessages.count == baselineOutgoingCount)
         #expect((await fulcrum.makeDiagnosticsSnapshot()).inflightUnaryCallCount == 0)
 
+        await fulcrum.stop()
+    }
+
+    @Test("request cancellation while negotiating does not hang", .timeLimit(.minutes(1)))
+    func requestCancellationWhileNegotiatingDoesNotHang() async throws {
+        let transport = TransportTestActor()
+        let networkClient = FulcrumNetworkClient(transport: transport, protocolNegotiation: .init())
+        await transport.configureOutgoingSendPaused(true)
+        let completion = CancellationCompletionState()
+
+        let requestTask = Task {
+            do {
+                let _: (UUID, SwiftFulcrum.Response.Server.Ping) = try await networkClient.call(
+                    method: .server(.ping),
+                    options: .init(timeout: .seconds(30))
+                )
+                Issue.record("call() should throw cancelled when the calling task is cancelled during negotiation.")
+                await completion.finish(with: .client(.unknown(nil)))
+            } catch let error as SwiftFulcrum.Client.Error {
+                await completion.finish(with: error)
+            } catch {
+                await completion.finish(with: .client(.unknown(error)))
+            }
+        }
+
+        let didPauseNegotiationSend = await waitUntil(timeout: .seconds(2)) {
+            await transport.makePendingOutgoingSendCount() == 1
+        }
+        #expect(didPauseNegotiationSend)
+
+        requestTask.cancel()
+        await transport.configureOutgoingSendPaused(false)
+
+        let didComplete = await waitUntil(timeout: .seconds(2)) {
+            await completion.isCompleted
+        }
+        #expect(didComplete)
+
+        if didComplete {
+            #expect(isCancelledError(await completion.recordedError ?? .client(.unknown(nil))))
+        }
+
+        try? await Task.sleep(for: .milliseconds(150))
+        #expect(await transport.sentMessages.isEmpty)
+    }
+
+    @Test("cancelled negotiation owner does not cancel waiting call", .timeLimit(.minutes(1)))
+    func cancelledNegotiationOwnerDoesNotCancelWaitingCall() async throws {
+        let transport = TransportTestActor()
+        let networkClient = FulcrumNetworkClient(transport: transport, protocolNegotiation: .init())
+        let fulcrum = await SwiftFulcrum.Client(client: networkClient)
+        try await startAndNegotiate(fulcrum, transport: transport)
+        await networkClient.resetNegotiatedSession()
+        let baselineSentMessageCount = await transport.sentMessages.count
+        await transport.configureOutgoingSendPaused(true)
+        let ownerCompletion = CancellationCompletionState()
+
+        let ownerCallTask = Task {
+            do {
+                let _: (UUID, SwiftFulcrum.Response.Server.Ping) = try await networkClient.call(
+                    method: .server(.ping),
+                    options: .init(timeout: .seconds(30))
+                )
+                Issue.record("Cancelled negotiation owner should not complete successfully.")
+                await ownerCompletion.finish(with: .client(.unknown(nil)))
+            } catch let error as SwiftFulcrum.Client.Error {
+                await ownerCompletion.finish(with: error)
+            } catch {
+                await ownerCompletion.finish(with: .client(.unknown(error)))
+            }
+        }
+
+        let didPauseNegotiationSend = await waitUntil(timeout: .seconds(2)) {
+            await transport.makePendingOutgoingSendCount() == 1
+        }
+        #expect(didPauseNegotiationSend)
+
+        let waiterCallTask = Task {
+            try await networkClient.call(
+                method: .server(.ping),
+                options: .init(timeout: .seconds(30))
+            ) as (UUID, SwiftFulcrum.Response.Server.Ping)
+        }
+
+        let didRegisterWaitingCall = await waitUntil(timeout: .seconds(2)) {
+            await networkClient.state.negotiatedSession.negotiationWaiterCount == 2
+        }
+        #expect(didRegisterWaitingCall)
+
+        ownerCallTask.cancel()
+
+        let didCancelOwner = await waitUntil(timeout: .seconds(2)) {
+            await ownerCompletion.isCompleted
+        }
+        #expect(didCancelOwner)
+
+        if didCancelOwner {
+            #expect(isCancelledError(await ownerCompletion.recordedError ?? .client(.unknown(nil))))
+        }
+
+        await transport.configureOutgoingSendPaused(false)
+
+        let didSendVersionRequest = await waitUntil(timeout: .seconds(2)) {
+            await transport.sentMessages.count >= baselineSentMessageCount + 1
+        }
+        #expect(didSendVersionRequest)
+        guard didSendVersionRequest else {
+            waiterCallTask.cancel()
+            _ = try? await waiterCallTask.value
+            await fulcrum.stop()
+            return
+        }
+
+        let versionObject = try TransportTestActor.decodeJSONObject(from: await transport.dequeueOutgoing())
+        let versionIdentifier = try requestIdentifier(from: versionObject)
+        let versionPayload = try TransportTestActor.encodeResponsePayload(
+            identifier: versionIdentifier,
+            result: ["SwiftFulcrum.Client 2.0", "1.5.3"]
+        )
+        await transport.enqueueIncoming(.data(versionPayload))
+
+        let didSendFeaturesRequest = await waitUntil(timeout: .seconds(2)) {
+            await transport.sentMessages.count >= baselineSentMessageCount + 2
+        }
+        #expect(didSendFeaturesRequest)
+        guard didSendFeaturesRequest else {
+            waiterCallTask.cancel()
+            _ = try? await waiterCallTask.value
+            await fulcrum.stop()
+            return
+        }
+
+        let featuresObject = try TransportTestActor.decodeJSONObject(from: await transport.dequeueOutgoing())
+        let featuresIdentifier = try requestIdentifier(from: featuresObject)
+        let featuresPayload = try TransportTestActor.encodeResponsePayload(
+            identifier: featuresIdentifier,
+            result: [
+                "genesis_hash": String(repeating: "0", count: 64),
+                "hash_function": "sha256",
+                "server_version": "SwiftFulcrum.Client 2.0",
+                "protocol_max": "1.6.0",
+                "protocol_min": "1.4.0"
+            ]
+        )
+        await transport.enqueueIncoming(.data(featuresPayload))
+
+        let didSendPingRequest = await waitUntil(timeout: .seconds(2)) {
+            await transport.sentMessages.count >= baselineSentMessageCount + 3
+        }
+        #expect(didSendPingRequest)
+        guard didSendPingRequest else {
+            waiterCallTask.cancel()
+            _ = try? await waiterCallTask.value
+            await fulcrum.stop()
+            return
+        }
+
+        let pingObject = try TransportTestActor.decodeJSONObject(from: await transport.dequeueOutgoing())
+        #expect(pingObject["method"] as? String == "server.ping")
+        let pingIdentifier = try requestIdentifier(from: pingObject)
+        let pingPayload = try TransportTestActor.encodeResponsePayload(
+            identifier: pingIdentifier,
+            result: NSNull()
+        )
+        await transport.enqueueIncoming(.data(pingPayload))
+
+        _ = try await waiterCallTask.value
+        await fulcrum.stop()
+    }
+
+    @Test("start task cancellation does not hang while connecting", .timeLimit(.minutes(1)))
+    func startTaskCancellationDoesNotHangWhileConnecting() async throws {
+        let transport = TransportTestActor()
+        await transport.configureConnectDelay(.seconds(5))
+        let client = FulcrumNetworkClient(transport: transport, protocolNegotiation: .init())
+        let completion = CancellationCompletionState()
+
+        let startTask = Task {
+            do {
+                try await client.start()
+                Issue.record("start() should throw cancelled when the calling task is cancelled.")
+                await completion.finish(with: .client(.unknown(nil)))
+            } catch is CancellationError {
+                await completion.finish(with: .client(.cancelled))
+            } catch let error as SwiftFulcrum.Client.Error {
+                await completion.finish(with: error)
+            } catch {
+                await completion.finish(with: .client(.unknown(error)))
+            }
+        }
+
+        try? await Task.sleep(for: .milliseconds(50))
+        startTask.cancel()
+
+        let didComplete = await waitUntil(timeout: .seconds(2)) {
+            await completion.isCompleted
+        }
+        #expect(didComplete)
+
+        if didComplete {
+            #expect(isCancelledError(await completion.recordedError ?? .client(.unknown(nil))))
+        }
+
+        #expect(await transport.connectionState == .idle)
+    }
+
+    @Test("cancelled shared start waiter does not cancel startup owner", .timeLimit(.minutes(1)))
+    func cancelledSharedStartWaiterDoesNotCancelStartupOwner() async throws {
+        let transport = TransportTestActor()
+        await transport.configureConnectDelay(.milliseconds(100))
+        let client = FulcrumNetworkClient(transport: transport, protocolNegotiation: .init())
+        let waiterCompletion = CancellationCompletionState()
+
+        let ownerStartTask = Task {
+            try await client.start()
+        }
+
+        try? await Task.sleep(for: .milliseconds(10))
+        let waiterStartTask = Task {
+            do {
+                try await client.start()
+                Issue.record("Cancelled shared start waiter should not complete successfully.")
+                await waiterCompletion.finish(with: .client(.unknown(nil)))
+            } catch is CancellationError {
+                await waiterCompletion.finish(with: .client(.cancelled))
+            } catch let error as SwiftFulcrum.Client.Error {
+                await waiterCompletion.finish(with: error)
+            } catch {
+                await waiterCompletion.finish(with: .client(.unknown(error)))
+            }
+        }
+
+        try? await Task.sleep(for: .milliseconds(10))
+        waiterStartTask.cancel()
+
+        let didCancelWaiter = await waitUntil(timeout: .seconds(2)) {
+            await waiterCompletion.isCompleted
+        }
+        #expect(didCancelWaiter)
+
+        if didCancelWaiter {
+            #expect(isCancelledError(await waiterCompletion.recordedError ?? .client(.unknown(nil))))
+        }
+
+        let didSendNegotiationRequest = await waitUntil(timeout: .seconds(2)) {
+            await !transport.sentMessages.isEmpty
+        }
+        #expect(didSendNegotiationRequest)
+        guard didSendNegotiationRequest else {
+            ownerStartTask.cancel()
+            _ = try? await ownerStartTask.value
+            return
+        }
+
+        let versionObject = try TransportTestActor.decodeJSONObject(from: await transport.dequeueOutgoing())
+        let versionIdentifier = try requestIdentifier(from: versionObject)
+        let versionPayload = try TransportTestActor.encodeResponsePayload(
+            identifier: versionIdentifier,
+            result: ["SwiftFulcrum.Client 2.0", "1.5.3"]
+        )
+        await transport.enqueueIncoming(.data(versionPayload))
+
+        let featuresObject = try TransportTestActor.decodeJSONObject(from: await transport.dequeueOutgoing())
+        let featuresIdentifier = try requestIdentifier(from: featuresObject)
+        let featuresPayload = try TransportTestActor.encodeResponsePayload(
+            identifier: featuresIdentifier,
+            result: [
+                "genesis_hash": String(repeating: "0", count: 64),
+                "hash_function": "sha256",
+                "server_version": "SwiftFulcrum.Client 2.0",
+                "protocol_max": "1.6.0",
+                "protocol_min": "1.4.0"
+            ]
+        )
+        await transport.enqueueIncoming(.data(featuresPayload))
+
+        try await ownerStartTask.value
+        await client.stop()
+    }
+
+    @Test("cancelled shared start owner does not cancel waiting start", .timeLimit(.minutes(1)))
+    func cancelledSharedStartOwnerDoesNotCancelWaitingStart() async throws {
+        let transport = TransportTestActor()
+        await transport.configureConnectDelay(.milliseconds(100))
+        let client = FulcrumNetworkClient(transport: transport, protocolNegotiation: .init())
+        let ownerCompletion = CancellationCompletionState()
+
+        let ownerStartTask = Task {
+            do {
+                try await client.start()
+                Issue.record("Cancelled shared start owner should not complete successfully.")
+                await ownerCompletion.finish(with: .client(.unknown(nil)))
+            } catch is CancellationError {
+                await ownerCompletion.finish(with: .client(.cancelled))
+            } catch let error as SwiftFulcrum.Client.Error {
+                await ownerCompletion.finish(with: error)
+            } catch {
+                await ownerCompletion.finish(with: .client(.unknown(error)))
+            }
+        }
+
+        try? await Task.sleep(for: .milliseconds(10))
+        let waiterStartTask = Task {
+            try await client.start()
+        }
+
+        try? await Task.sleep(for: .milliseconds(10))
+        ownerStartTask.cancel()
+
+        let didCancelOwner = await waitUntil(timeout: .seconds(2)) {
+            await ownerCompletion.isCompleted
+        }
+        #expect(didCancelOwner)
+
+        if didCancelOwner {
+            #expect(isCancelledError(await ownerCompletion.recordedError ?? .client(.unknown(nil))))
+        }
+
+        let didSendNegotiationRequest = await waitUntil(timeout: .seconds(2)) {
+            await !transport.sentMessages.isEmpty
+        }
+        #expect(didSendNegotiationRequest)
+        guard didSendNegotiationRequest else {
+            waiterStartTask.cancel()
+            _ = try? await waiterStartTask.value
+            return
+        }
+
+        let versionObject = try TransportTestActor.decodeJSONObject(from: await transport.dequeueOutgoing())
+        let versionIdentifier = try requestIdentifier(from: versionObject)
+        let versionPayload = try TransportTestActor.encodeResponsePayload(
+            identifier: versionIdentifier,
+            result: ["SwiftFulcrum.Client 2.0", "1.5.3"]
+        )
+        await transport.enqueueIncoming(.data(versionPayload))
+
+        let featuresObject = try TransportTestActor.decodeJSONObject(from: await transport.dequeueOutgoing())
+        let featuresIdentifier = try requestIdentifier(from: featuresObject)
+        let featuresPayload = try TransportTestActor.encodeResponsePayload(
+            identifier: featuresIdentifier,
+            result: [
+                "genesis_hash": String(repeating: "0", count: 64),
+                "hash_function": "sha256",
+                "server_version": "SwiftFulcrum.Client 2.0",
+                "protocol_max": "1.6.0",
+                "protocol_min": "1.4.0"
+            ]
+        )
+        await transport.enqueueIncoming(.data(featuresPayload))
+
+        try await waiterStartTask.value
+        await client.stop()
+    }
+
+    @Test("public client start cancellation does not hang while connecting", .timeLimit(.minutes(1)))
+    func publicClientStartCancellationDoesNotHangWhileConnecting() async throws {
+        let transport = TransportTestActor()
+        await transport.configureConnectDelay(.seconds(5))
+        let networkClient = FulcrumNetworkClient(transport: transport, protocolNegotiation: .init())
+        let fulcrum = await SwiftFulcrum.Client(client: networkClient)
+        let completion = CancellationCompletionState()
+
+        let startTask = Task {
+            do {
+                try await fulcrum.start()
+                Issue.record("SwiftFulcrum.Client.start() should throw cancelled when the calling task is cancelled.")
+                await completion.finish(with: .client(.unknown(nil)))
+            } catch is CancellationError {
+                await completion.finish(with: .client(.cancelled))
+            } catch let error as SwiftFulcrum.Client.Error {
+                await completion.finish(with: error)
+            } catch {
+                await completion.finish(with: .client(.unknown(error)))
+            }
+        }
+
+        try? await Task.sleep(for: .milliseconds(50))
+        startTask.cancel()
+
+        let didComplete = await waitUntil(timeout: .seconds(2)) {
+            await completion.isCompleted
+        }
+        #expect(didComplete)
+
+        if didComplete {
+            #expect(isCancelledError(await completion.recordedError ?? .client(.unknown(nil))))
+        }
+
+        #expect(await transport.connectionState == .idle)
+        await fulcrum.stop()
+    }
+
+    @Test("cancelled public start waiter does not cancel startup owner", .timeLimit(.minutes(1)))
+    func cancelledPublicStartWaiterDoesNotCancelStartupOwner() async throws {
+        let transport = TransportTestActor()
+        await transport.configureConnectDelay(.milliseconds(100))
+        let networkClient = FulcrumNetworkClient(transport: transport, protocolNegotiation: .init())
+        let fulcrum = await SwiftFulcrum.Client(client: networkClient)
+        let waiterCompletion = CancellationCompletionState()
+
+        let ownerStartTask = Task {
+            try await fulcrum.start()
+        }
+
+        try? await Task.sleep(for: .milliseconds(10))
+        let waiterStartTask = Task {
+            do {
+                try await fulcrum.start()
+                Issue.record("Cancelled public start waiter should not complete successfully.")
+                await waiterCompletion.finish(with: .client(.unknown(nil)))
+            } catch is CancellationError {
+                await waiterCompletion.finish(with: .client(.cancelled))
+            } catch let error as SwiftFulcrum.Client.Error {
+                await waiterCompletion.finish(with: error)
+            } catch {
+                await waiterCompletion.finish(with: .client(.unknown(error)))
+            }
+        }
+
+        try? await Task.sleep(for: .milliseconds(10))
+        waiterStartTask.cancel()
+
+        let didCancelWaiter = await waitUntil(timeout: .seconds(2)) {
+            await waiterCompletion.isCompleted
+        }
+        #expect(didCancelWaiter)
+
+        if didCancelWaiter {
+            #expect(isCancelledError(await waiterCompletion.recordedError ?? .client(.unknown(nil))))
+        }
+
+        let didSendNegotiationRequest = await waitUntil(timeout: .seconds(2)) {
+            await !transport.sentMessages.isEmpty
+        }
+        #expect(didSendNegotiationRequest)
+        guard didSendNegotiationRequest else {
+            ownerStartTask.cancel()
+            _ = try? await ownerStartTask.value
+            await fulcrum.stop()
+            return
+        }
+
+        let versionObject = try TransportTestActor.decodeJSONObject(from: await transport.dequeueOutgoing())
+        let versionIdentifier = try requestIdentifier(from: versionObject)
+        let versionPayload = try TransportTestActor.encodeResponsePayload(
+            identifier: versionIdentifier,
+            result: ["SwiftFulcrum.Client 2.0", "1.5.3"]
+        )
+        await transport.enqueueIncoming(.data(versionPayload))
+
+        let featuresObject = try TransportTestActor.decodeJSONObject(from: await transport.dequeueOutgoing())
+        let featuresIdentifier = try requestIdentifier(from: featuresObject)
+        let featuresPayload = try TransportTestActor.encodeResponsePayload(
+            identifier: featuresIdentifier,
+            result: [
+                "genesis_hash": String(repeating: "0", count: 64),
+                "hash_function": "sha256",
+                "server_version": "SwiftFulcrum.Client 2.0",
+                "protocol_max": "1.6.0",
+                "protocol_min": "1.4.0"
+            ]
+        )
+        await transport.enqueueIncoming(.data(featuresPayload))
+
+        try await ownerStartTask.value
+        await fulcrum.stop()
+    }
+
+    @Test("cancelled public start owner does not cancel waiting start", .timeLimit(.minutes(1)))
+    func cancelledPublicStartOwnerDoesNotCancelWaitingStart() async throws {
+        let transport = TransportTestActor()
+        await transport.configureConnectDelay(.milliseconds(100))
+        let networkClient = FulcrumNetworkClient(transport: transport, protocolNegotiation: .init())
+        let fulcrum = await SwiftFulcrum.Client(client: networkClient)
+        let ownerCompletion = CancellationCompletionState()
+
+        let ownerStartTask = Task {
+            do {
+                try await fulcrum.start()
+                Issue.record("Cancelled public start owner should not complete successfully.")
+                await ownerCompletion.finish(with: .client(.unknown(nil)))
+            } catch is CancellationError {
+                await ownerCompletion.finish(with: .client(.cancelled))
+            } catch let error as SwiftFulcrum.Client.Error {
+                await ownerCompletion.finish(with: error)
+            } catch {
+                await ownerCompletion.finish(with: .client(.unknown(error)))
+            }
+        }
+
+        try? await Task.sleep(for: .milliseconds(10))
+        let waiterStartTask = Task {
+            try await fulcrum.start()
+        }
+
+        try? await Task.sleep(for: .milliseconds(10))
+        ownerStartTask.cancel()
+
+        let didCancelOwner = await waitUntil(timeout: .seconds(2)) {
+            await ownerCompletion.isCompleted
+        }
+        #expect(didCancelOwner)
+
+        if didCancelOwner {
+            #expect(isCancelledError(await ownerCompletion.recordedError ?? .client(.unknown(nil))))
+        }
+
+        let didSendNegotiationRequest = await waitUntil(timeout: .seconds(2)) {
+            await !transport.sentMessages.isEmpty
+        }
+        #expect(didSendNegotiationRequest)
+        guard didSendNegotiationRequest else {
+            waiterStartTask.cancel()
+            _ = try? await waiterStartTask.value
+            await fulcrum.stop()
+            return
+        }
+
+        let versionObject = try TransportTestActor.decodeJSONObject(from: await transport.dequeueOutgoing())
+        let versionIdentifier = try requestIdentifier(from: versionObject)
+        let versionPayload = try TransportTestActor.encodeResponsePayload(
+            identifier: versionIdentifier,
+            result: ["SwiftFulcrum.Client 2.0", "1.5.3"]
+        )
+        await transport.enqueueIncoming(.data(versionPayload))
+
+        let featuresObject = try TransportTestActor.decodeJSONObject(from: await transport.dequeueOutgoing())
+        let featuresIdentifier = try requestIdentifier(from: featuresObject)
+        let featuresPayload = try TransportTestActor.encodeResponsePayload(
+            identifier: featuresIdentifier,
+            result: [
+                "genesis_hash": String(repeating: "0", count: 64),
+                "hash_function": "sha256",
+                "server_version": "SwiftFulcrum.Client 2.0",
+                "protocol_max": "1.6.0",
+                "protocol_min": "1.4.0"
+            ]
+        )
+        await transport.enqueueIncoming(.data(featuresPayload))
+
+        try await waiterStartTask.value
         await fulcrum.stop()
     }
     

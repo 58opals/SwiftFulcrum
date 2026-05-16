@@ -16,9 +16,15 @@ let package = Package(
             name: "SwiftFulcrum",
             targets: ["SwiftFulcrum"]),
     ],
+    dependencies: [
+        .package(url: "https://github.com/58opals/OpalDiagnostics.git", branch: "develop")
+    ],
     targets: [
         .target(
             name: "SwiftFulcrum",
+            dependencies: [
+                .product(name: "OpalDiagnostics", package: "OpalDiagnostics")
+            ],
             resources: [
                 .process("Network/WebSocket/servers.mainnet.json"),
                 .process("Network/WebSocket/servers.testnet.json"),
@@ -32,7 +38,11 @@ let package = Package(
         ),
         .testTarget(
             name: "SwiftFulcrumLocalTests",
-            dependencies: ["SwiftFulcrum", "SwiftFulcrumTestSupport"],
+            dependencies: [
+                "SwiftFulcrum",
+                "SwiftFulcrumTestSupport",
+                .product(name: "OpalDiagnostics", package: "OpalDiagnostics")
+            ],
             path: "Tests/SwiftFulcrumLocalTests"
         ),
         .testTarget(

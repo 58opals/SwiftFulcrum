@@ -7,28 +7,53 @@ extension FulcrumNetworkClient {
         if state.negotiatedSession.negotiatedProtocol != nil {
             return state.negotiatedSession
         }
-        
-        if let negotiationTask = state.negotiatedSession.negotiationTask {
-            return try await negotiationTask.value
+
+        let negotiationTask: Task<NegotiatedSession, Swift.Error>
+        if let existingNegotiationTask = state.negotiatedSession.negotiationTask {
+            negotiationTask = existingNegotiationTask
+        } else {
+            negotiationTask = Task { try await self.performProtocolNegotiation() }
+            state.negotiatedSession.negotiationTask = negotiationTask
+        }
+
+        let cancellationCoordinator = state.negotiatedSession.negotiationCancellationCoordinator
+        state.negotiatedSession.negotiationWaiterCount += 1
+        cancellationCoordinator.addWaiter()
+        defer {
+            let remainingWaiterCount = cancellationCoordinator.removeWaiter()
+            state.negotiatedSession.negotiationWaiterCount -= 1
+            if Task.isCancelled, remainingWaiterCount == 0 {
+                negotiationTask.cancel()
+                clearNegotiatedSession()
+            }
         }
         
-        let negotiationTask = Task { try await self.performProtocolNegotiation() }
-        state.negotiatedSession.negotiationTask = negotiationTask
-        
         do {
-            let negotiatedSession = try await negotiationTask.value
+            let negotiatedSession = try await awaitCancellableTask(
+                negotiationTask,
+                shouldCancelUnderlyingTask: {
+                    cancellationCoordinator.shouldCancelUnderlyingTaskForCancellingWaiter()
+                }
+            )
             state.negotiatedSession.negotiatedProtocol = negotiatedSession.negotiatedProtocol
             state.negotiatedSession.serverSoftwareVersion = negotiatedSession.serverSoftwareVersion
             state.negotiatedSession.serverFeatures = negotiatedSession.serverFeatures
             state.negotiatedSession.negotiationTask = nil
             return negotiatedSession
         } catch {
-            state.negotiatedSession.negotiatedProtocol = nil
-            state.negotiatedSession.serverSoftwareVersion = nil
-            state.negotiatedSession.serverFeatures = nil
-            state.negotiatedSession.negotiationTask = nil
+            if Task.isCancelled, error is CancellationError {
+                throw error
+            }
+            clearNegotiatedSession()
             throw error
         }
+    }
+
+    private func clearNegotiatedSession() {
+        state.negotiatedSession.negotiatedProtocol = nil
+        state.negotiatedSession.serverSoftwareVersion = nil
+        state.negotiatedSession.serverFeatures = nil
+        state.negotiatedSession.negotiationTask = nil
     }
     
     private func performProtocolNegotiation() async throws -> NegotiatedSession {

@@ -55,7 +55,6 @@ extension WebSocketReconnectorValidator {
             fallback
         }
         let clientConfiguration = SwiftFulcrum.Client.Configuration(
-            logger: SwiftFulcrum.Logging.NoOperationAdapter(),
             bootstrapServers: [bootstrap],
             serverCatalogLoader: loader
         )

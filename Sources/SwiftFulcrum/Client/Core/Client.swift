@@ -14,6 +14,7 @@ extension SwiftFulcrum {
         private(set) var isRunning = false
         var desiredRunning = false
         var startTask: Task<Void, Swift.Error>?
+        var startTaskWaiterCount = 0
         var currentConnectionState: ConnectionState = .idle
         var connectionStateObservationTask: Task<Void, Never>?
         var connectionStateContinuationsBySubscriberIdentifier: [UUID: AsyncStream<ConnectionState>.Continuation] = .init()
@@ -21,7 +22,7 @@ extension SwiftFulcrum {
         /// Creates a Fulcrum client that connects to a specific server endpoint.
         /// - Parameters:
         ///   - endpoint: WebSocket endpoint for the Fulcrum server.
-        ///   - configuration: Custom connection behavior including TLS, reconnection, metrics, and logging hooks.
+        ///   - configuration: Custom connection behavior including TLS, reconnection, catalog lookup, and protocol negotiation.
         /// - Throws: ``SwiftFulcrum.Client.Error`` when the transport cannot be prepared.
         public init(connectingTo endpoint: URL, configuration: Configuration = .init()) async throws {
             self.client = try Self.makeClient(connectingTo: endpoint, configuration: configuration)
@@ -29,7 +30,7 @@ extension SwiftFulcrum {
         }
 
         /// Creates a Fulcrum client that resolves a server from the configured catalog.
-        /// - Parameter configuration: Custom connection behavior including catalog lookup, TLS, reconnection, metrics, and logging hooks.
+        /// - Parameter configuration: Custom connection behavior including catalog lookup, TLS, reconnection, and protocol negotiation.
         /// - Throws: ``SwiftFulcrum.Client.Error`` when no usable server can be loaded or the transport cannot be prepared.
         public init(configuration: Configuration = .init()) async throws {
             let endpoint = try await Self.selectServerEndpoint(using: configuration)
@@ -52,18 +53,28 @@ extension SwiftFulcrum {
             guard !self.isRunning else { return }
 
             let startTask = makeOrReuseStartTask()
+            startTaskWaiterCount += 1
             defer {
-                self.startTask = nil
+                startTaskWaiterCount -= 1
+                if Task.isCancelled, startTaskWaiterCount == 0 {
+                    startTask.cancel()
+                    self.startTask = nil
+                }
             }
 
             do {
-                try await startTask.value
+                try await awaitCancellableTask(startTask, cancelUnderlyingTask: false)
             } catch {
                 if !desiredRunning, error is CancellationError {
                     return
                 }
+                if Task.isCancelled, error is CancellationError {
+                    throw error
+                }
+                self.startTask = nil
                 throw error
             }
+            self.startTask = nil
 
             guard desiredRunning else { return }
             self.isRunning = true
@@ -136,8 +147,6 @@ private extension SwiftFulcrum.Client {
 
         return .init(
             transport: WebSocketTransport(webSocket: webSocket),
-            metrics: configuration.metrics,
-            logger: configuration.resolvedLogger,
             protocolNegotiation: configuration.protocolNegotiation
         )
     }
@@ -179,4 +188,5 @@ private extension SwiftFulcrum.Client {
         self.startTask = startTask
         return startTask
     }
+
 }

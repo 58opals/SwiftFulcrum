@@ -71,11 +71,6 @@ struct PublicAPIFacadeContractValidator {
         let serverCatalogRepositoryType: SwiftFulcrum.ServerCatalog.Repository.Type = SwiftFulcrum.ServerCatalog.Repository.self
         _ = serverCatalogRepositoryType
 
-        _ = SwiftFulcrum.Metrics.MetricsClient.self
-
-        let loggingType: SwiftFulcrum.Logging.Type = SwiftFulcrum.Logging.self
-        _ = loggingType
-
         let tlsDescriptor = SwiftFulcrum.Client.Configuration.TLSDescriptor()
         _ = tlsDescriptor
 
@@ -120,7 +115,7 @@ struct PublicAPIFacadeContractValidator {
             "SwiftFulcrum.Client.Configuration",
             "SwiftFulcrum.Client.Configuration.TLSDescriptor",
             "SwiftFulcrum.Client.Configuration.TLSDescriptor.init(options:)",
-            "SwiftFulcrum.Client.Configuration.init(tlsDescriptor:reconnect:metrics:logger:isLoggingEnabled:connectionTimeout:maximumMessageSize:bootstrapServers:serverCatalogLoader:network:protocolNegotiation:)",
+            "SwiftFulcrum.Client.Configuration.init(tlsDescriptor:reconnect:connectionTimeout:maximumMessageSize:bootstrapServers:serverCatalogLoader:network:protocolNegotiation:)",
             "SwiftFulcrum.Client.Call.Options",
             "SwiftFulcrum.Client.Subscription",
             "SwiftFulcrum.Client.Diagnostics",
@@ -143,11 +138,7 @@ struct PublicAPIFacadeContractValidator {
             "SwiftFulcrum.CashTokens.TokenData.NFT",
             "SwiftFulcrum.ProtocolVersion",
             "SwiftFulcrum.Transport.State",
-            "SwiftFulcrum.ServerCatalog.Repository",
-            "SwiftFulcrum.Metrics",
-            "SwiftFulcrum.Logging",
-            "SwiftFulcrum.Metrics.MetricsClient",
-            "SwiftFulcrum.Logging.Adapter"
+            "SwiftFulcrum.ServerCatalog.Repository"
         ]
 
         for symbol in requiredSymbols {
@@ -178,7 +169,15 @@ struct PublicAPIFacadeContractValidator {
             "SwiftFulcrum.Client.Configuration.urlSession",
             "SwiftFulcrum.Client.Configuration.TLSDescriptor.delegate",
             "SwiftFulcrum.Client.Configuration.TLSDescriptor.init(options:delegate:)",
+            "SwiftFulcrum.Client.Configuration.init(tlsDescriptor:reconnect:metrics:logger:isLoggingEnabled:connectionTimeout:maximumMessageSize:bootstrapServers:serverCatalogLoader:network:protocolNegotiation:)",
             "SwiftFulcrum.Client.Configuration.init(tlsDescriptor:reconnect:metrics:logger:isLoggingEnabled:urlSession:connectionTimeout:maximumMessageSize:bootstrapServers:serverCatalogLoader:network:protocolNegotiation:)",
+            "SwiftFulcrum.Client.Configuration.metrics",
+            "SwiftFulcrum.Client.Configuration.logger",
+            "SwiftFulcrum.Client.Configuration.isLoggingEnabled",
+            "SwiftFulcrum.Metrics",
+            "SwiftFulcrum.Logging",
+            "SwiftFulcrum.Metrics.MetricsClient",
+            "SwiftFulcrum.Logging.Adapter",
             "SwiftFulcrum.API.Request.server",
             "SwiftFulcrum.API.Request.blockchain",
             "SwiftFulcrum.API.Request.mempool",

@@ -49,14 +49,13 @@ extension WebSocketConnection {
         }
         
         task.resume()
-        emitLog(.info, "connect.begin")
+        recordWebSocketEvent(SwiftFulcrumDiagnostics.Event.webSocketConnectBegin, level: .info)
         
         do {
             let isConnected = try await waitForConnection(timeout: connectionTimeout)
             if isConnected {
                 await updateConnectionState(.connected)
-                emitLog(.info, "connect.succeeded")
-                await metrics?.recordConnect(url: url, network: network)
+                recordWebSocketEvent(SwiftFulcrumDiagnostics.Event.webSocketConnectSucceeded, level: .info)
                 if shouldEmitLifecycle { emitLifecycle(.connected(isReconnect: false)) }
                 ensureAutomaticReceiving()
             } else {
@@ -66,7 +65,14 @@ extension WebSocketConnection {
                 )
                 await updateConnectionState(failureState)
                 task.cancel(with: .goingAway, reason: timeoutReason.data(using: .utf8))
-                emitLog(.error, "connect.timeout")
+                recordWebSocketEvent(
+                    SwiftFulcrumDiagnostics.Event.webSocketConnectTimeout,
+                    level: .error,
+                    fields: [
+                        SwiftFulcrumDiagnostics.publicField("close_code", URLSessionWebSocketTask.CloseCode.goingAway.rawValue),
+                        SwiftFulcrumDiagnostics.privateField("reason", timeoutReason)
+                    ]
+                )
                 try await performInitialFailoverIfNeeded(
                     shouldAllowFailover: shouldAllowFailover,
                     failure: timeoutFailure
@@ -95,10 +101,10 @@ extension WebSocketConnection {
     ) async throws {
         guard shouldAllowFailover else { throw failure }
         
-        emitLog(
-            .warning,
-            "connect.failover",
-            metadata: ["error": failure.localizedDescription]
+        recordWebSocketEvent(
+            SwiftFulcrumDiagnostics.Event.webSocketConnectFailover,
+            level: .error,
+            fields: SwiftFulcrumDiagnostics.errorFields(failure)
         )
         
         do {
@@ -109,10 +115,10 @@ extension WebSocketConnection {
                 isInitialConnection: true
             )
         } catch {
-            emitLog(
-                .error,
-                "connect.failover_exhausted",
-                metadata: ["error": error.localizedDescription]
+            recordWebSocketEvent(
+                SwiftFulcrumDiagnostics.Event.webSocketConnectFailoverExhausted,
+                level: .error,
+                fields: SwiftFulcrumDiagnostics.errorFields(error)
             )
             
             throw error
@@ -159,16 +165,15 @@ extension WebSocketConnection {
         
         messageContinuation?.finish(throwing: closedError)
         
-        await metrics?.recordDisconnect(
-            url: url,
-            closeCode: finalInformation.code,
-            reason: finalInformation.reason
-        )
         await resetMessageStreamAndReader()
-        emitLog(.info, "disconnect", metadata: [
-            "reason": finalInformation.reason ?? "nil",
-            "code": String(finalInformation.code.rawValue)
-        ])
+        recordWebSocketEvent(
+            SwiftFulcrumDiagnostics.Event.webSocketDisconnect,
+            level: .info,
+            fields: [
+                SwiftFulcrumDiagnostics.publicField("close_code", finalInformation.code.rawValue),
+                SwiftFulcrumDiagnostics.privateField("reason", finalInformation.reason ?? "")
+            ]
+        )
         emitLifecycle(.disconnected(code: finalInformation.code, reason: finalInformation.reason))
     }
 }

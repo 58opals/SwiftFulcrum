@@ -11,9 +11,21 @@ extension FulcrumNetworkClient {
             if let data = string.data(using: .utf8) {
                 return await router.handle(raw: data)
             }
-            else { emitLog(.warning, "webSocket.message.string.decode_failed") }
+            else {
+                recordClientEvent(
+                    SwiftFulcrumDiagnostics.Event.webSocketReceiveFailed,
+                    category: SwiftFulcrumDiagnostics.Category.webSocket,
+                    level: .error,
+                    fields: SwiftFulcrumDiagnostics.payloadFields(payloadType: "string", byteCount: string.utf8.count)
+                )
+            }
         @unknown default:
-            emitLog(.warning, "webSocket.message.unknown_type")
+            recordClientEvent(
+                SwiftFulcrumDiagnostics.Event.webSocketReceiveFailed,
+                category: SwiftFulcrumDiagnostics.Category.webSocket,
+                level: .error,
+                fields: SwiftFulcrumDiagnostics.payloadFields(payloadType: "unknown", byteCount: 0)
+            )
         }
         
         return nil
