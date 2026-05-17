@@ -94,7 +94,7 @@ struct ClientInterfaceLocalValidator {
 
         let versionRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
         #expect(versionRequest["method"] as? String == "server.version")
-        let versionIdentifier = try requestIdentifier(from: versionRequest)
+        let versionIdentifier = try extractRequestIdentifier(from: versionRequest)
         let versionPayload = try TransportTestActor.encodeResponsePayload(
             identifier: versionIdentifier,
             result: ["SwiftFulcrum.Client 2.0", "1.5.3"]
@@ -103,7 +103,7 @@ struct ClientInterfaceLocalValidator {
 
         let featuresRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
         #expect(featuresRequest["method"] as? String == "server.features")
-        let featuresIdentifier = try requestIdentifier(from: featuresRequest)
+        let featuresIdentifier = try extractRequestIdentifier(from: featuresRequest)
         let featuresPayload = try TransportTestActor.encodeResponsePayload(
             identifier: featuresIdentifier,
             result: [
@@ -118,7 +118,7 @@ struct ClientInterfaceLocalValidator {
 
         let unaryRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
         #expect(unaryRequest["method"] as? String == SwiftFulcrum.RPC.Method.blockchain(.headers(.getTip)).path)
-        let unaryIdentifier = try requestIdentifier(from: unaryRequest)
+        let unaryIdentifier = try extractRequestIdentifier(from: unaryRequest)
         let unaryPayload = try TransportTestActor.encodeResponsePayload(
             identifier: unaryIdentifier,
             result: ["height": 900_000, "hex": String(repeating: "a", count: 160)]
@@ -175,6 +175,55 @@ struct ClientInterfaceLocalValidator {
         #expect(await cancellation.isCancelled)
     }
 
+    @Test("Unary request fails on unidentified JSON-RPC error responses", .timeLimit(.minutes(1)))
+    func requestFailsOnUnidentifiedJSONRPCErrorResponse() async throws {
+        let transport = TransportTestActor()
+        let networkClient = FulcrumNetworkClient(transport: transport, protocolNegotiation: .init())
+        let client = await SwiftFulcrum.Client(client: networkClient)
+
+        let requestTask = Task<SwiftFulcrum.Client.Error, Never> {
+            do {
+                _ = try await client.request(
+                    SwiftFulcrum.API.blockchain.headers.tip,
+                    options: .init(timeout: .seconds(30))
+                )
+                Issue.record("request() should fail on an unidentified JSON-RPC error response")
+                return .client(.unknown(nil))
+            } catch let error as SwiftFulcrum.Client.Error {
+                return error
+            } catch {
+                return .client(.unknown(error))
+            }
+        }
+
+        try await completeProtocolNegotiation(on: transport)
+
+        _ = try await decodeRequestObject(await transport.dequeueOutgoing())
+        let errorPayload = try JSONSerialization.data(
+            withJSONObject: [
+                "jsonrpc": "2.0",
+                "id": NSNull(),
+                "error": [
+                    "code": -32700,
+                    "message": "parse error"
+                ]
+            ]
+        )
+        await transport.enqueueIncoming(.data(errorPayload))
+
+        let error = await requestTask.value
+        guard case .rpc(let rpcError) = error else {
+            Issue.record("Expected request() to surface a nil-id RPC error, got \(error)")
+            await client.stop()
+            return
+        }
+        #expect(rpcError.id == nil)
+        #expect(rpcError.code == -32700)
+        #expect(rpcError.message == "parse error")
+
+        await client.stop()
+    }
+
     @Test("Unary request surfaces malformed payloads as decode errors", .timeLimit(.minutes(1)))
     func requestSurfacesMalformedPayloadAsDecodeError() async throws {
         let transport = TransportTestActor()
@@ -196,30 +245,10 @@ struct ClientInterfaceLocalValidator {
             }
         }
 
-        let versionRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
-        let versionIdentifier = try requestIdentifier(from: versionRequest)
-        let versionPayload = try TransportTestActor.encodeResponsePayload(
-            identifier: versionIdentifier,
-            result: ["SwiftFulcrum.Client 2.0", "1.5.3"]
-        )
-        await transport.enqueueIncoming(.data(versionPayload))
-
-        let featuresRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
-        let featuresIdentifier = try requestIdentifier(from: featuresRequest)
-        let featuresPayload = try TransportTestActor.encodeResponsePayload(
-            identifier: featuresIdentifier,
-            result: [
-                "genesis_hash": String(repeating: "0", count: 64),
-                "hash_function": "sha256",
-                "server_version": "SwiftFulcrum.Client 2.0",
-                "protocol_max": "1.6.0",
-                "protocol_min": "1.4.0"
-            ]
-        )
-        await transport.enqueueIncoming(.data(featuresPayload))
+        try await completeProtocolNegotiation(on: transport)
 
         let unaryRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
-        let unaryIdentifier = try requestIdentifier(from: unaryRequest)
+        let unaryIdentifier = try extractRequestIdentifier(from: unaryRequest)
         let malformedPayload = try TransportTestActor.encodeResponsePayload(
             identifier: unaryIdentifier,
             result: ["height": "not-a-height", "hex": 7]
@@ -239,11 +268,35 @@ struct ClientInterfaceLocalValidator {
 }
 
 private extension ClientInterfaceLocalValidator {
+    func completeProtocolNegotiation(on transport: TransportTestActor) async throws {
+        let versionRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
+        let versionIdentifier = try extractRequestIdentifier(from: versionRequest)
+        let versionPayload = try TransportTestActor.encodeResponsePayload(
+            identifier: versionIdentifier,
+            result: ["SwiftFulcrum.Client 2.0", "1.5.3"]
+        )
+        await transport.enqueueIncoming(.data(versionPayload))
+
+        let featuresRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
+        let featuresIdentifier = try extractRequestIdentifier(from: featuresRequest)
+        let featuresPayload = try TransportTestActor.encodeResponsePayload(
+            identifier: featuresIdentifier,
+            result: [
+                "genesis_hash": String(repeating: "0", count: 64),
+                "hash_function": "sha256",
+                "server_version": "SwiftFulcrum.Client 2.0",
+                "protocol_max": "1.6.0",
+                "protocol_min": "1.4.0"
+            ]
+        )
+        await transport.enqueueIncoming(.data(featuresPayload))
+    }
+
     func decodeRequestObject(_ message: URLSessionWebSocketTask.Message) async throws -> [String: Any] {
         try TransportTestActor.decodeJSONObject(from: message)
     }
 
-    func requestIdentifier(from object: [String: Any]) throws -> String {
+    func extractRequestIdentifier(from object: [String: Any]) throws -> String {
         guard let identifier = object["id"] as? String else {
             throw SupportError.missingRequestIdentifier
         }

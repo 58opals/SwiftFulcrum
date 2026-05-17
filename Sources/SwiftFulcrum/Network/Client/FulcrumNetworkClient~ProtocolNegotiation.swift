@@ -32,7 +32,7 @@ extension FulcrumNetworkClient {
             let negotiatedSession = try await awaitCancellableTask(
                 negotiationTask,
                 shouldCancelUnderlyingTask: {
-                    cancellationCoordinator.shouldCancelUnderlyingTaskForCancellingWaiter()
+                    cancellationCoordinator.shouldCancelUnderlyingTaskForCancellingWaiter
                 }
             )
             state.negotiatedSession.negotiatedProtocol = negotiatedSession.negotiatedProtocol

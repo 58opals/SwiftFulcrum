@@ -9,7 +9,7 @@ extension SwiftFulcrum.Response.Blockchain.Header {
 
         public init(from decoder: Decoder) throws {
             let payloadModel = try SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Header.Lookup(from: decoder)
-            try SwiftFulcrum.Response.Blockchain.validateBlockHeaderLength(payloadModel.hex)
+            try SwiftFulcrum.Response.Blockchain.validateBlockHeader(payloadModel.hex)
             self.height = payloadModel.height
             self.hex = payloadModel.hex
         }

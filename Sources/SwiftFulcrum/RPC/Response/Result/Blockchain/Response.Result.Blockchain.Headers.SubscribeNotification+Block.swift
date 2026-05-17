@@ -8,7 +8,7 @@ extension SwiftFulcrum.Response.Blockchain.Headers.SubscribeNotification {
         public let hex: String
 
         init(height: UInt, hex: String) throws {
-            try SwiftFulcrum.Response.Blockchain.validateBlockHeaderLength(hex)
+            try SwiftFulcrum.Response.Blockchain.validateBlockHeader(hex)
             self.height = height
             self.hex = hex
         }

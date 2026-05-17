@@ -31,6 +31,9 @@ extension FulcrumNetworkClient {
             do {
                 id = try SwiftFulcrum.RPC.Response.JSONRPC.extractIdentifier(from: raw)
             } catch {
+                if let remainingUnaryCallCount = handleUnidentifiedErrorResponse(raw) {
+                    return remainingUnaryCallCount
+                }
                 recordUnroutableResponseDecodeFailure(raw: raw, error: error)
                 return nil
             }
@@ -110,6 +113,14 @@ extension FulcrumNetworkClient {
             }
             
             return nil
+        }
+
+        private func handleUnidentifiedErrorResponse(_ raw: Data) -> Int? {
+            guard
+                case .error(let error) = try? SwiftFulcrum.RPC.Response.JSONRPC.classifyErasedResponse(from: raw)
+            else { return nil }
+
+            return failUnaries(with: error)
         }
 
         private func recordUnroutableResponseDecodeFailure(raw: Data, error: Swift.Error) {

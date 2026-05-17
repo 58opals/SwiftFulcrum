@@ -34,7 +34,7 @@ extension SwiftFulcrum.Response.Blockchain.Block {
             let headers: [String]
             if let providedHeaders = payloadModel.headers {
                 headers = providedHeaders
-                try SwiftFulcrum.Response.Blockchain.validateBlockHeaderLengths(headers)
+                try SwiftFulcrum.Response.Blockchain.validateBlockHeaders(headers)
             } else {
                 headers = try splitHeaders(hex: payloadModel.hex)
             }

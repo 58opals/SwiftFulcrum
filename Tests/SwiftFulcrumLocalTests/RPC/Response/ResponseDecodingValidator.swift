@@ -11,7 +11,7 @@ struct ResponseDecodingValidator {
     func classifyEnvelopes() throws {
         let identifier = UUID().uuidString
 
-        let regularData = try jsonData(["jsonrpc": "2.0", "id": identifier, "result": "ok"])
+        let regularData = try makeJSONData(["jsonrpc": "2.0", "id": identifier, "result": "ok"])
         let regularEnvelope = try JSONDecoder().decode(SwiftFulcrum.RPC.Response.JSONRPC.Generic<String>.self, from: regularData)
         if case .regular(let regular) = try regularEnvelope.determineResponseType() {
             #expect(regular.result == "ok")
@@ -19,7 +19,7 @@ struct ResponseDecodingValidator {
             Issue.record("Expected regular response envelope")
         }
 
-        let subscriptionData = try jsonData(
+        let subscriptionData = try makeJSONData(
             ["jsonrpc": "2.0", "method": "blockchain.headers.subscribe", "params": "update"]
         )
         let subscriptionEnvelope = try JSONDecoder().decode(SwiftFulcrum.RPC.Response.JSONRPC.Generic<String>.self, from: subscriptionData)
@@ -30,7 +30,7 @@ struct ResponseDecodingValidator {
             Issue.record("Expected subscription response envelope")
         }
 
-        let errorData = try jsonData(
+        let errorData = try makeJSONData(
             ["jsonrpc": "2.0", "id": identifier, "error": ["code": -1, "message": "boom"]]
         )
         let errorEnvelope = try JSONDecoder().decode(SwiftFulcrum.RPC.Response.JSONRPC.Generic<String>.self, from: errorData)
@@ -41,7 +41,22 @@ struct ResponseDecodingValidator {
             Issue.record("Expected error response envelope")
         }
 
-        let emptyData = try jsonData(["jsonrpc": "2.0", "id": identifier])
+        let nullIDErrorData = try makeJSONData(
+            ["jsonrpc": "2.0", "id": NSNull(), "error": ["code": -32700, "message": "parse error"]]
+        )
+        let nullIDErrorEnvelope = try JSONDecoder().decode(
+            SwiftFulcrum.RPC.Response.JSONRPC.Generic<String>.self,
+            from: nullIDErrorData
+        )
+        if case .error(let rpcError) = try nullIDErrorEnvelope.determineResponseType() {
+            #expect(rpcError.id == nil)
+            #expect(rpcError.error.code == -32700)
+            #expect(rpcError.error.message == "parse error")
+        } else {
+            Issue.record("Expected nil-id error response envelope")
+        }
+
+        let emptyData = try makeJSONData(["jsonrpc": "2.0", "id": identifier])
         let emptyEnvelope = try JSONDecoder().decode(SwiftFulcrum.RPC.Response.JSONRPC.Generic<String?>.self, from: emptyData)
         if case .empty(let id) = try emptyEnvelope.determineResponseType() {
             #expect(id.uuidString == identifier)
@@ -52,7 +67,7 @@ struct ResponseDecodingValidator {
 
     @Test("Rejects non-JSON-RPC-2.0 envelopes")
     func rejectNonJSONRPC2Envelope() throws {
-        let payload = try jsonData(["jsonrpc": "1.0", "id": UUID().uuidString, "result": "ok"])
+        let payload = try makeJSONData(["jsonrpc": "1.0", "id": UUID().uuidString, "result": "ok"])
 
         #expect(throws: DecodingError.self) {
             _ = try payload.decode(String.self, context: .init(methodPath: "server.banner"))
@@ -61,7 +76,7 @@ struct ResponseDecodingValidator {
 
     @Test("Rejects non-JSON-RPC-2.0 identifier envelopes")
     func rejectNonJSONRPC2IdentifierEnvelope() throws {
-        let payload = try jsonData(["jsonrpc": "1.0", "id": UUID().uuidString, "result": true])
+        let payload = try makeJSONData(["jsonrpc": "1.0", "id": UUID().uuidString, "result": true])
 
         #expect(throws: DecodingError.self) {
             _ = try SwiftFulcrum.RPC.Response.JSONRPC.extractIdentifier(from: payload)
@@ -70,7 +85,7 @@ struct ResponseDecodingValidator {
 
     @Test("Rejects non-JSON-RPC-2.0 erased envelopes")
     func rejectNonJSONRPC2ErasedEnvelope() throws {
-        let payload = try jsonData(["jsonrpc": "1.0", "id": UUID().uuidString, "result": true])
+        let payload = try makeJSONData(["jsonrpc": "1.0", "id": UUID().uuidString, "result": true])
 
         #expect(throws: DecodingError.self) {
             _ = try SwiftFulcrum.RPC.Response.JSONRPC.classifyErasedResponse(from: payload)
@@ -79,7 +94,7 @@ struct ResponseDecodingValidator {
 
     @Test("Rejects envelopes that contain both result and error")
     func rejectEnvelopeWithResultAndError() throws {
-        let payload = try jsonData(
+        let payload = try makeJSONData(
             [
                 "jsonrpc": "2.0",
                 "id": UUID().uuidString,
@@ -95,7 +110,7 @@ struct ResponseDecodingValidator {
 
     @Test("Rejects erased envelopes that contain both result and error")
     func rejectErasedEnvelopeWithResultAndError() throws {
-        let payload = try jsonData(
+        let payload = try makeJSONData(
             [
                 "jsonrpc": "2.0",
                 "id": UUID().uuidString,
@@ -109,9 +124,26 @@ struct ResponseDecodingValidator {
         }
     }
 
+    @Test("Classifies erased error envelopes with null identifiers")
+    func classifyErasedErrorEnvelopesWithNullIdentifiers() throws {
+        let payload = try makeJSONData(
+            ["jsonrpc": "2.0", "id": NSNull(), "error": ["code": -32700, "message": "parse error"]]
+        )
+
+        let response = try SwiftFulcrum.RPC.Response.JSONRPC.classifyErasedResponse(from: payload)
+
+        if case .error(.rpc(let rpcError)) = response {
+            #expect(rpcError.id == nil)
+            #expect(rpcError.code == -32700)
+            #expect(rpcError.message == "parse error")
+        } else {
+            Issue.record("Expected nil-id erased error response")
+        }
+    }
+
     @Test("Rejects envelopes with null error members")
     func rejectEnvelopeWithNullError() throws {
-        let payload = try jsonData(
+        let payload = try makeJSONData(
             [
                 "jsonrpc": "2.0",
                 "id": UUID().uuidString,
@@ -126,7 +158,7 @@ struct ResponseDecodingValidator {
 
     @Test("Rejects erased envelopes with null error members")
     func rejectErasedEnvelopeWithNullError() throws {
-        let payload = try jsonData(
+        let payload = try makeJSONData(
             [
                 "jsonrpc": "2.0",
                 "id": UUID().uuidString,
@@ -141,7 +173,7 @@ struct ResponseDecodingValidator {
 
     @Test("Rejects subscription envelopes that contain an error")
     func rejectSubscriptionEnvelopeWithError() throws {
-        let payload = try jsonData(
+        let payload = try makeJSONData(
             [
                 "jsonrpc": "2.0",
                 "method": "blockchain.headers.subscribe",
@@ -157,7 +189,7 @@ struct ResponseDecodingValidator {
 
     @Test("Rejects erased setup responses that contain subscription fields")
     func rejectErasedSetupResponseWithSubscriptionFields() throws {
-        let payload = try jsonData(
+        let payload = try makeJSONData(
             [
                 "jsonrpc": "2.0",
                 "id": UUID().uuidString,
@@ -174,7 +206,7 @@ struct ResponseDecodingValidator {
 
     @Test("Decodes server.version and server.features")
     func decodeServerMetadataResponses() throws {
-        let versionPayload = try jsonData(
+        let versionPayload = try makeJSONData(
             ["jsonrpc": "2.0", "id": UUID().uuidString, "result": ["Fulcrum 2.0", "1.5.3"]]
         )
         let version = try versionPayload.decode(
@@ -184,19 +216,14 @@ struct ResponseDecodingValidator {
         #expect(version.serverVersion == "Fulcrum 2.0")
         #expect(version.negotiatedProtocolVersion == SwiftFulcrum.ProtocolVersion(string: "1.5.3"))
 
-        let featuresPayload = try jsonData(
+        let featuresPayload = try makeJSONData(
             [
                 "jsonrpc": "2.0",
                 "id": UUID().uuidString,
-                "result": [
-                    "genesis_hash": String(repeating: "0", count: 64),
-                    "hash_function": "sha256",
-                    "server_version": "Fulcrum 2.0",
-                    "protocol_max": "1.6.0",
-                    "protocol_min": "1.4.0",
+                "result": makeServerFeaturesResult([
                     "cashtokens": true,
                     "dsproof": true
-                ]
+                ])
             ]
         )
         let features = try featuresPayload.decode(
@@ -211,89 +238,51 @@ struct ResponseDecodingValidator {
 
     @Test("Rejects server.features with an inverted protocol range")
     func rejectServerFeaturesWithInvertedProtocolRange() throws {
-        let payload = try jsonData(
-            [
-                "jsonrpc": "2.0",
-                "id": UUID().uuidString,
-                "result": [
-                    "genesis_hash": String(repeating: "0", count: 64),
-                    "hash_function": "sha256",
-                    "server_version": "Fulcrum 2.0",
-                    "protocol_max": "1.4.0",
-                    "protocol_min": "1.6.0"
-                ]
-            ]
-        )
-
-        #expect(throws: ResponseResultDecodeError.self) {
-            _ = try payload.decode(
-                SwiftFulcrum.Response.Server.Features.self,
-                context: .init(methodPath: "server.features")
-            )
-        }
+        try expectServerFeaturesDecodeFailure([
+            "protocol_max": "1.4.0",
+            "protocol_min": "1.6.0"
+        ])
     }
 
     @Test("Rejects server.features host ports outside the valid range")
     func rejectServerFeaturesHostPortsOutsideValidRange() throws {
-        let payload = try jsonData(
-            [
-                "jsonrpc": "2.0",
-                "id": UUID().uuidString,
-                "result": [
-                    "genesis_hash": String(repeating: "0", count: 64),
-                    "hash_function": "sha256",
-                    "server_version": "Fulcrum 2.0",
-                    "protocol_max": "1.6.0",
-                    "protocol_min": "1.4.0",
-                    "hosts": [
-                        "invalid.fulcrum.example": ["wss_port": 0]
-                    ]
-                ]
+        try expectServerFeaturesDecodeFailure([
+            "hosts": [
+                "invalid.fulcrum.example": ["wss_port": 0]
             ]
-        )
+        ])
+    }
 
-        #expect(throws: ResponseResultDecodeError.self) {
-            _ = try payload.decode(
-                SwiftFulcrum.Response.Server.Features.self,
-                context: .init(methodPath: "server.features")
-            )
-        }
+    @Test("Rejects server.features empty host names")
+    func rejectServerFeaturesEmptyHostNames() throws {
+        try expectServerFeaturesDecodeFailure([
+            "hosts": [
+                " ": ["wss_port": 50004]
+            ]
+        ])
+    }
+
+    @Test("Rejects server.features negative pruning limits")
+    func rejectServerFeaturesNegativePruningLimits() throws {
+        try expectServerFeaturesDecodeFailure(["pruning": -1])
     }
 
     @Test("Rejects server.features reusable payment address negative values")
     func rejectServerFeaturesReusablePaymentAddressNegativeValues() throws {
-        let payload = try jsonData(
-            [
-                "jsonrpc": "2.0",
-                "id": UUID().uuidString,
-                "result": [
-                    "genesis_hash": String(repeating: "0", count: 64),
-                    "hash_function": "sha256",
-                    "server_version": "Fulcrum 2.0",
-                    "protocol_max": "1.6.0",
-                    "protocol_min": "1.4.0",
-                    "rpa": [
-                        "history_block_limit": -1,
-                        "max_history": 100,
-                        "prefix_bits": 20,
-                        "prefix_bits_min": 8,
-                        "starting_height": 0
-                    ]
-                ]
+        try expectServerFeaturesDecodeFailure([
+            "rpa": [
+                "history_block_limit": -1,
+                "max_history": 100,
+                "prefix_bits": 20,
+                "prefix_bits_min": 8,
+                "starting_height": 0
             ]
-        )
-
-        #expect(throws: ResponseResultDecodeError.self) {
-            _ = try payload.decode(
-                SwiftFulcrum.Response.Server.Features.self,
-                context: .init(methodPath: "server.features")
-            )
-        }
+        ])
     }
 
     @Test("Rejects server.version arrays with extra fields")
     func rejectServerVersionArraysWithExtraFields() throws {
-        let payload = try jsonData(
+        let payload = try makeJSONData(
             ["jsonrpc": "2.0", "id": UUID().uuidString, "result": ["Fulcrum 2.0", "1.5.3", "extra"]]
         )
 
@@ -307,7 +296,7 @@ struct ResponseDecodingValidator {
 
     @Test("Decodes nil result payloads without wrapper adapters")
     func decodeNilResultPayloads() throws {
-        let pingPayload = try jsonData(
+        let pingPayload = try makeJSONData(
             ["jsonrpc": "2.0", "id": UUID().uuidString, "result": NSNull()]
         )
         _ = try pingPayload.decode(
@@ -315,7 +304,7 @@ struct ResponseDecodingValidator {
             context: .init(methodPath: "server.ping")
         )
 
-        let firstUsePayload = try jsonData(
+        let firstUsePayload = try makeJSONData(
             ["jsonrpc": "2.0", "id": UUID().uuidString, "result": NSNull()]
         )
         let firstUse = try firstUsePayload.decode(
@@ -327,7 +316,7 @@ struct ResponseDecodingValidator {
         #expect(firstUse.height == nil)
         #expect(firstUse.transactionHash == nil)
 
-        let subscribePayload = try jsonData(
+        let subscribePayload = try makeJSONData(
             ["jsonrpc": "2.0", "id": UUID().uuidString, "result": NSNull()]
         )
         let subscribe = try subscribePayload.decode(
@@ -339,7 +328,7 @@ struct ResponseDecodingValidator {
 
     @Test("Rejects first-use responses with malformed hashes")
     func rejectFirstUseResponsesWithMalformedHashes() throws {
-        let payload = try jsonData(
+        let payload = try makeJSONData(
             [
                 "jsonrpc": "2.0",
                 "id": UUID().uuidString,
@@ -368,7 +357,7 @@ struct ResponseDecodingValidator {
 
     @Test("Rejects negative blockchain relay fees")
     func rejectNegativeBlockchainRelayFee() throws {
-        let payload = try jsonData(
+        let payload = try makeJSONData(
             ["jsonrpc": "2.0", "id": UUID().uuidString, "result": -0.00001]
         )
 
@@ -382,7 +371,7 @@ struct ResponseDecodingValidator {
 
     @Test("Decodes unknown transaction height status")
     func decodeUnknownTransactionHeightStatus() throws {
-        let getHeightPayload = try jsonData(
+        let getHeightPayload = try makeJSONData(
             ["jsonrpc": "2.0", "id": UUID().uuidString, "result": NSNull()]
         )
         let getHeight = try getHeightPayload.decode(
@@ -391,7 +380,7 @@ struct ResponseDecodingValidator {
         )
         #expect(getHeight.height == nil)
 
-        let subscribePayload = try jsonData(
+        let subscribePayload = try makeJSONData(
             ["jsonrpc": "2.0", "id": UUID().uuidString, "result": NSNull()]
         )
         let subscribe = try subscribePayload.decode(
@@ -400,7 +389,7 @@ struct ResponseDecodingValidator {
         )
         #expect(subscribe.height == nil)
 
-        let notificationPayload = try jsonData(
+        let notificationPayload = try makeJSONData(
             ["jsonrpc": "2.0", "method": "blockchain.transaction.subscribe", "params": ["abc123", NSNull()]]
         )
         let notification = try notificationPayload.decode(
@@ -413,7 +402,7 @@ struct ResponseDecodingValidator {
 
     @Test("Rejects malformed confirmed block hash payloads")
     func rejectMalformedConfirmedBlockHashPayloads() throws {
-        let payload = try jsonData(
+        let payload = try makeJSONData(
             [
                 "jsonrpc": "2.0",
                 "id": UUID().uuidString,
@@ -435,7 +424,7 @@ struct ResponseDecodingValidator {
 
     @Test("Rejects reversed transaction subscribe notification payloads")
     func rejectReversedTransactionSubscribeNotificationPayload() throws {
-        let payload = try jsonData(
+        let payload = try makeJSONData(
             ["jsonrpc": "2.0", "method": "blockchain.transaction.subscribe", "params": [42, "abc123"]]
         )
 
@@ -449,7 +438,7 @@ struct ResponseDecodingValidator {
 
     @Test("Decodes missing UTXO info as not found")
     func decodeMissingUTXOInfoAsNotFound() throws {
-        let payload = try jsonData(
+        let payload = try makeJSONData(
             ["jsonrpc": "2.0", "id": UUID().uuidString, "result": NSNull()]
         )
 
@@ -465,9 +454,23 @@ struct ResponseDecodingValidator {
         #expect(result.tokenData == nil)
     }
 
+    @Test("Rejects address.get_scripthash responses with malformed script hashes")
+    func rejectAddressScriptHashResponsesWithMalformedScriptHashes() throws {
+        let payload = try makeJSONData(
+            ["jsonrpc": "2.0", "id": UUID().uuidString, "result": String(repeating: "g", count: 64)]
+        )
+
+        #expect(throws: ResponseResultDecodeError.self) {
+            _ = try payload.decode(
+                SwiftFulcrum.Response.Blockchain.Address.ScriptHash.self,
+                context: .init(methodPath: "blockchain.address.get_scripthash")
+            )
+        }
+    }
+
     @Test("Rejects listunspent entries with malformed transaction hashes")
     func rejectListUnspentEntriesWithMalformedTransactionHashes() throws {
-        let payload = try jsonData(
+        let payload = try makeJSONData(
             [
                 "jsonrpc": "2.0",
                 "id": UUID().uuidString,
@@ -499,7 +502,7 @@ struct ResponseDecodingValidator {
 
     @Test("Rejects history entries with malformed transaction hashes")
     func rejectHistoryEntriesWithMalformedTransactionHashes() throws {
-        let payload = try jsonData(
+        let payload = try makeJSONData(
             [
                 "jsonrpc": "2.0",
                 "id": UUID().uuidString,
@@ -529,7 +532,7 @@ struct ResponseDecodingValidator {
 
     @Test("Decodes blockchain header lookup")
     func decodeBlockchainHeaderLookup() throws {
-        let payload = try jsonData(
+        let payload = try makeJSONData(
             [
                 "jsonrpc": "2.0",
                 "id": UUID().uuidString,
@@ -551,7 +554,7 @@ struct ResponseDecodingValidator {
 
     @Test("Rejects malformed blockchain header lookups with invalid header widths")
     func rejectMalformedBlockchainHeaderLookupWithInvalidHeaderWidth() throws {
-        let payload = try jsonData(
+        let payload = try makeJSONData(
             [
                 "jsonrpc": "2.0",
                 "id": UUID().uuidString,
@@ -572,7 +575,7 @@ struct ResponseDecodingValidator {
 
     @Test("Decodes blockchain headers tip")
     func decodeBlockchainHeadersTip() throws {
-        let payload = try jsonData(
+        let payload = try makeJSONData(
             [
                 "jsonrpc": "2.0",
                 "id": UUID().uuidString,
@@ -594,7 +597,7 @@ struct ResponseDecodingValidator {
 
     @Test("Rejects malformed blockchain headers tips with invalid header widths")
     func rejectMalformedBlockchainHeadersTipWithInvalidHeaderWidth() throws {
-        let payload = try jsonData(
+        let payload = try makeJSONData(
             [
                 "jsonrpc": "2.0",
                 "id": UUID().uuidString,
@@ -613,9 +616,30 @@ struct ResponseDecodingValidator {
         }
     }
 
+    @Test("Rejects malformed blockchain headers tips with non-hex headers")
+    func rejectMalformedBlockchainHeadersTipWithNonHexHeader() throws {
+        let payload = try makeJSONData(
+            [
+                "jsonrpc": "2.0",
+                "id": UUID().uuidString,
+                "result": [
+                    "height": 2,
+                    "hex": String(repeating: "g", count: 160)
+                ]
+            ]
+        )
+
+        #expect(throws: ResponseResultDecodeError.self) {
+            _ = try payload.decode(
+                SwiftFulcrum.Response.Blockchain.Headers.Tip.self,
+                context: .init(methodPath: "blockchain.headers.get_tip")
+            )
+        }
+    }
+
     @Test("Decodes missing double-spend proof as not found")
     func decodeMissingDSProofAsNotFound() throws {
-        let getPayload = try jsonData(
+        let getPayload = try makeJSONData(
             ["jsonrpc": "2.0", "id": UUID().uuidString, "result": NSNull()]
         )
         let get = try getPayload.decode(
@@ -629,7 +653,7 @@ struct ResponseDecodingValidator {
         #expect(get.outpoint == nil)
         #expect(get.descendants.isEmpty)
 
-        let subscribePayload = try jsonData(
+        let subscribePayload = try makeJSONData(
             ["jsonrpc": "2.0", "id": UUID().uuidString, "result": NSNull()]
         )
         let subscribe = try subscribePayload.decode(
@@ -638,7 +662,7 @@ struct ResponseDecodingValidator {
         )
         #expect(subscribe.proof == nil)
 
-        let notificationPayload = try jsonData(
+        let notificationPayload = try makeJSONData(
             [
                 "jsonrpc": "2.0",
                 "method": "blockchain.transaction.dsproof.subscribe",
@@ -655,7 +679,7 @@ struct ResponseDecodingValidator {
 
     @Test("Rejects reversed DSProof subscribe notification payloads")
     func rejectReversedDSProofSubscribeNotificationPayload() throws {
-        let payload = try jsonData(
+        let payload = try makeJSONData(
             [
                 "jsonrpc": "2.0",
                 "method": "blockchain.transaction.dsproof.subscribe",
@@ -689,7 +713,7 @@ struct ResponseDecodingValidator {
             "outpoint": ["txid": "prev", "vout": 1],
             "descendants": []
         ]
-        let payload = try jsonData(
+        let payload = try makeJSONData(
             [
                 "jsonrpc": "2.0",
                 "method": "blockchain.transaction.dsproof.subscribe",
@@ -715,7 +739,7 @@ struct ResponseDecodingValidator {
 
     @Test("Decodes headers/address/transaction/dsproof notifications")
     func decodeSubscriptionNotifications() throws {
-        let headerPayload = try jsonData(
+        let headerPayload = try makeJSONData(
             ["jsonrpc": "2.0", "method": "blockchain.headers.subscribe", "params": [["height": 1, "hex": String(repeating: "a", count: 160)]]]
         )
         let headerUpdate = try headerPayload.decode(
@@ -725,7 +749,7 @@ struct ResponseDecodingValidator {
         #expect(headerUpdate.subscriptionIdentifier == "blockchain.headers.subscribe")
         #expect(headerUpdate.blocks.count == 1)
 
-        let addressPayload = try jsonData(
+        let addressPayload = try makeJSONData(
             ["jsonrpc": "2.0", "method": "blockchain.address.subscribe", "params": ["bitcoincash:qtest", "status"]]
         )
         let addressUpdate = try addressPayload.decode(
@@ -735,7 +759,7 @@ struct ResponseDecodingValidator {
         #expect(addressUpdate.subscriptionIdentifier == "bitcoincash:qtest")
         #expect(addressUpdate.status == "status")
 
-        let transactionPayload = try jsonData(
+        let transactionPayload = try makeJSONData(
             ["jsonrpc": "2.0", "method": "blockchain.transaction.subscribe", "params": ["abc123", 42]]
         )
         let transactionUpdate = try transactionPayload.decode(
@@ -745,7 +769,7 @@ struct ResponseDecodingValidator {
         #expect(transactionUpdate.subscriptionIdentifier == "abc123")
         #expect(transactionUpdate.height == 42)
 
-        let dsProofPayload = try jsonData(
+        let dsProofPayload = try makeJSONData(
             [
                 "jsonrpc": "2.0",
                 "method": "blockchain.transaction.dsproof.subscribe",
@@ -771,7 +795,7 @@ struct ResponseDecodingValidator {
 
     @Test("Rejects malformed headers subscription notifications with invalid header widths")
     func rejectMalformedHeadersSubscriptionNotificationWithInvalidHeaderWidth() throws {
-        let payload = try jsonData(
+        let payload = try makeJSONData(
             ["jsonrpc": "2.0", "method": "blockchain.headers.subscribe", "params": [["height": 1, "hex": String(repeating: "a", count: 158)]]]
         )
 
@@ -813,7 +837,7 @@ struct ResponseDecodingValidator {
 
     @Test("Rejects oversized address and scripthash notification payloads")
     func rejectOversizedAddressAndScriptHashNotifications() throws {
-        let addressPayload = try jsonData(
+        let addressPayload = try makeJSONData(
             [
                 "jsonrpc": "2.0",
                 "method": "blockchain.address.subscribe",
@@ -827,7 +851,7 @@ struct ResponseDecodingValidator {
             )
         }
 
-        let scripthashPayload = try jsonData(
+        let scripthashPayload = try makeJSONData(
             [
                 "jsonrpc": "2.0",
                 "method": "blockchain.scripthash.subscribe",
@@ -844,7 +868,7 @@ struct ResponseDecodingValidator {
 
     @Test("Rejects undersized address and scripthash notification payloads")
     func rejectUndersizedAddressAndScriptHashNotifications() throws {
-        let addressPayload = try jsonData(
+        let addressPayload = try makeJSONData(
             [
                 "jsonrpc": "2.0",
                 "method": "blockchain.address.subscribe",
@@ -858,7 +882,7 @@ struct ResponseDecodingValidator {
             )
         }
 
-        let scripthashPayload = try jsonData(
+        let scripthashPayload = try makeJSONData(
             [
                 "jsonrpc": "2.0",
                 "method": "blockchain.scripthash.subscribe",
@@ -875,7 +899,7 @@ struct ResponseDecodingValidator {
 
     @Test("Decodes mempool fee histogram flexible number pairs")
     func decodeMempoolFeeHistogram() throws {
-        let payload = try jsonData(
+        let payload = try makeJSONData(
             ["jsonrpc": "2.0", "id": UUID().uuidString, "result": [[2.5, 2000], [1, 1000]]]
         )
         let histogram = try payload.decode(
@@ -891,7 +915,7 @@ struct ResponseDecodingValidator {
 
     @Test("Rejects invalid mempool info fee values")
     func rejectInvalidMempoolInfoFeeValues() throws {
-        let payload = try jsonData(
+        let payload = try makeJSONData(
             [
                 "jsonrpc": "2.0",
                 "id": UUID().uuidString,
@@ -913,7 +937,7 @@ struct ResponseDecodingValidator {
 
     @Test("Rejects negative mempool info unbroadcast count")
     func rejectNegativeMempoolInfoUnbroadcastCount() throws {
-        let payload = try jsonData(
+        let payload = try makeJSONData(
             [
                 "jsonrpc": "2.0",
                 "id": UUID().uuidString,
@@ -933,7 +957,7 @@ struct ResponseDecodingValidator {
 
     @Test("Rejects oversized mempool fee histogram virtual sizes")
     func rejectOversizedMempoolFeeHistogramVirtualSize() throws {
-        let payload = try jsonData(
+        let payload = try makeJSONData(
             ["jsonrpc": "2.0", "id": UUID().uuidString, "result": [[1, "18446744073709551616"]]]
         )
 
@@ -947,7 +971,7 @@ struct ResponseDecodingValidator {
 
     @Test("Rejects fractional mempool fee histogram virtual sizes")
     func rejectFractionalMempoolFeeHistogramVirtualSize() throws {
-        let payload = try jsonData(
+        let payload = try makeJSONData(
             ["jsonrpc": "2.0", "id": UUID().uuidString, "result": [[1, 2000.75]]]
         )
 
@@ -962,7 +986,7 @@ struct ResponseDecodingValidator {
     @Test("Decodes transaction.id_from_pos without a merkle proof")
     func decodeTransactionIDFromPosWithoutMerkleProof() throws {
         let transactionHash = String(repeating: "f", count: 64)
-        let payload = try jsonData(
+        let payload = try makeJSONData(
             ["jsonrpc": "2.0", "id": UUID().uuidString, "result": transactionHash]
         )
 
@@ -977,7 +1001,7 @@ struct ResponseDecodingValidator {
 
     @Test("Rejects transaction.id_from_pos responses with malformed transaction hashes")
     func rejectTransactionIDFromPosWithMalformedTransactionHashes() throws {
-        let barePayload = try jsonData(
+        let barePayload = try makeJSONData(
             ["jsonrpc": "2.0", "id": UUID().uuidString, "result": String(repeating: "f", count: 63)]
         )
 
@@ -988,7 +1012,7 @@ struct ResponseDecodingValidator {
             )
         }
 
-        let proofPayload = try jsonData(
+        let proofPayload = try makeJSONData(
             [
                 "jsonrpc": "2.0",
                 "id": UUID().uuidString,
@@ -1009,7 +1033,7 @@ struct ResponseDecodingValidator {
 
     @Test("Decodes transaction merkle proof")
     func decodeTransactionMerkleProof() throws {
-        let payload = try jsonData(
+        let payload = try makeJSONData(
             [
                 "jsonrpc": "2.0",
                 "id": UUID().uuidString,
@@ -1033,7 +1057,7 @@ struct ResponseDecodingValidator {
 
     @Test("Rejects transaction merkle proofs with malformed branch hashes")
     func rejectTransactionMerkleProofsWithMalformedBranchHashes() throws {
-        let proofPayload = try jsonData(
+        let proofPayload = try makeJSONData(
             [
                 "jsonrpc": "2.0",
                 "id": UUID().uuidString,
@@ -1052,7 +1076,7 @@ struct ResponseDecodingValidator {
             )
         }
 
-        let idFromPosPayload = try jsonData(
+        let idFromPosPayload = try makeJSONData(
             [
                 "jsonrpc": "2.0",
                 "id": UUID().uuidString,
@@ -1073,7 +1097,7 @@ struct ResponseDecodingValidator {
 
     @Test("Decodes verbose mempool transactions without confirmation metadata")
     func decodeVerboseMempoolTransactionWithoutConfirmationMetadata() throws {
-        let payload = try jsonData(
+        let payload = try makeJSONData(
             [
                 "jsonrpc": "2.0",
                 "id": UUID().uuidString,
@@ -1126,7 +1150,7 @@ struct ResponseDecodingValidator {
 
     @Test("Decodes verbose coinbase transactions without spend-input fields")
     func decodeVerboseCoinbaseTransaction() throws {
-        let payload = try jsonData(
+        let payload = try makeJSONData(
             [
                 "jsonrpc": "2.0",
                 "id": UUID().uuidString,
@@ -1177,7 +1201,7 @@ struct ResponseDecodingValidator {
 
     @Test("Decodes verbose transaction outputs that use singular scriptPubKey address")
     func decodeVerboseTransactionOutputWithSingularAddress() throws {
-        let payload = try jsonData(
+        let payload = try makeJSONData(
             [
                 "jsonrpc": "2.0",
                 "id": UUID().uuidString,
@@ -1226,7 +1250,7 @@ struct ResponseDecodingValidator {
 
     @Test("Rejects malformed block.headers batches instead of truncating them")
     func rejectMalformedBlockHeaderBatch() throws {
-        let payload = try jsonData(
+        let payload = try makeJSONData(
             [
                 "jsonrpc": "2.0",
                 "id": UUID().uuidString,
@@ -1272,7 +1296,7 @@ struct ResponseDecodingValidator {
 
     @Test("Rejects malformed block.headers arrays with invalid header widths")
     func rejectMalformedBlockHeaderArray() throws {
-        let payload = try jsonData(
+        let payload = try makeJSONData(
             [
                 "jsonrpc": "2.0",
                 "id": UUID().uuidString,
@@ -1294,7 +1318,7 @@ struct ResponseDecodingValidator {
 
     @Test("Rejects malformed block.header payloads with invalid header widths")
     func rejectMalformedBlockHeaderWithInvalidHeaderWidth() throws {
-        let payload = try jsonData(
+        let payload = try makeJSONData(
             ["jsonrpc": "2.0", "id": UUID().uuidString, "result": String(repeating: "a", count: 158)]
         )
 
@@ -1308,7 +1332,7 @@ struct ResponseDecodingValidator {
 
     @Test("Rejects incomplete block.headers proof metadata")
     func rejectIncompleteBlockHeaderProofMetadata() throws {
-        let payload = try jsonData(
+        let payload = try makeJSONData(
             [
                 "jsonrpc": "2.0",
                 "id": UUID().uuidString,
@@ -1331,7 +1355,7 @@ struct ResponseDecodingValidator {
 
     @Test("Unexpected format errors include decode context")
     func enrichUnexpectedFormatWithContext() throws {
-        let payload = try jsonData(
+        let payload = try makeJSONData(
             ["jsonrpc": "2.0", "id": UUID().uuidString, "result": ["Fulcrum 2.0", "invalid"]]
         )
 
@@ -1351,7 +1375,40 @@ struct ResponseDecodingValidator {
         }
     }
 
-    private func jsonData(_ object: [String: Any]) throws -> Data {
+    private func makeJSONData(_ object: [String: Any]) throws -> Data {
         try JSONSerialization.data(withJSONObject: object)
+    }
+
+    private func expectServerFeaturesDecodeFailure(_ resultOverrides: [String: Any]) throws {
+        let payload = try makeJSONData(
+            [
+                "jsonrpc": "2.0",
+                "id": UUID().uuidString,
+                "result": makeServerFeaturesResult(resultOverrides)
+            ]
+        )
+
+        #expect(throws: ResponseResultDecodeError.self) {
+            _ = try payload.decode(
+                SwiftFulcrum.Response.Server.Features.self,
+                context: .init(methodPath: "server.features")
+            )
+        }
+    }
+
+    private func makeServerFeaturesResult(_ overrides: [String: Any] = [:]) -> [String: Any] {
+        var result: [String: Any] = [
+            "genesis_hash": String(repeating: "0", count: 64),
+            "hash_function": "sha256",
+            "server_version": "Fulcrum 2.0",
+            "protocol_max": "1.6.0",
+            "protocol_min": "1.4.0"
+        ]
+
+        for (key, value) in overrides {
+            result[key] = value
+        }
+
+        return result
     }
 }

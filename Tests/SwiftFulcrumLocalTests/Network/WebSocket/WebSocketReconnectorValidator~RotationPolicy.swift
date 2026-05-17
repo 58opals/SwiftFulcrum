@@ -71,4 +71,63 @@ extension WebSocketReconnectorValidator {
 
         #expect(rotationKeys == [bootstrap, current].map(WebSocketConnection.Reconnector.canonicalize))
     }
+
+    @Test("Reconnector filters invalid catalog fallback entries")
+    func filterInvalidCatalogFallbackEntries() async throws {
+        let current = try #require(URL(string: "wss://current.fulcrum.example"))
+        let invalidBootstrap = try #require(URL(string: "http://invalid.fulcrum.example"))
+        let validBootstrap = try #require(URL(string: "wss://valid.fulcrum.example"))
+        let loader = SwiftFulcrum.ServerCatalog.Repository { _, fallback in
+            fallback
+        }
+        let clientConfiguration = SwiftFulcrum.Client.Configuration(
+            bootstrapServers: [invalidBootstrap, validBootstrap],
+            serverCatalogLoader: loader
+        )
+        let webSocket = WebSocketConnection(
+            url: current,
+            configuration: clientConfiguration.convertToWebSocketConfiguration()
+        )
+
+        let rotation = try await webSocket.reconnector.buildCandidateRotation(
+            preferredURL: nil,
+            currentURL: current
+        )
+        let rotationKeys = rotation.map(WebSocketConnection.Reconnector.canonicalize)
+
+        #expect(rotationKeys == [validBootstrap, current].map(WebSocketConnection.Reconnector.canonicalize))
+    }
+
+    @Test("Reconnector filters invalid fallback entries after catalog cache is warm")
+    func filterInvalidFallbackEntriesAfterCatalogCacheIsWarm() async throws {
+        let firstCurrent = try #require(URL(string: "wss://first.fulcrum.example"))
+        let secondCurrent = try #require(URL(string: "wss://second.fulcrum.example"))
+        let invalidBootstrap = try #require(URL(string: "http://invalid.fulcrum.example"))
+        let validBootstrap = try #require(URL(string: "wss://valid.fulcrum.example"))
+        let loader = SwiftFulcrum.ServerCatalog.Repository { _, fallback in
+            fallback
+        }
+        let clientConfiguration = SwiftFulcrum.Client.Configuration(
+            bootstrapServers: [invalidBootstrap, validBootstrap],
+            serverCatalogLoader: loader
+        )
+        let webSocket = WebSocketConnection(
+            url: firstCurrent,
+            configuration: clientConfiguration.convertToWebSocketConfiguration()
+        )
+
+        _ = try await webSocket.reconnector.buildCandidateRotation(
+            preferredURL: nil,
+            currentURL: firstCurrent
+        )
+        let rotation = try await webSocket.reconnector.buildCandidateRotation(
+            preferredURL: nil,
+            currentURL: secondCurrent
+        )
+        let rotationKeys = rotation.map(WebSocketConnection.Reconnector.canonicalize)
+
+        #expect(!rotationKeys.contains(WebSocketConnection.Reconnector.canonicalize(invalidBootstrap)))
+        #expect(rotationKeys.contains(WebSocketConnection.Reconnector.canonicalize(validBootstrap)))
+        #expect(rotationKeys.last == WebSocketConnection.Reconnector.canonicalize(secondCurrent))
+    }
 }

@@ -11,12 +11,12 @@ extension SwiftFulcrum.Response.Blockchain.Transaction {
             let payloadModel = try SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Transaction.IDFromPos(from: decoder)
             switch payloadModel {
             case .transactionHash(let transactionHash):
-                try SwiftFulcrum.Response.Blockchain.validateTransactionHashLength(transactionHash)
+                try SwiftFulcrum.Response.Blockchain.validateTransactionHash(transactionHash)
                 self.merkle = []
                 self.transactionHash = transactionHash
             case .merkleProof(let merkleProof):
-                try SwiftFulcrum.Response.Blockchain.validateTransactionHashLength(merkleProof.tx_hash)
-                try SwiftFulcrum.Response.Blockchain.validateMerkleHashLengths(merkleProof.merkle)
+                try SwiftFulcrum.Response.Blockchain.validateTransactionHash(merkleProof.tx_hash)
+                try SwiftFulcrum.Response.Blockchain.validateMerkleHashes(merkleProof.merkle)
                 self.merkle = merkleProof.merkle
                 self.transactionHash = merkleProof.tx_hash
             }

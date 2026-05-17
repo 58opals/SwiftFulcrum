@@ -11,7 +11,7 @@ extension SwiftFulcrum.Response.Blockchain.ScriptHash.ListUnspent {
         public let value: UInt64
 
         init(from payloadModel: SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.ScriptHash.ListUnspentItem) throws {
-            try SwiftFulcrum.Response.Blockchain.validateTransactionHashLength(payloadModel.tx_hash)
+            try SwiftFulcrum.Response.Blockchain.validateTransactionHash(payloadModel.tx_hash)
             self.height = payloadModel.height
             self.tokenData = payloadModel.token_data
             self.transactionHash = payloadModel.tx_hash

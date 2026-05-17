@@ -9,7 +9,7 @@ extension SwiftFulcrum.Response.Blockchain.Address.History {
         public let fee: UInt?
 
         init(from payloadModel: SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Address.GetHistoryItem) throws {
-            try SwiftFulcrum.Response.Blockchain.validateTransactionHashLength(payloadModel.tx_hash)
+            try SwiftFulcrum.Response.Blockchain.validateTransactionHash(payloadModel.tx_hash)
             self.height = payloadModel.height
             self.transactionHash = payloadModel.tx_hash
             self.fee = payloadModel.fee

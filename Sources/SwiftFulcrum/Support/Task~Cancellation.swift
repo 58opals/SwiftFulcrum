@@ -71,7 +71,7 @@ final class SharedTaskCancellationCoordinator: @unchecked Sendable {
         return remainingCount
     }
 
-    func shouldCancelUnderlyingTaskForCancellingWaiter() -> Bool {
+    var shouldCancelUnderlyingTaskForCancellingWaiter: Bool {
         lock.lock()
         let shouldCancel = waiterCount <= 1
         lock.unlock()

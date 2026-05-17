@@ -7,7 +7,9 @@ extension SwiftFulcrum.Response.Blockchain.Address {
         public let scriptHash: String
 
         public init(from decoder: Decoder) throws {
-            self.scriptHash = try String(from: decoder)
+            let scriptHash = try String(from: decoder)
+            try SwiftFulcrum.Response.Blockchain.validateScriptHash(scriptHash)
+            self.scriptHash = scriptHash
         }
     }
 }

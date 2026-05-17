@@ -57,7 +57,7 @@ extension SwiftFulcrum.RPC.Response.JSONRPC.Generic {
             return .regular(SwiftFulcrum.RPC.Response.Regular(id: id, result: result))
         }
 
-        if let id, let error {
+        if hasError, let error {
             return .error(SwiftFulcrum.RPC.Response.Error(id: id, error: error))
         }
 

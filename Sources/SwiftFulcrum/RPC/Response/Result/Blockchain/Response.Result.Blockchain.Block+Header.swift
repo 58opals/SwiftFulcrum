@@ -11,11 +11,11 @@ extension SwiftFulcrum.Response.Blockchain.Block {
             let payloadModel = try SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Block.Header(from: decoder)
             switch payloadModel {
             case .raw(let raw):
-                try SwiftFulcrum.Response.Blockchain.validateBlockHeaderLength(raw)
+                try SwiftFulcrum.Response.Blockchain.validateBlockHeader(raw)
                 self.hex = raw
                 self.proof = nil
             case .proof(let proof):
-                try SwiftFulcrum.Response.Blockchain.validateBlockHeaderLength(proof.header)
+                try SwiftFulcrum.Response.Blockchain.validateBlockHeader(proof.header)
                 self.hex = proof.header
                 self.proof = Proof(branch: proof.branch, root: proof.root)
             }

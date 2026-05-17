@@ -110,7 +110,7 @@ struct ClientCancellationValidator {
         }
 
         let firstSubscribeRequest = try TransportTestActor.decodeJSONObject(from: await transport.dequeueOutgoing())
-        let firstSubscribeIdentifier = try requestIdentifier(from: firstSubscribeRequest)
+        let firstSubscribeIdentifier = try extractRequestIdentifier(from: firstSubscribeRequest)
         let firstSubscribePayload = try TransportTestActor.encodeResponsePayload(
             identifier: firstSubscribeIdentifier,
             result: ["height": 940_000, "hex": String(repeating: "a", count: 160)]
@@ -145,7 +145,7 @@ struct ClientCancellationValidator {
         }
 
         let secondSubscribeRequest = try TransportTestActor.decodeJSONObject(from: await transport.dequeueOutgoing())
-        let secondSubscribeIdentifier = try requestIdentifier(from: secondSubscribeRequest)
+        let secondSubscribeIdentifier = try extractRequestIdentifier(from: secondSubscribeRequest)
         let secondSubscribePayload = try TransportTestActor.encodeResponsePayload(
             identifier: secondSubscribeIdentifier,
             result: ["height": 940_001, "hex": String(repeating: "b", count: 160)]
@@ -207,7 +207,7 @@ struct ClientCancellationValidator {
         }
 
         let subscribeRequest = try TransportTestActor.decodeJSONObject(from: await transport.dequeueOutgoing())
-        let subscribeIdentifier = try requestIdentifier(from: subscribeRequest)
+        let subscribeIdentifier = try extractRequestIdentifier(from: subscribeRequest)
         let subscribePayload = try TransportTestActor.encodeResponsePayload(
             identifier: subscribeIdentifier,
             result: ["height": 940_000, "hex": String(repeating: "a", count: 160)]
@@ -283,7 +283,7 @@ struct ClientCancellationValidator {
         }
 
         let versionObject = try TransportTestActor.decodeJSONObject(from: await transport.dequeueOutgoing())
-        let versionIdentifier = try requestIdentifier(from: versionObject)
+        let versionIdentifier = try extractRequestIdentifier(from: versionObject)
         let versionPayload = try TransportTestActor.encodeResponsePayload(
             identifier: versionIdentifier,
             result: ["SwiftFulcrum.Client 2.0", "1.5.3"]
@@ -291,7 +291,7 @@ struct ClientCancellationValidator {
         await transport.enqueueIncoming(.data(versionPayload))
 
         let featuresObject = try TransportTestActor.decodeJSONObject(from: await transport.dequeueOutgoing())
-        let featuresIdentifier = try requestIdentifier(from: featuresObject)
+        let featuresIdentifier = try extractRequestIdentifier(from: featuresObject)
         await transport.configureOutgoingSendDelay(.milliseconds(100))
         let featuresPayload = try TransportTestActor.encodeResponsePayload(
             identifier: featuresIdentifier,
@@ -473,7 +473,7 @@ struct ClientCancellationValidator {
         }
 
         let versionObject = try TransportTestActor.decodeJSONObject(from: await transport.dequeueOutgoing())
-        let versionIdentifier = try requestIdentifier(from: versionObject)
+        let versionIdentifier = try extractRequestIdentifier(from: versionObject)
         let versionPayload = try TransportTestActor.encodeResponsePayload(
             identifier: versionIdentifier,
             result: ["SwiftFulcrum.Client 2.0", "1.5.3"]
@@ -492,7 +492,7 @@ struct ClientCancellationValidator {
         }
 
         let featuresObject = try TransportTestActor.decodeJSONObject(from: await transport.dequeueOutgoing())
-        let featuresIdentifier = try requestIdentifier(from: featuresObject)
+        let featuresIdentifier = try extractRequestIdentifier(from: featuresObject)
         let featuresPayload = try TransportTestActor.encodeResponsePayload(
             identifier: featuresIdentifier,
             result: [
@@ -518,7 +518,7 @@ struct ClientCancellationValidator {
 
         let pingObject = try TransportTestActor.decodeJSONObject(from: await transport.dequeueOutgoing())
         #expect(pingObject["method"] as? String == "server.ping")
-        let pingIdentifier = try requestIdentifier(from: pingObject)
+        let pingIdentifier = try extractRequestIdentifier(from: pingObject)
         let pingPayload = try TransportTestActor.encodeResponsePayload(
             identifier: pingIdentifier,
             result: NSNull()
@@ -614,7 +614,7 @@ struct ClientCancellationValidator {
         }
 
         let versionObject = try TransportTestActor.decodeJSONObject(from: await transport.dequeueOutgoing())
-        let versionIdentifier = try requestIdentifier(from: versionObject)
+        let versionIdentifier = try extractRequestIdentifier(from: versionObject)
         let versionPayload = try TransportTestActor.encodeResponsePayload(
             identifier: versionIdentifier,
             result: ["SwiftFulcrum.Client 2.0", "1.5.3"]
@@ -622,7 +622,7 @@ struct ClientCancellationValidator {
         await transport.enqueueIncoming(.data(versionPayload))
 
         let featuresObject = try TransportTestActor.decodeJSONObject(from: await transport.dequeueOutgoing())
-        let featuresIdentifier = try requestIdentifier(from: featuresObject)
+        let featuresIdentifier = try extractRequestIdentifier(from: featuresObject)
         let featuresPayload = try TransportTestActor.encodeResponsePayload(
             identifier: featuresIdentifier,
             result: [
@@ -688,7 +688,7 @@ struct ClientCancellationValidator {
         }
 
         let versionObject = try TransportTestActor.decodeJSONObject(from: await transport.dequeueOutgoing())
-        let versionIdentifier = try requestIdentifier(from: versionObject)
+        let versionIdentifier = try extractRequestIdentifier(from: versionObject)
         let versionPayload = try TransportTestActor.encodeResponsePayload(
             identifier: versionIdentifier,
             result: ["SwiftFulcrum.Client 2.0", "1.5.3"]
@@ -696,7 +696,7 @@ struct ClientCancellationValidator {
         await transport.enqueueIncoming(.data(versionPayload))
 
         let featuresObject = try TransportTestActor.decodeJSONObject(from: await transport.dequeueOutgoing())
-        let featuresIdentifier = try requestIdentifier(from: featuresObject)
+        let featuresIdentifier = try extractRequestIdentifier(from: featuresObject)
         let featuresPayload = try TransportTestActor.encodeResponsePayload(
             identifier: featuresIdentifier,
             result: [
@@ -802,7 +802,7 @@ struct ClientCancellationValidator {
         }
 
         let versionObject = try TransportTestActor.decodeJSONObject(from: await transport.dequeueOutgoing())
-        let versionIdentifier = try requestIdentifier(from: versionObject)
+        let versionIdentifier = try extractRequestIdentifier(from: versionObject)
         let versionPayload = try TransportTestActor.encodeResponsePayload(
             identifier: versionIdentifier,
             result: ["SwiftFulcrum.Client 2.0", "1.5.3"]
@@ -810,7 +810,7 @@ struct ClientCancellationValidator {
         await transport.enqueueIncoming(.data(versionPayload))
 
         let featuresObject = try TransportTestActor.decodeJSONObject(from: await transport.dequeueOutgoing())
-        let featuresIdentifier = try requestIdentifier(from: featuresObject)
+        let featuresIdentifier = try extractRequestIdentifier(from: featuresObject)
         let featuresPayload = try TransportTestActor.encodeResponsePayload(
             identifier: featuresIdentifier,
             result: [
@@ -878,7 +878,7 @@ struct ClientCancellationValidator {
         }
 
         let versionObject = try TransportTestActor.decodeJSONObject(from: await transport.dequeueOutgoing())
-        let versionIdentifier = try requestIdentifier(from: versionObject)
+        let versionIdentifier = try extractRequestIdentifier(from: versionObject)
         let versionPayload = try TransportTestActor.encodeResponsePayload(
             identifier: versionIdentifier,
             result: ["SwiftFulcrum.Client 2.0", "1.5.3"]
@@ -886,7 +886,7 @@ struct ClientCancellationValidator {
         await transport.enqueueIncoming(.data(versionPayload))
 
         let featuresObject = try TransportTestActor.decodeJSONObject(from: await transport.dequeueOutgoing())
-        let featuresIdentifier = try requestIdentifier(from: featuresObject)
+        let featuresIdentifier = try extractRequestIdentifier(from: featuresObject)
         let featuresPayload = try TransportTestActor.encodeResponsePayload(
             identifier: featuresIdentifier,
             result: [
@@ -966,7 +966,7 @@ struct ClientCancellationValidator {
         }
 
         let versionObject = try TransportTestActor.decodeJSONObject(from: await transport.dequeueOutgoing())
-        let versionIdentifier = try requestIdentifier(from: versionObject)
+        let versionIdentifier = try extractRequestIdentifier(from: versionObject)
         let versionPayload = try TransportTestActor.encodeResponsePayload(
             identifier: versionIdentifier,
             result: ["SwiftFulcrum.Client 2.0", "1.5.3"]
@@ -974,7 +974,7 @@ struct ClientCancellationValidator {
         await transport.enqueueIncoming(.data(versionPayload))
 
         let featuresObject = try TransportTestActor.decodeJSONObject(from: await transport.dequeueOutgoing())
-        let featuresIdentifier = try requestIdentifier(from: featuresObject)
+        let featuresIdentifier = try extractRequestIdentifier(from: featuresObject)
         await transport.configureOutgoingSendDelay(.milliseconds(100))
         let featuresPayload = try TransportTestActor.encodeResponsePayload(
             identifier: featuresIdentifier,
@@ -1093,7 +1093,7 @@ extension ClientCancellationValidator {
         let startTask = Task { try await fulcrum.start() }
         
         let versionObject = try TransportTestActor.decodeJSONObject(from: await transport.dequeueOutgoing())
-        let versionIdentifier = try requestIdentifier(from: versionObject)
+        let versionIdentifier = try extractRequestIdentifier(from: versionObject)
         let versionPayload = try TransportTestActor.encodeResponsePayload(
             identifier: versionIdentifier,
             result: ["SwiftFulcrum.Client 2.0", "1.5.3"]
@@ -1101,7 +1101,7 @@ extension ClientCancellationValidator {
         await transport.enqueueIncoming(.data(versionPayload))
         
         let featuresObject = try TransportTestActor.decodeJSONObject(from: await transport.dequeueOutgoing())
-        let featuresIdentifier = try requestIdentifier(from: featuresObject)
+        let featuresIdentifier = try extractRequestIdentifier(from: featuresObject)
         let featuresPayload = try TransportTestActor.encodeResponsePayload(
             identifier: featuresIdentifier,
             result: [
@@ -1117,7 +1117,7 @@ extension ClientCancellationValidator {
         _ = try await startTask.value
     }
     
-    private func requestIdentifier(from object: [String: Any]) throws -> String {
+    private func extractRequestIdentifier(from object: [String: Any]) throws -> String {
         guard let identifier = object["id"] as? String else {
             throw SupportError.missingRequestIdentifier
         }

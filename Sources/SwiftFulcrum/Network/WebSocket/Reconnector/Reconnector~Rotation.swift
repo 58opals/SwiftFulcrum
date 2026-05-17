@@ -10,11 +10,11 @@ extension WebSocketConnection.Reconnector {
         fallbacks = Self.deduplicate(fallbacks)
 
         if serverCatalog.isEmpty {
-            serverCatalog = Self.deduplicate(
+            serverCatalog = Self.makeValidatedUniqueServers(
                 try await serverCatalogLoader.loadServers(for: network, fallback: fallbacks)
             )
         } else {
-            serverCatalog = Self.deduplicate(serverCatalog + fallbacks)
+            serverCatalog = Self.makeValidatedUniqueServers(serverCatalog + fallbacks)
         }
 
         guard !serverCatalog.isEmpty else { return [currentURL] }
@@ -69,6 +69,10 @@ extension WebSocketConnection.Reconnector {
         }
 
         return unique
+    }
+
+    static func makeValidatedUniqueServers(_ urls: [URL]) -> [URL] {
+        deduplicate(SwiftFulcrum.ServerCatalog.Repository.sanitizeServers(urls))
     }
 
     static func rotate(_ urls: [URL], offset: Int) -> [URL] {
