@@ -67,7 +67,7 @@ extension FulcrumClientLifecycleValidator {
 
         let secondSubscription = try await secondSubscribeTask.value
         #expect(secondSubscription.initial.height == 925_001)
-        #expect((await fulcrum.listSubscriptions()).count == 1)
+        #expect(await fulcrum.makeActiveSubscriptionCount() == 1)
         #expect(await NetworkTestClient.detectStreamTermination(firstUpdates, within: .seconds(5)))
 
         await secondSubscription.cancel()
@@ -161,7 +161,7 @@ extension FulcrumClientLifecycleValidator {
         #expect(firstUpdate?.blocks.first?.height == 920_001)
 
         let registryDidClear = await waitUntil(timeout: .seconds(5)) {
-            (await fulcrum.listSubscriptions()).isEmpty
+            await fulcrum.makeActiveSubscriptionStates().isEmpty
         }
         #expect(registryDidClear)
 
@@ -178,13 +178,11 @@ extension FulcrumClientLifecycleValidator {
         await fulcrum.stop()
     }
 
-    @Test("diagnostics and subscriptions reflect subscribe/cancel lifecycle", .timeLimit(.minutes(1)))
-    func reportDiagnosticsAndSubscriptionLifecycle() async throws {
+    @Test("subscription registry reflects subscribe/cancel lifecycle", .timeLimit(.minutes(1)))
+    func reportSubscriptionLifecycle() async throws {
         let (fulcrum, transport) = try await makeStartedFulcrum()
 
-        let initialSnapshot = await fulcrum.makeDiagnosticsSnapshot()
-        #expect(initialSnapshot.activeSubscriptionCount == 0)
-        #expect((await fulcrum.listSubscriptions()).isEmpty)
+        #expect(await fulcrum.makeActiveSubscriptionStates().isEmpty)
 
         let subscribeTask = Task {
             try await fulcrum.subscribe(
@@ -206,18 +204,14 @@ extension FulcrumClientLifecycleValidator {
         let subscription = try await subscribeTask.value
         #expect(subscription.initial.height == 900_000)
 
-        let activeSnapshot = await fulcrum.makeDiagnosticsSnapshot()
-        let activeSubscriptions = await fulcrum.listSubscriptions()
-        #expect(activeSnapshot.activeSubscriptionCount == 1)
+        let activeSubscriptions = await fulcrum.makeActiveSubscriptionStates()
         #expect(activeSubscriptions.count == 1)
         #expect(activeSubscriptions.first?.methodPath == SwiftFulcrum.RPC.Method.blockchain(.headers(.subscribe)).path)
 
         await subscription.cancel()
         #expect(await NetworkTestClient.detectStreamTermination(subscription.updates, within: .seconds(5)))
 
-        let finalSnapshot = await fulcrum.makeDiagnosticsSnapshot()
-        #expect(finalSnapshot.activeSubscriptionCount == 0)
-        #expect((await fulcrum.listSubscriptions()).isEmpty)
+        #expect(await fulcrum.makeActiveSubscriptionStates().isEmpty)
 
         await fulcrum.stop()
     }
@@ -242,13 +236,11 @@ extension FulcrumClientLifecycleValidator {
         await transport.enqueueIncoming(.data(payload))
 
         let subscription = try await subscribeTask.value
-        #expect((await fulcrum.listSubscriptions()).count == 1)
+        #expect(await fulcrum.makeActiveSubscriptionCount() == 1)
 
         await fulcrum.stop()
 
-        let snapshot = await fulcrum.makeDiagnosticsSnapshot()
-        #expect(snapshot.activeSubscriptionCount == 0)
-        #expect((await fulcrum.listSubscriptions()).isEmpty)
+        #expect(await fulcrum.makeActiveSubscriptionStates().isEmpty)
         #expect(await NetworkTestClient.detectStreamTermination(subscription.updates, within: .seconds(5)))
     }
 

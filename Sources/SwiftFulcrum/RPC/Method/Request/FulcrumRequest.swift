@@ -1,6 +1,7 @@
 // FulcrumRequest.swift
 
 import Foundation
+import OpalDiagnostics
 
 struct FulcrumRequest {
     let jsonrpc: String = "2.0"
@@ -39,30 +40,29 @@ extension FulcrumRequest: Hashable {
 
 extension FulcrumRequest {
     var data: Data? {
-        let traceID = SwiftFulcrumDiagnostics.traceID(for: id)
+        let traceID = OpalDiagnostics.TraceID(swiftFulcrumRequestID: id)
         do {
             let data = try JSONRPCCodec.Coder.encoder.encode(self)
-            SwiftFulcrumDiagnostics.record(
-                SwiftFulcrumDiagnostics.Event.jsonRPCRequestEncoded,
-                category: SwiftFulcrumDiagnostics.Category.jsonRPC,
+            OpalDiagnostics.logger(category: .swiftFulcrumJSONRPC).record(
+                event: .swiftFulcrumJSONRPCRequestEncoded,
+                level: .debug,
                 traceID: traceID,
                 fields: [
-                    SwiftFulcrumDiagnostics.methodField(method),
-                    SwiftFulcrumDiagnostics.publicField("request_id", id),
-                    SwiftFulcrumDiagnostics.publicField("byte_count", data.count)
+                    .swiftFulcrumMethodPath(method),
+                    .swiftFulcrumField("request_id", id),
+                    .swiftFulcrumField("byte_count", data.count)
                 ]
             )
             return data
         } catch {
-            SwiftFulcrumDiagnostics.record(
-                SwiftFulcrumDiagnostics.Event.jsonRPCRequestEncodeFailed,
-                category: SwiftFulcrumDiagnostics.Category.jsonRPC,
-                level: .error,
+            OpalDiagnostics.logger(category: .swiftFulcrumJSONRPC).record(
+                event: .swiftFulcrumJSONRPCRequestEncodeFailed,
+                level: .info,
                 traceID: traceID,
                 fields: [
-                    SwiftFulcrumDiagnostics.methodField(method),
-                    SwiftFulcrumDiagnostics.publicField("request_id", id)
-                ] + SwiftFulcrumDiagnostics.errorFields(error)
+                    .swiftFulcrumMethodPath(method),
+                    .swiftFulcrumField("request_id", id)
+                ] + OpalDiagnostics.Field.swiftFulcrumErrorFields(error)
             )
             return nil
         }

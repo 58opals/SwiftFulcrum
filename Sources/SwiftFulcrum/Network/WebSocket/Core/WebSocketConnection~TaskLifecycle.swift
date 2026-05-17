@@ -50,11 +50,8 @@ extension WebSocketConnection {
     func recordReconnectAttempt() { reconnectAttemptCount &+= 1 }
     
     func recordReconnectSuccess() { reconnectSuccessCount &+= 1 }
-    
-    func makeDiagnosticsSnapshot() -> ClientDiagnosticsTransportState {
-        .init(
-            reconnectAttempts: reconnectAttemptCount,
-            reconnectSuccesses: reconnectSuccessCount
-        )
-    }
+
+    var reconnectAttempts: Int { reconnectAttemptCount }
+
+    var reconnectSuccesses: Int { reconnectSuccessCount }
 }

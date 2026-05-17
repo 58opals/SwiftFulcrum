@@ -31,19 +31,19 @@ struct PublicAPIFacadeContractValidator {
         >.Type = SwiftFulcrum.Client.Subscription.self
         _ = subscriptionType
 
-        let diagnosticsType: SwiftFulcrum.Client.Diagnostics.Type = SwiftFulcrum.Client.Diagnostics.self
-        _ = diagnosticsType
-
-        let diagnosticsCategory: OpalDiagnostics.Category = SwiftFulcrum.Client.Diagnostics.Category.fulcrum
+        let diagnosticsCategory: OpalDiagnostics.Category = OpalDiagnostics.Category.fulcrum
         _ = diagnosticsCategory
 
-        let diagnosticsEvent: OpalDiagnostics.Event = SwiftFulcrum.Client.Diagnostics.Event.clientCallBegin
+        let diagnosticsSubcategory: OpalDiagnostics.Category = OpalDiagnostics.Category.swiftFulcrumJSONRPC
+        _ = diagnosticsSubcategory
+
+        let diagnosticsEvent: OpalDiagnostics.Event = OpalDiagnostics.Event.swiftFulcrumClientCallBegin
         _ = diagnosticsEvent
 
-        let diagnosticsFieldName = SwiftFulcrum.Client.Diagnostics.Field.errorCode
+        let diagnosticsFieldName = OpalDiagnostics.Field.swiftFulcrumErrorCodeName
         _ = diagnosticsFieldName
 
-        let diagnosticsErrorCode = SwiftFulcrum.Client.Diagnostics.ErrorCode.jsonRPCDecodeFailed
+        let diagnosticsErrorCode = "jsonrpc.decode_failed"
         _ = diagnosticsErrorCode
 
         let connectionStateType: SwiftFulcrum.Client.ConnectionState.Type = SwiftFulcrum.Client.ConnectionState.self
@@ -131,7 +131,6 @@ struct PublicAPIFacadeContractValidator {
             "SwiftFulcrum.Client.Configuration.init(tlsDescriptor:reconnect:connectionTimeout:maximumMessageSize:bootstrapServers:serverCatalogLoader:network:protocolNegotiation:)",
             "SwiftFulcrum.Client.Call.Options",
             "SwiftFulcrum.Client.Subscription",
-            "SwiftFulcrum.Client.Diagnostics",
             "SwiftFulcrum.Client.ConnectionState",
             "SwiftFulcrum.Client.Error",
             "SwiftFulcrum.API",
@@ -162,6 +161,12 @@ struct PublicAPIFacadeContractValidator {
             "SwiftFulcrum.Client.RPCResponse",
             "SwiftFulcrum.Client.RPCSingleResponse",
             "SwiftFulcrum.Client.RPCStreamResponse",
+            "SwiftFulcrum.Client.Diagnostics",
+            "SwiftFulcrum.Client.Diagnostics.Snapshot",
+            "SwiftFulcrum.Client.Diagnostics.Subscription",
+            "SwiftFulcrum.ClientDiagnosticsTransportState",
+            "SwiftFulcrum.Client.makeDiagnosticsSnapshot()",
+            "SwiftFulcrum.Client.listSubscriptions()",
             "SwiftFulcrum.RPC.Response.Regular",
             "SwiftFulcrum.RPC.Response.Subscription",
             "SwiftFulcrum.RPC.Response.Error",

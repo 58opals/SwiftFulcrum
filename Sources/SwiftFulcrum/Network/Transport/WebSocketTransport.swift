@@ -12,6 +12,8 @@ actor WebSocketTransport: TransportAdapter {
     var connectionState: SwiftFulcrum.Client.ConnectionState { get async { mapConnectionState(await webSocket.connectionState) } }
     var closeInformation: CloseInformation { get async { await webSocket.closeInformation } }
     var endpoint: URL { get async { await webSocket.url } }
+    var reconnectAttempts: Int { get async { await webSocket.reconnectAttempts } }
+    var reconnectSuccesses: Int { get async { await webSocket.reconnectSuccesses } }
     
     func connect() async throws { try await webSocket.connect() }
     
@@ -59,8 +61,6 @@ actor WebSocketTransport: TransportAdapter {
             continuation.onTermination = { @Sendable _ in task.cancel() }
         }
     }
-    
-    func makeDiagnosticsSnapshot() async -> ClientDiagnosticsTransportState { await webSocket.makeDiagnosticsSnapshot() }
     
     private func mapConnectionState(_ state: WebSocketConnection.ConnectionState) -> SwiftFulcrum.Client.ConnectionState {
         switch state {

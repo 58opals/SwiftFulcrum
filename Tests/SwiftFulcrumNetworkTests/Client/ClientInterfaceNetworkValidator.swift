@@ -143,8 +143,6 @@ struct ClientInterfaceNetworkValidator {
             #expect(initial.height > 0)
             #expect(initial.hex.count == 160)
 
-            print("Current tip height: \(initial.height)")
-
             var observedUpdateCount = 0
             for try await update in updates {
                 #expect(
@@ -153,13 +151,9 @@ struct ClientInterfaceNetworkValidator {
                 )
                 _ = try #require(update.blocks.first)
 
-                print("Subscription identifier (method): \(update.subscriptionIdentifier)")
-                print("Number of blocks: \(update.blocks.count)")
                 for block in update.blocks {
                     #expect(block.height > 0)
                     #expect(block.hex.count == 160)
-
-                    print("\(block.height): \(block.hex)")
                 }
                 observedUpdateCount += 1
 

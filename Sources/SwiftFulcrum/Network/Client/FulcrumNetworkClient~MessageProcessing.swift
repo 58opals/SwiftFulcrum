@@ -1,6 +1,7 @@
 // FulcrumNetworkClient~MessageProcessing.swift
 
 import Foundation
+import OpalDiagnostics
 
 extension FulcrumNetworkClient {
     func handleMessage(_ message: URLSessionWebSocketTask.Message) async -> Int? {
@@ -12,19 +13,21 @@ extension FulcrumNetworkClient {
                 return await router.handle(raw: data)
             }
             else {
-                recordClientEvent(
-                    SwiftFulcrumDiagnostics.Event.webSocketReceiveFailed,
-                    category: SwiftFulcrumDiagnostics.Category.webSocket,
-                    level: .error,
-                    fields: SwiftFulcrumDiagnostics.payloadFields(payloadType: "string", byteCount: string.utf8.count)
+                OpalDiagnostics.logger(category: .swiftFulcrumWebSocket).record(
+                    event: .swiftFulcrumWebSocketReceiveFailed,
+                    level: .info,
+                    fields: makeClientDiagnosticFields(
+                        OpalDiagnostics.Field.swiftFulcrumPayloadFields(payloadType: "string", byteCount: string.utf8.count)
+                    )
                 )
             }
         @unknown default:
-            recordClientEvent(
-                SwiftFulcrumDiagnostics.Event.webSocketReceiveFailed,
-                category: SwiftFulcrumDiagnostics.Category.webSocket,
-                level: .error,
-                fields: SwiftFulcrumDiagnostics.payloadFields(payloadType: "unknown", byteCount: 0)
+            OpalDiagnostics.logger(category: .swiftFulcrumWebSocket).record(
+                event: .swiftFulcrumWebSocketReceiveFailed,
+                level: .info,
+                fields: makeClientDiagnosticFields(
+                    OpalDiagnostics.Field.swiftFulcrumPayloadFields(payloadType: "unknown", byteCount: 0)
+                )
             )
         }
         

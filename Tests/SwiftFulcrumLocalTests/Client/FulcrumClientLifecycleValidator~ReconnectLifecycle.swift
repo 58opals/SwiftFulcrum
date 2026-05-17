@@ -98,7 +98,7 @@ extension FulcrumClientLifecycleValidator {
         #expect(await NetworkTestClient.detectStreamTermination(updates, within: .seconds(5)))
 
         let didClearInitialSubscription = await waitUntil(timeout: .seconds(5)) {
-            (await fulcrum.listSubscriptions()).isEmpty
+            await fulcrum.makeActiveSubscriptionStates().isEmpty
         }
         #expect(didClearInitialSubscription)
 
@@ -134,7 +134,7 @@ extension FulcrumClientLifecycleValidator {
 
         let replacementSubscription = try await replacementSubscribeTask.value
         #expect(replacementSubscription.initial.height == 940_001)
-        #expect((await fulcrum.listSubscriptions()).count == 1)
+        #expect(await fulcrum.makeActiveSubscriptionCount() == 1)
 
         await replacementSubscription.cancel()
         #expect(await NetworkTestClient.detectStreamTermination(replacementSubscription.updates, within: .seconds(5)))
@@ -238,7 +238,7 @@ extension FulcrumClientLifecycleValidator {
         await transport.enqueueIncoming(.data(reconnectResubscribePayload))
 
         try await reconnectTask.value
-        #expect((await fulcrum.listSubscriptions()).count == 1)
+        #expect(await fulcrum.makeActiveSubscriptionCount() == 1)
 
         await initialSubscription.cancel()
         #expect(await NetworkTestClient.detectStreamTermination(updates, within: .seconds(5)))
@@ -321,7 +321,7 @@ extension FulcrumClientLifecycleValidator {
         }
 
         let didClearSubscriptions = await waitUntil(timeout: .seconds(2)) {
-            (await fulcrum.listSubscriptions()).isEmpty
+            await fulcrum.makeActiveSubscriptionStates().isEmpty
         }
         #expect(didClearSubscriptions)
         #expect(await NetworkTestClient.detectStreamTermination(updates, within: .seconds(5)))
@@ -400,7 +400,7 @@ extension FulcrumClientLifecycleValidator {
         await subscription.cancel()
 
         let didClearSubscriptions = await waitUntil(timeout: .seconds(2)) {
-            (await fulcrum.listSubscriptions()).isEmpty
+            await fulcrum.makeActiveSubscriptionStates().isEmpty
         }
         #expect(didClearSubscriptions)
         #expect(await NetworkTestClient.detectStreamTermination(updates, within: .seconds(5)))
@@ -497,7 +497,7 @@ extension FulcrumClientLifecycleValidator {
             result: ["height": 930_000, "hex": String(repeating: "f", count: 160)]
         )
         await transport.enqueueIncoming(.data(reconnectResubscribePayload))
-        #expect((await fulcrum.listSubscriptions()).count == 1)
+        #expect(await fulcrum.makeActiveSubscriptionCount() == 1)
 
         let notificationPayload = try TransportTestActor.encodeSubscriptionNotification(
             method: subscribeMethodPath,
@@ -911,7 +911,7 @@ extension FulcrumClientLifecycleValidator {
         let scripthashSubscription = try await scripthashSubscribeTask.value
         let scripthashUpdates = scripthashSubscription.updates
 
-        #expect((await fulcrum.listSubscriptions()).count == 2)
+        #expect(await fulcrum.makeActiveSubscriptionCount() == 2)
 
         let reconnectTask = Task {
             try await fulcrum.reconnect()
@@ -967,7 +967,7 @@ extension FulcrumClientLifecycleValidator {
 
         try await reconnectTask.value
 
-        let activeSubscriptions = await fulcrum.listSubscriptions()
+        let activeSubscriptions = await fulcrum.makeActiveSubscriptionStates()
         #expect(activeSubscriptions.count == 1)
         #expect(activeSubscriptions.first?.methodPath == headersMethod.path)
 
@@ -1051,7 +1051,7 @@ extension FulcrumClientLifecycleValidator {
 
         try await reconnectTask.value
 
-        #expect((await fulcrum.listSubscriptions()).isEmpty)
+        #expect(await fulcrum.makeActiveSubscriptionStates().isEmpty)
 
         let terminalError = await waitForStreamTerminalError(updates, within: .seconds(2))
         guard case .transport(.reconnectFailed) = terminalError as? SwiftFulcrum.Client.Error else {

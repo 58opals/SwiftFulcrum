@@ -1,6 +1,7 @@
 // FulcrumNetworkClient~Heartbeat.swift
 
 import Foundation
+import OpalDiagnostics
 
 extension FulcrumNetworkClient {
     func startRPCHeartbeat() {
@@ -25,10 +26,10 @@ extension FulcrumNetworkClient {
                     // If we were cancelled while handling an error, bail out.
                     if Task.isCancelled { break }
                     
-                    await owner.recordClientEvent(
-                        SwiftFulcrumDiagnostics.Event.clientHeartbeatTimeout,
-                        level: .error,
-                        fields: SwiftFulcrumDiagnostics.errorFields(error)
+                    OpalDiagnostics.logger(category: .fulcrum).record(
+                        event: .swiftFulcrumClientHeartbeatTimeout,
+                        level: .info,
+                        fields: await owner.makeClientTransportDiagnosticFields(OpalDiagnostics.Field.swiftFulcrumErrorFields(error))
                     )
                     
                     do {
@@ -40,7 +41,7 @@ extension FulcrumNetworkClient {
                         let heartbeatTimeoutError = SwiftFulcrum.Client.Error.transport(.heartbeatTimeout)
                         let inflightCount = await owner.router.failAll(with: heartbeatTimeoutError)
                         await owner.dropAllStoredSubscriptions()
-                        await owner.publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightCount)
+                        await owner.recordClientState(inflightUnaryCallCount: inflightCount)
                         break
                     }
                 }

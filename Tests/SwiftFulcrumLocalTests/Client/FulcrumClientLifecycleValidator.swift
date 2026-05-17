@@ -265,9 +265,7 @@ struct FulcrumClientLifecycleValidator {
 
         await subscribeTask.value
 
-        let snapshot = await fulcrum.makeDiagnosticsSnapshot()
-        let subscriptions = await fulcrum.listSubscriptions()
-        #expect(snapshot.activeSubscriptionCount == 0)
+        let subscriptions = await fulcrum.makeActiveSubscriptionStates()
         #expect(subscriptions.isEmpty)
 
         await fulcrum.stop()

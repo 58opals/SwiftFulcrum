@@ -1,6 +1,7 @@
 // FulcrumNetworkClient~Subscription.swift
 
 import Foundation
+import OpalDiagnostics
 
 extension FulcrumNetworkClient {
     struct SubscriptionCancellationRegistration: Sendable {
@@ -34,7 +35,7 @@ extension FulcrumNetworkClient {
         guard !subscriptionMethods.isEmpty else { return }
         subscriptionMethods.removeAll(keepingCapacity: false)
         activeSubscriptionRequestIdentifiers.removeAll(keepingCapacity: false)
-        await publishSubscriptionRegistry()
+        await recordSubscriptionRegistry()
     }
 }
 
@@ -103,15 +104,15 @@ extension FulcrumNetworkClient {
                 error: error
             )
             if didRemove {
-                recordClientEvent(
-                    SwiftFulcrumDiagnostics.Event.clientSubscriptionRestoreFailed,
-                    level: .error,
-                    traceID: SwiftFulcrumDiagnostics.traceID(for: requestIdentifier),
-                    fields: [
-                        SwiftFulcrumDiagnostics.privateField("subscription_identifier", subscriptionKey.identifier ?? ""),
-                        SwiftFulcrumDiagnostics.methodField(method.path),
-                        SwiftFulcrumDiagnostics.publicField("removed", didRemove)
-                    ] + SwiftFulcrumDiagnostics.errorFields(error)
+                OpalDiagnostics.logger(category: .fulcrum).record(
+                    event: .swiftFulcrumClientSubscriptionRestoreFailed,
+                    level: .info,
+                    traceID: OpalDiagnostics.TraceID(swiftFulcrumRequestID: requestIdentifier),
+                    fields: makeClientDiagnosticFields([
+                        .swiftFulcrumPrivateField("subscription_identifier", subscriptionKey.identifier ?? ""),
+                        .swiftFulcrumMethodPath(method.path),
+                        .swiftFulcrumField("removed", didRemove)
+                    ] + OpalDiagnostics.Field.swiftFulcrumErrorFields(error))
                 )
             }
             return
@@ -147,14 +148,14 @@ extension FulcrumNetworkClient {
             switch try SwiftFulcrum.RPC.Response.JSONRPC.classifyErasedResponse(from: rawResponse) {
             case .regular:
                 await owner.clearSubscriptionSetupRequestIdentifier(requestIdentifier, for: subscriptionKey)
-                await owner.recordClientEvent(
-                    SwiftFulcrumDiagnostics.Event.clientSubscriptionRestored,
+                await OpalDiagnostics.logger(category: .fulcrum).record(
+                    event: .swiftFulcrumClientSubscriptionRestored,
                     level: .info,
-                    traceID: SwiftFulcrumDiagnostics.traceID(for: requestIdentifier),
-                    fields: [
-                        SwiftFulcrumDiagnostics.privateField("subscription_identifier", subscriptionKey.identifier ?? ""),
-                        SwiftFulcrumDiagnostics.methodField(method.path)
-                    ]
+                    traceID: OpalDiagnostics.TraceID(swiftFulcrumRequestID: requestIdentifier),
+                    fields: owner.makeClientDiagnosticFields([
+                        .swiftFulcrumPrivateField("subscription_identifier", subscriptionKey.identifier ?? ""),
+                        .swiftFulcrumMethodPath(method.path)
+                    ])
                 )
             case .error(let error):
                 throw error
@@ -180,15 +181,15 @@ extension FulcrumNetworkClient {
             )
             guard shouldLogFailure || didRemove else { return }
 
-            recordClientEvent(
-                SwiftFulcrumDiagnostics.Event.clientSubscriptionRestoreFailed,
-                level: .error,
-                traceID: SwiftFulcrumDiagnostics.traceID(for: requestIdentifier),
-                fields: [
-                    SwiftFulcrumDiagnostics.privateField("subscription_identifier", subscriptionKey.identifier ?? ""),
-                    SwiftFulcrumDiagnostics.methodField(method.path),
-                    SwiftFulcrumDiagnostics.publicField("removed", didRemove)
-                ] + SwiftFulcrumDiagnostics.errorFields(error)
+            OpalDiagnostics.logger(category: .fulcrum).record(
+                event: .swiftFulcrumClientSubscriptionRestoreFailed,
+                level: .info,
+                traceID: OpalDiagnostics.TraceID(swiftFulcrumRequestID: requestIdentifier),
+                fields: makeClientDiagnosticFields([
+                    .swiftFulcrumPrivateField("subscription_identifier", subscriptionKey.identifier ?? ""),
+                    .swiftFulcrumMethodPath(method.path),
+                    .swiftFulcrumField("removed", didRemove)
+                ] + OpalDiagnostics.Field.swiftFulcrumErrorFields(error))
             )
         }
     }
@@ -443,20 +444,20 @@ extension FulcrumNetworkClient {
         )
 
         if didRemove {
-            recordClientEvent(
-                SwiftFulcrumDiagnostics.Event.clientSubscriptionRemoved,
+            OpalDiagnostics.logger(category: .fulcrum).record(
+                event: .swiftFulcrumClientSubscriptionRemoved,
                 level: .info,
-                traceID: SwiftFulcrumDiagnostics.traceID(for: requestIdentifier),
-                fields: [
-                    SwiftFulcrumDiagnostics.privateField("subscription_identifier", subscriptionKey.identifier ?? ""),
-                    SwiftFulcrumDiagnostics.publicField("method_path", subscriptionKey.methodPath.rawValue),
-                    SwiftFulcrumDiagnostics.publicField("subscription_count", subscriptionMethods.count)
-                ]
+                traceID: OpalDiagnostics.TraceID(swiftFulcrumRequestID: requestIdentifier),
+                fields: makeClientDiagnosticFields([
+                    .swiftFulcrumPrivateField("subscription_identifier", subscriptionKey.identifier ?? ""),
+                    .swiftFulcrumField("method_path", subscriptionKey.methodPath.rawValue),
+                    .swiftFulcrumField("subscription_count", subscriptionMethods.count)
+                ])
             )
-            await publishSubscriptionRegistry()
+            await recordSubscriptionRegistry()
         }
 
-        await publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightCount)
+        await recordClientState(inflightUnaryCallCount: inflightCount)
 
         return didRemove
     }
@@ -487,18 +488,18 @@ extension FulcrumNetworkClient {
         recordActiveSubscriptionRequestIdentifier(requestIdentifier, for: subscriptionKey)
         subscriptionMethods[subscriptionKey] = method
 
-        recordClientEvent(
-            SwiftFulcrumDiagnostics.Event.clientSubscriptionAdded,
+        OpalDiagnostics.logger(category: .fulcrum).record(
+            event: .swiftFulcrumClientSubscriptionAdded,
             level: .info,
-            traceID: SwiftFulcrumDiagnostics.traceID(for: requestIdentifier),
-            fields: [
-                SwiftFulcrumDiagnostics.privateField("subscription_identifier", subscriptionKey.identifier ?? ""),
-                SwiftFulcrumDiagnostics.methodField(method.path),
-                SwiftFulcrumDiagnostics.publicField("subscription_count", subscriptionMethods.count)
-            ]
+            traceID: OpalDiagnostics.TraceID(swiftFulcrumRequestID: requestIdentifier),
+            fields: makeClientDiagnosticFields([
+                .swiftFulcrumPrivateField("subscription_identifier", subscriptionKey.identifier ?? ""),
+                .swiftFulcrumMethodPath(method.path),
+                .swiftFulcrumField("subscription_count", subscriptionMethods.count)
+            ])
         )
-        await publishSubscriptionRegistry()
-        await publishDiagnosticsSnapshot()
+        await recordSubscriptionRegistry()
+        await recordClientState()
 
         rawContinuation.onTermination = { @Sendable [weak self] _ in
             guard let self else { return }

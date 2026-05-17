@@ -56,10 +56,10 @@ Task {
         let client = try await SwiftFulcrum.Client()
 
         let tip = try await client.request(SwiftFulcrum.API.blockchain.headers.tip)
-        print("Best header height: \(tip.height)")
         await client.stop()
+        // Update application state with tip.height.
     } catch {
-        print("Fulcrum error: \(error)")
+        // Surface the error through application-owned handling.
     }
 }
 ```
@@ -80,7 +80,7 @@ let chipnetClient = try await SwiftFulcrum.Client(
 - Typed response models under `SwiftFulcrum.Response.*`
 - Automatic protocol negotiation plus reconnect and failover with subscription recovery
 - Bundled public server catalogs for `mainnet`, `testnet`, and `chipnet`
-- Connection-state streams, diagnostics snapshots, and OpalDiagnostics events for observability
+- Connection-state streams and OpalDiagnostics events for observability
 
 ## Diagnostics
 

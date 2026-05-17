@@ -128,7 +128,7 @@ struct ClientHeartbeatValidator {
             within: .milliseconds(250)
         )
         #expect(terminated)
-        #expect((await client.listSubscriptions()).isEmpty)
+        #expect(await client.makeActiveSubscriptionStates().isEmpty)
         #expect(await transport.makeReconnectAttempts() > 0)
 
         await client.stop()

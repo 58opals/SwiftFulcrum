@@ -1,6 +1,7 @@
 // FulcrumNetworkClient.swift
 
 import Foundation
+import OpalDiagnostics
 
 actor FulcrumNetworkClient {
     let id: UUID
@@ -100,7 +101,7 @@ actor FulcrumNetworkClient {
             _ = try await ensureNegotiatedProtocol()
             
             startRPCHeartbeat()
-            await publishDiagnosticsSnapshot()
+            await recordClientState()
         } catch {
             await cancelBackgroundTasks()
             await transport.disconnect(with: "FulcrumNetworkClient.start() negotiation failed")
@@ -127,7 +128,7 @@ actor FulcrumNetworkClient {
         let closedError = await SwiftFulcrum.Client.Error.transport(.connectionClosed(info.code, info.reason))
         await dropAllStoredSubscriptions()
         let inflightCount = await router.failAll(with: closedError)
-        await publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightCount)
+        await recordClientState(inflightUnaryCallCount: inflightCount)
         
         await stopRPCHeartbeat()
         await cancelBackgroundTasks()
@@ -149,25 +150,29 @@ actor FulcrumNetworkClient {
                 try await owner.transport.reconnect(with: url)
                 await owner.startReceivingTask()
                 _ = try await owner.ensureNegotiatedProtocol()
-                await owner.recordClientEvent(
-                    SwiftFulcrumDiagnostics.Event.clientReconnectRecoveryBegin,
-                    category: SwiftFulcrumDiagnostics.Category.reconnect,
-                    level: .info
+                OpalDiagnostics.logger(category: .swiftFulcrumReconnect).record(
+                    event: .swiftFulcrumClientReconnectRecoveryBegin,
+                    level: .info,
+                    fields: await owner.makeClientTransportDiagnosticFields()
                 )
                 await owner.resubscribeStoredMethods()
-                await owner.recordClientEvent(
-                    SwiftFulcrumDiagnostics.Event.clientReconnectRecoverySucceeded,
-                    category: SwiftFulcrumDiagnostics.Category.reconnect,
+                OpalDiagnostics.logger(category: .swiftFulcrumReconnect).record(
+                    event: .swiftFulcrumClientReconnectRecoverySucceeded,
                     level: .info,
-                    fields: [
-                        SwiftFulcrumDiagnostics.publicField("subscription_count", owner.subscriptionMethods.count)
-                    ]
+                    fields: await owner.makeClientTransportDiagnosticFields([
+                        .swiftFulcrumField("subscription_count", owner.subscriptionMethods.count)
+                    ])
                 )
                 await owner.clearAutomaticReconnectRecoveryNeed()
                 await owner.startLifecycleObservationTasks()
-                await owner.publishDiagnosticsSnapshot()
+                await owner.recordClientState()
             } catch {
                 await owner.cancelBackgroundTasks()
+                OpalDiagnostics.logger(category: .swiftFulcrumReconnect).record(
+                    event: .swiftFulcrumClientReconnectRecoveryFailed,
+                    level: .info,
+                    fields: await owner.makeClientTransportDiagnosticFields(OpalDiagnostics.Field.swiftFulcrumErrorFields(error))
+                )
                 await owner.transport.disconnect(with: "FulcrumNetworkClient.reconnect() failed")
                 throw error
             }
@@ -215,7 +220,7 @@ actor FulcrumNetworkClient {
         let owner = self
         lifecycleTask = Task {
             for await event in await owner.transport.makeLifecycleEvents() {
-                await owner.publishDiagnosticsSnapshot()
+                await owner.recordClientState()
                 switch event {
                 case .connected(let isReconnect) where isReconnect:
                     await owner.markAutomaticReconnectRecoveryNeeded()
@@ -223,11 +228,10 @@ actor FulcrumNetworkClient {
                     do {
                         try await recoveryTask.value
                     } catch {
-                        await owner.recordClientEvent(
-                            SwiftFulcrumDiagnostics.Event.clientReconnectRecoveryFailed,
-                            category: SwiftFulcrumDiagnostics.Category.reconnect,
-                            level: .error,
-                            fields: SwiftFulcrumDiagnostics.errorFields(error)
+                        OpalDiagnostics.logger(category: .swiftFulcrumReconnect).record(
+                            event: .swiftFulcrumClientReconnectRecoveryFailed,
+                            level: .info,
+                            fields: await owner.makeClientTransportDiagnosticFields(OpalDiagnostics.Field.swiftFulcrumErrorFields(error))
                         )
                         await owner.handleAutomaticReconnectRecoveryFailure(error)
                     }
@@ -245,7 +249,7 @@ actor FulcrumNetworkClient {
                 if state == .reconnecting {
                     await owner.prepareForAutomaticReconnectRecoveryIfNeeded()
                 }
-                await owner.publishDiagnosticsSnapshot()
+                await owner.recordClientState()
             }
         }
     }
@@ -347,22 +351,21 @@ private extension FulcrumNetworkClient {
 
     func performAutomaticReconnectRecovery() async throws {
         resetNegotiatedSession()
-        recordClientEvent(
-            SwiftFulcrumDiagnostics.Event.clientReconnectRecoveryBegin,
-            category: SwiftFulcrumDiagnostics.Category.reconnect,
-            level: .info
+        OpalDiagnostics.logger(category: .swiftFulcrumReconnect).record(
+            event: .swiftFulcrumClientReconnectRecoveryBegin,
+            level: .info,
+            fields: await makeClientTransportDiagnosticFields()
         )
 
         _ = try await ensureNegotiatedProtocol()
         await resubscribeStoredMethods()
         needsAutomaticReconnectRecovery = false
-        recordClientEvent(
-            SwiftFulcrumDiagnostics.Event.clientReconnectRecoverySucceeded,
-            category: SwiftFulcrumDiagnostics.Category.reconnect,
+        OpalDiagnostics.logger(category: .swiftFulcrumReconnect).record(
+            event: .swiftFulcrumClientReconnectRecoverySucceeded,
             level: .info,
-            fields: [
-                SwiftFulcrumDiagnostics.publicField("subscription_count", subscriptionMethods.count)
-            ]
+            fields: await makeClientTransportDiagnosticFields([
+                .swiftFulcrumField("subscription_count", subscriptionMethods.count)
+            ])
         )
     }
 
@@ -373,7 +376,7 @@ private extension FulcrumNetworkClient {
 
         let inflightCount = await router.failAll(with: error)
         await dropAllStoredSubscriptions()
-        await publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightCount)
+        await recordClientState(inflightUnaryCallCount: inflightCount)
         await transport.disconnect(with: "FulcrumNetworkClient automatic reconnect recovery failed")
     }
 

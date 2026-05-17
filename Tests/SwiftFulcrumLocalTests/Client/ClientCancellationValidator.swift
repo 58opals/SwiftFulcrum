@@ -131,7 +131,7 @@ struct ClientCancellationValidator {
         )
 
         let didClearFirstSubscription = await waitUntil(timeout: .seconds(2)) {
-            (await fulcrum.listSubscriptions()).isEmpty
+            await fulcrum.makeActiveSubscriptionStates().isEmpty
         }
         #expect(didClearFirstSubscription)
 
@@ -153,12 +153,12 @@ struct ClientCancellationValidator {
         await transport.enqueueIncoming(.data(secondSubscribePayload))
 
         let secondSubscription = try await secondSubscribeTask.value
-        #expect((await fulcrum.listSubscriptions()).count == 1)
+        #expect(await fulcrum.makeActiveSubscriptionCount() == 1)
 
         await sharedCancellation.cancel()
 
         let didPreserveSecondSubscription = await waitUntil(timeout: .milliseconds(250)) {
-            (await fulcrum.listSubscriptions()).count == 1
+            await fulcrum.makeActiveSubscriptionCount() == 1
         }
         #expect(didPreserveSecondSubscription)
 
@@ -357,7 +357,7 @@ struct ClientCancellationValidator {
 
         try? await Task.sleep(for: .milliseconds(150))
         #expect(await transport.sentMessages.count == baselineOutgoingCount)
-        #expect((await fulcrum.makeDiagnosticsSnapshot()).inflightUnaryCallCount == 0)
+        #expect(await fulcrum.makeInflightUnaryCallCount() == 0)
 
         await fulcrum.stop()
     }
@@ -934,8 +934,7 @@ struct ClientCancellationValidator {
         let finalOutgoingCount = await transport.sentMessages.count
         #expect(finalOutgoingCount == baselineOutgoingCount)
         
-        let snapshot = await fulcrum.makeDiagnosticsSnapshot()
-        #expect(snapshot.activeSubscriptionCount == 0)
+        #expect(await fulcrum.makeActiveSubscriptionCount() == 0)
         
         await fulcrum.stop()
     }
@@ -994,8 +993,8 @@ struct ClientCancellationValidator {
 
         try? await Task.sleep(for: .milliseconds(250))
         #expect(await transport.sentMessages.count == 2)
-        #expect((await client.listSubscriptions()).isEmpty)
-        #expect((await client.makeDiagnosticsSnapshot()).activeSubscriptionCount == 0)
+        #expect(await client.makeActiveSubscriptionStates().isEmpty)
+        #expect(await client.makeActiveSubscriptionCount() == 0)
 
         await client.stop()
     }
@@ -1044,8 +1043,7 @@ struct ClientCancellationValidator {
 
         try? await Task.sleep(for: .milliseconds(150))
         #expect(await transport.sentMessages.count == baselineOutgoingCount)
-        let snapshot = await fulcrum.makeDiagnosticsSnapshot()
-        #expect(snapshot.activeSubscriptionCount == 0)
+        #expect(await fulcrum.makeActiveSubscriptionCount() == 0)
 
         await fulcrum.stop()
     }

@@ -1,0 +1,51 @@
+// OpalDiagnostics.Event+SwiftFulcrum.swift
+
+public import OpalDiagnostics
+
+public extension OpalDiagnostics.Event {
+    static let swiftFulcrumJSONRPCRequestEncoded = Self(rawValue: "swiftfulcrum.jsonrpc.request.encoded")
+    static let swiftFulcrumJSONRPCRequestEncodeFailed = Self(rawValue: "swiftfulcrum.jsonrpc.request.encode_failed")
+    static let swiftFulcrumJSONRPCResponseDecoded = Self(rawValue: "swiftfulcrum.jsonrpc.response.decoded")
+    static let swiftFulcrumJSONRPCResponseDecodeFailed = Self(rawValue: "swiftfulcrum.jsonrpc.response.decode_failed")
+
+    static let swiftFulcrumClientCallBegin = Self(rawValue: "swiftfulcrum.client.call.begin")
+    static let swiftFulcrumClientCallSent = Self(rawValue: "swiftfulcrum.client.call.sent")
+    static let swiftFulcrumClientCallResponseDecoded = Self(rawValue: "swiftfulcrum.client.call.response_decoded")
+    static let swiftFulcrumClientCallTimeout = Self(rawValue: "swiftfulcrum.client.call.timeout")
+    static let swiftFulcrumClientCallCancelled = Self(rawValue: "swiftfulcrum.client.call.cancelled")
+    static let swiftFulcrumClientCallFailed = Self(rawValue: "swiftfulcrum.client.call.failed")
+    static let swiftFulcrumClientSubscribeBegin = Self(rawValue: "swiftfulcrum.client.subscribe.begin")
+    static let swiftFulcrumClientSubscribeSent = Self(rawValue: "swiftfulcrum.client.subscribe.sent")
+    static let swiftFulcrumClientSubscribeInitialDecoded = Self(rawValue: "swiftfulcrum.client.subscribe.initial_decoded")
+    static let swiftFulcrumClientSubscribeTimeout = Self(rawValue: "swiftfulcrum.client.subscribe.timeout")
+    static let swiftFulcrumClientSubscribeCancelled = Self(rawValue: "swiftfulcrum.client.subscribe.cancelled")
+    static let swiftFulcrumClientSubscribeFailed = Self(rawValue: "swiftfulcrum.client.subscribe.failed")
+    static let swiftFulcrumClientStateUpdated = Self(rawValue: "swiftfulcrum.client.state.updated")
+    static let swiftFulcrumClientSubscriptionsUpdated = Self(rawValue: "swiftfulcrum.client.subscriptions.updated")
+    static let swiftFulcrumClientHeartbeatTimeout = Self(rawValue: "swiftfulcrum.client.heartbeat.timeout")
+    static let swiftFulcrumClientReconnectRecoveryBegin = Self(rawValue: "swiftfulcrum.client.reconnect_recovery.begin")
+    static let swiftFulcrumClientReconnectRecoverySucceeded = Self(rawValue: "swiftfulcrum.client.reconnect_recovery.succeeded")
+    static let swiftFulcrumClientReconnectRecoveryFailed = Self(rawValue: "swiftfulcrum.client.reconnect_recovery.failed")
+    static let swiftFulcrumClientSubscriptionRestored = Self(rawValue: "swiftfulcrum.client.subscription.restored")
+    static let swiftFulcrumClientSubscriptionRestoreFailed = Self(rawValue: "swiftfulcrum.client.subscription.restore_failed")
+    static let swiftFulcrumClientSubscriptionRemoved = Self(rawValue: "swiftfulcrum.client.subscription.removed")
+    static let swiftFulcrumClientSubscriptionAdded = Self(rawValue: "swiftfulcrum.client.subscription.added")
+
+    static let swiftFulcrumWebSocketConnectBegin = Self(rawValue: "swiftfulcrum.websocket.connect.begin")
+    static let swiftFulcrumWebSocketConnectSucceeded = Self(rawValue: "swiftfulcrum.websocket.connect.succeeded")
+    static let swiftFulcrumWebSocketConnectTimeout = Self(rawValue: "swiftfulcrum.websocket.connect.timeout")
+    static let swiftFulcrumWebSocketConnectFailover = Self(rawValue: "swiftfulcrum.websocket.connect.failover")
+    static let swiftFulcrumWebSocketConnectFailoverExhausted = Self(rawValue: "swiftfulcrum.websocket.connect.failover_exhausted")
+    static let swiftFulcrumWebSocketDisconnect = Self(rawValue: "swiftfulcrum.websocket.disconnect")
+    static let swiftFulcrumWebSocketSendBegin = Self(rawValue: "swiftfulcrum.websocket.send.begin")
+    static let swiftFulcrumWebSocketSendSucceeded = Self(rawValue: "swiftfulcrum.websocket.send.succeeded")
+    static let swiftFulcrumWebSocketSendFailed = Self(rawValue: "swiftfulcrum.websocket.send.failed")
+    static let swiftFulcrumWebSocketReceiveMessage = Self(rawValue: "swiftfulcrum.websocket.receive.message")
+    static let swiftFulcrumWebSocketReceiveFailed = Self(rawValue: "swiftfulcrum.websocket.receive.failed")
+    static let swiftFulcrumWebSocketReceiveReconnected = Self(rawValue: "swiftfulcrum.websocket.receive.reconnected")
+
+    static let swiftFulcrumReconnectAttempt = Self(rawValue: "swiftfulcrum.websocket.reconnect.attempt")
+    static let swiftFulcrumReconnectSucceeded = Self(rawValue: "swiftfulcrum.websocket.reconnect.succeeded")
+    static let swiftFulcrumReconnectFailed = Self(rawValue: "swiftfulcrum.websocket.reconnect.failed")
+    static let swiftFulcrumReconnectMaxAttempts = Self(rawValue: "swiftfulcrum.websocket.reconnect.max_attempts")
+}

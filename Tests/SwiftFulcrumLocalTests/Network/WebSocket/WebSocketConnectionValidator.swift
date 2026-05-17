@@ -246,11 +246,11 @@ struct WebSocketConnectionValidator {
 
             let timeoutRecord = try #require(
                 OpalDiagnostics.recentRecords(
-                    matching: .init(event: SwiftFulcrum.Client.Diagnostics.Event.webSocketConnectTimeout)
+                    matching: .init(event: OpalDiagnostics.Event.swiftFulcrumWebSocketConnectTimeout)
                 ).first
             )
-            #expect(timeoutRecord.category == SwiftFulcrum.Client.Diagnostics.Category.webSocket)
-            #expect(findField(SwiftFulcrum.Client.Diagnostics.Field.errorCode, in: timeoutRecord)?.value == SwiftFulcrum.Client.Diagnostics.ErrorCode.clientTimeout)
+            #expect(timeoutRecord.category == OpalDiagnostics.Category.swiftFulcrumWebSocket)
+            #expect(findField(OpalDiagnostics.Field.swiftFulcrumErrorCodeName, in: timeoutRecord)?.value == "client.timeout")
             #expect(findField("reason", in: timeoutRecord)?.value == "<redacted>")
         }
 
@@ -297,7 +297,7 @@ private extension WebSocketConnectionValidator {
 
     static let diagnosticsConfiguration = OpalDiagnostics.Configuration(
         minimumLevel: .debug,
-        categoryFilter: .enabledIncludingSubcategories([SwiftFulcrum.Client.Diagnostics.Category.fulcrum]),
+        categoryFilter: .enabledIncludingSubcategories([OpalDiagnostics.Category.fulcrum]),
         bufferPolicy: .enabled(capacity: 1_000)
     )
 

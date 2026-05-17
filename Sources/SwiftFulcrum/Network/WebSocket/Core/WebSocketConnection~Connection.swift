@@ -1,6 +1,7 @@
 // WebSocketConnection~Connection.swift
 
 import Foundation
+import OpalDiagnostics
 
 extension WebSocketConnection {
     func connect(
@@ -49,13 +50,21 @@ extension WebSocketConnection {
         }
         
         task.resume()
-        recordWebSocketEvent(SwiftFulcrumDiagnostics.Event.webSocketConnectBegin, level: .info)
+        OpalDiagnostics.logger(category: .swiftFulcrumWebSocket).record(
+            event: .swiftFulcrumWebSocketConnectBegin,
+            level: .info,
+            fields: webSocketDiagnosticFields()
+        )
         
         do {
             let isConnected = try await waitForConnection(timeout: connectionTimeout)
             if isConnected {
                 await updateConnectionState(.connected)
-                recordWebSocketEvent(SwiftFulcrumDiagnostics.Event.webSocketConnectSucceeded, level: .info)
+                OpalDiagnostics.logger(category: .swiftFulcrumWebSocket).record(
+                    event: .swiftFulcrumWebSocketConnectSucceeded,
+                    level: .info,
+                    fields: webSocketDiagnosticFields()
+                )
                 if shouldEmitLifecycle { emitLifecycle(.connected(isReconnect: false)) }
                 ensureAutomaticReceiving()
             } else {
@@ -65,14 +74,14 @@ extension WebSocketConnection {
                 )
                 await updateConnectionState(failureState)
                 task.cancel(with: .goingAway, reason: timeoutReason.data(using: .utf8))
-                recordWebSocketEvent(
-                    SwiftFulcrumDiagnostics.Event.webSocketConnectTimeout,
-                    level: .error,
-                    fields: [
-                        SwiftFulcrumDiagnostics.errorCodeField(SwiftFulcrum.Client.Diagnostics.ErrorCode.clientTimeout),
-                        SwiftFulcrumDiagnostics.publicField("close_code", URLSessionWebSocketTask.CloseCode.goingAway.rawValue),
-                        SwiftFulcrumDiagnostics.privateField("reason", timeoutReason)
-                    ]
+                OpalDiagnostics.logger(category: .swiftFulcrumWebSocket).record(
+                    event: .swiftFulcrumWebSocketConnectTimeout,
+                    level: .info,
+                    fields: webSocketDiagnosticFields([
+                        .swiftFulcrumErrorCode("client.timeout"),
+                        .swiftFulcrumField("close_code", URLSessionWebSocketTask.CloseCode.goingAway.rawValue),
+                        .swiftFulcrumPrivateField("reason", timeoutReason)
+                    ])
                 )
                 try await performInitialFailoverIfNeeded(
                     shouldAllowFailover: shouldAllowFailover,
@@ -102,10 +111,10 @@ extension WebSocketConnection {
     ) async throws {
         guard shouldAllowFailover else { throw failure }
         
-        recordWebSocketEvent(
-            SwiftFulcrumDiagnostics.Event.webSocketConnectFailover,
-            level: .error,
-            fields: SwiftFulcrumDiagnostics.errorFields(failure)
+        OpalDiagnostics.logger(category: .swiftFulcrumWebSocket).record(
+            event: .swiftFulcrumWebSocketConnectFailover,
+            level: .info,
+            fields: webSocketDiagnosticFields(OpalDiagnostics.Field.swiftFulcrumErrorFields(failure))
         )
         
         do {
@@ -116,10 +125,10 @@ extension WebSocketConnection {
                 isInitialConnection: true
             )
         } catch {
-            recordWebSocketEvent(
-                SwiftFulcrumDiagnostics.Event.webSocketConnectFailoverExhausted,
-                level: .error,
-                fields: SwiftFulcrumDiagnostics.errorFields(error)
+            OpalDiagnostics.logger(category: .swiftFulcrumWebSocket).record(
+                event: .swiftFulcrumWebSocketConnectFailoverExhausted,
+                level: .info,
+                fields: webSocketDiagnosticFields(OpalDiagnostics.Field.swiftFulcrumErrorFields(error))
             )
             
             throw error
@@ -167,13 +176,13 @@ extension WebSocketConnection {
         messageContinuation?.finish(throwing: closedError)
         
         await resetMessageStreamAndReader()
-        recordWebSocketEvent(
-            SwiftFulcrumDiagnostics.Event.webSocketDisconnect,
+        OpalDiagnostics.logger(category: .swiftFulcrumWebSocket).record(
+            event: .swiftFulcrumWebSocketDisconnect,
             level: .info,
-            fields: [
-                SwiftFulcrumDiagnostics.publicField("close_code", finalInformation.code.rawValue),
-                SwiftFulcrumDiagnostics.privateField("reason", finalInformation.reason ?? "")
-            ]
+            fields: webSocketDiagnosticFields([
+                .swiftFulcrumField("close_code", finalInformation.code.rawValue),
+                .swiftFulcrumPrivateField("reason", finalInformation.reason ?? "")
+            ])
         )
         emitLifecycle(.disconnected(code: finalInformation.code, reason: finalInformation.reason))
     }

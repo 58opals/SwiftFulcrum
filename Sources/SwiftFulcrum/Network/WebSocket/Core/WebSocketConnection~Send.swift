@@ -6,12 +6,12 @@ import OpalDiagnostics
 extension WebSocketConnection {
     func send(data: Data) async throws {
         let message = URLSessionWebSocketTask.Message.data(data)
-        try await sendMessage(message, fields: SwiftFulcrumDiagnostics.payloadFields(payloadType: "data", byteCount: data.count))
+        try await sendMessage(message, fields: OpalDiagnostics.Field.swiftFulcrumPayloadFields(payloadType: "data", byteCount: data.count))
     }
     
     func send(string: String) async throws {
         let message = URLSessionWebSocketTask.Message.string(string)
-        try await sendMessage(message, fields: SwiftFulcrumDiagnostics.payloadFields(payloadType: "string", byteCount: string.utf8.count))
+        try await sendMessage(message, fields: OpalDiagnostics.Field.swiftFulcrumPayloadFields(payloadType: "string", byteCount: string.utf8.count))
     }
     
     private func sendMessage(
@@ -20,28 +20,36 @@ extension WebSocketConnection {
     ) async throws {
         guard let task else {
             let error = SwiftFulcrum.Client.Error.transport(.connectionClosed(closeInformation.code, closeInformation.reason))
-            recordWebSocketEvent(
-                SwiftFulcrumDiagnostics.Event.webSocketSendFailed,
-                level: .error,
-                fields: fields + SwiftFulcrumDiagnostics.errorFields(error)
+            OpalDiagnostics.logger(category: .swiftFulcrumWebSocket).record(
+                event: .swiftFulcrumWebSocketSendFailed,
+                level: .info,
+                fields: webSocketDiagnosticFields(fields + OpalDiagnostics.Field.swiftFulcrumErrorFields(error))
             )
             throw error
         }
         
         let messageIdentifier = makeOutgoingMessageIdentifier()
         let eventFields = fields + [
-            SwiftFulcrumDiagnostics.publicField("message_id", messageIdentifier)
+            OpalDiagnostics.Field.swiftFulcrumField("message_id", messageIdentifier)
         ]
         
-        recordWebSocketEvent(SwiftFulcrumDiagnostics.Event.webSocketSendBegin, fields: eventFields)
+        OpalDiagnostics.logger(category: .swiftFulcrumWebSocket).record(
+            event: .swiftFulcrumWebSocketSendBegin,
+            level: .debug,
+            fields: webSocketDiagnosticFields(eventFields)
+        )
         do {
             try await task.send(message)
-            recordWebSocketEvent(SwiftFulcrumDiagnostics.Event.webSocketSendSucceeded, fields: eventFields)
+            OpalDiagnostics.logger(category: .swiftFulcrumWebSocket).record(
+                event: .swiftFulcrumWebSocketSendSucceeded,
+                level: .debug,
+                fields: webSocketDiagnosticFields(eventFields)
+            )
         } catch {
-            recordWebSocketEvent(
-                SwiftFulcrumDiagnostics.Event.webSocketSendFailed,
-                level: .error,
-                fields: eventFields + SwiftFulcrumDiagnostics.errorFields(error)
+            OpalDiagnostics.logger(category: .swiftFulcrumWebSocket).record(
+                event: .swiftFulcrumWebSocketSendFailed,
+                level: .info,
+                fields: webSocketDiagnosticFields(eventFields + OpalDiagnostics.Field.swiftFulcrumErrorFields(error))
             )
             throw error
         }

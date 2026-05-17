@@ -1,60 +1,68 @@
 // FulcrumNetworkClient~Diagnostics.swift
 
 import Foundation
+import OpalDiagnostics
 
 extension FulcrumNetworkClient {
-    func makeDiagnosticsSnapshot() async -> SwiftFulcrum.Client.Diagnostics.Snapshot {
-        await makeDiagnosticsSnapshot(inflightUnaryCallCount: nil)
+    func makeClientDiagnosticFields(_ fields: [OpalDiagnostics.Field] = []) -> [OpalDiagnostics.Field] {
+        [.swiftFulcrumField("client_id", id)] + fields
     }
 
-    func makeDiagnosticsSnapshot(
-        inflightUnaryCallCount: Int?
-    ) async -> SwiftFulcrum.Client.Diagnostics.Snapshot {
-        let transportSnapshot = await transport.makeDiagnosticsSnapshot()
+    func makeClientTransportDiagnosticFields(_ fields: [OpalDiagnostics.Field] = []) async -> [OpalDiagnostics.Field] {
+        await makeClientDiagnosticFields([
+            .swiftFulcrumEndpointURL(transport.endpoint),
+            .swiftFulcrumField("reconnect_attempts", transport.reconnectAttempts),
+            .swiftFulcrumField("reconnect_successes", transport.reconnectSuccesses)
+        ] + fields)
+    }
+
+    func makeRequestDiagnosticFields(
+        methodPath: String,
+        _ fields: [OpalDiagnostics.Field] = []
+    ) -> [OpalDiagnostics.Field] {
+        makeClientDiagnosticFields([.swiftFulcrumMethodPath(methodPath)] + fields)
+    }
+
+    func makeRequestFailureDiagnosticFields(
+        methodPath: String,
+        error: Swift.Error
+    ) -> [OpalDiagnostics.Field] {
+        makeRequestDiagnosticFields(
+            methodPath: methodPath,
+            OpalDiagnostics.Field.swiftFulcrumErrorFields(error)
+        )
+    }
+
+    func recordClientState(inflightUnaryCallCount: Int? = nil) async {
         let inflightCount = if let inflightUnaryCallCount {
             inflightUnaryCallCount
         } else {
             await router.makeInflightUnaryCallCount()
         }
-        
-        return .init(
-            reconnectAttempts: transportSnapshot.reconnectAttempts,
-            reconnectSuccesses: transportSnapshot.reconnectSuccesses,
-            inflightUnaryCallCount: inflightCount,
-            activeSubscriptionCount: subscriptionMethods.count
+        let fields = await makeClientTransportDiagnosticFields([
+            .swiftFulcrumField("inflight_unary_call_count", inflightCount),
+            .swiftFulcrumField("active_subscription_count", subscriptionMethods.count)
+        ])
+
+        OpalDiagnostics.logger(category: .fulcrum).record(
+            event: .swiftFulcrumClientStateUpdated,
+            level: .debug,
+            fields: fields
         )
     }
-    
-    func listSubscriptions() -> [SwiftFulcrum.Client.Diagnostics.Subscription] {
-        subscriptionMethods.map { entry in
-                .init(methodPath: entry.key.methodPath.rawValue, identifier: entry.key.identifier)
-        }
-    }
-    
-    func publishDiagnosticsSnapshot(inflightUnaryCallCount: Int? = nil) async {
-        let snapshot = await makeDiagnosticsSnapshot(inflightUnaryCallCount: inflightUnaryCallCount)
+
+    func recordSubscriptionRegistry() async {
         let endpoint = await transport.endpoint
-        recordClientEvent(
-            SwiftFulcrumDiagnostics.Event.clientDiagnosticsUpdated,
-            fields: [
-                SwiftFulcrumDiagnostics.endpointField(endpoint),
-                SwiftFulcrumDiagnostics.publicField("reconnect_attempts", snapshot.reconnectAttempts),
-                SwiftFulcrumDiagnostics.publicField("reconnect_successes", snapshot.reconnectSuccesses),
-                SwiftFulcrumDiagnostics.publicField("inflight_unary_call_count", snapshot.inflightUnaryCallCount),
-                SwiftFulcrumDiagnostics.publicField("active_subscription_count", snapshot.activeSubscriptionCount)
-            ]
-        )
-    }
-    
-    func publishSubscriptionRegistry() async {
-        let subscriptions = listSubscriptions()
-        let endpoint = await transport.endpoint
-        recordClientEvent(
-            SwiftFulcrumDiagnostics.Event.clientSubscriptionsUpdated,
-            fields: [
-                SwiftFulcrumDiagnostics.endpointField(endpoint),
-                SwiftFulcrumDiagnostics.publicField("subscription_count", subscriptions.count)
-            ]
+        let fields: [OpalDiagnostics.Field] = [
+            .swiftFulcrumField("client_id", id),
+            .swiftFulcrumEndpointURL(endpoint),
+            .swiftFulcrumField("subscription_count", subscriptionMethods.count)
+        ]
+
+        OpalDiagnostics.logger(category: .fulcrum).record(
+            event: .swiftFulcrumClientSubscriptionsUpdated,
+            level: .debug,
+            fields: fields
         )
     }
 }

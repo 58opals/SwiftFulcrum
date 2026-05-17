@@ -14,7 +14,7 @@ extension Data {
         )
         let envelopeMethodPath = identifierEnvelope?.method
         let methodHint = context?.methodPath ?? envelopeMethodPath
-        let traceID = identifierEnvelope?.id.map { SwiftFulcrumDiagnostics.traceID(for: $0) }
+        let traceID = identifierEnvelope?.id.map { OpalDiagnostics.TraceID(swiftFulcrumRequestID: $0) }
 
         let responseKind: SwiftFulcrum.RPC.Response.Kind<Payload>
         do {
@@ -52,7 +52,7 @@ extension Data {
                 methodHint: methodHint,
                 traceID: traceID,
                 fields: [
-                    SwiftFulcrumDiagnostics.errorCodeField(SwiftFulcrum.Client.Diagnostics.ErrorCode.jsonRPCServerError)
+                    OpalDiagnostics.Field.swiftFulcrumErrorCode("jsonrpc.server_error")
                 ]
             )
             throw SwiftFulcrum.Client.Error.rpc(.init(id: error.id, code: error.error.code, message: error.error.message))
@@ -68,9 +68,9 @@ extension Data {
         traceID: OpalDiagnostics.TraceID?,
         fields: [OpalDiagnostics.Field] = []
     ) {
-        SwiftFulcrumDiagnostics.record(
-            SwiftFulcrumDiagnostics.Event.jsonRPCResponseDecoded,
-            category: SwiftFulcrumDiagnostics.Category.jsonRPC,
+        OpalDiagnostics.logger(category: .swiftFulcrumJSONRPC).record(
+            event: .swiftFulcrumJSONRPCResponseDecoded,
+            level: .debug,
             traceID: traceID,
             fields: responseDecodeFields(methodHint: methodHint) + fields
         )
@@ -81,19 +81,18 @@ extension Data {
         traceID: OpalDiagnostics.TraceID?,
         error: Swift.Error
     ) {
-        SwiftFulcrumDiagnostics.record(
-            SwiftFulcrumDiagnostics.Event.jsonRPCResponseDecodeFailed,
-            category: SwiftFulcrumDiagnostics.Category.jsonRPC,
-            level: .error,
+        OpalDiagnostics.logger(category: .swiftFulcrumJSONRPC).record(
+            event: .swiftFulcrumJSONRPCResponseDecodeFailed,
+            level: .info,
             traceID: traceID,
-            fields: responseDecodeFields(methodHint: methodHint) + SwiftFulcrumDiagnostics.errorFields(error)
+            fields: responseDecodeFields(methodHint: methodHint) + OpalDiagnostics.Field.swiftFulcrumErrorFields(error)
         )
     }
 
     private func responseDecodeFields(methodHint: String?) -> [OpalDiagnostics.Field] {
         [
-            methodHint.map { SwiftFulcrumDiagnostics.publicField("method_hint", $0) },
-            SwiftFulcrumDiagnostics.publicField("byte_count", count)
+            methodHint.map { OpalDiagnostics.Field.swiftFulcrumField("method_hint", $0) },
+            OpalDiagnostics.Field.swiftFulcrumField("byte_count", count)
         ].compactMap { $0 }
     }
 }

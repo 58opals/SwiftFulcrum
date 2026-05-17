@@ -26,7 +26,7 @@ It owns:
 - Actor-isolated client lifecycle via `SwiftFulcrum.Client`
 - Protocol negotiation, reconnect handling, and best-effort subscription recovery
 - Bundled public server catalogs for `mainnet`, `testnet`, and `chipnet`
-- Connection-state streams, diagnostics snapshots, and structured OpalDiagnostics events for downstream observability
+- Connection-state streams and structured OpalDiagnostics events for downstream observability
 
 It does not own:
 
@@ -49,8 +49,7 @@ Use the client surface according to interaction style:
 - `request(_:)` for unary typed endpoints that return one decoded result
 - `subscribe(_:)` for streaming typed endpoints with an initial response plus an async updates stream
 - `makeConnectionStateStream()` when the consumer needs transport-state visibility
-- `makeDiagnosticsSnapshot()` and `listSubscriptions()` when the consumer needs lightweight runtime diagnostics
-- OpalDiagnostics runtime configuration when the host app needs minimum-level control, category filtering, OSLog routing, or recent-record buffer export
+- OpalDiagnostics runtime configuration when the host app needs minimum-level control, category filtering, routing policy, or recent-record buffer export
 
 Common integration patterns:
 

@@ -17,10 +17,11 @@ extension FulcrumNetworkClient {
         let id = UUID()
         let request = method.createRequest(with: id)
         let timeoutState = RequestTimeoutState()
-        recordClientEvent(
-            SwiftFulcrumDiagnostics.Event.clientCallBegin,
-            traceID: SwiftFulcrumDiagnostics.traceID(for: id),
-            fields: [SwiftFulcrumDiagnostics.methodField(method.path)]
+        OpalDiagnostics.logger(category: .fulcrum).record(
+            event: .swiftFulcrumClientCallBegin,
+            level: .debug,
+            traceID: OpalDiagnostics.TraceID(swiftFulcrumRequestID: id),
+            fields: makeRequestDiagnosticFields(methodPath: method.path)
         )
         
         let callTask = Task<Data, Swift.Error> {
@@ -81,19 +82,19 @@ extension FulcrumNetworkClient {
             }
             if error is CancellationError {
                 let cancellationError = await makeRequestCancellationError(using: timeoutState)
-                recordRequestFailure(
-                    await callFailureEvent(for: cancellationError, timeoutState: timeoutState),
-                    requestID: id,
-                    methodPath: method.path,
-                    error: cancellationError
+                OpalDiagnostics.logger(category: .fulcrum).record(
+                    event: await callFailureEvent(for: cancellationError, timeoutState: timeoutState),
+                    level: .info,
+                    traceID: OpalDiagnostics.TraceID(swiftFulcrumRequestID: id),
+                    fields: makeRequestFailureDiagnosticFields(methodPath: method.path, error: cancellationError)
                 )
                 throw cancellationError
             }
-            recordRequestFailure(
-                await callFailureEvent(for: error, timeoutState: timeoutState),
-                requestID: id,
-                methodPath: method.path,
-                error: error
+            OpalDiagnostics.logger(category: .fulcrum).record(
+                event: await callFailureEvent(for: error, timeoutState: timeoutState),
+                level: .info,
+                traceID: OpalDiagnostics.TraceID(swiftFulcrumRequestID: id),
+                fields: makeRequestFailureDiagnosticFields(methodPath: method.path, error: error)
             )
             throw error
         }
@@ -104,21 +105,21 @@ extension FulcrumNetworkClient {
 
         do {
             let response = try raw.decode(ResponsePayload.self, context: .init(methodPath: method.path))
-            recordClientEvent(
-                SwiftFulcrumDiagnostics.Event.clientCallResponseDecoded,
-                traceID: SwiftFulcrumDiagnostics.traceID(for: id),
-                fields: [
-                    SwiftFulcrumDiagnostics.methodField(method.path),
-                    SwiftFulcrumDiagnostics.publicField("byte_count", raw.count)
-                ]
+            OpalDiagnostics.logger(category: .fulcrum).record(
+                event: .swiftFulcrumClientCallResponseDecoded,
+                level: .debug,
+                traceID: OpalDiagnostics.TraceID(swiftFulcrumRequestID: id),
+                fields: makeRequestDiagnosticFields(methodPath: method.path, [
+                    .swiftFulcrumField("byte_count", raw.count)
+                ])
             )
             return (id, response)
         } catch {
-            recordRequestFailure(
-                SwiftFulcrumDiagnostics.Event.clientCallFailed,
-                requestID: id,
-                methodPath: method.path,
-                error: error
+            OpalDiagnostics.logger(category: .fulcrum).record(
+                event: .swiftFulcrumClientCallFailed,
+                level: .info,
+                traceID: OpalDiagnostics.TraceID(swiftFulcrumRequestID: id),
+                fields: makeRequestFailureDiagnosticFields(methodPath: method.path, error: error)
             )
             throw error
         }
@@ -146,10 +147,11 @@ extension FulcrumNetworkClient {
         )
         let timeoutState = RequestTimeoutState()
         let token = options.token
-        recordClientEvent(
-            SwiftFulcrumDiagnostics.Event.clientSubscribeBegin,
-            traceID: SwiftFulcrumDiagnostics.traceID(for: id),
-            fields: [SwiftFulcrumDiagnostics.methodField(method.path)]
+        OpalDiagnostics.logger(category: .fulcrum).record(
+            event: .swiftFulcrumClientSubscribeBegin,
+            level: .debug,
+            traceID: OpalDiagnostics.TraceID(swiftFulcrumRequestID: id),
+            fields: makeRequestDiagnosticFields(methodPath: method.path)
         )
         
         let subscriptionTask = Task<(UUID, Initial, AsyncThrowingStream<Notification, Swift.Error>), Swift.Error> {
@@ -174,13 +176,13 @@ extension FulcrumNetworkClient {
                         Initial.self,
                         context: .init(methodPath: method.path)
                     )
-                    self.recordClientEvent(
-                        SwiftFulcrumDiagnostics.Event.clientSubscribeInitialDecoded,
-                        traceID: SwiftFulcrumDiagnostics.traceID(for: id),
-                        fields: [
-                            SwiftFulcrumDiagnostics.methodField(method.path),
-                            SwiftFulcrumDiagnostics.publicField("byte_count", initialRaw.count)
-                        ]
+                    OpalDiagnostics.logger(category: .fulcrum).record(
+                        event: .swiftFulcrumClientSubscribeInitialDecoded,
+                        level: .debug,
+                        traceID: OpalDiagnostics.TraceID(swiftFulcrumRequestID: id),
+                        fields: self.makeRequestDiagnosticFields(methodPath: method.path, [
+                            .swiftFulcrumField("byte_count", initialRaw.count)
+                        ])
                     )
                     clearSubscriptionSetupRequestIdentifier(id, for: subscriptionKey)
                     
@@ -211,11 +213,11 @@ extension FulcrumNetworkClient {
                     resolvedError = error
                 }
                 let event = await self.subscribeFailureEvent(for: resolvedError, timeoutState: timeoutState)
-                self.recordRequestFailure(
-                    event,
-                    requestID: id,
-                    methodPath: method.path,
-                    error: resolvedError
+                OpalDiagnostics.logger(category: .fulcrum).record(
+                    event: event,
+                    level: .info,
+                    traceID: OpalDiagnostics.TraceID(swiftFulcrumRequestID: id),
+                    fields: self.makeRequestFailureDiagnosticFields(methodPath: method.path, error: resolvedError)
                 )
                 await self.cleanUpSubscriptionSetup(
                     for: subscriptionKey,
@@ -312,11 +314,11 @@ extension FulcrumNetworkClient {
             }
             if error is CancellationError {
                 let cancellationError = await makeRequestCancellationError(using: timeoutState)
-                recordRequestFailure(
-                    await subscribeFailureEvent(for: cancellationError, timeoutState: timeoutState),
-                    requestID: id,
-                    methodPath: method.path,
-                    error: cancellationError
+                OpalDiagnostics.logger(category: .fulcrum).record(
+                    event: await subscribeFailureEvent(for: cancellationError, timeoutState: timeoutState),
+                    level: .info,
+                    traceID: OpalDiagnostics.TraceID(swiftFulcrumRequestID: id),
+                    fields: makeRequestFailureDiagnosticFields(methodPath: method.path, error: cancellationError)
                 )
                 throw cancellationError
             }
@@ -335,14 +337,14 @@ private extension FulcrumNetworkClient {
         timeoutState: RequestTimeoutState
     ) async -> OpalDiagnostics.Event {
         if await timeoutState.timeoutError != nil || isTimeoutError(error) {
-            return SwiftFulcrumDiagnostics.Event.clientCallTimeout
+            return OpalDiagnostics.Event.swiftFulcrumClientCallTimeout
         }
 
         if isCancellationError(error) {
-            return SwiftFulcrumDiagnostics.Event.clientCallCancelled
+            return OpalDiagnostics.Event.swiftFulcrumClientCallCancelled
         }
 
-        return SwiftFulcrumDiagnostics.Event.clientCallFailed
+        return OpalDiagnostics.Event.swiftFulcrumClientCallFailed
     }
 
     func subscribeFailureEvent(
@@ -350,14 +352,14 @@ private extension FulcrumNetworkClient {
         timeoutState: RequestTimeoutState
     ) async -> OpalDiagnostics.Event {
         if await timeoutState.timeoutError != nil || isTimeoutError(error) {
-            return SwiftFulcrumDiagnostics.Event.clientSubscribeTimeout
+            return OpalDiagnostics.Event.swiftFulcrumClientSubscribeTimeout
         }
 
         if isCancellationError(error) {
-            return SwiftFulcrumDiagnostics.Event.clientSubscribeCancelled
+            return OpalDiagnostics.Event.swiftFulcrumClientSubscribeCancelled
         }
 
-        return SwiftFulcrumDiagnostics.Event.clientSubscribeFailed
+        return OpalDiagnostics.Event.swiftFulcrumClientSubscribeFailed
     }
 
     func isCancellationError(_ error: Swift.Error) -> Bool {

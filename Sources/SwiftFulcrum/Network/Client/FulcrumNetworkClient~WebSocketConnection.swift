@@ -1,6 +1,7 @@
 // FulcrumNetworkClient~WebSocketConnection.swift
 
 import Foundation
+import OpalDiagnostics
 
 extension FulcrumNetworkClient {
     func send(data: Data) async throws {
@@ -18,21 +19,20 @@ extension FulcrumNetworkClient {
         
         do {
             for try await message in await transport.makeMessageStream() {
-                if let inflightCount = await handleMessage(message) { await publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightCount) }
+                if let inflightCount = await handleMessage(message) { await recordClientState(inflightUnaryCallCount: inflightCount) }
             }
         } catch {
-            recordClientEvent(
-                SwiftFulcrumDiagnostics.Event.webSocketReceiveFailed,
-                category: SwiftFulcrumDiagnostics.Category.webSocket,
-                level: .error,
-                fields: SwiftFulcrumDiagnostics.errorFields(error)
+            OpalDiagnostics.logger(category: .swiftFulcrumWebSocket).record(
+                event: .swiftFulcrumWebSocketReceiveFailed,
+                level: .info,
+                fields: makeClientDiagnosticFields(OpalDiagnostics.Field.swiftFulcrumErrorFields(error))
             )
             
             let info = await transport.closeInformation
             let closedError = await SwiftFulcrum.Client.Error.transport(.connectionClosed(info.code, info.reason))
             
             let inflightCount = await self.router.failUnaries(with: closedError)
-            await publishDiagnosticsSnapshot(inflightUnaryCallCount: inflightCount)
+            await recordClientState(inflightUnaryCallCount: inflightCount)
         }
     }
 }

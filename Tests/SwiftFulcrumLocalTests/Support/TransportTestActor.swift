@@ -31,6 +31,7 @@ actor TransportTestActor: TransportAdapter {
 
     var reconnectFailure: Swift.Error?
     var reconnectAttempts = 0
+    var reconnectSuccesses = 0
 
     init(endpoint: URL = URL(string: "wss://example.invalid")!) {
         self.currentEndpoint = endpoint
@@ -57,6 +58,7 @@ actor TransportTestActor: TransportAdapter {
         if let reconnectFailure {
             throw reconnectFailure
         }
+        reconnectSuccesses += 1
         if let url { currentEndpoint = url }
         updateConnectionState(to: .reconnecting)
     }
@@ -122,10 +124,6 @@ actor TransportTestActor: TransportAdapter {
         connectionStateContinuationsBySubscriberIdentifier[subscriberIdentifier] = continuation
         flushConnectionStateBuffer()
         return stream
-    }
-
-    func makeDiagnosticsSnapshot() async -> ClientDiagnosticsTransportState {
-        .init(reconnectAttempts: 0, reconnectSuccesses: 0)
     }
 
     func enqueueIncoming(_ message: URLSessionWebSocketTask.Message) {

@@ -1,6 +1,7 @@
 // WebSocketConnection~Receive.swift
 
 import Foundation
+import OpalDiagnostics
 
 extension WebSocketConnection {
     private func startReader() {
@@ -71,11 +72,12 @@ extension WebSocketConnection {
                     task.cancel(with: .goingAway, reason: nil)
                 }
                 let messageIdentifier = makeIncomingMessageIdentifier()
-                recordWebSocketEvent(
-                    SwiftFulcrumDiagnostics.Event.webSocketReceiveMessage,
-                    fields: SwiftFulcrumDiagnostics.payloadFields(for: message) + [
-                        SwiftFulcrumDiagnostics.publicField("message_id", messageIdentifier)
-                    ]
+                OpalDiagnostics.logger(category: .swiftFulcrumWebSocket).record(
+                    event: .swiftFulcrumWebSocketReceiveMessage,
+                    level: .debug,
+                    fields: webSocketDiagnosticFields(OpalDiagnostics.Field.swiftFulcrumPayloadFields(for: message) + [
+                        .swiftFulcrumField("message_id", messageIdentifier)
+                    ])
                 )
                 switch messageContinuation?.yield(with: .success(message)) {
                 case .some(.enqueued): break
@@ -88,15 +90,19 @@ extension WebSocketConnection {
                 break
             } catch {
                 if Task.isCancelled { break }
-                recordWebSocketEvent(
-                    SwiftFulcrumDiagnostics.Event.webSocketReceiveFailed,
-                    level: .error,
-                    fields: SwiftFulcrumDiagnostics.errorFields(error)
+                OpalDiagnostics.logger(category: .swiftFulcrumWebSocket).record(
+                    event: .swiftFulcrumWebSocketReceiveFailed,
+                    level: .info,
+                    fields: webSocketDiagnosticFields(OpalDiagnostics.Field.swiftFulcrumErrorFields(error))
                 )
                 do {
                     await updateConnectionState(.reconnecting)
                     try await reconnector.attemptReconnection(for: self, shouldCancelReceiver: false)
-                    recordWebSocketEvent(SwiftFulcrumDiagnostics.Event.webSocketReceiveReconnected, level: .info)
+                    OpalDiagnostics.logger(category: .swiftFulcrumWebSocket).record(
+                        event: .swiftFulcrumWebSocketReceiveReconnected,
+                        level: .info,
+                        fields: webSocketDiagnosticFields()
+                    )
                     await updateConnectionState(.connected)
                     continue
                 } catch {

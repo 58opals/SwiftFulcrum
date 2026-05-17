@@ -1,6 +1,7 @@
 // FulcrumNetworkClient+Router.swift
 
 import Foundation
+import OpalDiagnostics
 
 extension FulcrumNetworkClient {
     actor Router {
@@ -26,7 +27,14 @@ extension FulcrumNetworkClient {
         }
         
         func handle(raw: Data) -> Int? {
-            guard let id = try? SwiftFulcrum.RPC.Response.JSONRPC.extractIdentifier(from: raw) else { return nil }
+            let id: SwiftFulcrum.RPC.Response.Identifier
+            do {
+                id = try SwiftFulcrum.RPC.Response.JSONRPC.extractIdentifier(from: raw)
+            } catch {
+                recordUnroutableResponseDecodeFailure(raw: raw, error: error)
+                return nil
+            }
+
             switch id {
             case .uuid:
                 return resolve(identifier: id, with: raw)
@@ -102,6 +110,16 @@ extension FulcrumNetworkClient {
             }
             
             return nil
+        }
+
+        private func recordUnroutableResponseDecodeFailure(raw: Data, error: Swift.Error) {
+            OpalDiagnostics.logger(category: .swiftFulcrumJSONRPC).record(
+                event: .swiftFulcrumJSONRPCResponseDecodeFailed,
+                level: .info,
+                fields: [
+                    .swiftFulcrumField("byte_count", raw.count)
+                ] + OpalDiagnostics.Field.swiftFulcrumErrorFields(error)
+            )
         }
     }
 }
