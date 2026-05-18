@@ -1,11 +1,7 @@
 // OpalDiagnostics.Field+SwiftFulcrum.swift
 
 import Foundation
-public import OpalDiagnostics
-
-public extension OpalDiagnostics.Field {
-    static let swiftFulcrumErrorCodeName = "error_code"
-}
+import OpalDiagnostics
 
 extension OpalDiagnostics.Field {
     static func swiftFulcrumField(_ name: String, _ value: String) -> Self {
@@ -44,15 +40,11 @@ extension OpalDiagnostics.Field {
         swiftFulcrumField("network", network.resourceName)
     }
 
-    static func swiftFulcrumErrorCode(_ errorCode: String) -> Self {
-        swiftFulcrumField(swiftFulcrumErrorCodeName, errorCode)
-    }
-
     static func swiftFulcrumErrorFields(_ error: Swift.Error) -> [Self] {
         [
-            swiftFulcrumErrorCode(swiftFulcrumErrorCode(for: error)),
-            swiftFulcrumField("error_type", String(reflecting: Swift.type(of: error))),
-            swiftFulcrumPrivateField("error_message", (error as NSError).localizedDescription)
+            OpalDiagnostics.Field.errorCode(errorCode(for: error)),
+            OpalDiagnostics.Field.errorType(error),
+            OpalDiagnostics.Field.errorMessage((error as NSError).localizedDescription)
         ]
     }
 

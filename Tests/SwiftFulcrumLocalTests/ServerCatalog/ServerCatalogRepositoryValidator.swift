@@ -73,6 +73,24 @@ struct ServerCatalogRepositoryValidator {
         }
     }
 
+    @Test("Normalizes object catalog schemes with surrounding whitespace")
+    func normalizeObjectCatalogSchemeWhitespace() throws {
+        let data = Data(#"{"host":"fulcrum.example","scheme":" WSS "}"#.utf8)
+
+        let server = try JSONRPCCodec.Coder.decoder.decode(WebSocketConnection.Server.self, from: data)
+
+        #expect(server.url.absoluteString == "wss://fulcrum.example")
+    }
+
+    @Test("Normalizes string catalog URLs with surrounding whitespace")
+    func normalizeStringCatalogURLWhitespace() throws {
+        let data = Data(#""  wss://fulcrum.example  ""#.utf8)
+
+        let server = try JSONRPCCodec.Coder.decoder.decode(WebSocketConnection.Server.self, from: data)
+
+        #expect(server.url.absoluteString == "wss://fulcrum.example")
+    }
+
     @Test("Falls back when bundled catalog is unavailable")
     func loadFallbackBootstrapList() async throws {
         let fallbackServers = [URL(string: "wss://fallback.fulcrum.example")!]

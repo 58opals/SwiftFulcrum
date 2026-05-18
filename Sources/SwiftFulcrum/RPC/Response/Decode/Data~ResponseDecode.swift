@@ -52,7 +52,7 @@ extension Data {
                 methodHint: methodHint,
                 traceID: traceID,
                 fields: [
-                    OpalDiagnostics.Field.swiftFulcrumErrorCode("jsonrpc.server_error")
+                    OpalDiagnostics.Field.errorCode(.jsonRPCServerError)
                 ]
             )
             throw SwiftFulcrum.Client.Error.rpc(.init(id: error.id, code: error.error.code, message: error.error.message))

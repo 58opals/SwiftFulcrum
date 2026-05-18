@@ -78,7 +78,7 @@ extension WebSocketConnection {
                     event: .swiftFulcrumWebSocketConnectTimeout,
                     level: .info,
                     fields: webSocketDiagnosticFields([
-                        .swiftFulcrumErrorCode("client.timeout"),
+                        .errorCode(.clientTimeout),
                         .swiftFulcrumField("close_code", URLSessionWebSocketTask.CloseCode.goingAway.rawValue),
                         .swiftFulcrumPrivateField("reason", timeoutReason)
                     ])

@@ -38,7 +38,8 @@ extension WebSocketConnection {
         }
         
         private static func normalizeURL(from rawValue: String, codingPath: [CodingKey]) throws -> URL {
-            guard let rawComponents = URLComponents(string: rawValue) else {
+            let trimmedRawValue = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard let rawComponents = URLComponents(string: trimmedRawValue) else {
                 throw DecodingError.dataCorrupted(.init(
                     codingPath: codingPath,
                     debugDescription: "Unable to parse URL string: \(rawValue)"
@@ -61,12 +62,7 @@ extension WebSocketConnection {
                     debugDescription: "Host must not be empty."
                 ))
             }
-            guard result.port.map({ (1 ... 65_535).contains($0) }) ?? true else {
-                throw DecodingError.dataCorrupted(.init(
-                    codingPath: codingPath,
-                    debugDescription: "Port must be between 1 and 65535."
-                ))
-            }
+            _ = try validatePort(result.port, codingPath: codingPath)
             
             return result
         }
@@ -74,15 +70,7 @@ extension WebSocketConnection {
         private static func normalizeURL(host: String, port: Int?, scheme: String?, codingPath: [CodingKey]) throws -> URL {
             var components = URLComponents()
             components.host = host
-            if let port {
-                guard (1 ... 65_535).contains(port) else {
-                    throw DecodingError.dataCorrupted(.init(
-                        codingPath: codingPath,
-                        debugDescription: "Port must be between 1 and 65535."
-                    ))
-                }
-                components.port = port
-            }
+            components.port = try validatePort(port, codingPath: codingPath)
             components.scheme = try normalizeScheme(from: scheme, codingPath: codingPath)
             
             guard let url = components.url else {
@@ -94,8 +82,20 @@ extension WebSocketConnection {
             
             return url
         }
+
+        private static func validatePort(_ port: Int?, codingPath: [CodingKey]) throws -> Int? {
+            guard let port else { return nil }
+            guard (1 ... 65_535).contains(port) else {
+                throw DecodingError.dataCorrupted(.init(
+                    codingPath: codingPath,
+                    debugDescription: "Port must be between 1 and 65535."
+                ))
+            }
+            return port
+        }
         
         private static func normalizeScheme(from rawScheme: String?, codingPath: [CodingKey]) throws -> String {
+            let rawScheme = rawScheme?.trimmingCharacters(in: .whitespacesAndNewlines)
             guard let rawScheme, !rawScheme.isEmpty else { return "wss" }
             
             switch rawScheme.lowercased() {

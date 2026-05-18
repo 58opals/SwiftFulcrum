@@ -16,7 +16,10 @@ struct OpalDiagnosticsSwiftFulcrumValidator {
         #expect(OpalDiagnostics.Event.swiftFulcrumClientCallBegin.rawValue == "swiftfulcrum.client.call.begin")
         #expect(OpalDiagnostics.Event.swiftFulcrumClientStateUpdated.rawValue == "swiftfulcrum.client.state.updated")
         #expect(OpalDiagnostics.Event.swiftFulcrumReconnectAttempt.rawValue == "swiftfulcrum.websocket.reconnect.attempt")
-        #expect(OpalDiagnostics.Field.swiftFulcrumErrorCodeName == "error_code")
+        let errorCodeField = OpalDiagnostics.Field.errorCode(.jsonRPCDecodeFailed)
+        #expect(errorCodeField.name == "error_code")
+        #expect(errorCodeField.value == "jsonrpc.decode_failed")
+        #expect(errorCodeField.privacy == .public)
     }
 
     @Test("Default Opal diagnostics configuration does not retain package diagnostics")
@@ -37,17 +40,56 @@ struct OpalDiagnosticsSwiftFulcrumValidator {
     @Test("Diagnostics error code catalog maps known failures")
     func mapDiagnosticsErrorCodeCatalogToKnownFailures() {
         let mappings = [
-            (OpalDiagnostics.Field.swiftFulcrumErrorCode(for: SwiftFulcrum.Client.Error.client(.cancelled)), "client.cancelled"),
-            (OpalDiagnostics.Field.swiftFulcrumErrorCode(for: SwiftFulcrum.Client.Error.client(.timeout(.seconds(1)))), "client.timeout"),
-            (OpalDiagnostics.Field.swiftFulcrumErrorCode(for: SwiftFulcrum.Client.Error.coding(.decode(nil))), "jsonrpc.decode_failed"),
-            (OpalDiagnostics.Field.swiftFulcrumErrorCode(for: SwiftFulcrum.Client.Error.rpc(.init(id: nil, code: 1, message: "server message"))), "jsonrpc.server_error"),
-            (OpalDiagnostics.Field.swiftFulcrumErrorCode(for: SwiftFulcrum.Client.Error.transport(.connectionClosed(.goingAway, "server reason"))), "websocket.connection_closed"),
-            (OpalDiagnostics.Field.swiftFulcrumErrorCode(for: SwiftFulcrum.Client.Error.transport(.heartbeatTimeout)), "websocket.heartbeat_timeout"),
-            (OpalDiagnostics.Field.swiftFulcrumErrorCode(for: JSONRPCCodec.Error.decodingFailure(reason: .unexpectedFormat, data: Data([0x01]), description: "payload detail")), "jsonrpc.unexpected_format")
+            (
+                OpalDiagnostics.Field.errorCode(for: SwiftFulcrum.Client.Error.client(.cancelled)),
+                OpalDiagnostics.ErrorCode.clientCancelled,
+                "client.cancelled"
+            ),
+            (
+                OpalDiagnostics.Field.errorCode(for: SwiftFulcrum.Client.Error.client(.timeout(.seconds(1)))),
+                OpalDiagnostics.ErrorCode.clientTimeout,
+                "client.timeout"
+            ),
+            (
+                OpalDiagnostics.Field.errorCode(for: SwiftFulcrum.Client.Error.coding(.decode(nil))),
+                OpalDiagnostics.ErrorCode.jsonRPCDecodeFailed,
+                "jsonrpc.decode_failed"
+            ),
+            (
+                OpalDiagnostics.Field.errorCode(for: SwiftFulcrum.Client.Error.rpc(.init(id: nil, code: 1, message: "server message"))),
+                OpalDiagnostics.ErrorCode.jsonRPCServerError,
+                "jsonrpc.server_error"
+            ),
+            (
+                OpalDiagnostics.Field.errorCode(for: SwiftFulcrum.Client.Error.transport(.connectionClosed(.goingAway, "server reason"))),
+                OpalDiagnostics.ErrorCode.webSocketConnectionClosed,
+                "websocket.connection_closed"
+            ),
+            (
+                OpalDiagnostics.Field.errorCode(for: SwiftFulcrum.Client.Error.transport(.heartbeatTimeout)),
+                OpalDiagnostics.ErrorCode.webSocketHeartbeatTimeout,
+                "websocket.heartbeat_timeout"
+            ),
+            (
+                OpalDiagnostics.Field.errorCode(for: JSONRPCCodec.Error.decodingFailure(reason: .unexpectedFormat, data: Data([0x01]), description: "payload detail")),
+                OpalDiagnostics.ErrorCode.jsonRPCUnexpectedFormat,
+                "jsonrpc.unexpected_format"
+            ),
+            (
+                OpalDiagnostics.Field.errorCode(for: URLError(.cancelled)),
+                OpalDiagnostics.ErrorCode.clientCancelled,
+                "client.cancelled"
+            ),
+            (
+                OpalDiagnostics.Field.errorCode(for: URLError(.timedOut)),
+                OpalDiagnostics.ErrorCode.networkFailure,
+                "network.failure"
+            )
         ]
 
-        for (actual, expected) in mappings {
+        for (actual, expected, rawValue) in mappings {
             #expect(actual == expected)
+            #expect(actual.rawValue == rawValue)
         }
     }
 
@@ -83,7 +125,7 @@ struct OpalDiagnosticsSwiftFulcrumValidator {
             let record = try #require(findDiagnosticRecord(named: .swiftFulcrumJSONRPCRequestEncodeFailed, traceID: traceID))
             #expect(record.category == .swiftFulcrumJSONRPC)
             #expect(findField("method_path", in: record)?.value == "server.ping")
-            #expect(findField(OpalDiagnostics.Field.swiftFulcrumErrorCodeName, in: record)?.value == "jsonrpc.encode_failed")
+            record.expectErrorCode(.jsonRPCEncodeFailed)
             #expect(findField("error_message", in: record)?.value == "<redacted>")
         }
     }
@@ -114,7 +156,7 @@ struct OpalDiagnosticsSwiftFulcrumValidator {
             #expect(failureRecord.category == .swiftFulcrumJSONRPC)
             #expect(failureRecord.traceID == traceID)
             #expect(findField("method_hint", in: failureRecord)?.value == "server.banner")
-            #expect(findField(OpalDiagnostics.Field.swiftFulcrumErrorCodeName, in: failureRecord)?.value == "jsonrpc.decode_failed")
+            failureRecord.expectErrorCode(.jsonRPCDecodeFailed)
             #expect(findField("error_type", in: failureRecord)?.privacy == .public)
             #expect(findField("error_message", in: failureRecord)?.value == "<redacted>")
         }
@@ -138,7 +180,7 @@ struct OpalDiagnosticsSwiftFulcrumValidator {
             let decodedRecord = try #require(findDiagnosticRecord(named: .swiftFulcrumJSONRPCResponseDecoded, traceID: traceID))
             #expect(decodedRecord.category == .swiftFulcrumJSONRPC)
             #expect(findField("method_hint", in: decodedRecord)?.value == "server.banner")
-            #expect(findField(OpalDiagnostics.Field.swiftFulcrumErrorCodeName, in: decodedRecord)?.value == "jsonrpc.server_error")
+            decodedRecord.expectErrorCode(.jsonRPCServerError)
             #expect(findField("error_message", in: decodedRecord) == nil)
             #expect(OpalDiagnostics.recentRecords(matching: .init(event: .swiftFulcrumJSONRPCResponseDecodeFailed)).isEmpty)
         }

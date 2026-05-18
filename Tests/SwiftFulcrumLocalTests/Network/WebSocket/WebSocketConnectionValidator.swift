@@ -250,7 +250,7 @@ struct WebSocketConnectionValidator {
                 ).first
             )
             #expect(timeoutRecord.category == OpalDiagnostics.Category.swiftFulcrumWebSocket)
-            #expect(findField(OpalDiagnostics.Field.swiftFulcrumErrorCodeName, in: timeoutRecord)?.value == "client.timeout")
+            timeoutRecord.expectErrorCode(.clientTimeout)
             #expect(findField("reason", in: timeoutRecord)?.value == "<redacted>")
         }
 
@@ -304,4 +304,5 @@ private extension WebSocketConnectionValidator {
     func findField(_ name: String, in record: OpalDiagnostics.Record) -> OpalDiagnostics.Field? {
         record.fields.first { $0.name == name }
     }
+
 }

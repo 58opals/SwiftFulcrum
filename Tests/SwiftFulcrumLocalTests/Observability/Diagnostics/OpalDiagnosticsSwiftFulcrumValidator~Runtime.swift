@@ -52,7 +52,7 @@ extension OpalDiagnosticsSwiftFulcrumValidator {
             let failureRecord = try #require(findDiagnosticRecord(named: .swiftFulcrumJSONRPCResponseDecodeFailed))
             #expect(failureRecord.category == .swiftFulcrumJSONRPC)
             #expect(findField("byte_count", in: failureRecord)?.value == String(malformedPayload.count))
-            #expect(findField(OpalDiagnostics.Field.swiftFulcrumErrorCodeName, in: failureRecord)?.value == "jsonrpc.decode_failed")
+            failureRecord.expectErrorCode(.jsonRPCDecodeFailed)
             #expect(findField("error_message", in: failureRecord)?.value == "<redacted>")
         }
     }
@@ -75,7 +75,7 @@ extension OpalDiagnosticsSwiftFulcrumValidator {
                 #expect(failureRecord.category == .swiftFulcrumReconnect)
                 #expect(findField("reconnect_attempts", in: failureRecord)?.value == "1")
                 #expect(findField("reconnect_successes", in: failureRecord)?.value == "0")
-                #expect(findField(OpalDiagnostics.Field.swiftFulcrumErrorCodeName, in: failureRecord)?.value == "websocket.reconnect_failed")
+                failureRecord.expectErrorCode(.webSocketReconnectFailed)
             }
 
             await client.stop()
@@ -105,7 +105,7 @@ extension OpalDiagnosticsSwiftFulcrumValidator {
             #expect(findField("endpoint_url", in: timeoutRecord)?.value == "<redacted>")
             #expect(findField("reconnect_attempts", in: timeoutRecord)?.value == "0")
             #expect(findField("reconnect_successes", in: timeoutRecord)?.value == "0")
-            #expect(findField(OpalDiagnostics.Field.swiftFulcrumErrorCodeName, in: timeoutRecord)?.value == "client.timeout")
+            timeoutRecord.expectErrorCode(.clientTimeout)
 
             await client.stop()
         }

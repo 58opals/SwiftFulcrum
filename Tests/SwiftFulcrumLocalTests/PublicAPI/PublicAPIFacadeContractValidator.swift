@@ -40,11 +40,10 @@ struct PublicAPIFacadeContractValidator {
         let diagnosticsEvent: OpalDiagnostics.Event = OpalDiagnostics.Event.swiftFulcrumClientCallBegin
         _ = diagnosticsEvent
 
-        let diagnosticsFieldName = OpalDiagnostics.Field.swiftFulcrumErrorCodeName
-        _ = diagnosticsFieldName
-
-        let diagnosticsErrorCode = "jsonrpc.decode_failed"
-        _ = diagnosticsErrorCode
+        let diagnosticsErrorCodeField = OpalDiagnostics.Field.errorCode(
+            OpalDiagnostics.ErrorCode(rawValue: "jsonrpc.decode_failed")
+        )
+        _ = diagnosticsErrorCodeField
 
         let connectionStateType: SwiftFulcrum.Client.ConnectionState.Type = SwiftFulcrum.Client.ConnectionState.self
         _ = connectionStateType
