@@ -238,7 +238,7 @@ struct ResponseDecodingValidator {
 
     @Test("Rejects server.features with an inverted protocol range")
     func rejectServerFeaturesWithInvertedProtocolRange() throws {
-        try expectServerFeaturesDecodeFailure([
+        try expectServerFeaturesResultDecodeFailure([
             "protocol_max": "1.4.0",
             "protocol_min": "1.6.0"
         ])
@@ -246,45 +246,75 @@ struct ResponseDecodingValidator {
 
     @Test("Rejects server.features with malformed genesis hashes")
     func rejectServerFeaturesWithMalformedGenesisHashes() throws {
-        try expectServerFeaturesDecodeFailure([
+        try expectServerFeaturesResultDecodeFailure([
             "genesis_hash": String(repeating: "g", count: 64)
         ])
     }
 
-    @Test("Rejects server.features host ports outside the valid range")
-    func rejectServerFeaturesHostPortsOutsideValidRange() throws {
-        try expectServerFeaturesDecodeFailure([
+    @Test(
+        "Rejects server.features with unsupported hash functions",
+        arguments: [
+            "sha512",
+            "SHA256"
+        ]
+    )
+    func rejectServerFeaturesWithUnsupportedHashFunctions(_ hashFunction: String) throws {
+        try expectServerFeaturesResultDecodeFailure(["hash_function": hashFunction])
+    }
+
+    @Test(
+        "Rejects server.features host ports outside the valid range",
+        arguments: [-1, 0, 65_536]
+    )
+    func rejectServerFeaturesHostPortsOutsideValidRange(_ port: Int) throws {
+        try expectServerFeaturesResultDecodeFailure([
             "hosts": [
-                "invalid.fulcrum.example": ["wss_port": 0]
+                "invalid.fulcrum.example": ["wss_port": port]
             ]
         ])
     }
 
-    @Test("Rejects server.features empty host names")
-    func rejectServerFeaturesEmptyHostNames() throws {
-        try expectServerFeaturesDecodeFailure([
+    @Test(
+        "Rejects server.features with invalid host names",
+        arguments: [
+            ("blank host name", " "),
+            ("leading newline host name", "\ninvalid.fulcrum.example"),
+            ("embedded whitespace host name", "invalid fulcrum.example"),
+            ("padded host name", " invalid.fulcrum.example ")
+        ]
+    )
+    func rejectServerFeaturesWithInvalidHostNames(_ caseDescription: String, _ hostName: String) throws {
+        try expectServerFeaturesResultDecodeFailure([
             "hosts": [
-                " ": ["wss_port": 50004]
+                hostName: ["wss_port": 50004]
             ]
         ])
     }
 
     @Test("Rejects server.features negative pruning limits")
     func rejectServerFeaturesNegativePruningLimits() throws {
-        try expectServerFeaturesDecodeFailure(["pruning": -1])
+        try expectServerFeaturesResultDecodeFailure(["pruning": -1])
     }
 
-    @Test("Rejects server.features reusable payment address negative values")
-    func rejectServerFeaturesReusablePaymentAddressNegativeValues() throws {
-        try expectServerFeaturesDecodeFailure([
-            "rpa": [
-                "history_block_limit": -1,
-                "max_history": 100,
-                "prefix_bits": 20,
-                "prefix_bits_min": 8,
-                "starting_height": 0
-            ]
-        ])
+    @Test(
+        "Rejects server.features reusable payment address negative values",
+        arguments: [
+            "history_block_limit",
+            "max_history",
+            "prefix_bits",
+            "prefix_bits_min",
+            "starting_height"
+        ]
+    )
+    func rejectServerFeaturesReusablePaymentAddressNegativeValues(_ field: String) throws {
+        try expectServerFeaturesResultDecodeFailure(makeReusablePaymentAddressFeatureOverrides([field: -1]))
+    }
+
+    @Test("Rejects server.features reusable payment address inverted prefix ranges")
+    func rejectServerFeaturesReusablePaymentAddressInvertedPrefixRanges() throws {
+        try expectServerFeaturesResultDecodeFailure(
+            makeReusablePaymentAddressFeatureOverrides(["prefix_bits": 8, "prefix_bits_min": 20])
+        )
     }
 
     @Test("Rejects server.version arrays with extra fields")
@@ -333,8 +363,26 @@ struct ResponseDecodingValidator {
         #expect(subscribe.status == nil)
     }
 
-    @Test("Rejects first-use responses with malformed hashes")
-    func rejectFirstUseResponsesWithMalformedHashes() throws {
+    @Test("Rejects address first-use responses with malformed hashes")
+    func rejectAddressFirstUseResponsesWithMalformedHashes() throws {
+        try expectFirstUseResponseDecodeFailure(
+            SwiftFulcrum.Response.Blockchain.Address.FirstUse.self,
+            methodPath: "blockchain.address.get_first_use"
+        )
+    }
+
+    @Test("Rejects scripthash first-use responses with malformed hashes")
+    func rejectScriptHashFirstUseResponsesWithMalformedHashes() throws {
+        try expectFirstUseResponseDecodeFailure(
+            SwiftFulcrum.Response.Blockchain.ScriptHash.FirstUse.self,
+            methodPath: "blockchain.scripthash.get_first_use"
+        )
+    }
+
+    private func expectFirstUseResponseDecodeFailure<DecodedResponse: Decodable & Sendable>(
+        _ responseType: DecodedResponse.Type,
+        methodPath: String
+    ) throws {
         let payload = try makeJSONData(
             [
                 "jsonrpc": "2.0",
@@ -347,17 +395,89 @@ struct ResponseDecodingValidator {
             ]
         )
 
-        #expect(throws: ResponseResultDecodeError.self) {
-            _ = try payload.decode(
-                SwiftFulcrum.Response.Blockchain.Address.FirstUse.self,
-                context: .init(methodPath: "blockchain.address.get_first_use")
-            )
-        }
+        expectResponseResultDecodeFailure(responseType, from: payload, methodPath: methodPath)
+    }
 
-        #expect(throws: ResponseResultDecodeError.self) {
-            _ = try payload.decode(
-                SwiftFulcrum.Response.Blockchain.ScriptHash.FirstUse.self,
-                context: .init(methodPath: "blockchain.scripthash.get_first_use")
+    @Test(
+        "Rejects mempool transactions with malformed hashes",
+        arguments: [
+            ("blockchain.address.get_mempool", true),
+            ("blockchain.scripthash.get_mempool", false)
+        ]
+    )
+    func rejectMempoolTransactionsWithMalformedHashes(methodPath: String, isAddressMempoolResponse: Bool) throws {
+        let payload = try makeJSONData(
+            [
+                "jsonrpc": "2.0",
+                "id": UUID().uuidString,
+                "result": [
+                    [
+                        "height": 0,
+                        "tx_hash": "abc123",
+                        "fee": 1
+                    ]
+                ]
+            ]
+        )
+
+        expectMempoolResponseDecodeFailure(
+            from: payload,
+            methodPath: methodPath,
+            isAddressMempoolResponse: isAddressMempoolResponse
+        )
+    }
+
+    @Test(
+        "Rejects mempool transactions with invalid heights",
+        arguments: [
+            ("blockchain.address.get_mempool", true, -2),
+            ("blockchain.address.get_mempool", true, 1),
+            ("blockchain.scripthash.get_mempool", false, -2),
+            ("blockchain.scripthash.get_mempool", false, 1)
+        ]
+    )
+    func rejectMempoolTransactionsWithInvalidHeights(
+        methodPath: String,
+        isAddressMempoolResponse: Bool,
+        height: Int
+    ) throws {
+        let payload = try makeJSONData(
+            [
+                "jsonrpc": "2.0",
+                "id": UUID().uuidString,
+                "result": [
+                    [
+                        "height": height,
+                        "tx_hash": String(repeating: "b", count: 64),
+                        "fee": 1
+                    ]
+                ]
+            ]
+        )
+
+        expectMempoolResponseDecodeFailure(
+            from: payload,
+            methodPath: methodPath,
+            isAddressMempoolResponse: isAddressMempoolResponse
+        )
+    }
+
+    private func expectMempoolResponseDecodeFailure(
+        from payload: Data,
+        methodPath: String,
+        isAddressMempoolResponse: Bool
+    ) {
+        if isAddressMempoolResponse {
+            expectResponseResultDecodeFailure(
+                SwiftFulcrum.Response.Blockchain.Address.Mempool.self,
+                from: payload,
+                methodPath: methodPath
+            )
+        } else {
+            expectResponseResultDecodeFailure(
+                SwiftFulcrum.Response.Blockchain.ScriptHash.Mempool.self,
+                from: payload,
+                methodPath: methodPath
             )
         }
     }
@@ -474,6 +594,27 @@ struct ResponseDecodingValidator {
         #expect(result.scriptHash == nil)
         #expect(result.value == nil)
         #expect(result.tokenData == nil)
+    }
+
+    @Test("Rejects UTXO info responses with malformed script hashes")
+    func rejectUTXOInfoResponsesWithMalformedScriptHashes() throws {
+        let payload = try makeJSONData(
+            [
+                "jsonrpc": "2.0",
+                "id": UUID().uuidString,
+                "result": [
+                    "confirmed_height": 1,
+                    "scripthash": "abc123",
+                    "value": 546
+                ]
+            ]
+        )
+
+        expectResponseResultDecodeFailure(
+            SwiftFulcrum.Response.Blockchain.UTXO.Info.self,
+            from: payload,
+            methodPath: "blockchain.utxo.get_info"
+        )
     }
 
     @Test("Rejects address.get_scripthash responses with malformed script hashes")
@@ -793,81 +934,97 @@ struct ResponseDecodingValidator {
 
     @Test("Rejects DSProof lookup payloads with malformed transaction hashes")
     func rejectDSProofLookupPayloadsWithMalformedTransactionHashes() throws {
-        let payload = try makeJSONData(
-            [
-                "jsonrpc": "2.0",
-                "id": UUID().uuidString,
-                "result": makeDSProofResult(transactionHash: "abc123")
-            ]
+        let payload = try makeDSProofLookupPayload(makeDSProofResult(transactionHash: "abc123"))
+
+        expectDSProofLookupDecodeFailure(from: payload)
+    }
+
+    @Test(
+        "Rejects DSProof lookup payloads with malformed proof identifiers",
+        arguments: [
+            ("short identifier", "proof-id"),
+            ("non-hex identifier", String(repeating: "g", count: 64))
+        ]
+    )
+    func rejectDSProofLookupPayloadsWithMalformedProofIdentifiers(
+        _ caseDescription: String,
+        _ doubleSpendProofIdentifier: String
+    ) throws {
+        let payload = try makeDSProofLookupPayload(
+            makeDSProofResult(
+                transactionHash: String(repeating: "a", count: 64),
+                doubleSpendProofIdentifier: doubleSpendProofIdentifier
+            )
         )
 
-        #expect(throws: ResponseResultDecodeError.self) {
-            _ = try payload.decode(
-                SwiftFulcrum.Response.Blockchain.Transaction.DSProof.Lookup.self,
-                context: .init(methodPath: "blockchain.transaction.dsproof.get")
-            )
-        }
+        expectDSProofLookupDecodeFailure(from: payload)
     }
 
     @Test("Rejects DSProof lookup payloads with malformed outpoint hashes")
     func rejectDSProofLookupPayloadsWithMalformedOutpointHashes() throws {
-        let payload = try makeJSONData(
-            [
-                "jsonrpc": "2.0",
-                "id": UUID().uuidString,
-                "result": makeDSProofResult(
-                    transactionHash: String(repeating: "a", count: 64),
-                    outpointTransactionHash: "prev"
-                )
-            ]
+        let payload = try makeDSProofLookupPayload(
+            makeDSProofResult(
+                transactionHash: String(repeating: "a", count: 64),
+                outpointTransactionHash: "prev"
+            )
         )
 
-        #expect(throws: ResponseResultDecodeError.self) {
-            _ = try payload.decode(
-                SwiftFulcrum.Response.Blockchain.Transaction.DSProof.Lookup.self,
-                context: .init(methodPath: "blockchain.transaction.dsproof.get")
-            )
-        }
+        expectDSProofLookupDecodeFailure(from: payload)
     }
 
     @Test("Rejects DSProof lookup payloads with malformed descendant hashes")
     func rejectDSProofLookupPayloadsWithMalformedDescendantHashes() throws {
-        let payload = try makeJSONData(
-            [
-                "jsonrpc": "2.0",
-                "id": UUID().uuidString,
-                "result": makeDSProofResult(
-                    transactionHash: String(repeating: "a", count: 64),
-                    descendants: ["child"]
-                )
-            ]
+        let payload = try makeDSProofLookupPayload(
+            makeDSProofResult(
+                transactionHash: String(repeating: "a", count: 64),
+                descendants: ["child"]
+            )
         )
 
-        #expect(throws: ResponseResultDecodeError.self) {
-            _ = try payload.decode(
-                SwiftFulcrum.Response.Blockchain.Transaction.DSProof.Lookup.self,
-                context: .init(methodPath: "blockchain.transaction.dsproof.get")
-            )
-        }
+        expectDSProofLookupDecodeFailure(from: payload)
     }
 
-    @Test("Rejects DSProof lookup payloads with malformed proof hex")
-    func rejectDSProofLookupPayloadsWithMalformedProofHex() throws {
+    @Test(
+        "Rejects DSProof lookup payloads with malformed proof hex",
+        arguments: [
+            ("empty proof hex", ""),
+            ("non-hex proof hex", "zz")
+        ]
+    )
+    func rejectDSProofLookupPayloadsWithMalformedProofHex(_ caseDescription: String, _ proofHex: String) throws {
+        let payload = try makeDSProofLookupPayload(
+            makeDSProofResult(
+                transactionHash: String(repeating: "a", count: 64),
+                hex: proofHex
+            )
+        )
+
+        expectDSProofLookupDecodeFailure(from: payload)
+    }
+
+    @Test(
+        "Rejects DSProof list payloads with malformed transaction hashes",
+        arguments: [
+            "abc123",
+            String(repeating: "g", count: 64)
+        ]
+    )
+    func rejectDSProofListPayloadsWithMalformedTransactionHashes(_ transactionHash: String) throws {
         let payload = try makeJSONData(
             [
                 "jsonrpc": "2.0",
                 "id": UUID().uuidString,
-                "result": makeDSProofResult(
-                    transactionHash: String(repeating: "a", count: 64),
-                    hex: "zz"
-                )
+                "result": [
+                    String(repeating: "a", count: 64),
+                    transactionHash
+                ]
             ]
         )
 
         #expect(throws: ResponseResultDecodeError.self) {
             _ = try payload.decode(
-                SwiftFulcrum.Response.Blockchain.Transaction.DSProof.Lookup.self,
-                context: .init(methodPath: "blockchain.transaction.dsproof.get")
+                SwiftFulcrum.Response.Blockchain.Transaction.DSProof.List.self,
+                context: .init(methodPath: "blockchain.transaction.dsproof.list")
             )
         }
     }
@@ -975,12 +1132,11 @@ struct ResponseDecodingValidator {
                 "params": ["bitcoincash:qtest", "status", "unexpected"]
             ]
         )
-        #expect(throws: ResponseResultDecodeError.self) {
-            _ = try addressPayload.decode(
-                SwiftFulcrum.Response.Blockchain.Address.SubscribeNotification.self,
-                context: .init(methodPath: "blockchain.address.subscribe")
-            )
-        }
+        expectResponseResultDecodeFailure(
+            SwiftFulcrum.Response.Blockchain.Address.SubscribeNotification.self,
+            from: addressPayload,
+            methodPath: "blockchain.address.subscribe"
+        )
 
         let scripthashPayload = try makeJSONData(
             [
@@ -989,12 +1145,11 @@ struct ResponseDecodingValidator {
                 "params": [String(repeating: "b", count: 64), "status", "unexpected"]
             ]
         )
-        #expect(throws: ResponseResultDecodeError.self) {
-            _ = try scripthashPayload.decode(
-                SwiftFulcrum.Response.Blockchain.ScriptHash.SubscribeNotification.self,
-                context: .init(methodPath: "blockchain.scripthash.subscribe")
-            )
-        }
+        expectResponseResultDecodeFailure(
+            SwiftFulcrum.Response.Blockchain.ScriptHash.SubscribeNotification.self,
+            from: scripthashPayload,
+            methodPath: "blockchain.scripthash.subscribe"
+        )
     }
 
     @Test("Rejects undersized address and scripthash notification payloads")
@@ -1026,6 +1181,29 @@ struct ResponseDecodingValidator {
                 context: .init(methodPath: "blockchain.scripthash.subscribe")
             )
         }
+    }
+
+    @Test(
+        "Rejects scripthash notifications with malformed subscription identifiers",
+        arguments: [
+            "script-hash",
+            String(repeating: "g", count: 64)
+        ]
+    )
+    func rejectScriptHashNotificationsWithMalformedSubscriptionIdentifiers(_ scriptHash: String) throws {
+        let payload = try makeJSONData(
+            [
+                "jsonrpc": "2.0",
+                "method": "blockchain.scripthash.subscribe",
+                "params": [scriptHash, "status"]
+            ]
+        )
+
+        expectResponseResultDecodeFailure(
+            SwiftFulcrum.Response.Blockchain.ScriptHash.SubscribeNotification.self,
+            from: payload,
+            methodPath: "blockchain.scripthash.subscribe"
+        )
     }
 
     @Test("Decodes mempool fee histogram flexible number pairs")
@@ -1285,7 +1463,7 @@ struct ResponseDecodingValidator {
             resultOverrides: ["hash": "transaction"]
         )
 
-        try expectVerboseTransactionDecodeFailure(malformedTopLevelPayload)
+        expectVerboseTransactionDecodeFailure(malformedTopLevelPayload)
 
         let malformedInputPayload = try makeVerboseTransactionPayload(
             resultOverrides: [
@@ -1297,19 +1475,23 @@ struct ResponseDecodingValidator {
             ]
         )
 
-        try expectVerboseTransactionDecodeFailure(malformedInputPayload)
+        expectVerboseTransactionDecodeFailure(malformedInputPayload)
     }
 
     @Test(
         "Rejects verbose transaction payloads with malformed transaction hex",
-        arguments: ["0100000z", "0100000"]
+        arguments: [
+            ("empty transaction hex", ""),
+            ("non-hex transaction hex", "0100000z"),
+            ("odd-length transaction hex", "0100000")
+        ]
     )
-    func rejectVerboseTransactionPayloadsWithMalformedTransactionHex(_ hex: String) throws {
+    func rejectVerboseTransactionPayloadsWithMalformedTransactionHex(_ caseDescription: String, _ transactionHex: String) throws {
         let payload = try makeVerboseTransactionPayload(
-            resultOverrides: ["hex": hex]
+            resultOverrides: ["hex": transactionHex]
         )
 
-        try expectVerboseTransactionDecodeFailure(payload)
+        expectVerboseTransactionDecodeFailure(payload)
     }
 
     @Test(
@@ -1325,33 +1507,39 @@ struct ResponseDecodingValidator {
             ]
         )
 
-        try expectVerboseTransactionDecodeFailure(payload)
+        expectVerboseTransactionDecodeFailure(payload)
     }
 
     @Test("Rejects verbose transaction outputs with malformed scriptPubKey hex")
     func rejectVerboseTransactionOutputsWithMalformedScriptPubKeyHex() throws {
         let payload = try makeVerboseTransactionPayload(
-            resultOverrides: [
-                "vout": [
-                    makeVerboseTransactionOutput(scriptPubKeyHex: "76a914zz")
-                ]
-            ]
+            output: makeVerboseTransactionOutput(scriptPubKeyHex: "76a914zz")
         )
 
-        try expectVerboseTransactionDecodeFailure(payload)
+        expectVerboseTransactionDecodeFailure(payload)
+    }
+
+    @Test("Rejects verbose transaction outputs with ambiguous scriptPubKey addresses")
+    func rejectVerboseTransactionOutputsWithAmbiguousScriptPubKeyAddresses() throws {
+        let payload = try makeVerboseTransactionPayload(
+            output: makeVerboseTransactionOutput(
+                scriptPubKeyOverrides: [
+                    "address": "bitcoincash:qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a",
+                    "addresses": ["bitcoincash:qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a"]
+                ]
+            )
+        )
+
+        expectVerboseTransactionDecodeFailure(payload)
     }
 
     @Test("Rejects verbose transaction outputs with negative values")
     func rejectVerboseTransactionOutputsWithNegativeValues() throws {
         let payload = try makeVerboseTransactionPayload(
-            resultOverrides: [
-                "vout": [
-                    makeVerboseTransactionOutput(value: -0.01)
-                ]
-            ]
+            output: makeVerboseTransactionOutput(value: -0.01)
         )
 
-        try expectVerboseTransactionDecodeFailure(payload)
+        expectVerboseTransactionDecodeFailure(payload)
     }
 
     @Test("Decodes verbose coinbase transactions without spend-input fields")
@@ -1476,6 +1664,27 @@ struct ResponseDecodingValidator {
         }
     }
 
+    @Test("Rejects malformed block.headers batches with non-hex headers")
+    func rejectMalformedBlockHeaderBatchWithNonHexHeaders() throws {
+        let payload = try makeJSONData(
+            [
+                "jsonrpc": "2.0",
+                "id": UUID().uuidString,
+                "result": [
+                    "count": 1,
+                    "hex": String(repeating: "g", count: 160),
+                    "max": 2016
+                ]
+            ]
+        )
+
+        expectResponseResultDecodeFailure(
+            SwiftFulcrum.Response.Blockchain.Block.Headers.self,
+            from: payload,
+            methodPath: "blockchain.block.headers"
+        )
+    }
+
     @Test("Rejects block.headers counts larger than Int.max")
     func rejectBlockHeaderCountLargerThanIntMax() throws {
         let payload = Data(
@@ -1500,15 +1709,21 @@ struct ResponseDecodingValidator {
         }
     }
 
-    @Test("Rejects malformed block.headers arrays with invalid header widths")
-    func rejectMalformedBlockHeaderArray() throws {
+    @Test(
+        "Rejects malformed block.headers arrays",
+        arguments: [
+            String(repeating: "b", count: 159),
+            String(repeating: "g", count: 160)
+        ]
+    )
+    func rejectMalformedBlockHeaderArrayEntries(_ header: String) throws {
         let payload = try makeJSONData(
             [
                 "jsonrpc": "2.0",
                 "id": UUID().uuidString,
                 "result": [
                     "count": 1,
-                    "headers": [String(repeating: "b", count: 159)],
+                    "headers": [header],
                     "max": 2016
                 ]
             ]
@@ -1534,6 +1749,33 @@ struct ResponseDecodingValidator {
                 context: .init(methodPath: "blockchain.block.header")
             )
         }
+    }
+
+    @Test(
+        "Rejects malformed block.header proof hashes",
+        arguments: [
+            (["abc123"], String(repeating: "d", count: 64)),
+            ([String(repeating: "d", count: 64)], "abc123")
+        ]
+    )
+    func rejectMalformedBlockHeaderProofHashes(branch: [String], root: String) throws {
+        let payload = try makeJSONData(
+            [
+                "jsonrpc": "2.0",
+                "id": UUID().uuidString,
+                "result": [
+                    "branch": branch,
+                    "header": String(repeating: "c", count: 160),
+                    "root": root
+                ]
+            ]
+        )
+
+        expectResponseResultDecodeFailure(
+            SwiftFulcrum.Response.Blockchain.Block.Header.self,
+            from: payload,
+            methodPath: "blockchain.block.header"
+        )
     }
 
     @Test("Rejects incomplete block.headers proof metadata")
@@ -1585,7 +1827,31 @@ struct ResponseDecodingValidator {
         try JSONSerialization.data(withJSONObject: object)
     }
 
-    private func expectServerFeaturesDecodeFailure(_ resultOverrides: [String: Any]) throws {
+    private func makeReusablePaymentAddressFeatureOverrides(_ overrides: [String: Any]) -> [String: Any] {
+        var reusablePaymentAddress: [String: Any] = [
+            "history_block_limit": 1_000,
+            "max_history": 100,
+            "prefix_bits": 20,
+            "prefix_bits_min": 8,
+            "starting_height": 0
+        ]
+        for (key, value) in overrides {
+            reusablePaymentAddress[key] = value
+        }
+        return ["rpa": reusablePaymentAddress]
+    }
+
+    private func expectResponseResultDecodeFailure<DecodedResponse: Decodable & Sendable>(
+        _ responseType: DecodedResponse.Type,
+        from payload: Data,
+        methodPath: String
+    ) {
+        #expect(throws: ResponseResultDecodeError.self) {
+            _ = try payload.decode(responseType, context: .init(methodPath: methodPath))
+        }
+    }
+
+    private func expectServerFeaturesResultDecodeFailure(_ resultOverrides: [String: Any]) throws {
         let payload = try makeJSONData(
             [
                 "jsonrpc": "2.0",
@@ -1594,21 +1860,28 @@ struct ResponseDecodingValidator {
             ]
         )
 
-        #expect(throws: ResponseResultDecodeError.self) {
-            _ = try payload.decode(
-                SwiftFulcrum.Response.Server.Features.self,
-                context: .init(methodPath: "server.features")
-            )
-        }
+        expectResponseResultDecodeFailure(
+            SwiftFulcrum.Response.Server.Features.self,
+            from: payload,
+            methodPath: "server.features"
+        )
     }
 
-    private func expectVerboseTransactionDecodeFailure(_ payload: Data) throws {
+    private func expectVerboseTransactionDecodeFailure(_ payload: Data) {
         #expect(throws: ResponseResultDecodeError.self) {
             _ = try payload.decode(
                 SwiftFulcrum.Response.Blockchain.Transaction.Verbose.self,
                 context: .init(methodPath: "blockchain.transaction.get")
             )
         }
+    }
+
+    private func expectDSProofLookupDecodeFailure(from payload: Data) {
+        expectResponseResultDecodeFailure(
+            SwiftFulcrum.Response.Blockchain.Transaction.DSProof.Lookup.self,
+            from: payload,
+            methodPath: "blockchain.transaction.dsproof.get"
+        )
     }
 
     private func makeServerFeaturesResult(_ overrides: [String: Any] = [:]) -> [String: Any] {
@@ -1629,17 +1902,26 @@ struct ResponseDecodingValidator {
 
     private func makeDSProofResult(
         transactionHash: String,
+        doubleSpendProofIdentifier: String = String(repeating: "1", count: 64),
         hex: String = "00",
         outpointTransactionHash: String = String(repeating: "0", count: 64),
         descendants: [String] = []
     ) -> [String: Any] {
         [
-            "dspid": "proof-id",
+            "dspid": doubleSpendProofIdentifier,
             "txid": transactionHash,
             "hex": hex,
             "outpoint": ["txid": outpointTransactionHash, "vout": 1],
             "descendants": descendants
         ]
+    }
+
+    private func makeDSProofLookupPayload(_ result: [String: Any]) throws -> Data {
+        try makeJSONData([
+            "jsonrpc": "2.0",
+            "id": UUID().uuidString,
+            "result": result
+        ])
     }
 
     private func makeVerboseTransactionPayload(resultOverrides: [String: Any] = [:]) throws -> Data {
@@ -1666,6 +1948,10 @@ struct ResponseDecodingValidator {
         ])
     }
 
+    private func makeVerboseTransactionPayload(output: [String: Any]) throws -> Data {
+        try makeVerboseTransactionPayload(resultOverrides: ["vout": [output]])
+    }
+
     private func makeVerboseTransactionInput(
         transactionHash: String = "5bb9142c960a838329694d3fe9ba08c2a6421c5158d8f7044cb7c48006c1b484",
         scriptSigHex: String = "160014deadbeef"
@@ -1683,15 +1969,21 @@ struct ResponseDecodingValidator {
 
     private func makeVerboseTransactionOutput(
         scriptPubKeyHex: String = "76a914deadbeef88ac",
+        scriptPubKeyOverrides: [String: Any] = [:],
         value: Double = 1.25
     ) -> [String: Any] {
-        [
+        var scriptPubKey: [String: Any] = [
+            "asm": "OP_DUP OP_HASH160 deadbeef OP_EQUALVERIFY OP_CHECKSIG",
+            "hex": scriptPubKeyHex,
+            "type": "pubkeyhash"
+        ]
+        for (key, value) in scriptPubKeyOverrides {
+            scriptPubKey[key] = value
+        }
+
+        return [
             "n": 0,
-            "scriptPubKey": [
-                "asm": "OP_DUP OP_HASH160 deadbeef OP_EQUALVERIFY OP_CHECKSIG",
-                "hex": scriptPubKeyHex,
-                "type": "pubkeyhash"
-            ],
+            "scriptPubKey": scriptPubKey,
             "value": value
         ]
     }

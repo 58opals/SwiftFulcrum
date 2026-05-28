@@ -20,6 +20,11 @@ extension SwiftFulcrum.Response.Server {
             let payloadModel = try SwiftFulcrum.RPC.Response.JSONRPC.Result.Server.Features(from: decoder)
             let protocolVersions = try Self.makeProtocolVersions(from: payloadModel)
             try SwiftFulcrum.Response.Blockchain.validateBlockHash(payloadModel.genesis_hash)
+            guard payloadModel.hash_function == "sha256" else {
+                throw ResponseResultDecodeError.unexpectedFormat(
+                    "Unsupported server.features hash_function: \(payloadModel.hash_function)"
+                )
+            }
             try Self.validateNonNegative(payloadModel.pruning, field: "pruning")
 
             self.genesisHash = payloadModel.genesis_hash
@@ -65,7 +70,8 @@ extension SwiftFulcrum.Response.Server {
             hosts.reserveCapacity(payloadHosts.count)
 
             for (name, host) in payloadHosts {
-                guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                guard !name.isEmpty,
+                      name.rangeOfCharacter(from: .whitespacesAndNewlines) == nil else {
                     throw ResponseResultDecodeError.unexpectedFormat("Invalid server.features host name: \(name)")
                 }
                 hosts[name] = try Host(from: host)

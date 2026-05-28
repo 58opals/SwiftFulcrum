@@ -19,6 +19,7 @@ extension SwiftFulcrum.Response.Blockchain.ScriptHash {
                 guard let first = pair.first, let scripthash = first else {
                     throw ResponseResultDecodeError.missingField("subscriptionIdentifier")
                 }
+                try SwiftFulcrum.Response.Blockchain.validateScriptHash(scripthash)
                 self.subscriptionIdentifier = scripthash
                 self.status = (pair.count > 1) ? pair[1] : nil
             case .status(let statusString):

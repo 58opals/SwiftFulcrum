@@ -28,7 +28,7 @@ extension SwiftFulcrum.Response.Blockchain.Transaction {
                 }
                 try SwiftFulcrum.Response.Blockchain.validateTransactionHash(detailed.hash)
                 try SwiftFulcrum.Response.Blockchain.validateTransactionHash(detailed.txid)
-                try SwiftFulcrum.Response.Blockchain.validateHexString(detailed.hex, description: "transaction hex")
+                try SwiftFulcrum.Response.Blockchain.validateNonEmptyHexString(detailed.hex, description: "transaction hex")
                 self.blockHash = detailed.blockhash
                 self.blocktime = detailed.blocktime
                 self.confirmations = detailed.confirmations

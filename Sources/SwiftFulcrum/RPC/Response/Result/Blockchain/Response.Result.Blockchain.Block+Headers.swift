@@ -18,7 +18,7 @@ extension SwiftFulcrum.Response.Blockchain.Block {
             self.max = payloadModel.max
             switch (payloadModel.branch, payloadModel.root) {
             case let (.some(branch), .some(root)):
-                self.proof = SwiftFulcrum.Response.Blockchain.Block.Header.Proof(branch: branch, root: root)
+                self.proof = try SwiftFulcrum.Response.Blockchain.Block.Header.Proof(branch: branch, root: root)
             case (nil, nil):
                 self.proof = nil
             case (.some, nil), (nil, .some):
@@ -34,10 +34,10 @@ extension SwiftFulcrum.Response.Blockchain.Block {
             let headers: [String]
             if let providedHeaders = payloadModel.headers {
                 headers = providedHeaders
-                try SwiftFulcrum.Response.Blockchain.validateBlockHeaders(headers)
             } else {
                 headers = try splitHeaders(hex: payloadModel.hex)
             }
+            try SwiftFulcrum.Response.Blockchain.validateBlockHeaders(headers)
 
             guard payloadModel.count <= UInt(Int.max) else {
                 throw ResponseResultDecodeError.unexpectedFormat(

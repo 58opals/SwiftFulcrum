@@ -17,7 +17,7 @@ extension SwiftFulcrum.Response.Blockchain.Block {
             case .proof(let proof):
                 try SwiftFulcrum.Response.Blockchain.validateBlockHeader(proof.header)
                 self.hex = proof.header
-                self.proof = Proof(branch: proof.branch, root: proof.root)
+                self.proof = try Proof(branch: proof.branch, root: proof.root)
             }
         }
     }

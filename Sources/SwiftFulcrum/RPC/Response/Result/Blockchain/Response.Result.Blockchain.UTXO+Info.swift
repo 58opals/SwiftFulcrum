@@ -24,6 +24,7 @@ extension SwiftFulcrum.Response.Blockchain.UTXO {
 
         public init(from decoder: Decoder) throws {
             let payloadModel = try SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.UTXO.Info(from: decoder)
+            try SwiftFulcrum.Response.Blockchain.validateScriptHash(payloadModel.scripthash)
             self.confirmedHeight = payloadModel.confirmed_height
             self.scriptHash = payloadModel.scripthash
             self.value = payloadModel.value

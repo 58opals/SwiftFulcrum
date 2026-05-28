@@ -26,8 +26,9 @@ extension SwiftFulcrum.Response.Blockchain.Transaction.DSProof {
         }
 
         init(from payloadModel: SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Transaction.DSProof.Get) throws {
+            try SwiftFulcrum.Response.Blockchain.validateDoubleSpendProofIdentifier(payloadModel.dspid)
             try SwiftFulcrum.Response.Blockchain.validateTransactionHash(payloadModel.txid)
-            try SwiftFulcrum.Response.Blockchain.validateHexString(payloadModel.hex, description: "DSProof hex")
+            try SwiftFulcrum.Response.Blockchain.validateNonEmptyHexString(payloadModel.hex, description: "DSProof hex")
             try SwiftFulcrum.Response.Blockchain.validateTransactionHashes(
                 payloadModel.descendants,
                 description: "DSProof descendant transaction hash"

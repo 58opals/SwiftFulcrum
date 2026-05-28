@@ -30,6 +30,9 @@ extension WebSocketConnection {
             guard !host.isEmpty else {
                 throw DecodingError.dataCorruptedError(forKey: .host, in: container, debugDescription: "Host must not be empty.")
             }
+            guard !host.contains("@") else {
+                throw DecodingError.dataCorruptedError(forKey: .host, in: container, debugDescription: "Host must not contain user info.")
+            }
             
             let port = try container.decodeIfPresent(Int.self, forKey: .port)
             let scheme = try container.decodeIfPresent(String.self, forKey: .scheme)
@@ -47,6 +50,7 @@ extension WebSocketConnection {
             }
             
             try validateNoUserInfo(in: rawComponents, codingPath: codingPath)
+            try validateNoFragment(in: rawComponents, codingPath: codingPath)
             var components = rawComponents
             components.scheme = try normalizeScheme(from: rawComponents.scheme, codingPath: codingPath)
             
@@ -89,6 +93,15 @@ extension WebSocketConnection {
                 throw DecodingError.dataCorrupted(.init(
                     codingPath: codingPath,
                     debugDescription: "Server URL must not contain user info."
+                ))
+            }
+        }
+
+        private static func validateNoFragment(in components: URLComponents, codingPath: [CodingKey]) throws {
+            guard components.fragment == nil else {
+                throw DecodingError.dataCorrupted(.init(
+                    codingPath: codingPath,
+                    debugDescription: "Server URL must not contain a fragment."
                 ))
             }
         }

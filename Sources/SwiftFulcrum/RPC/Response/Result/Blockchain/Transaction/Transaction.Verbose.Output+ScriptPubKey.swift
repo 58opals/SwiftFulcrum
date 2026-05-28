@@ -12,6 +12,9 @@ extension SwiftFulcrum.Response.Blockchain.Transaction.Verbose.Output {
 
         init(from payloadModel: SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Transaction.Get.Detailed.Output.ScriptPubKey) throws {
             try SwiftFulcrum.Response.Blockchain.validateHexString(payloadModel.hex, description: "scriptPubKey hex")
+            guard payloadModel.addresses == nil || payloadModel.address == nil else {
+                throw ResponseResultDecodeError.unexpectedFormat("scriptPubKey must not contain both address and addresses")
+            }
             if let addresses = payloadModel.addresses {
                 self.addresses = addresses
             } else if let address = payloadModel.address {

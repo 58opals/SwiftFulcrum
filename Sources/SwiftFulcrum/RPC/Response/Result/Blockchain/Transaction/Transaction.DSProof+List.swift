@@ -7,7 +7,12 @@ extension SwiftFulcrum.Response.Blockchain.Transaction.DSProof {
         public let transactionHashes: [String]
 
         public init(from decoder: Decoder) throws {
-            self.transactionHashes = try [String](from: decoder)
+            let transactionHashes = try [String](from: decoder)
+            try SwiftFulcrum.Response.Blockchain.validateTransactionHashes(
+                transactionHashes,
+                description: "DSProof transaction hash"
+            )
+            self.transactionHashes = transactionHashes
         }
     }
 }

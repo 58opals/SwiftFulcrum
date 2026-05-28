@@ -43,27 +43,31 @@ struct ServerCatalogRepositoryValidator {
             #""wss:missing-host.example""#,
             #""wss://%20""#,
             #""wss://fulcrum.example:0""#,
-            #""wss://user:pass@fulcrum.example""#
+            #""wss://user:pass@fulcrum.example""#,
+            #""wss://fulcrum.example#fragment""#
         ]
     )
     func rejectMalformedStringCatalogURLs(_ json: String) throws {
-        let data = Data(json.utf8)
-
-        #expect(throws: DecodingError.self) {
-            _ = try JSONRPCCodec.Coder.decoder.decode(WebSocketConnection.Server.self, from: data)
-        }
+        expectServerCatalogEntryDecodeFailure(json)
     }
 
     @Test(
-        "Rejects object catalog URLs with invalid ports",
+        "Rejects object catalog entries with invalid ports",
         arguments: [-1, 0, 65_536]
     )
-    func rejectObjectCatalogURLsWithInvalidPorts(_ port: Int) throws {
-        let data = Data(#"{"host":"fulcrum.example","port":\#(port)}"#.utf8)
+    func rejectObjectCatalogEntriesWithInvalidPorts(_ port: Int) throws {
+        expectServerCatalogEntryDecodeFailure(#"{"host":"fulcrum.example","port":\#(port)}"#)
+    }
 
-        #expect(throws: DecodingError.self) {
-            _ = try JSONRPCCodec.Coder.decoder.decode(WebSocketConnection.Server.self, from: data)
-        }
+    @Test(
+        "Rejects object catalog hosts with user info delimiters",
+        arguments: [
+            "user@fulcrum.example",
+            "user:pass@fulcrum.example"
+        ]
+    )
+    func rejectObjectCatalogHostsWithUserInfoDelimiters(_ host: String) throws {
+        expectServerCatalogEntryDecodeFailure(#"{"host":"\#(host)"}"#)
     }
 
     @Test(
@@ -102,15 +106,43 @@ struct ServerCatalogRepositoryValidator {
             URL(string: "wss://%20")!,
             URL(string: "wss://valid.fulcrum.example")!
         ]
-        let fallbackLoader = FallbackLoader()
-        let loader = SwiftFulcrum.ServerCatalog.Repository { _, fallback in
-            try await fallbackLoader.load(fallback)
-        }
 
-        let servers = try await loader.loadServers(for: .mainnet, fallback: fallbackServers)
+        let servers = try await loadSanitizedFallbackServers(fallbackServers)
 
         #expect(servers.count == 1)
         #expect(servers.first?.absoluteString == "wss://valid.fulcrum.example")
+    }
+
+    @Test(
+        "Sanitizes fallback catalog entries with credentials",
+        arguments: [
+            "wss://user@invalid.fulcrum.example",
+            "wss://user:pass@invalid.fulcrum.example"
+        ]
+    )
+    func sanitizeFallbackCatalogEntriesWithCredentials(_ invalidURLString: String) async throws {
+        let validServer = URL(string: "wss://valid.fulcrum.example")!
+        let fallbackServers = [
+            URL(string: invalidURLString)!,
+            validServer
+        ]
+
+        let servers = try await loadSanitizedFallbackServers(fallbackServers)
+
+        #expect(servers == [validServer])
+    }
+
+    @Test("Sanitizes fallback catalog entries with fragments")
+    func sanitizeFallbackCatalogEntriesWithFragments() async throws {
+        let validServer = URL(string: "wss://valid.fulcrum.example")!
+        let fallbackServers = [
+            URL(string: "wss://invalid.fulcrum.example#fragment")!,
+            validServer
+        ]
+
+        let servers = try await loadSanitizedFallbackServers(fallbackServers)
+
+        #expect(servers == [validServer])
     }
     
     @Test("Constant catalog filters invalid catalog entries")
@@ -180,6 +212,21 @@ struct ServerCatalogRepositoryValidator {
         }
     }
 
+    @Test(
+        "Client initialization rejects endpoints with disallowed URL components",
+        arguments: [
+            "wss://user@invalid.fulcrum.example",
+            "wss://invalid.fulcrum.example#fragment"
+        ]
+    )
+    func clientInitializationRejectsEndpointsWithDisallowedURLComponents(_ endpointString: String) async throws {
+        let endpoint = try #require(URL(string: endpointString))
+
+        await #expect(throws: SwiftFulcrum.Client.Error.self) {
+            _ = try await SwiftFulcrum.Client(connectingTo: endpoint)
+        }
+    }
+
     @Test("Client initialization ignores invalid custom catalog entries when a valid endpoint exists")
     func clientInitializationIgnoresInvalidCustomCatalogEntries() async throws {
         let expectedServer = URL(string: "wss://valid.fulcrum.example")!
@@ -206,6 +253,23 @@ struct ServerCatalogRepositoryValidator {
                 )
                 return
             }
+        }
+    }
+
+    private func loadSanitizedFallbackServers(_ fallbackServers: [URL]) async throws -> [URL] {
+        let fallbackLoader = FallbackLoader()
+        let loader = SwiftFulcrum.ServerCatalog.Repository { _, fallback in
+            try await fallbackLoader.load(fallback)
+        }
+
+        return try await loader.loadServers(for: .mainnet, fallback: fallbackServers)
+    }
+
+    private func expectServerCatalogEntryDecodeFailure(_ json: String) {
+        let data = Data(json.utf8)
+
+        #expect(throws: DecodingError.self) {
+            _ = try JSONRPCCodec.Coder.decoder.decode(WebSocketConnection.Server.self, from: data)
         }
     }
 }
