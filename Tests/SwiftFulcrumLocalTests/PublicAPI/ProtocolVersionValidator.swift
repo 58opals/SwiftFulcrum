@@ -22,16 +22,12 @@ struct ProtocolVersionValidator {
         #expect(patched.description == "1.4.1")
     }
 
-    @Test("Rejects malformed dotted versions")
-    func rejectMalformedVersions() {
-        #expect(SwiftFulcrum.ProtocolVersion(string: "1") == nil)
-        #expect(SwiftFulcrum.ProtocolVersion(string: "1.2.3.4") == nil)
-        #expect(SwiftFulcrum.ProtocolVersion(string: "1..6") == nil)
-        #expect(SwiftFulcrum.ProtocolVersion(string: ".1.6") == nil)
-        #expect(SwiftFulcrum.ProtocolVersion(string: "1.6.") == nil)
-        #expect(SwiftFulcrum.ProtocolVersion(string: "1.a") == nil)
-        #expect(SwiftFulcrum.ProtocolVersion(string: "-1.0") == nil)
-        #expect(SwiftFulcrum.ProtocolVersion(string: "+1.0") == nil)
+    @Test(
+        "Rejects malformed dotted versions",
+        arguments: ["1", "1.2.3.4", "1..6", ".1.6", "1.6.", "1.a", "-1.0", "+1.0"]
+    )
+    func rejectMalformedVersions(_ version: String) {
+        #expect(SwiftFulcrum.ProtocolVersion(string: version) == nil)
     }
 
     @Test("Decodes dotted version strings")
@@ -49,12 +45,15 @@ struct ProtocolVersionValidator {
         #expect(patched.description == "1.6.0")
     }
 
-    @Test("Rejects malformed decoded version strings")
-    func rejectMalformedDecodedVersionStrings() {
+    @Test(
+        "Rejects malformed decoded version strings",
+        arguments: ["1", "1.6.", "1.a"]
+    )
+    func rejectMalformedDecodedVersionStrings(_ version: String) {
         #expect(throws: DecodingError.self) {
             _ = try JSONDecoder().decode(
                 SwiftFulcrum.ProtocolVersion.self,
-                from: Data(#""1.a""#.utf8)
+                from: Data("\"\(version)\"".utf8)
             )
         }
     }

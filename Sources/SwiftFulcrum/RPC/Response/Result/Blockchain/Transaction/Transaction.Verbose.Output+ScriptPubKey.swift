@@ -10,7 +10,8 @@ extension SwiftFulcrum.Response.Blockchain.Transaction.Verbose.Output {
         public let requiredSignatures: UInt
         public let type: String
 
-        init(from payloadModel: SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Transaction.Get.Detailed.Output.ScriptPubKey) {
+        init(from payloadModel: SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Transaction.Get.Detailed.Output.ScriptPubKey) throws {
+            try SwiftFulcrum.Response.Blockchain.validateHexString(payloadModel.hex, description: "scriptPubKey hex")
             if let addresses = payloadModel.addresses {
                 self.addresses = addresses
             } else if let address = payloadModel.address {

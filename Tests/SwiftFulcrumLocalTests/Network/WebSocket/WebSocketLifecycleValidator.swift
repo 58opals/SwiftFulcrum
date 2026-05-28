@@ -55,6 +55,6 @@ extension WebSocketLifecycleValidator {
             group.cancelAll()
         }
         
-        return await collector.snapshot()
+        return await collector.makeSnapshot()
     }
 }

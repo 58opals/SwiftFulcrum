@@ -15,7 +15,7 @@ extension SwiftFulcrum.Client.Error: Equatable, Sendable {}
 
 extension SwiftFulcrum.Client.Error {
     static func wrappedErrorsAreEqual(_ lhs: Swift.Error?, _ rhs: Swift.Error?) -> Bool {
-        switch (wrappedErrorIdentity(lhs), wrappedErrorIdentity(rhs)) {
+        switch (makeWrappedErrorIdentity(lhs), makeWrappedErrorIdentity(rhs)) {
         case (nil, nil):
             return true
         case let ((leftType, leftDomain, leftCode)?, (rightType, rightDomain, rightCode)?):
@@ -27,7 +27,7 @@ extension SwiftFulcrum.Client.Error {
         }
     }
 
-    static func wrappedErrorIdentity(_ error: Swift.Error?) -> (String, String, Int)? {
+    static func makeWrappedErrorIdentity(_ error: Swift.Error?) -> (String, String, Int)? {
         guard let error else { return nil }
 
         let nsError = error as NSError

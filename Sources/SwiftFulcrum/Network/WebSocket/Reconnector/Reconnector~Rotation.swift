@@ -39,7 +39,7 @@ extension WebSocketConnection.Reconnector {
         return rotation
     }
 
-    func indexOfServer(_ url: URL) -> Int? {
+    func findIndexOfServer(_ url: URL) -> Int? {
         let key = Self.canonicalize(url)
         return serverCatalog.firstIndex { Self.canonicalize($0) == key }
     }

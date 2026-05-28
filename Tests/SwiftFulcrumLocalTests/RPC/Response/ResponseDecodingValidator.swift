@@ -244,6 +244,13 @@ struct ResponseDecodingValidator {
         ])
     }
 
+    @Test("Rejects server.features with malformed genesis hashes")
+    func rejectServerFeaturesWithMalformedGenesisHashes() throws {
+        try expectServerFeaturesDecodeFailure([
+            "genesis_hash": String(repeating: "g", count: 64)
+        ])
+    }
+
     @Test("Rejects server.features host ports outside the valid range")
     func rejectServerFeaturesHostPortsOutsideValidRange() throws {
         try expectServerFeaturesDecodeFailure([
@@ -389,15 +396,30 @@ struct ResponseDecodingValidator {
         )
         #expect(subscribe.height == nil)
 
+        let transactionHash = String(repeating: "a", count: 64)
         let notificationPayload = try makeJSONData(
-            ["jsonrpc": "2.0", "method": "blockchain.transaction.subscribe", "params": ["abc123", NSNull()]]
+            ["jsonrpc": "2.0", "method": "blockchain.transaction.subscribe", "params": [transactionHash, NSNull()]]
         )
         let notification = try notificationPayload.decode(
             SwiftFulcrum.Response.Blockchain.Transaction.SubscribeNotification.self,
             context: .init(methodPath: "blockchain.transaction.subscribe")
         )
-        #expect(notification.transactionHash == "abc123")
+        #expect(notification.transactionHash == transactionHash)
         #expect(notification.height == nil)
+    }
+
+    @Test("Rejects malformed transaction subscribe notification hashes")
+    func rejectMalformedTransactionSubscribeNotificationHashes() throws {
+        let payload = try makeJSONData(
+            ["jsonrpc": "2.0", "method": "blockchain.transaction.subscribe", "params": ["abc123", NSNull()]]
+        )
+
+        #expect(throws: ResponseResultDecodeError.self) {
+            _ = try payload.decode(
+                SwiftFulcrum.Response.Blockchain.Transaction.SubscribeNotification.self,
+                context: .init(methodPath: "blockchain.transaction.subscribe")
+            )
+        }
     }
 
     @Test("Rejects malformed confirmed block hash payloads")
@@ -662,36 +684,73 @@ struct ResponseDecodingValidator {
         )
         #expect(subscribe.proof == nil)
 
+        let transactionHash = String(repeating: "d", count: 64)
         let notificationPayload = try makeJSONData(
             [
                 "jsonrpc": "2.0",
                 "method": "blockchain.transaction.dsproof.subscribe",
-                "params": ["abc123", NSNull()]
+                "params": [transactionHash, NSNull()]
             ]
         )
         let notification = try notificationPayload.decode(
             SwiftFulcrum.Response.Blockchain.Transaction.DSProof.SubscribeNotification.self,
             context: .init(methodPath: "blockchain.transaction.dsproof.subscribe")
         )
-        #expect(notification.transactionHash == "abc123")
+        #expect(notification.transactionHash == transactionHash)
         #expect(notification.proof == nil)
     }
 
-    @Test("Rejects reversed DSProof subscribe notification payloads")
-    func rejectReversedDSProofSubscribeNotificationPayload() throws {
+    @Test("Rejects malformed DSProof subscribe notification hashes")
+    func rejectMalformedDSProofSubscribeNotificationHashes() throws {
+        let payload = try makeJSONData(
+            [
+                "jsonrpc": "2.0",
+                "method": "blockchain.transaction.dsproof.subscribe",
+                "params": ["abc123", NSNull()]
+            ]
+        )
+
+        #expect(throws: ResponseResultDecodeError.self) {
+            _ = try payload.decode(
+                SwiftFulcrum.Response.Blockchain.Transaction.DSProof.SubscribeNotification.self,
+                context: .init(methodPath: "blockchain.transaction.dsproof.subscribe")
+            )
+        }
+    }
+
+    @Test("Rejects mismatched DSProof subscribe notification proof hashes")
+    func rejectMismatchedDSProofSubscribeNotificationProofHashes() throws {
+        let routeTransactionHash = String(repeating: "1", count: 64)
+        let proofTransactionHash = String(repeating: "2", count: 64)
         let payload = try makeJSONData(
             [
                 "jsonrpc": "2.0",
                 "method": "blockchain.transaction.dsproof.subscribe",
                 "params": [
-                    [
-                        "dspid": "proof-id",
-                        "txid": "abc123",
-                        "hex": "00",
-                        "outpoint": ["txid": "prev", "vout": 1],
-                        "descendants": []
-                    ],
-                    "abc123"
+                    routeTransactionHash,
+                    makeDSProofResult(transactionHash: proofTransactionHash)
+                ]
+            ]
+        )
+
+        #expect(throws: ResponseResultDecodeError.self) {
+            _ = try payload.decode(
+                SwiftFulcrum.Response.Blockchain.Transaction.DSProof.SubscribeNotification.self,
+                context: .init(methodPath: "blockchain.transaction.dsproof.subscribe")
+            )
+        }
+    }
+
+    @Test("Rejects reversed DSProof subscribe notification payloads")
+    func rejectReversedDSProofSubscribeNotificationPayload() throws {
+        let transactionHash = String(repeating: "f", count: 64)
+        let payload = try makeJSONData(
+            [
+                "jsonrpc": "2.0",
+                "method": "blockchain.transaction.dsproof.subscribe",
+                "params": [
+                    makeDSProofResult(transactionHash: transactionHash),
+                    transactionHash
                 ]
             ]
         )
@@ -706,13 +765,8 @@ struct ResponseDecodingValidator {
 
     @Test("Decodes routeable DSProof notification proof-only payloads")
     func decodeRouteableDSProofNotificationProofOnlyPayload() throws {
-        let proof: [String: Any] = [
-            "dspid": "proof-id",
-            "txid": "abc123",
-            "hex": "00",
-            "outpoint": ["txid": "prev", "vout": 1],
-            "descendants": []
-        ]
+        let proofTransactionHash = String(repeating: "e", count: 64)
+        let proof = makeDSProofResult(transactionHash: proofTransactionHash)
         let payload = try makeJSONData(
             [
                 "jsonrpc": "2.0",
@@ -725,16 +779,97 @@ struct ResponseDecodingValidator {
             FulcrumNetworkClient.makeSubscriptionIdentifier(
                 methodPath: "blockchain.transaction.dsproof.subscribe",
                 data: payload
-            ) == "abc123"
+            ) == proofTransactionHash
         )
 
         let notification = try payload.decode(
             SwiftFulcrum.Response.Blockchain.Transaction.DSProof.SubscribeNotification.self,
             context: .init(methodPath: "blockchain.transaction.dsproof.subscribe")
         )
-        #expect(notification.subscriptionIdentifier == "abc123")
-        #expect(notification.transactionHash == "abc123")
-        #expect(notification.proof?.transactionID == "abc123")
+        #expect(notification.subscriptionIdentifier == proofTransactionHash)
+        #expect(notification.transactionHash == proofTransactionHash)
+        #expect(notification.proof?.transactionID == proofTransactionHash)
+    }
+
+    @Test("Rejects DSProof lookup payloads with malformed transaction hashes")
+    func rejectDSProofLookupPayloadsWithMalformedTransactionHashes() throws {
+        let payload = try makeJSONData(
+            [
+                "jsonrpc": "2.0",
+                "id": UUID().uuidString,
+                "result": makeDSProofResult(transactionHash: "abc123")
+            ]
+        )
+
+        #expect(throws: ResponseResultDecodeError.self) {
+            _ = try payload.decode(
+                SwiftFulcrum.Response.Blockchain.Transaction.DSProof.Lookup.self,
+                context: .init(methodPath: "blockchain.transaction.dsproof.get")
+            )
+        }
+    }
+
+    @Test("Rejects DSProof lookup payloads with malformed outpoint hashes")
+    func rejectDSProofLookupPayloadsWithMalformedOutpointHashes() throws {
+        let payload = try makeJSONData(
+            [
+                "jsonrpc": "2.0",
+                "id": UUID().uuidString,
+                "result": makeDSProofResult(
+                    transactionHash: String(repeating: "a", count: 64),
+                    outpointTransactionHash: "prev"
+                )
+            ]
+        )
+
+        #expect(throws: ResponseResultDecodeError.self) {
+            _ = try payload.decode(
+                SwiftFulcrum.Response.Blockchain.Transaction.DSProof.Lookup.self,
+                context: .init(methodPath: "blockchain.transaction.dsproof.get")
+            )
+        }
+    }
+
+    @Test("Rejects DSProof lookup payloads with malformed descendant hashes")
+    func rejectDSProofLookupPayloadsWithMalformedDescendantHashes() throws {
+        let payload = try makeJSONData(
+            [
+                "jsonrpc": "2.0",
+                "id": UUID().uuidString,
+                "result": makeDSProofResult(
+                    transactionHash: String(repeating: "a", count: 64),
+                    descendants: ["child"]
+                )
+            ]
+        )
+
+        #expect(throws: ResponseResultDecodeError.self) {
+            _ = try payload.decode(
+                SwiftFulcrum.Response.Blockchain.Transaction.DSProof.Lookup.self,
+                context: .init(methodPath: "blockchain.transaction.dsproof.get")
+            )
+        }
+    }
+
+    @Test("Rejects DSProof lookup payloads with malformed proof hex")
+    func rejectDSProofLookupPayloadsWithMalformedProofHex() throws {
+        let payload = try makeJSONData(
+            [
+                "jsonrpc": "2.0",
+                "id": UUID().uuidString,
+                "result": makeDSProofResult(
+                    transactionHash: String(repeating: "a", count: 64),
+                    hex: "zz"
+                )
+            ]
+        )
+
+        #expect(throws: ResponseResultDecodeError.self) {
+            _ = try payload.decode(
+                SwiftFulcrum.Response.Blockchain.Transaction.DSProof.Lookup.self,
+                context: .init(methodPath: "blockchain.transaction.dsproof.get")
+            )
+        }
     }
 
     @Test("Decodes headers/address/transaction/dsproof notifications")
@@ -759,29 +894,25 @@ struct ResponseDecodingValidator {
         #expect(addressUpdate.subscriptionIdentifier == "bitcoincash:qtest")
         #expect(addressUpdate.status == "status")
 
+        let transactionHash = String(repeating: "c", count: 64)
         let transactionPayload = try makeJSONData(
-            ["jsonrpc": "2.0", "method": "blockchain.transaction.subscribe", "params": ["abc123", 42]]
+            ["jsonrpc": "2.0", "method": "blockchain.transaction.subscribe", "params": [transactionHash, 42]]
         )
         let transactionUpdate = try transactionPayload.decode(
             SwiftFulcrum.Response.Blockchain.Transaction.SubscribeNotification.self,
             context: .init(methodPath: "blockchain.transaction.subscribe")
         )
-        #expect(transactionUpdate.subscriptionIdentifier == "abc123")
+        #expect(transactionUpdate.subscriptionIdentifier == transactionHash)
         #expect(transactionUpdate.height == 42)
 
+        let dsProofTransactionHash = String(repeating: "d", count: 64)
         let dsProofPayload = try makeJSONData(
             [
                 "jsonrpc": "2.0",
                 "method": "blockchain.transaction.dsproof.subscribe",
                 "params": [
-                    "abc123",
-                    [
-                        "dspid": "proof-id",
-                        "txid": "abc123",
-                        "hex": "00",
-                        "outpoint": ["txid": "prev", "vout": 1],
-                        "descendants": []
-                    ]
+                    dsProofTransactionHash,
+                    makeDSProofResult(transactionHash: dsProofTransactionHash)
                 ]
             ]
         )
@@ -789,8 +920,8 @@ struct ResponseDecodingValidator {
             SwiftFulcrum.Response.Blockchain.Transaction.DSProof.SubscribeNotification.self,
             context: .init(methodPath: "blockchain.transaction.dsproof.subscribe")
         )
-        #expect(dsProofUpdate.subscriptionIdentifier == "abc123")
-        #expect(dsProofUpdate.proof?.transactionID == "abc123")
+        #expect(dsProofUpdate.subscriptionIdentifier == dsProofTransactionHash)
+        #expect(dsProofUpdate.proof?.transactionID == dsProofTransactionHash)
     }
 
     @Test("Rejects malformed headers subscription notifications with invalid header widths")
@@ -1148,6 +1279,81 @@ struct ResponseDecodingValidator {
         #expect(transaction.outputs.count == 1)
     }
 
+    @Test("Rejects verbose transaction payloads with malformed hashes")
+    func rejectVerboseTransactionPayloadsWithMalformedHashes() throws {
+        let malformedTopLevelPayload = try makeVerboseTransactionPayload(
+            resultOverrides: ["hash": "transaction"]
+        )
+
+        try expectVerboseTransactionDecodeFailure(malformedTopLevelPayload)
+
+        let malformedInputPayload = try makeVerboseTransactionPayload(
+            resultOverrides: [
+                "vin": [
+                    makeVerboseTransactionInput(
+                        transactionHash: "5bb9142c960a838329694d3fe9ba08c2a6421c5158d8f7044cb7c48006c1b48"
+                    )
+                ]
+            ]
+        )
+
+        try expectVerboseTransactionDecodeFailure(malformedInputPayload)
+    }
+
+    @Test(
+        "Rejects verbose transaction payloads with malformed transaction hex",
+        arguments: ["0100000z", "0100000"]
+    )
+    func rejectVerboseTransactionPayloadsWithMalformedTransactionHex(_ hex: String) throws {
+        let payload = try makeVerboseTransactionPayload(
+            resultOverrides: ["hex": hex]
+        )
+
+        try expectVerboseTransactionDecodeFailure(payload)
+    }
+
+    @Test(
+        "Rejects verbose transaction inputs with malformed scriptSig hex",
+        arguments: ["160014zz", "160014d"]
+    )
+    func rejectVerboseTransactionInputsWithMalformedScriptSigHex(_ scriptSigHex: String) throws {
+        let payload = try makeVerboseTransactionPayload(
+            resultOverrides: [
+                "vin": [
+                    makeVerboseTransactionInput(scriptSigHex: scriptSigHex)
+                ]
+            ]
+        )
+
+        try expectVerboseTransactionDecodeFailure(payload)
+    }
+
+    @Test("Rejects verbose transaction outputs with malformed scriptPubKey hex")
+    func rejectVerboseTransactionOutputsWithMalformedScriptPubKeyHex() throws {
+        let payload = try makeVerboseTransactionPayload(
+            resultOverrides: [
+                "vout": [
+                    makeVerboseTransactionOutput(scriptPubKeyHex: "76a914zz")
+                ]
+            ]
+        )
+
+        try expectVerboseTransactionDecodeFailure(payload)
+    }
+
+    @Test("Rejects verbose transaction outputs with negative values")
+    func rejectVerboseTransactionOutputsWithNegativeValues() throws {
+        let payload = try makeVerboseTransactionPayload(
+            resultOverrides: [
+                "vout": [
+                    makeVerboseTransactionOutput(value: -0.01)
+                ]
+            ]
+        )
+
+        try expectVerboseTransactionDecodeFailure(payload)
+    }
+
     @Test("Decodes verbose coinbase transactions without spend-input fields")
     func decodeVerboseCoinbaseTransaction() throws {
         let payload = try makeJSONData(
@@ -1396,6 +1602,15 @@ struct ResponseDecodingValidator {
         }
     }
 
+    private func expectVerboseTransactionDecodeFailure(_ payload: Data) throws {
+        #expect(throws: ResponseResultDecodeError.self) {
+            _ = try payload.decode(
+                SwiftFulcrum.Response.Blockchain.Transaction.Verbose.self,
+                context: .init(methodPath: "blockchain.transaction.get")
+            )
+        }
+    }
+
     private func makeServerFeaturesResult(_ overrides: [String: Any] = [:]) -> [String: Any] {
         var result: [String: Any] = [
             "genesis_hash": String(repeating: "0", count: 64),
@@ -1410,5 +1625,74 @@ struct ResponseDecodingValidator {
         }
 
         return result
+    }
+
+    private func makeDSProofResult(
+        transactionHash: String,
+        hex: String = "00",
+        outpointTransactionHash: String = String(repeating: "0", count: 64),
+        descendants: [String] = []
+    ) -> [String: Any] {
+        [
+            "dspid": "proof-id",
+            "txid": transactionHash,
+            "hex": hex,
+            "outpoint": ["txid": outpointTransactionHash, "vout": 1],
+            "descendants": descendants
+        ]
+    }
+
+    private func makeVerboseTransactionPayload(resultOverrides: [String: Any] = [:]) throws -> Data {
+        let transactionHash = "36a3692a41a8ac60b73f7f41ee23f5c917413e5b2fad9e44b34865bd0d601a3d"
+        var result: [String: Any] = [
+            "hash": transactionHash,
+            "hex": "01000000",
+            "locktime": 0,
+            "size": 225,
+            "txid": transactionHash,
+            "version": 1,
+            "vin": [],
+            "vout": []
+        ]
+
+        for (key, value) in resultOverrides {
+            result[key] = value
+        }
+
+        return try makeJSONData([
+            "jsonrpc": "2.0",
+            "id": UUID().uuidString,
+            "result": result
+        ])
+    }
+
+    private func makeVerboseTransactionInput(
+        transactionHash: String = "5bb9142c960a838329694d3fe9ba08c2a6421c5158d8f7044cb7c48006c1b484",
+        scriptSigHex: String = "160014deadbeef"
+    ) -> [String: Any] {
+        [
+            "scriptSig": [
+                "asm": "0014deadbeef",
+                "hex": scriptSigHex
+            ],
+            "sequence": 4_294_967_295,
+            "txid": transactionHash,
+            "vout": 0
+        ]
+    }
+
+    private func makeVerboseTransactionOutput(
+        scriptPubKeyHex: String = "76a914deadbeef88ac",
+        value: Double = 1.25
+    ) -> [String: Any] {
+        [
+            "n": 0,
+            "scriptPubKey": [
+                "asm": "OP_DUP OP_HASH160 deadbeef OP_EQUALVERIFY OP_CHECKSIG",
+                "hex": scriptPubKeyHex,
+                "type": "pubkeyhash"
+            ],
+            "value": value
+        ]
     }
 }

@@ -15,28 +15,41 @@ extension SwiftFulcrum.Response.Blockchain.Transaction.DSProof {
                 if pairs.count == 2,
                    case .transactionHash(let hash) = pairs[0],
                    case .dsProof(let proofValue) = pairs[1] {
-                    self.subscriptionIdentifier = hash
-                    self.transactionHash = hash
-                    self.proof = proofValue.map { Lookup(from: $0) }
+                    try SwiftFulcrum.Response.Blockchain.validateTransactionHash(hash)
+                    let proof = try proofValue.map { try Lookup(from: $0) }
+                    if let proofTransactionHash = proof?.transactionID, proofTransactionHash != hash {
+                        throw ResponseResultDecodeError.unexpectedFormat(
+                            "Expected DSProof notification hash to match proof transaction hash"
+                        )
+                    }
+                    self.init(transactionHash: hash, proof: proof)
                 } else if pairs.count == 1,
                           case .dsProof(let proofValue?) = pairs[0] {
-                    self.subscriptionIdentifier = proofValue.txid
-                    self.transactionHash = proofValue.txid
-                    self.proof = Lookup(from: proofValue)
+                    try self.init(proofValue: proofValue)
                 } else {
                     throw ResponseResultDecodeError.unexpectedFormat(
                         "Expected DSProof notification payload to contain [txHash, dsProof]; got \(pairs.count) values"
                     )
                 }
             case .dsProof(let proof?):
-                self.subscriptionIdentifier = proof.txid
-                self.transactionHash = proof.txid
-                self.proof = Lookup(from: proof)
+                try self.init(proofValue: proof)
             case .dsProof(let proof):
                 throw ResponseResultDecodeError.unexpectedFormat(
                     "Expected [txHash, dsProof] for DSProof notification; got proof only: \(String(describing: proof))"
                 )
             }
+        }
+
+        private init(
+            proofValue: SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Transaction.DSProof.Get
+        ) throws {
+            self.init(transactionHash: proofValue.txid, proof: try Lookup(from: proofValue))
+        }
+
+        private init(transactionHash: String, proof: Lookup?) {
+            self.subscriptionIdentifier = transactionHash
+            self.transactionHash = transactionHash
+            self.proof = proof
         }
     }
 }

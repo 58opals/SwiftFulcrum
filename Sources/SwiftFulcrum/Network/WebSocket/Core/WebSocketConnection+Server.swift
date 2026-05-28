@@ -46,6 +46,7 @@ extension WebSocketConnection {
                 ))
             }
             
+            try validateNoUserInfo(in: rawComponents, codingPath: codingPath)
             var components = rawComponents
             components.scheme = try normalizeScheme(from: rawComponents.scheme, codingPath: codingPath)
             
@@ -81,6 +82,15 @@ extension WebSocketConnection {
             }
             
             return url
+        }
+
+        private static func validateNoUserInfo(in components: URLComponents, codingPath: [CodingKey]) throws {
+            guard components.user == nil, components.password == nil else {
+                throw DecodingError.dataCorrupted(.init(
+                    codingPath: codingPath,
+                    debugDescription: "Server URL must not contain user info."
+                ))
+            }
         }
 
         private static func validatePort(_ port: Int?, codingPath: [CodingKey]) throws -> Int? {

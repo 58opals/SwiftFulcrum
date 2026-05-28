@@ -17,7 +17,7 @@ extension FulcrumClientLifecycleValidator {
             return states.count >= targetCount
         }
 
-        func snapshot() -> [SwiftFulcrum.Client.ConnectionState] {
+        func makeSnapshot() -> [SwiftFulcrum.Client.ConnectionState] {
             states
         }
     }

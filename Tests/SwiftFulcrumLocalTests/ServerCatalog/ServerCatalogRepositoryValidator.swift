@@ -37,54 +37,44 @@ struct ServerCatalogRepositoryValidator {
         #expect(chipnetServers.contains { $0.host == "chipnet.imaginary.cash" })
     }
 
-    @Test("Rejects hostless string catalog URLs")
-    func rejectHostlessStringCatalogURLs() throws {
-        let data = Data(#""wss:missing-host.example""#.utf8)
+    @Test(
+        "Rejects malformed string catalog URLs",
+        arguments: [
+            #""wss:missing-host.example""#,
+            #""wss://%20""#,
+            #""wss://fulcrum.example:0""#,
+            #""wss://user:pass@fulcrum.example""#
+        ]
+    )
+    func rejectMalformedStringCatalogURLs(_ json: String) throws {
+        let data = Data(json.utf8)
 
         #expect(throws: DecodingError.self) {
             _ = try JSONRPCCodec.Coder.decoder.decode(WebSocketConnection.Server.self, from: data)
         }
     }
 
-    @Test("Rejects whitespace-only string catalog URL hosts")
-    func rejectWhitespaceOnlyStringCatalogURLHost() throws {
-        let data = Data(#""wss://%20""#.utf8)
+    @Test(
+        "Rejects object catalog URLs with invalid ports",
+        arguments: [-1, 0, 65_536]
+    )
+    func rejectObjectCatalogURLsWithInvalidPorts(_ port: Int) throws {
+        let data = Data(#"{"host":"fulcrum.example","port":\#(port)}"#.utf8)
 
         #expect(throws: DecodingError.self) {
             _ = try JSONRPCCodec.Coder.decoder.decode(WebSocketConnection.Server.self, from: data)
         }
     }
 
-    @Test("Rejects object catalog URLs with invalid ports")
-    func rejectObjectCatalogURLInvalidPort() throws {
-        let data = Data(#"{"host":"fulcrum.example","port":-1}"#.utf8)
-
-        #expect(throws: DecodingError.self) {
-            _ = try JSONRPCCodec.Coder.decoder.decode(WebSocketConnection.Server.self, from: data)
-        }
-    }
-
-    @Test("Rejects string catalog URLs with invalid ports")
-    func rejectStringCatalogURLInvalidPort() throws {
-        let data = Data(#""wss://fulcrum.example:0""#.utf8)
-
-        #expect(throws: DecodingError.self) {
-            _ = try JSONRPCCodec.Coder.decoder.decode(WebSocketConnection.Server.self, from: data)
-        }
-    }
-
-    @Test("Normalizes object catalog schemes with surrounding whitespace")
-    func normalizeObjectCatalogSchemeWhitespace() throws {
-        let data = Data(#"{"host":"fulcrum.example","scheme":" WSS "}"#.utf8)
-
-        let server = try JSONRPCCodec.Coder.decoder.decode(WebSocketConnection.Server.self, from: data)
-
-        #expect(server.url.absoluteString == "wss://fulcrum.example")
-    }
-
-    @Test("Normalizes string catalog URLs with surrounding whitespace")
-    func normalizeStringCatalogURLWhitespace() throws {
-        let data = Data(#""  wss://fulcrum.example  ""#.utf8)
+    @Test(
+        "Normalizes catalog URLs with surrounding whitespace",
+        arguments: [
+            #"{"host":"fulcrum.example","scheme":" WSS "}"#,
+            #""  wss://fulcrum.example  ""#
+        ]
+    )
+    func normalizeCatalogURLWhitespace(_ json: String) throws {
+        let data = Data(json.utf8)
 
         let server = try JSONRPCCodec.Coder.decoder.decode(WebSocketConnection.Server.self, from: data)
 
@@ -146,18 +136,8 @@ struct ServerCatalogRepositoryValidator {
             URL(string: "ftp://invalid.fulcrum.example")!
         ])
         
-        do {
+        await #expect(throws: SwiftFulcrum.Client.Error.transport(.setupFailed)) {
             _ = try await loader.loadServers(for: .mainnet, fallback: .init())
-            Issue.record("Expected constant catalog loader to throw when no valid servers are available")
-        } catch let error as SwiftFulcrum.Client.Error {
-            switch error {
-            case .transport(.setupFailed):
-                break
-            default:
-                Issue.record("Unexpected SwiftFulcrum.Client.Error: \(error)")
-            }
-        } catch {
-            Issue.record("Unexpected error type: \(error)")
         }
     }
 
@@ -168,18 +148,8 @@ struct ServerCatalogRepositoryValidator {
             try await fallbackLoader.load(.init())
         }
 
-        do {
+        await #expect(throws: SwiftFulcrum.Client.Error.transport(.setupFailed)) {
             _ = try await loader.loadServers(for: .mainnet, fallback: .init())
-            Issue.record("Expected loader to throw when no servers are available")
-        } catch let error as SwiftFulcrum.Client.Error {
-            switch error {
-            case .transport(.setupFailed):
-                break
-            default:
-                Issue.record("Unexpected SwiftFulcrum.Client.Error: \(error)")
-            }
-        } catch {
-            Issue.record("Unexpected error type: \(error)")
         }
     }
 

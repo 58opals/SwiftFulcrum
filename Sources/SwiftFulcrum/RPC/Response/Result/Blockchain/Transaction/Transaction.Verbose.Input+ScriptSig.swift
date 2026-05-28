@@ -7,7 +7,8 @@ extension SwiftFulcrum.Response.Blockchain.Transaction.Verbose.Input {
         public let assemblyScriptLanguage: String
         public let hex: String
 
-        init(from payloadModel: SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Transaction.Get.Detailed.Input.ScriptSig) {
+        init(from payloadModel: SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Transaction.Get.Detailed.Input.ScriptSig) throws {
+            try SwiftFulcrum.Response.Blockchain.validateHexString(payloadModel.hex, description: "scriptSig hex")
             self.assemblyScriptLanguage = payloadModel.asm
             self.hex = payloadModel.hex
         }

@@ -24,38 +24,24 @@ struct ProtocolNegotiationConfigurationValidator {
     func throwForInvalidRanges() throws {
         let minimumVersion = try #require(SwiftFulcrum.ProtocolVersion(string: "1.6.0"))
         let maximumVersion = try #require(SwiftFulcrum.ProtocolVersion(string: "1.4.0"))
-        
-        do {
+        let expectedError = SwiftFulcrum.Client.Error.client(
+            .invalidProtocolNegotiationRange(
+                minimumVersion: minimumVersion,
+                maximumVersion: maximumVersion
+            )
+        )
+
+        #expect(throws: expectedError) {
             _ = try SwiftFulcrum.Client.Configuration.ProtocolNegotiation(
                 minimumVersion: minimumVersion,
                 maximumVersion: maximumVersion
             )
-            Issue.record("Expected protocol negotiation initialization to throw for an invalid range")
-        } catch let error as SwiftFulcrum.Client.Error {
-            #expect(
-                error == .client(
-                    .invalidProtocolNegotiationRange(
-                        minimumVersion: minimumVersion,
-                        maximumVersion: maximumVersion
-                    )
-                )
-            )
         }
-        
-        do {
+
+        #expect(throws: expectedError) {
             _ = try SwiftFulcrum.Client.Configuration.ProtocolNegotiation.Argument(
                 minimumVersion: minimumVersion,
                 maximumVersion: maximumVersion
-            )
-            Issue.record("Expected argument initializer to throw for an invalid range")
-        } catch let error as SwiftFulcrum.Client.Error {
-            #expect(
-                error == .client(
-                    .invalidProtocolNegotiationRange(
-                        minimumVersion: minimumVersion,
-                        maximumVersion: maximumVersion
-                    )
-                )
             )
         }
     }

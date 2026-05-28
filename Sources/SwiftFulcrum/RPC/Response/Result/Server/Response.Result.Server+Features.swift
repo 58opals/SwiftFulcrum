@@ -19,7 +19,8 @@ extension SwiftFulcrum.Response.Server {
         public init(from decoder: Decoder) throws {
             let payloadModel = try SwiftFulcrum.RPC.Response.JSONRPC.Result.Server.Features(from: decoder)
             let protocolVersions = try Self.makeProtocolVersions(from: payloadModel)
-            try Self.validate(payloadModel.pruning, field: "pruning", range: 0 ... Int.max)
+            try SwiftFulcrum.Response.Blockchain.validateBlockHash(payloadModel.genesis_hash)
+            try Self.validateNonNegative(payloadModel.pruning, field: "pruning")
 
             self.genesisHash = payloadModel.genesis_hash
             self.hashFunction = payloadModel.hash_function

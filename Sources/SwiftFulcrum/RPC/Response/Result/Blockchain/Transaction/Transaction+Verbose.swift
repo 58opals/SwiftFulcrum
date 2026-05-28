@@ -23,6 +23,12 @@ extension SwiftFulcrum.Response.Blockchain.Transaction {
             case .raw(let raw):
                 throw ResponseResultDecodeError.unexpectedFormat("Expected detailed transaction information; received raw hex string: \(raw)")
             case .detailed(let detailed):
+                if let blockHash = detailed.blockhash {
+                    try SwiftFulcrum.Response.Blockchain.validateBlockHash(blockHash)
+                }
+                try SwiftFulcrum.Response.Blockchain.validateTransactionHash(detailed.hash)
+                try SwiftFulcrum.Response.Blockchain.validateTransactionHash(detailed.txid)
+                try SwiftFulcrum.Response.Blockchain.validateHexString(detailed.hex, description: "transaction hex")
                 self.blockHash = detailed.blockhash
                 self.blocktime = detailed.blocktime
                 self.confirmations = detailed.confirmations
@@ -33,8 +39,8 @@ extension SwiftFulcrum.Response.Blockchain.Transaction {
                 self.time = detailed.time
                 self.transactionID = detailed.txid
                 self.version = detailed.version
-                self.inputs = detailed.vin.map(Input.init(from:))
-                self.outputs = detailed.vout.map(Output.init(from:))
+                self.inputs = try detailed.vin.map { try Input(from: $0) }
+                self.outputs = try detailed.vout.map { try Output(from: $0) }
             }
         }
     }

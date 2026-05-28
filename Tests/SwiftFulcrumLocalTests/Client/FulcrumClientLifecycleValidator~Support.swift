@@ -16,7 +16,7 @@ extension FulcrumClientLifecycleValidator {
         let startTask = Task { try await fulcrum.start() }
 
         let versionObject = try await decodeRequestObject(await transport.dequeueOutgoing())
-        let versionIdentifier = try requestIdentifier(from: versionObject)
+        let versionIdentifier = try extractRequestIdentifier(from: versionObject)
         let versionPayload = try TransportTestActor.encodeResponsePayload(
             identifier: versionIdentifier,
             result: ["SwiftFulcrum.Client 2.0", "1.5.3"]
@@ -24,7 +24,7 @@ extension FulcrumClientLifecycleValidator {
         await transport.enqueueIncoming(.data(versionPayload))
 
         let featuresObject = try await decodeRequestObject(await transport.dequeueOutgoing())
-        let featuresIdentifier = try requestIdentifier(from: featuresObject)
+        let featuresIdentifier = try extractRequestIdentifier(from: featuresObject)
         let featuresPayload = try TransportTestActor.encodeResponsePayload(
             identifier: featuresIdentifier,
             result: [
@@ -43,7 +43,7 @@ extension FulcrumClientLifecycleValidator {
         try TransportTestActor.decodeJSONObject(from: message)
     }
 
-    func requestIdentifier(from object: [String: Any]) throws -> String {
+    func extractRequestIdentifier(from object: [String: Any]) throws -> String {
         guard let identifier = object["id"] as? String else {
             throw SupportError.missingRequestIdentifier
         }
@@ -105,7 +105,7 @@ extension FulcrumClientLifecycleValidator {
             group.cancelAll()
         }
 
-        return await collector.snapshot()
+        return await collector.makeSnapshot()
     }
     
     func detectConnectionStateStreamTermination(

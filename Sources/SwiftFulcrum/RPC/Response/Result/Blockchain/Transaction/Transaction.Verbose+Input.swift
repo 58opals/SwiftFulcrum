@@ -12,9 +12,12 @@ extension SwiftFulcrum.Response.Blockchain.Transaction.Verbose {
 
         public var isCoinbase: Bool { coinbase != nil }
 
-        init(from payloadModel: SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Transaction.Get.Detailed.Input) {
+        init(from payloadModel: SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Transaction.Get.Detailed.Input) throws {
+            if let transactionID = payloadModel.txid {
+                try SwiftFulcrum.Response.Blockchain.validateTransactionHash(transactionID)
+            }
             self.coinbase = payloadModel.coinbase
-            self.scriptSig = payloadModel.scriptSig.map(ScriptSig.init(from:))
+            self.scriptSig = try payloadModel.scriptSig.map { try ScriptSig(from: $0) }
             self.sequence = payloadModel.sequence
             self.transactionID = payloadModel.txid
             self.indexNumberOfPreviousTransactionOutput = payloadModel.vout

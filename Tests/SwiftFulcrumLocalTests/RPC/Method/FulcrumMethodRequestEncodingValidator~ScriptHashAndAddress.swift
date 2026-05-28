@@ -87,7 +87,7 @@ extension FulcrumMethodRequestEncodingValidator {
 
 private extension FulcrumMethodRequestEncodingValidator {
     func assertHistoryDefaultUpperBound(for method: SwiftFulcrum.RPC.Method, identifier: String) throws {
-        let parameters = try parameters(for: method)
+        let parameters = try makeParameters(for: method)
         #expect(parameters.count == 3)
         #expect(parameters[0] as? String == identifier)
         #expect((parameters[1] as? NSNumber)?.uint64Value == 0)

@@ -12,14 +12,6 @@ extension SwiftFulcrum.RPC.Response.JSONRPC.Result.Mempool {
                 self.value = double
                 return
             }
-            if let int = try? container.decode(Int.self) {
-                self.value = Double(int)
-                return
-            }
-            if let uint = try? container.decode(UInt.self) {
-                self.value = Double(uint)
-                return
-            }
             if let string = try? container.decode(String.self), let double = Double(string) {
                 self.value = double
                 return

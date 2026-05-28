@@ -38,7 +38,7 @@ extension FulcrumClientLifecycleValidator {
         }
 
         let initialSubscribeRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
-        let initialSubscribeIdentifier = try requestIdentifier(from: initialSubscribeRequest)
+        let initialSubscribeIdentifier = try extractRequestIdentifier(from: initialSubscribeRequest)
         let initialSubscribePayload = try TransportTestActor.encodeResponsePayload(
             identifier: initialSubscribeIdentifier,
             result: ["height": 940_000, "hex": String(repeating: "f", count: 160)]
@@ -54,7 +54,7 @@ extension FulcrumClientLifecycleValidator {
 
         let versionRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
         #expect(versionRequest["method"] as? String == "server.version")
-        let versionIdentifier = try requestIdentifier(from: versionRequest)
+        let versionIdentifier = try extractRequestIdentifier(from: versionRequest)
         let versionPayload = try TransportTestActor.encodeResponsePayload(
             identifier: versionIdentifier,
             result: ["SwiftFulcrum.Client 2.0", "1.5.3"]
@@ -63,7 +63,7 @@ extension FulcrumClientLifecycleValidator {
 
         let featuresRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
         #expect(featuresRequest["method"] as? String == "server.features")
-        let featuresIdentifier = try requestIdentifier(from: featuresRequest)
+        let featuresIdentifier = try extractRequestIdentifier(from: featuresRequest)
         let featuresPayload = try TransportTestActor.encodeResponsePayload(
             identifier: featuresIdentifier,
             result: [
@@ -87,7 +87,7 @@ extension FulcrumClientLifecycleValidator {
 
         let reconnectResubscribeRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
         #expect(reconnectResubscribeRequest["method"] as? String == subscribeMethod.path)
-        let reconnectResubscribeIdentifier = try requestIdentifier(from: reconnectResubscribeRequest)
+        let reconnectResubscribeIdentifier = try extractRequestIdentifier(from: reconnectResubscribeRequest)
         let reconnectResubscribePayload = try TransportTestActor.encodeResponsePayload(
             identifier: reconnectResubscribeIdentifier,
             result: ["height": 940_000, "hex": String(repeating: "f", count: 160)]
@@ -125,7 +125,7 @@ extension FulcrumClientLifecycleValidator {
             }
         }
         let replacementSubscribeRequest = try #require(pendingReplacementSubscribeRequest)
-        let replacementSubscribeIdentifier = try requestIdentifier(from: replacementSubscribeRequest)
+        let replacementSubscribeIdentifier = try extractRequestIdentifier(from: replacementSubscribeRequest)
         let replacementSubscribePayload = try TransportTestActor.encodeResponsePayload(
             identifier: replacementSubscribeIdentifier,
             result: ["height": 940_001, "hex": String(repeating: "1", count: 160)]
@@ -154,7 +154,7 @@ extension FulcrumClientLifecycleValidator {
         }
 
         let subscribeRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
-        let subscribeIdentifier = try requestIdentifier(from: subscribeRequest)
+        let subscribeIdentifier = try extractRequestIdentifier(from: subscribeRequest)
         let subscribePayload = try TransportTestActor.encodeResponsePayload(
             identifier: subscribeIdentifier,
             result: ["height": 910_000, "hex": String(repeating: "c", count: 160)]
@@ -191,7 +191,7 @@ extension FulcrumClientLifecycleValidator {
 
         let versionRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
         #expect(versionRequest["method"] as? String == "server.version")
-        let versionIdentifier = try requestIdentifier(from: versionRequest)
+        let versionIdentifier = try extractRequestIdentifier(from: versionRequest)
         let versionPayload = try TransportTestActor.encodeResponsePayload(
             identifier: versionIdentifier,
             result: ["SwiftFulcrum.Client 2.0", "1.5.3"]
@@ -200,7 +200,7 @@ extension FulcrumClientLifecycleValidator {
 
         let featuresRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
         #expect(featuresRequest["method"] as? String == "server.features")
-        let featuresIdentifier = try requestIdentifier(from: featuresRequest)
+        let featuresIdentifier = try extractRequestIdentifier(from: featuresRequest)
         let featuresPayload = try TransportTestActor.encodeResponsePayload(
             identifier: featuresIdentifier,
             result: [
@@ -223,7 +223,7 @@ extension FulcrumClientLifecycleValidator {
 
         #expect(didResubscribe)
         let reconnectResubscribeRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
-        let reconnectResubscribeIdentifier = try requestIdentifier(from: reconnectResubscribeRequest)
+        let reconnectResubscribeIdentifier = try extractRequestIdentifier(from: reconnectResubscribeRequest)
         #expect(reconnectResubscribeRequest["method"] as? String == subscribeMethodPath)
 
         let didFinishBeforeAck = await waitUntil(timeout: .milliseconds(150)) {
@@ -255,7 +255,7 @@ extension FulcrumClientLifecycleValidator {
         }
 
         let subscribeRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
-        let subscribeIdentifier = try requestIdentifier(from: subscribeRequest)
+        let subscribeIdentifier = try extractRequestIdentifier(from: subscribeRequest)
         let subscribePayload = try TransportTestActor.encodeResponsePayload(
             identifier: subscribeIdentifier,
             result: ["height": 920_000, "hex": String(repeating: "d", count: 160)]
@@ -277,7 +277,7 @@ extension FulcrumClientLifecycleValidator {
 
         let versionRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
         #expect(versionRequest["method"] as? String == "server.version")
-        let versionIdentifier = try requestIdentifier(from: versionRequest)
+        let versionIdentifier = try extractRequestIdentifier(from: versionRequest)
         let versionPayload = try TransportTestActor.encodeResponsePayload(
             identifier: versionIdentifier,
             result: ["SwiftFulcrum.Client 2.0", "1.5.3"]
@@ -286,7 +286,7 @@ extension FulcrumClientLifecycleValidator {
 
         let featuresRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
         #expect(featuresRequest["method"] as? String == "server.features")
-        let featuresIdentifier = try requestIdentifier(from: featuresRequest)
+        let featuresIdentifier = try extractRequestIdentifier(from: featuresRequest)
         let featuresPayload = try TransportTestActor.encodeResponsePayload(
             identifier: featuresIdentifier,
             result: [
@@ -339,7 +339,7 @@ extension FulcrumClientLifecycleValidator {
         }
 
         let subscribeRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
-        let subscribeIdentifier = try requestIdentifier(from: subscribeRequest)
+        let subscribeIdentifier = try extractRequestIdentifier(from: subscribeRequest)
         let subscribePayload = try TransportTestActor.encodeResponsePayload(
             identifier: subscribeIdentifier,
             result: ["height": 925_000, "hex": String(repeating: "e", count: 160)]
@@ -361,7 +361,7 @@ extension FulcrumClientLifecycleValidator {
 
         let versionRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
         #expect(versionRequest["method"] as? String == "server.version")
-        let versionIdentifier = try requestIdentifier(from: versionRequest)
+        let versionIdentifier = try extractRequestIdentifier(from: versionRequest)
         let versionPayload = try TransportTestActor.encodeResponsePayload(
             identifier: versionIdentifier,
             result: ["SwiftFulcrum.Client 2.0", "1.5.3"]
@@ -373,7 +373,7 @@ extension FulcrumClientLifecycleValidator {
         let baselineOutgoingCount = await transport.sentMessages.count
         await transport.configureOutgoingSendPaused(true)
 
-        let featuresIdentifier = try requestIdentifier(from: featuresRequest)
+        let featuresIdentifier = try extractRequestIdentifier(from: featuresRequest)
         let featuresPayload = try TransportTestActor.encodeResponsePayload(
             identifier: featuresIdentifier,
             result: [
@@ -436,7 +436,7 @@ extension FulcrumClientLifecycleValidator {
         }
 
         let subscribeRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
-        let subscribeIdentifier = try requestIdentifier(from: subscribeRequest)
+        let subscribeIdentifier = try extractRequestIdentifier(from: subscribeRequest)
         let subscribePayload = try TransportTestActor.encodeResponsePayload(
             identifier: subscribeIdentifier,
             result: ["height": 930_000, "hex": String(repeating: "f", count: 160)]
@@ -458,7 +458,7 @@ extension FulcrumClientLifecycleValidator {
 
         let versionRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
         #expect(versionRequest["method"] as? String == "server.version")
-        let versionIdentifier = try requestIdentifier(from: versionRequest)
+        let versionIdentifier = try extractRequestIdentifier(from: versionRequest)
         let versionPayload = try TransportTestActor.encodeResponsePayload(
             identifier: versionIdentifier,
             result: ["SwiftFulcrum.Client 2.0", "1.5.3"]
@@ -467,7 +467,7 @@ extension FulcrumClientLifecycleValidator {
 
         let featuresRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
         #expect(featuresRequest["method"] as? String == "server.features")
-        let featuresIdentifier = try requestIdentifier(from: featuresRequest)
+        let featuresIdentifier = try extractRequestIdentifier(from: featuresRequest)
         let featuresPayload = try TransportTestActor.encodeResponsePayload(
             identifier: featuresIdentifier,
             result: [
@@ -490,7 +490,7 @@ extension FulcrumClientLifecycleValidator {
 
         #expect(didResubscribe)
         let reconnectResubscribeRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
-        let reconnectResubscribeIdentifier = try requestIdentifier(from: reconnectResubscribeRequest)
+        let reconnectResubscribeIdentifier = try extractRequestIdentifier(from: reconnectResubscribeRequest)
         #expect(reconnectResubscribeRequest["method"] as? String == subscribeMethodPath)
         let reconnectResubscribePayload = try TransportTestActor.encodeResponsePayload(
             identifier: reconnectResubscribeIdentifier,
@@ -528,7 +528,7 @@ extension FulcrumClientLifecycleValidator {
         }
 
         let subscribeRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
-        let subscribeIdentifier = try requestIdentifier(from: subscribeRequest)
+        let subscribeIdentifier = try extractRequestIdentifier(from: subscribeRequest)
         let subscribePayload = try TransportTestActor.encodeResponsePayload(
             identifier: subscribeIdentifier,
             result: ["height": 935_000, "hex": String(repeating: "7", count: 160)]
@@ -543,7 +543,7 @@ extension FulcrumClientLifecycleValidator {
 
         let versionRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
         #expect(versionRequest["method"] as? String == "server.version")
-        let versionIdentifier = try requestIdentifier(from: versionRequest)
+        let versionIdentifier = try extractRequestIdentifier(from: versionRequest)
         let versionPayload = try TransportTestActor.encodeResponsePayload(
             identifier: versionIdentifier,
             result: ["SwiftFulcrum.Client 2.0", "1.5.3"]
@@ -552,7 +552,7 @@ extension FulcrumClientLifecycleValidator {
 
         let featuresRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
         #expect(featuresRequest["method"] as? String == "server.features")
-        let featuresIdentifier = try requestIdentifier(from: featuresRequest)
+        let featuresIdentifier = try extractRequestIdentifier(from: featuresRequest)
         let featuresPayload = try TransportTestActor.encodeResponsePayload(
             identifier: featuresIdentifier,
             result: [
@@ -567,7 +567,7 @@ extension FulcrumClientLifecycleValidator {
 
         let restoreRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
         #expect(restoreRequest["method"] as? String == subscribeMethod.path)
-        let restoreIdentifier = try requestIdentifier(from: restoreRequest)
+        let restoreIdentifier = try extractRequestIdentifier(from: restoreRequest)
 
         let requestTask = Task {
             try await fulcrum.request(
@@ -594,11 +594,11 @@ extension FulcrumClientLifecycleValidator {
 
         try await reconnectTask.value
 
-        let request = try await nextRequestObject(
+        let request = try await dequeueNextRequestObject(
             matching: requestMethod.path,
             transport: transport
         )
-        let requestIdentifier = try requestIdentifier(from: request)
+        let requestIdentifier = try extractRequestIdentifier(from: request)
         let requestPayload = try TransportTestActor.encodeResponsePayload(
             identifier: requestIdentifier,
             result: ["height": 935_001, "hex": String(repeating: "8", count: 160)]
@@ -648,7 +648,7 @@ extension FulcrumClientLifecycleValidator {
 
         let versionRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
         #expect(versionRequest["method"] as? String == "server.version")
-        let versionIdentifier = try requestIdentifier(from: versionRequest)
+        let versionIdentifier = try extractRequestIdentifier(from: versionRequest)
         let versionPayload = try TransportTestActor.encodeResponsePayload(
             identifier: versionIdentifier,
             result: ["SwiftFulcrum.Client 2.0", "1.5.3"]
@@ -657,7 +657,7 @@ extension FulcrumClientLifecycleValidator {
 
         let featuresRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
         #expect(featuresRequest["method"] as? String == "server.features")
-        let featuresIdentifier = try requestIdentifier(from: featuresRequest)
+        let featuresIdentifier = try extractRequestIdentifier(from: featuresRequest)
         let featuresPayload = try TransportTestActor.encodeResponsePayload(
             identifier: featuresIdentifier,
             result: [
@@ -670,11 +670,11 @@ extension FulcrumClientLifecycleValidator {
         )
         await transport.enqueueIncoming(.data(featuresPayload))
 
-        let request = try await nextRequestObject(
+        let request = try await dequeueNextRequestObject(
             matching: requestMethod.path,
             transport: transport
         )
-        let requestIdentifier = try requestIdentifier(from: request)
+        let requestIdentifier = try extractRequestIdentifier(from: request)
         let requestPayload = try TransportTestActor.encodeResponsePayload(
             identifier: requestIdentifier,
             result: ["height": 936_001, "hex": String(repeating: "9", count: 160)]
@@ -722,7 +722,7 @@ extension FulcrumClientLifecycleValidator {
 
         let versionRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
         #expect(versionRequest["method"] as? String == "server.version")
-        let versionIdentifier = try requestIdentifier(from: versionRequest)
+        let versionIdentifier = try extractRequestIdentifier(from: versionRequest)
         let versionPayload = try TransportTestActor.encodeResponsePayload(
             identifier: versionIdentifier,
             result: ["SwiftFulcrum.Client 2.0", "1.5.3"]
@@ -731,7 +731,7 @@ extension FulcrumClientLifecycleValidator {
 
         let featuresRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
         #expect(featuresRequest["method"] as? String == "server.features")
-        let featuresIdentifier = try requestIdentifier(from: featuresRequest)
+        let featuresIdentifier = try extractRequestIdentifier(from: featuresRequest)
         let featuresPayload = try TransportTestActor.encodeResponsePayload(
             identifier: featuresIdentifier,
             result: [
@@ -744,11 +744,11 @@ extension FulcrumClientLifecycleValidator {
         )
         await transport.enqueueIncoming(.data(featuresPayload))
 
-        let request = try await nextRequestObject(
+        let request = try await dequeueNextRequestObject(
             matching: requestMethod.path,
             transport: transport
         )
-        let requestIdentifier = try requestIdentifier(from: request)
+        let requestIdentifier = try extractRequestIdentifier(from: request)
         let requestPayload = try TransportTestActor.encodeResponsePayload(
             identifier: requestIdentifier,
             result: ["height": 936_002, "hex": String(repeating: "a", count: 160)]
@@ -771,7 +771,7 @@ extension FulcrumClientLifecycleValidator {
 
         let versionRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
         #expect(versionRequest["method"] as? String == "server.version")
-        let versionIdentifier = try requestIdentifier(from: versionRequest)
+        let versionIdentifier = try extractRequestIdentifier(from: versionRequest)
         let versionPayload = try TransportTestActor.encodeResponsePayload(
             identifier: versionIdentifier,
             result: ["SwiftFulcrum.Client 2.0", "1.3.0"]
@@ -798,7 +798,7 @@ extension FulcrumClientLifecycleValidator {
 
         let versionRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
         #expect(versionRequest["method"] as? String == "server.version")
-        let versionIdentifier = try requestIdentifier(from: versionRequest)
+        let versionIdentifier = try extractRequestIdentifier(from: versionRequest)
         let versionPayload = try TransportTestActor.encodeResponsePayload(
             identifier: versionIdentifier,
             result: ["SwiftFulcrum.Client 2.0", "1.5.3"]
@@ -807,7 +807,7 @@ extension FulcrumClientLifecycleValidator {
 
         let featuresRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
         #expect(featuresRequest["method"] as? String == "server.features")
-        let featuresIdentifier = try requestIdentifier(from: featuresRequest)
+        let featuresIdentifier = try extractRequestIdentifier(from: featuresRequest)
         let baselineOutgoingCount = await transport.sentMessages.count
 
         let requestTask = Task<SwiftFulcrum.Client.Error, Never> {
@@ -852,7 +852,7 @@ extension FulcrumClientLifecycleValidator {
         await fulcrum.stop()
     }
 
-    private func nextRequestObject(
+    private func dequeueNextRequestObject(
         matching methodPath: String,
         transport: TransportTestActor
     ) async throws -> [String: Any] {
@@ -864,7 +864,7 @@ extension FulcrumClientLifecycleValidator {
             case methodPath:
                 return request
             case SwiftFulcrum.RPC.Method.server(.ping).path:
-                let pingIdentifier = try requestIdentifier(from: request)
+                let pingIdentifier = try extractRequestIdentifier(from: request)
                 let pingPayload = try TransportTestActor.encodeResponsePayload(
                     identifier: pingIdentifier,
                     result: NSNull()
@@ -888,7 +888,7 @@ extension FulcrumClientLifecycleValidator {
         }
 
         let headersSubscribeRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
-        let headersSubscribeIdentifier = try requestIdentifier(from: headersSubscribeRequest)
+        let headersSubscribeIdentifier = try extractRequestIdentifier(from: headersSubscribeRequest)
         let headersSubscribePayload = try TransportTestActor.encodeResponsePayload(
             identifier: headersSubscribeIdentifier,
             result: ["height": 950_000, "hex": String(repeating: "1", count: 160)]
@@ -902,7 +902,7 @@ extension FulcrumClientLifecycleValidator {
         }
 
         let scripthashSubscribeRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
-        let scripthashSubscribeIdentifier = try requestIdentifier(from: scripthashSubscribeRequest)
+        let scripthashSubscribeIdentifier = try extractRequestIdentifier(from: scripthashSubscribeRequest)
         let scripthashSubscribePayload = try TransportTestActor.encodeResponsePayload(
             identifier: scripthashSubscribeIdentifier,
             result: "confirmed-status"
@@ -919,7 +919,7 @@ extension FulcrumClientLifecycleValidator {
 
         let versionRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
         #expect(versionRequest["method"] as? String == "server.version")
-        let versionIdentifier = try requestIdentifier(from: versionRequest)
+        let versionIdentifier = try extractRequestIdentifier(from: versionRequest)
         let versionPayload = try TransportTestActor.encodeResponsePayload(
             identifier: versionIdentifier,
             result: ["SwiftFulcrum.Client 2.0", "1.5.3"]
@@ -928,7 +928,7 @@ extension FulcrumClientLifecycleValidator {
 
         let featuresRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
         #expect(featuresRequest["method"] as? String == "server.features")
-        let featuresIdentifier = try requestIdentifier(from: featuresRequest)
+        let featuresIdentifier = try extractRequestIdentifier(from: featuresRequest)
         let featuresPayload = try TransportTestActor.encodeResponsePayload(
             identifier: featuresIdentifier,
             result: [
@@ -943,7 +943,7 @@ extension FulcrumClientLifecycleValidator {
 
         for _ in 0..<2 {
             let restoreRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
-            let restoreIdentifier = try requestIdentifier(from: restoreRequest)
+            let restoreIdentifier = try extractRequestIdentifier(from: restoreRequest)
             let restoreMethodPath = try #require(restoreRequest["method"] as? String)
 
             switch restoreMethodPath {
@@ -1009,7 +1009,7 @@ extension FulcrumClientLifecycleValidator {
         }
 
         let subscribeRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
-        let subscribeIdentifier = try requestIdentifier(from: subscribeRequest)
+        let subscribeIdentifier = try extractRequestIdentifier(from: subscribeRequest)
         let subscribePayload = try TransportTestActor.encodeResponsePayload(
             identifier: subscribeIdentifier,
             result: ["height": 960_000, "hex": String(repeating: "3", count: 160)]
@@ -1027,7 +1027,7 @@ extension FulcrumClientLifecycleValidator {
 
         let versionRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
         #expect(versionRequest["method"] as? String == "server.version")
-        let versionIdentifier = try requestIdentifier(from: versionRequest)
+        let versionIdentifier = try extractRequestIdentifier(from: versionRequest)
         let versionPayload = try TransportTestActor.encodeResponsePayload(
             identifier: versionIdentifier,
             result: ["SwiftFulcrum.Client 2.0", "1.5.3"]
@@ -1036,7 +1036,7 @@ extension FulcrumClientLifecycleValidator {
 
         let featuresRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
         #expect(featuresRequest["method"] as? String == "server.features")
-        let featuresIdentifier = try requestIdentifier(from: featuresRequest)
+        let featuresIdentifier = try extractRequestIdentifier(from: featuresRequest)
         let featuresPayload = try TransportTestActor.encodeResponsePayload(
             identifier: featuresIdentifier,
             result: [

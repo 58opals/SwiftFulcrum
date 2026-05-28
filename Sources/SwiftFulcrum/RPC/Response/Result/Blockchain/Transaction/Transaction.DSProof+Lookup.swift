@@ -25,17 +25,23 @@ extension SwiftFulcrum.Response.Blockchain.Transaction.DSProof {
             self.descendants = descendants
         }
 
-        init(from payloadModel: SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Transaction.DSProof.Get) {
+        init(from payloadModel: SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Transaction.DSProof.Get) throws {
+            try SwiftFulcrum.Response.Blockchain.validateTransactionHash(payloadModel.txid)
+            try SwiftFulcrum.Response.Blockchain.validateHexString(payloadModel.hex, description: "DSProof hex")
+            try SwiftFulcrum.Response.Blockchain.validateTransactionHashes(
+                payloadModel.descendants,
+                description: "DSProof descendant transaction hash"
+            )
             self.dsProofID = payloadModel.dspid
             self.transactionID = payloadModel.txid
             self.hex = payloadModel.hex
-            self.outpoint = Outpoint(from: payloadModel.outpoint)
+            self.outpoint = try Outpoint(from: payloadModel.outpoint)
             self.descendants = payloadModel.descendants
         }
 
         public init(from decoder: Decoder) throws {
             let payloadModel = try SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Transaction.DSProof.Get(from: decoder)
-            self.init(from: payloadModel)
+            try self.init(from: payloadModel)
         }
     }
 }

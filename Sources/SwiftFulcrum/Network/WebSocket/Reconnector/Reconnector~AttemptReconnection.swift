@@ -39,7 +39,7 @@ extension WebSocketConnection.Reconnector {
                 rotationCursor += 1
             }
 
-            if let index = indexOfServer(candidateURL) {
+            if let index = findIndexOfServer(candidateURL) {
                 nextServerIndex = (index + 1) % max(serverCatalog.count, 1)
             }
 

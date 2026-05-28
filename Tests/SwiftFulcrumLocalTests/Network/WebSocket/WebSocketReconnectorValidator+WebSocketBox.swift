@@ -11,7 +11,7 @@ extension WebSocketReconnectorValidator {
             self.webSocket = webSocket
         }
 
-        func connectionState() async -> WebSocketConnection.ConnectionState? {
+        func makeConnectionState() async -> WebSocketConnection.ConnectionState? {
             guard let webSocket else { return nil }
             return await webSocket.connectionState
         }

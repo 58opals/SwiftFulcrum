@@ -234,8 +234,8 @@ struct PublicAPIFacadeContractValidator {
 private extension PublicAPIFacadeContractValidator {
     static var hasGeneratedPublicSymbolGraph: Bool {
         guard let symbolGraphURL = try? locateGeneratedPublicSymbolGraph(),
-              let symbolGraphModificationDate = try? modificationDate(for: symbolGraphURL),
-              let latestSourceModificationDate = try? latestPublicSurfaceModificationDate() else {
+              let symbolGraphModificationDate = try? readModificationDate(for: symbolGraphURL),
+              let latestSourceModificationDate = try? findLatestPublicSurfaceModificationDate() else {
             return false
         }
 
@@ -249,7 +249,7 @@ private extension PublicAPIFacadeContractValidator {
     }
 
     static func locateGeneratedPublicSymbolGraph() throws -> URL {
-        let buildDirectory = packageRootURL().appending(path: ".build")
+        let buildDirectory = makePackageRootURL().appending(path: ".build")
         guard let enumerator = FileManager.default.enumerator(
             at: buildDirectory,
             includingPropertiesForKeys: nil
@@ -266,7 +266,7 @@ private extension PublicAPIFacadeContractValidator {
         throw SupportError.missingGeneratedSymbolGraph(buildDirectory.path())
     }
 
-    static func packageRootURL() -> URL {
+    static func makePackageRootURL() -> URL {
         URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
@@ -274,8 +274,8 @@ private extension PublicAPIFacadeContractValidator {
             .deletingLastPathComponent()
     }
 
-    static func latestPublicSurfaceModificationDate() throws -> Date {
-        let packageRoot = packageRootURL()
+    static func findLatestPublicSurfaceModificationDate() throws -> Date {
+        let packageRoot = makePackageRootURL()
         let publicSurfaceRoots = [
             packageRoot.appending(path: "Package.swift"),
             packageRoot.appending(path: "Sources")
@@ -285,13 +285,13 @@ private extension PublicAPIFacadeContractValidator {
             var isDirectory = ObjCBool(false)
             FileManager.default.fileExists(atPath: rootURL.path(), isDirectory: &isDirectory)
             if isDirectory.boolValue {
-                return try max(latestDate, latestModificationDate(in: rootURL))
+                return try max(latestDate, findLatestModificationDate(in: rootURL))
             }
-            return try max(latestDate, modificationDate(for: rootURL))
+            return try max(latestDate, readModificationDate(for: rootURL))
         }
     }
 
-    static func latestModificationDate(in directoryURL: URL) throws -> Date {
+    static func findLatestModificationDate(in directoryURL: URL) throws -> Date {
         guard let enumerator = FileManager.default.enumerator(
             at: directoryURL,
             includingPropertiesForKeys: [.isRegularFileKey, .contentModificationDateKey]
@@ -309,7 +309,7 @@ private extension PublicAPIFacadeContractValidator {
         return latestDate
     }
 
-    static func modificationDate(for fileURL: URL) throws -> Date {
+    static func readModificationDate(for fileURL: URL) throws -> Date {
         let values = try fileURL.resourceValues(forKeys: [.contentModificationDateKey])
         return values.contentModificationDate ?? .distantPast
     }

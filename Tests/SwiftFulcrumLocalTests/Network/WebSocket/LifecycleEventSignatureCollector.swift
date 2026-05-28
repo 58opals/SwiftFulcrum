@@ -11,15 +11,15 @@ actor LifecycleEventSignatureCollector {
     }
 
     func record(_ event: WebSocketConnection.Lifecycle.Event) -> Bool {
-        values.append(signature(for: event))
+        values.append(makeSignature(for: event))
         return values.count >= targetCount
     }
 
-    func snapshot() -> [String] {
+    func makeSnapshot() -> [String] {
         values
     }
 
-    private func signature(for event: WebSocketConnection.Lifecycle.Event) -> String {
+    private func makeSignature(for event: WebSocketConnection.Lifecycle.Event) -> String {
         switch event {
         case .connected(let isReconnect):
             return "connected:\(isReconnect)"

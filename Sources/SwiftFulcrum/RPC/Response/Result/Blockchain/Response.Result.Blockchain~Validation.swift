@@ -30,10 +30,24 @@ extension SwiftFulcrum.Response.Blockchain {
         try validateHex(hash, expectedLength: transactionHashCharacterLength, description: "transaction hash")
     }
 
-    static func validateMerkleHashes(_ hashes: [String]) throws {
-        for hash in hashes {
-            try validateHex(hash, expectedLength: transactionHashCharacterLength, description: "merkle proof hash")
+    static func validateHexString(_ value: String, description: String) throws {
+        guard value.count.isMultiple(of: 2) else {
+            throw ResponseResultDecodeError.unexpectedFormat(
+                "Expected \(description) to contain an even number of hex characters"
+            )
         }
+
+        try validateHexDigits(value, description: description)
+    }
+
+    static func validateTransactionHashes(_ hashes: [String], description: String = "transaction hash") throws {
+        for hash in hashes {
+            try validateHex(hash, expectedLength: transactionHashCharacterLength, description: description)
+        }
+    }
+
+    static func validateMerkleHashes(_ hashes: [String]) throws {
+        try validateTransactionHashes(hashes, description: "merkle proof hash")
     }
 
     private static func validateHex(_ value: String, expectedLength: Int, description: String) throws {
@@ -43,6 +57,10 @@ extension SwiftFulcrum.Response.Blockchain {
             )
         }
 
+        try validateHexDigits(value, description: description)
+    }
+
+    private static func validateHexDigits(_ value: String, description: String) throws {
         guard value.utf8.allSatisfy(Self.isHexDigit) else {
             throw ResponseResultDecodeError.unexpectedFormat(
                 "Expected \(description) to contain only hex characters"

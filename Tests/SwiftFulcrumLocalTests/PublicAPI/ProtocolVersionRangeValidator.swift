@@ -53,11 +53,8 @@ struct ProtocolVersionRangeValidator {
             max: versionOnePointFive
         ))
 
-        do {
+        #expect(throws: SwiftFulcrum.ProtocolVersion.Range.Error.unsupportedVersionRange) {
             _ = try clientRange.chooseNegotiatedVersion(with: serverRange)
-            Issue.record("Expected negotiation to fail when no overlap exists")
-        } catch let error as SwiftFulcrum.ProtocolVersion.Range.Error {
-            #expect(error == .unsupportedVersionRange)
         }
     }
 }

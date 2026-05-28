@@ -23,6 +23,7 @@ extension SwiftFulcrum.Response.Blockchain.Transaction {
                 guard case .height(let heightValue) = pairs[1] else {
                     throw ResponseResultDecodeError.unexpectedFormat("Expected height as second notification value")
                 }
+                try SwiftFulcrum.Response.Blockchain.validateTransactionHash(transactionHash)
 
                 self.subscriptionIdentifier = transactionHash
                 self.transactionHash = transactionHash

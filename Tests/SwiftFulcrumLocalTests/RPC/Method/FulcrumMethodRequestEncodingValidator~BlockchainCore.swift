@@ -49,7 +49,7 @@ extension FulcrumMethodRequestEncodingValidator {
             expectedParameters: [100, 0]
         )
 
-        let overflowHeaderObject = try requestObject(
+        let overflowHeaderObject = try makeRequestObject(
             for: .blockchain(.block(.header(height: UInt.max, checkpointHeight: nil)))
         )
         let overflowHeaderParameters = try #require(overflowHeaderObject["params"] as? [Any])
@@ -80,7 +80,7 @@ extension FulcrumMethodRequestEncodingValidator {
             expectedPath: SwiftFulcrum.RPC.Method.blockchain(.block(.header(height: 0, checkpointHeight: nil))).path,
             expectedParameters: [100, 500]
         )
-        let overflowHeaderObject = try requestObject(
+        let overflowHeaderObject = try makeRequestObject(
             for: .blockchain(.block(.header(height: UInt.max, checkpointHeight: nil)))
         )
         #expect(

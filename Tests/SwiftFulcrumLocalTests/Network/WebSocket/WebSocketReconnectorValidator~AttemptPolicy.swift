@@ -165,7 +165,7 @@ extension WebSocketReconnectorValidator {
             reconnectConfiguration: configuration,
             connectionTimeout: 0.01,
             sleep: { duration in
-                if let state = await box.connectionState() {
+                if let state = await box.makeConnectionState() {
                     await probe.record(state)
                 }
                 try await Task.sleep(for: duration)

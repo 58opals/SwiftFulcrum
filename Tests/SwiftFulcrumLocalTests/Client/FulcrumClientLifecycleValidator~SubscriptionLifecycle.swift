@@ -20,7 +20,7 @@ extension FulcrumClientLifecycleValidator {
         }
 
         let firstSubscribeRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
-        let firstSubscribeIdentifier = try requestIdentifier(from: firstSubscribeRequest)
+        let firstSubscribeIdentifier = try extractRequestIdentifier(from: firstSubscribeRequest)
         let firstSubscribePayload = try TransportTestActor.encodeResponsePayload(
             identifier: firstSubscribeIdentifier,
             result: ["height": 925_000, "hex": String(repeating: "9", count: 160)]
@@ -58,7 +58,7 @@ extension FulcrumClientLifecycleValidator {
             }
         }
         let secondSubscribeRequest = try #require(pendingSecondSubscribeRequest)
-        let secondSubscribeIdentifier = try requestIdentifier(from: secondSubscribeRequest)
+        let secondSubscribeIdentifier = try extractRequestIdentifier(from: secondSubscribeRequest)
         let secondSubscribePayload = try TransportTestActor.encodeResponsePayload(
             identifier: secondSubscribeIdentifier,
             result: ["height": 925_001, "hex": String(repeating: "a", count: 160)]
@@ -103,7 +103,7 @@ extension FulcrumClientLifecycleValidator {
         }
 
         let subscribeRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
-        let subscribeIdentifier = try requestIdentifier(from: subscribeRequest)
+        let subscribeIdentifier = try extractRequestIdentifier(from: subscribeRequest)
         let subscribePayload = try TransportTestActor.encodeResponsePayload(
             identifier: subscribeIdentifier,
             result: ["height": 920_000, "hex": String(repeating: "d", count: 160)]
@@ -228,7 +228,7 @@ extension FulcrumClientLifecycleValidator {
         }
 
         let request = try await decodeRequestObject(await transport.dequeueOutgoing())
-        let identifier = try requestIdentifier(from: request)
+        let identifier = try extractRequestIdentifier(from: request)
         let payload = try TransportTestActor.encodeResponsePayload(
             identifier: identifier,
             result: ["height": 900_100, "hex": String(repeating: "b", count: 160)]
@@ -257,7 +257,7 @@ extension FulcrumClientLifecycleValidator {
         }
 
         let request = try await decodeRequestObject(await transport.dequeueOutgoing())
-        let identifier = try requestIdentifier(from: request)
+        let identifier = try extractRequestIdentifier(from: request)
         let payload = try TransportTestActor.encodeResponsePayload(
             identifier: identifier,
             result: ["height": 900_200, "hex": String(repeating: "c", count: 160)]
@@ -305,7 +305,7 @@ extension FulcrumClientLifecycleValidator {
         }
 
         let subscribeRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
-        let subscribeIdentifier = try requestIdentifier(from: subscribeRequest)
+        let subscribeIdentifier = try extractRequestIdentifier(from: subscribeRequest)
         let subscribePayload = try TransportTestActor.encodeResponsePayload(
             identifier: subscribeIdentifier,
             result: ["height": 930_000, "hex": String(repeating: "c", count: 160)]

@@ -7,7 +7,8 @@ extension SwiftFulcrum.Response.Blockchain.Transaction.DSProof.Lookup {
         public let transactionID: String
         public let outputIndex: UInt
 
-        init(from payloadModel: SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Transaction.DSProof.Get.Outpoint) {
+        init(from payloadModel: SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Transaction.DSProof.Get.Outpoint) throws {
+            try SwiftFulcrum.Response.Blockchain.validateTransactionHash(payloadModel.txid)
             self.transactionID = payloadModel.txid
             self.outputIndex = payloadModel.vout
         }

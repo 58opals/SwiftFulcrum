@@ -9,13 +9,8 @@ import SwiftFulcrumTestSupport
 struct ClientProtocolNegotiationValidator {
     @Test("FulcrumNetworkClient rejects negotiated protocol outside supported range", .timeLimit(.minutes(1)))
     func rejectNegotiatedProtocolOutsideSupportedRange() async throws {
-        guard
-            let minimum = SwiftFulcrum.ProtocolVersion(string: "1.6"),
-            let maximum = SwiftFulcrum.ProtocolVersion(string: "1.6")
-        else {
-            Issue.record("Failed to build protocol versions for negotiation test")
-            return
-        }
+        let minimum = try #require(SwiftFulcrum.ProtocolVersion(string: "1.6"))
+        let maximum = try #require(SwiftFulcrum.ProtocolVersion(string: "1.6"))
 
         let transport = TransportTestActor()
         let negotiation = try SwiftFulcrum.Client.Configuration.ProtocolNegotiation(
@@ -41,15 +36,10 @@ struct ClientProtocolNegotiationValidator {
         )
         await transport.enqueueIncoming(.data(payload))
 
-        do {
+        await #expect(throws: SwiftFulcrum.ProtocolVersion.Range.Error.unsupportedVersionRange) {
             try await startTask.value
-            Issue.record("FulcrumNetworkClient.start() should fail for unsupported negotiated protocol")
-        } catch let error as SwiftFulcrum.ProtocolVersion.Range.Error {
-            #expect(error == .unsupportedVersionRange)
-            #expect(await transport.connectionState == .disconnected)
-        } catch {
-            Issue.record("Unexpected error: \(error)")
         }
+        #expect(await transport.connectionState == .disconnected)
 
         await client.stop()
     }
