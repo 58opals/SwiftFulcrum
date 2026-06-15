@@ -7,7 +7,7 @@ extension FulcrumNetworkClient {
         guard let subscriptionPath = SubscriptionPathConfiguration(rawValue: methodPath) else { return nil }
         return makeSubscriptionIdentifier(methodPath: subscriptionPath, data: data)
     }
-    
+
     static func makeSubscriptionIdentifier(methodPath: SubscriptionPathConfiguration, data: Data) -> String? {
         guard let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let parameters = object["params"] as? [Any],
@@ -18,7 +18,7 @@ extension FulcrumNetworkClient {
         switch methodPath {
         case .scriptHash, .address, .transaction:
             return firstParameter as? String
-            
+
         case .transactionDoubleSpendProof:
             if let string = firstParameter as? String {
                 return string
@@ -28,9 +28,9 @@ extension FulcrumNetworkClient {
                 return transactionIdentifier
             }
             return nil
-            
+
         case .headers:
-            return nil   
+            return nil
         }
     }
 }

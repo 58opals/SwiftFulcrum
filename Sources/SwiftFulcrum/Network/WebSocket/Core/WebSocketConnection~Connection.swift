@@ -43,19 +43,19 @@ extension WebSocketConnection {
     ) async throws {
         guard await !self.isConnected else { return }
         await updateConnectionState(.connecting)
-        
+
         await createNewTask(with: nil, shouldCancelReceiver: shouldCancelReceiver)
         guard let task else {
             throw SwiftFulcrum.Client.Error.transport(.connectionClosed(closeInformation.code, closeInformation.reason))
         }
-        
+
         task.resume()
         OpalDiagnostics.logger(category: .swiftFulcrumWebSocket).record(
             event: .swiftFulcrumWebSocketConnectBegin,
             level: .info,
             fields: webSocketDiagnosticFields()
         )
-        
+
         do {
             let isConnected = try await waitForConnection(timeout: connectionTimeout)
             if isConnected {
@@ -104,19 +104,19 @@ extension WebSocketConnection {
             )
         }
     }
-    
+
     private func performInitialFailoverIfNeeded(
         shouldAllowFailover: Bool,
         failure: Error
     ) async throws {
         guard shouldAllowFailover else { throw failure }
-        
+
         OpalDiagnostics.logger(category: .swiftFulcrumWebSocket).record(
             event: .swiftFulcrumWebSocketConnectFailover,
             level: .info,
             fields: webSocketDiagnosticFields(OpalDiagnostics.Field.swiftFulcrumErrorFields(failure))
         )
-        
+
         do {
             await updateConnectionState(.reconnecting)
             try await reconnector.attemptReconnection(
@@ -130,11 +130,11 @@ extension WebSocketConnection {
                 level: .info,
                 fields: webSocketDiagnosticFields(OpalDiagnostics.Field.swiftFulcrumErrorFields(error))
             )
-            
+
             throw error
         }
     }
-    
+
     func reconnect(with url: URL? = nil) async throws {
         await disconnect(with: "WebSocketConnection.reconnect()")
         await updateConnectionState(.reconnecting)
@@ -145,15 +145,15 @@ extension WebSocketConnection {
             throw error
         }
     }
-    
+
     func disconnect(with reason: String? = nil) async {
         await cancelReceiverTask()
-        
+
         let existingInformation = closeInformation
         if let task {
             await connectionEventTracker.stopTracking(taskIdentifier: task.taskIdentifier)
         }
-        
+
         task?.cancel(with: .goingAway, reason: reason?.data(using: .utf8))
         task = nil
 
@@ -170,11 +170,11 @@ extension WebSocketConnection {
         let closedError = SwiftFulcrum.Client.Error.transport(
             .connectionClosed(finalInformation.code, finalInformation.reason)
         )
-        
+
         finishConnectWaiters(.failure(closedError))
-        
+
         messageContinuation?.finish(throwing: closedError)
-        
+
         await resetMessageStreamAndReader()
         OpalDiagnostics.logger(category: .swiftFulcrumWebSocket).record(
             event: .swiftFulcrumWebSocketDisconnect,

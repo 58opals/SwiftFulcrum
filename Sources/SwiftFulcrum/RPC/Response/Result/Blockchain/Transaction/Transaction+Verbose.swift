@@ -21,7 +21,9 @@ extension SwiftFulcrum.Response.Blockchain.Transaction {
             let payloadModel = try SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Transaction.Get(from: decoder)
             switch payloadModel {
             case .raw(let raw):
-                throw ResponseResultDecodeError.unexpectedFormat("Expected detailed transaction information; received raw hex string: \(raw)")
+                throw ResponseResultDecodeError.unexpectedFormat(
+                    "Expected detailed transaction information; received raw transaction hex payload with \(raw.utf8.count) UTF-8 bytes"
+                )
             case .detailed(let detailed):
                 if let blockHash = detailed.blockhash {
                     try SwiftFulcrum.Response.Blockchain.validateBlockHash(blockHash)

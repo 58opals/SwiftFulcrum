@@ -14,7 +14,7 @@ extension SwiftFulcrum.Client {
 
 extension SwiftFulcrum.Client {
     public var connectionState: ConnectionState { currentConnectionState }
-    
+
     public func makeConnectionStateStream() -> AsyncStream<ConnectionState> {
         let subscriberIdentifier = UUID()
         let stream = AsyncStream<ConnectionState> { continuation in
@@ -25,7 +25,7 @@ extension SwiftFulcrum.Client {
                 Task { await self.removeConnectionStateContinuation(forSubscriberIdentifier: subscriberIdentifier) }
             }
         }
-        
+
         return stream
     }
 }
@@ -48,23 +48,23 @@ extension SwiftFulcrum.Client {
         await connectionStateObservationTask?.value
         connectionStateObservationTask = nil
     }
-    
+
     func updateConnectionState(_ state: ConnectionState) async {
         guard currentConnectionState != state else { return }
         currentConnectionState = state
-        
+
         for continuation in connectionStateContinuationsBySubscriberIdentifier.values {
             continuation.yield(state)
         }
     }
-    
+
     func resetConnectionStateStream() async {
         for continuation in connectionStateContinuationsBySubscriberIdentifier.values {
             continuation.finish()
         }
         connectionStateContinuationsBySubscriberIdentifier.removeAll(keepingCapacity: false)
     }
-    
+
     func removeConnectionStateContinuation(forSubscriberIdentifier subscriberIdentifier: UUID) async {
         connectionStateContinuationsBySubscriberIdentifier.removeValue(forKey: subscriberIdentifier)
     }

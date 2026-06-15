@@ -30,7 +30,7 @@ extension FulcrumNetworkClient {
                 )
             )
         }
-        
+
         return nil
     }
 }

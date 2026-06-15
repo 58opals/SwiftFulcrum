@@ -8,12 +8,12 @@ extension WebSocketConnection {
         let message = URLSessionWebSocketTask.Message.data(data)
         try await sendMessage(message, fields: OpalDiagnostics.Field.swiftFulcrumPayloadFields(payloadType: "data", byteCount: data.count))
     }
-    
+
     func send(string: String) async throws {
         let message = URLSessionWebSocketTask.Message.string(string)
         try await sendMessage(message, fields: OpalDiagnostics.Field.swiftFulcrumPayloadFields(payloadType: "string", byteCount: string.utf8.count))
     }
-    
+
     private func sendMessage(
         _ message: URLSessionWebSocketTask.Message,
         fields: [OpalDiagnostics.Field]
@@ -27,12 +27,12 @@ extension WebSocketConnection {
             )
             throw error
         }
-        
+
         let messageIdentifier = makeOutgoingMessageIdentifier()
         let eventFields = fields + [
             OpalDiagnostics.Field.swiftFulcrumField("message_id", messageIdentifier)
         ]
-        
+
         OpalDiagnostics.logger(category: .swiftFulcrumWebSocket).record(
             event: .swiftFulcrumWebSocketSendBegin,
             level: .debug,

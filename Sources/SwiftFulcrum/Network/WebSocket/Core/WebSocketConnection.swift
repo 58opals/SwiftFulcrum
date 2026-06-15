@@ -8,12 +8,12 @@ actor WebSocketConnection {
     var lastCloseInformation: (code: URLSessionWebSocketTask.CloseCode, reason: String?)
     var connectionStateTracker: ConnectionStateTracker
     let network: SwiftFulcrum.Client.Configuration.Network
-    
+
     var sharedMessagesStream: AsyncThrowingStream<URLSessionWebSocketTask.Message, Swift.Error>?
     var messageContinuation: AsyncThrowingStream<URLSessionWebSocketTask.Message, Swift.Error>.Continuation?
-    
+
     let reconnector: Reconnector
-    
+
     var reconnectAttemptCount = 0
     var reconnectSuccessCount = 0
 
@@ -22,23 +22,23 @@ actor WebSocketConnection {
     var isConnectionInFlight = false
     var connectWaitersByIdentifier = [UUID: CheckedContinuation<Bool, Error>]()
     var isConnected: Bool { get async { await connectionStateTracker.state == .connected } }
-    
+
     var nextOutgoingMessageIdentifier: UInt64 = 0
     var nextIncomingMessageIdentifier: UInt64 = 0
-    
+
     var receivedTask: Task<Void, Never>?
     var shouldAutomaticallyReceive = false
-    
+
     var lifecycleContinuationsBySubscriberIdentifier: [UUID: AsyncStream<Lifecycle.Event>.Continuation] = .init()
-    
+
     let session: URLSession
     let connectionTimeout: TimeInterval
     let maximumMessageSize: Int
     let connectionEventTracker: WebSocketConnectionEventTracker
     let sessionDelegateProxy: WebSocketSessionDelegateProxy
-    
+
     private let tlsDescriptor: TLSDescriptor?
-    
+
     init(url: URL,
          configuration: Configuration = .init(),
          reconnectConfiguration: Reconnector.Configuration = .basic,
@@ -59,16 +59,16 @@ actor WebSocketConnection {
         )
         self.connectionTimeout = connectionTimeout
         self.network = configuration.network
-        
+
         self.tlsDescriptor = configuration.tlsDescriptor
         self.maximumMessageSize = configuration.maximumMessageSize
-        
+
         let sessionConfiguration = URLSessionConfiguration.default
         let connectionEventTracker = WebSocketConnectionEventTracker()
         let sessionDelegateProxy = WebSocketSessionDelegateProxy(
             connectionEventTracker: connectionEventTracker
         )
-        
+
         self.connectionEventTracker = connectionEventTracker
         self.sessionDelegateProxy = sessionDelegateProxy
         self.session = URLSession(

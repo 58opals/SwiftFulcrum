@@ -33,9 +33,9 @@ extension SwiftFulcrum.Response.Blockchain.Transaction.DSProof {
                 }
             case .dsProof(let proof?):
                 try self.init(proofValue: proof)
-            case .dsProof(let proof):
+            case .dsProof:
                 throw ResponseResultDecodeError.unexpectedFormat(
-                    "Expected [txHash, dsProof] for DSProof notification; got proof only: \(String(describing: proof))"
+                    "Expected [txHash, dsProof] for DSProof notification; got proof only"
                 )
             }
         }

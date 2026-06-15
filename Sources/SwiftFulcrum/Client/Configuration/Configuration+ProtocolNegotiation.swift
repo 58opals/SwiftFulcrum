@@ -77,27 +77,27 @@ extension SwiftFulcrum.Client.Configuration {
         guard let version = SwiftFulcrum.ProtocolVersion(string: "1.4") else {
             preconditionFailure("Default minimum protocol version must be valid")
         }
-        
+
         return version
     }
-    
+
     public static var defaultMaximumProtocolVersion: SwiftFulcrum.ProtocolVersion {
         guard let version = SwiftFulcrum.ProtocolVersion(string: "1.6.0") else {
             preconditionFailure("Default maximum protocol version must be valid")
         }
-        
+
         return version
     }
-    
+
     public static func resolveLibraryVersion() -> String {
         if let shortVersion = Bundle.module.infoDictionary?["CFBundleShortVersionString"] as? String {
             return shortVersion
         }
-        
+
         if let bundleVersion = Bundle.module.infoDictionary?["CFBundleVersion"] as? String {
             return bundleVersion
         }
-        
+
         return "unknown"
     }
 }

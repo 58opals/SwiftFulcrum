@@ -19,7 +19,7 @@ struct ProtocolNegotiationConfigurationValidator {
         let supportedRange = negotiation.supportedRange
         #expect(supportedRange.contains(try #require(SwiftFulcrum.ProtocolVersion(string: "1.5"))))
     }
-    
+
     @Test("Invalid protocol negotiation ranges throw recoverable errors")
     func throwForInvalidRanges() throws {
         let minimumVersion = try #require(SwiftFulcrum.ProtocolVersion(string: "1.6.0"))
@@ -45,7 +45,7 @@ struct ProtocolNegotiationConfigurationValidator {
             )
         }
     }
-    
+
     @Test("Protocol negotiation argument encodes valid ranges")
     func encodeValidRangeArguments() throws {
         let minimumVersion = try #require(SwiftFulcrum.ProtocolVersion(string: "1.4"))
@@ -54,11 +54,11 @@ struct ProtocolNegotiationConfigurationValidator {
             minimumVersion: minimumVersion,
             maximumVersion: maximumVersion
         )
-        
+
         let rangeArgument = negotiation.makeArgument()
         let rangeObject = try JSONDecoder().decode([String].self, from: JSONEncoder().encode(rangeArgument))
         #expect(rangeObject == ["1.4", "1.6.0"])
-        
+
         let singleArgument = try SwiftFulcrum.Client.Configuration.ProtocolNegotiation.Argument(
             minimumVersion: minimumVersion,
             maximumVersion: minimumVersion

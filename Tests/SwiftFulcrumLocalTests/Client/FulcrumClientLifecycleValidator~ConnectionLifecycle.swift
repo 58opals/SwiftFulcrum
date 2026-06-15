@@ -29,42 +29,42 @@ extension FulcrumClientLifecycleValidator {
         let transport = TransportTestActor()
         let client = FulcrumNetworkClient(transport: transport, protocolNegotiation: .init())
         let fulcrum = await SwiftFulcrum.Client(client: client)
-        
+
         let firstStream = await fulcrum.makeConnectionStateStream()
         let secondStream = await fulcrum.makeConnectionStateStream()
-        
+
         let firstCollector = Task {
             await collectConnectionStates(from: firstStream, count: 2, timeout: .seconds(2))
         }
         let secondCollector = Task {
             await collectConnectionStates(from: secondStream, count: 2, timeout: .seconds(2))
         }
-        
+
         try await startAndNegotiate(fulcrum, transport: transport)
         await fulcrum.stop()
-        
+
         let firstStates = await firstCollector.value
         let secondStates = await secondCollector.value
-        
+
         #expect(firstStates == secondStates)
         #expect(firstStates.first == .idle)
         #expect(firstStates.contains(.connected))
         #expect(await fulcrum.isRunning == false)
     }
-    
+
     @Test("stop wins when called during in-flight start", .timeLimit(.minutes(1)))
     func stopWinsWhenCalledDuringInFlightStart() async throws {
         let transport = TransportTestActor()
         await transport.configureConnectDelay(.milliseconds(250))
-        
+
         let client = FulcrumNetworkClient(transport: transport, protocolNegotiation: .init())
         let fulcrum = await SwiftFulcrum.Client(client: client)
-        
+
         let startTask = Task { try await fulcrum.start() }
-        
+
         try await Task.sleep(for: .milliseconds(30))
         await fulcrum.stop()
-        
+
         do {
             try await startTask.value
         } catch is CancellationError {
@@ -78,7 +78,7 @@ extension FulcrumClientLifecycleValidator {
         } catch {
             Issue.record("Unexpected error from start(): \(error)")
         }
-        
+
         #expect(await fulcrum.isRunning == false)
         #expect(await fulcrum.connectionState != .connected)
     }

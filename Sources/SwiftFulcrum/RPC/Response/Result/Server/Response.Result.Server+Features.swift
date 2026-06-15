@@ -22,7 +22,7 @@ extension SwiftFulcrum.Response.Server {
             try SwiftFulcrum.Response.Blockchain.validateBlockHash(payloadModel.genesis_hash)
             guard payloadModel.hash_function == "sha256" else {
                 throw ResponseResultDecodeError.unexpectedFormat(
-                    "Unsupported server.features hash_function: \(payloadModel.hash_function)"
+                    "Unsupported server.features hash_function value"
                 )
             }
             try Self.validateNonNegative(payloadModel.pruning, field: "pruning")
@@ -47,14 +47,14 @@ extension SwiftFulcrum.Response.Server {
             maximum: SwiftFulcrum.ProtocolVersion
         ) {
             guard let minimum = SwiftFulcrum.ProtocolVersion(string: payloadModel.protocol_min) else {
-                throw ResponseResultDecodeError.unexpectedFormat("Minimum protocol version is invalid: \(payloadModel.protocol_min)")
+                throw ResponseResultDecodeError.unexpectedFormat("Minimum protocol version is invalid")
             }
             guard let maximum = SwiftFulcrum.ProtocolVersion(string: payloadModel.protocol_max) else {
-                throw ResponseResultDecodeError.unexpectedFormat("Maximum protocol version is invalid: \(payloadModel.protocol_max)")
+                throw ResponseResultDecodeError.unexpectedFormat("Maximum protocol version is invalid")
             }
             guard SwiftFulcrum.ProtocolVersion.Range(min: minimum, max: maximum) != nil else {
                 throw ResponseResultDecodeError.unexpectedFormat(
-                    "Server feature protocol range is invalid: \(payloadModel.protocol_min)...\(payloadModel.protocol_max)"
+                    "Server feature protocol range is invalid"
                 )
             }
 
@@ -72,7 +72,7 @@ extension SwiftFulcrum.Response.Server {
             for (name, host) in payloadHosts {
                 guard !name.isEmpty,
                       name.rangeOfCharacter(from: .whitespacesAndNewlines) == nil else {
-                    throw ResponseResultDecodeError.unexpectedFormat("Invalid server.features host name: \(name)")
+                    throw ResponseResultDecodeError.unexpectedFormat("Invalid server.features host name")
                 }
                 hosts[name] = try Host(from: host)
             }

@@ -45,10 +45,10 @@ extension WebSocketConnection {
         guard let continuation = connectWaitersByIdentifier.removeValue(forKey: identifier) else { return }
         continuation.resume(throwing: CancellationError())
     }
-    
+
     func waitForConnection(timeout: TimeInterval) async throws -> Bool {
         if await isConnected { return true }
-        
+
         if isConnectionInFlight {
             let waiterIdentifier = UUID()
             return try await withTaskCancellationHandler {
@@ -61,7 +61,7 @@ extension WebSocketConnection {
                 }
             }
         }
-        
+
         isConnectionInFlight = true
         do {
             let isSuccessful = try await waitForConnectionOnce(timeout: timeout)
@@ -72,7 +72,7 @@ extension WebSocketConnection {
             throw error
         }
     }
-    
+
     private func waitForConnectionOnce(timeout: TimeInterval) async throws -> Bool {
         guard let task else {
             throw SwiftFulcrum.Client.Error.transport(.connectionClosed(closeInformation.code, closeInformation.reason))
@@ -84,7 +84,7 @@ extension WebSocketConnection {
             connectionEventTracker: connectionEventTracker
         )
     }
-    
+
     private func waitForConnectionOpenEvent(
         taskIdentifier: Int,
         timeout: TimeInterval,
@@ -95,16 +95,16 @@ extension WebSocketConnection {
                 try await connectionEventTracker.waitForOpen(taskIdentifier: taskIdentifier)
                 return true
             }
-            
+
             group.addTask {
                 try await Task.sleep(for: .seconds(timeout))
                 return false
             }
-            
+
             let winner = try await group.next() ?? false
             group.cancelAll()
             return winner
         }
     }
-    
+
 }

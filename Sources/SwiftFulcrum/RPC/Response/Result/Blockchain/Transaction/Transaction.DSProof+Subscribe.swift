@@ -17,7 +17,7 @@ extension SwiftFulcrum.Response.Blockchain.Transaction.DSProof {
                 self.proof = try proof.map { try Lookup(from: $0) }
             case .transactionHashAndDSProof(let pairs):
                 throw ResponseResultDecodeError.unexpectedFormat(
-                    "Expected DSProof or nil for DSProof.Subscribe initial response; got [txHash, DSProof]: \(pairs)"
+                    "Expected DSProof or nil for DSProof.Subscribe initial response; got [txHash, DSProof] with \(pairs.count) values"
                 )
             }
         }

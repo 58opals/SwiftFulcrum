@@ -13,9 +13,9 @@ extension SwiftFulcrum.Client {
         public var serverCatalogLoader: SwiftFulcrum.ServerCatalog.Repository
         public var network: Network
         public var protocolNegotiation: ProtocolNegotiation
-        
+
         public static let basic = Configuration()
-        
+
         public init(
             tlsDescriptor: TLSDescriptor? = nil,
             reconnect: ReconnectPolicy = .basic,
@@ -41,7 +41,7 @@ extension SwiftFulcrum.Client {
 extension SwiftFulcrum.Client.Configuration {
     func convertToWebSocketConfiguration() -> WebSocketConnection.Configuration {
         let socketTLSDescriptor = tlsDescriptor.map { WebSocketConnection.TLSDescriptor($0) }
-        
+
         return WebSocketConnection.Configuration(
             tlsDescriptor: socketTLSDescriptor,
             maximumMessageSize: maximumMessageSize,

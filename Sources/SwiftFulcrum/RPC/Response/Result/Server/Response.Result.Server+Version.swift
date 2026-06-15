@@ -11,7 +11,7 @@ extension SwiftFulcrum.Response.Server {
             let payloadModel = try SwiftFulcrum.RPC.Response.JSONRPC.Result.Server.Version(from: decoder)
 
             guard let protocolVersion = SwiftFulcrum.ProtocolVersion(string: payloadModel.protocolVersion) else {
-                throw ResponseResultDecodeError.unexpectedFormat("Negotiated protocol version is invalid: \(payloadModel.protocolVersion)")
+                throw ResponseResultDecodeError.unexpectedFormat("Negotiated protocol version is invalid")
             }
 
             self.serverVersion = payloadModel.serverVersion

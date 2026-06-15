@@ -25,7 +25,7 @@ extension SwiftFulcrum.Response.Blockchain.Transaction {
                 let currentIndex = string.index(index, offsetBy: 2)
                 let byteString = String(string[index ..< currentIndex])
                 guard let byte = UInt8(byteString, radix: 16) else {
-                    throw ResponseResultDecodeError.unexpectedFormat("tx contains non-hex: \(byteString)")
+                    throw ResponseResultDecodeError.unexpectedFormat("txid contains non-hex characters")
                 }
                 data.append(byte)
                 index = currentIndex

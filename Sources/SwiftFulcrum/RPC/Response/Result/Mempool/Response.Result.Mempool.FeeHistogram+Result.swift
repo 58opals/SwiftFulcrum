@@ -9,12 +9,14 @@ extension SwiftFulcrum.Response.Mempool.FeeHistogram {
 
         init(from pair: SwiftFulcrum.RPC.Response.JSONRPC.Result.Mempool.FeeHistogram) throws {
             guard pair.count == 2 else {
-                throw ResponseResultDecodeError.unexpectedFormat("Histogram entry must be [fee, vsize]; got \(pair)")
+                throw ResponseResultDecodeError.unexpectedFormat(
+                    "Histogram entry must be [fee, vsize]; got \(pair.count) values"
+                )
             }
             let feeValue = pair[0].value
             let virtualSizeValue = pair[1].value
             guard feeValue.isFinite, feeValue >= 0 else {
-                throw ResponseResultDecodeError.unexpectedFormat("Invalid fee: \(feeValue)")
+                throw ResponseResultDecodeError.unexpectedFormat("Invalid fee value")
             }
             let truncatedVirtualSizeValue = virtualSizeValue.rounded(.towardZero)
             let maximumConvertibleVirtualSize = Double(UInt.max).nextDown
@@ -22,7 +24,7 @@ extension SwiftFulcrum.Response.Mempool.FeeHistogram {
                   truncatedVirtualSizeValue >= 0,
                   truncatedVirtualSizeValue == virtualSizeValue,
                   truncatedVirtualSizeValue <= maximumConvertibleVirtualSize else {
-                throw ResponseResultDecodeError.unexpectedFormat("Invalid vsize: \(virtualSizeValue)")
+                throw ResponseResultDecodeError.unexpectedFormat("Invalid vsize value")
             }
 
             self.fee = feeValue

@@ -29,7 +29,7 @@ extension SwiftFulcrum.Response.Server.Features {
             guard let indexed, let minimum else { return }
             guard minimum <= indexed else {
                 throw ResponseResultDecodeError.unexpectedFormat(
-                    "Invalid server.features rpa prefix bit range: \(minimum) exceeds \(indexed)"
+                    "Invalid server.features rpa prefix bit range"
                 )
             }
         }

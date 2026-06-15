@@ -13,7 +13,7 @@ extension SwiftFulcrum.Response.Blockchain.ScriptHash {
             case .scripthashAndStatus(let pair):
                 guard pair.count == 2 else {
                     throw ResponseResultDecodeError.unexpectedFormat(
-                        "Expected scripthash notification payload to contain [scripthash, status]; got \(pair.description)"
+                        "Expected scripthash notification payload to contain [scripthash, status]; got \(pair.count) values"
                     )
                 }
                 guard let first = pair.first, let scripthash = first else {
@@ -22,8 +22,8 @@ extension SwiftFulcrum.Response.Blockchain.ScriptHash {
                 try SwiftFulcrum.Response.Blockchain.validateScriptHash(scripthash)
                 self.subscriptionIdentifier = scripthash
                 self.status = (pair.count > 1) ? pair[1] : nil
-            case .status(let statusString):
-                throw ResponseResultDecodeError.unexpectedFormat("Expected scripthash and status pair; got single status: \(statusString)")
+            case .status:
+                throw ResponseResultDecodeError.unexpectedFormat("Expected scripthash and status pair; got single status string")
             }
         }
     }

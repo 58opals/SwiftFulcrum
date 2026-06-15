@@ -5,27 +5,26 @@ import Testing
 import SwiftFulcrumTestSupport
 @testable import SwiftFulcrum
 
-@Suite(.tags(.local))
 struct WebSocketLifecycleValidator {
     @Test("WebSocket lifecycle stream multicasts events to each subscriber", .timeLimit(.minutes(1)))
     func multicastLifecycleEventsToAllSubscribers() async {
         let webSocket = WebSocketConnection(url: URL(string: "wss://example.invalid")!)
         let firstStream = await webSocket.makeLifecycleEvents()
         let secondStream = await webSocket.makeLifecycleEvents()
-        
+
         let firstCollector = Task {
             await collectLifecycleEventSignatures(from: firstStream, count: 2, timeout: .seconds(2))
         }
         let secondCollector = Task {
             await collectLifecycleEventSignatures(from: secondStream, count: 2, timeout: .seconds(2))
         }
-        
+
         await webSocket.emitLifecycle(.connected(isReconnect: true))
         await webSocket.emitLifecycle(.disconnected(code: .normalClosure, reason: "test"))
-        
+
         let firstEvents = await firstCollector.value
         let secondEvents = await secondCollector.value
-        
+
         #expect(firstEvents == secondEvents)
         #expect(firstEvents == ["connected:true", "disconnected:\(URLSessionWebSocketTask.CloseCode.normalClosure.rawValue):test"])
     }
@@ -38,7 +37,7 @@ extension WebSocketLifecycleValidator {
         timeout: Duration
     ) async -> [String] {
         let collector = LifecycleEventSignatureCollector(targetCount: count)
-        
+
         await withTaskGroup(of: Void.self) { group in
             group.addTask {
                 for await event in stream {
@@ -54,7 +53,7 @@ extension WebSocketLifecycleValidator {
             _ = await group.next()
             group.cancelAll()
         }
-        
+
         return await collector.makeSnapshot()
     }
 }

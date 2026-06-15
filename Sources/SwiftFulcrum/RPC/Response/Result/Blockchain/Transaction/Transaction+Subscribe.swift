@@ -16,7 +16,9 @@ extension SwiftFulcrum.Response.Blockchain.Transaction {
             case .height(let height):
                 self.height = height
             case .transactionHashAndHeight(let pairs):
-                throw ResponseResultDecodeError.unexpectedFormat("Expected a height uint; got transaction hash and height array for Transaction.Subscribe: \(pairs.description)")
+                throw ResponseResultDecodeError.unexpectedFormat(
+                    "Expected a height uint; got transaction hash and height array with \(pairs.count) values for Transaction.Subscribe"
+                )
             }
         }
     }

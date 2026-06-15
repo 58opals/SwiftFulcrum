@@ -8,12 +8,12 @@ extension FulcrumNetworkClient {
         rpcHeartbeatTask?.cancel()
         let owner = self
         rpcHeartbeatTask = Task {
-            
+
             while !Task.isCancelled {
                 do {
                     try await Task.sleep(for: owner.rpcHeartbeatInterval)
                     try Task.checkCancellation()
-                    
+
                     let (_, _): (UUID, SwiftFulcrum.Response.Server.Ping) =
                     try await owner.call(
                         method: .server(.ping),
@@ -25,13 +25,13 @@ extension FulcrumNetworkClient {
                 } catch {
                     // If we were cancelled while handling an error, bail out.
                     if Task.isCancelled { break }
-                    
+
                     OpalDiagnostics.logger(category: .fulcrum).record(
                         event: .swiftFulcrumClientHeartbeatTimeout,
                         level: .info,
                         fields: await owner.makeClientTransportDiagnosticFields(OpalDiagnostics.Field.swiftFulcrumErrorFields(error))
                     )
-                    
+
                     do {
                         try Task.checkCancellation()
                         try await owner.reconnect()
@@ -48,7 +48,7 @@ extension FulcrumNetworkClient {
             }
         }
     }
-    
+
     func stopRPCHeartbeat() async {
         rpcHeartbeatTask?.cancel()
         await rpcHeartbeatTask?.value

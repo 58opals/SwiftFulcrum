@@ -28,8 +28,8 @@ extension SwiftFulcrum.Response.Blockchain.Transaction {
                 self.subscriptionIdentifier = transactionHash
                 self.transactionHash = transactionHash
                 self.height = heightValue
-            case .height(let height):
-                throw ResponseResultDecodeError.unexpectedFormat("Expected [txid, height] for Transaction.Subscribe; got height only: \(String(describing: height))")
+            case .height:
+                throw ResponseResultDecodeError.unexpectedFormat("Expected [txid, height] for Transaction.Subscribe; got height only")
             }
         }
     }

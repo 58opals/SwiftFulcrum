@@ -49,7 +49,7 @@ extension FulcrumClientLifecycleValidator {
         }
         return identifier
     }
-    
+
     func countSentMethodOccurrences(
         _ methodPath: String,
         transport: TransportTestActor
@@ -63,7 +63,7 @@ extension FulcrumClientLifecycleValidator {
             }
         }
     }
-    
+
     func waitUntil(
         timeout: Duration,
         pollingInterval: Duration = .milliseconds(25),
@@ -71,14 +71,14 @@ extension FulcrumClientLifecycleValidator {
     ) async -> Bool {
         let clock = ContinuousClock()
         let deadline = clock.now + timeout
-        
+
         while clock.now < deadline {
             if await condition() {
                 return true
             }
             try? await Task.sleep(for: pollingInterval)
         }
-        
+
         return await condition()
     }
 
@@ -107,7 +107,7 @@ extension FulcrumClientLifecycleValidator {
 
         return await collector.makeSnapshot()
     }
-    
+
     func detectConnectionStateStreamTermination(
         _ stream: AsyncStream<SwiftFulcrum.Client.ConnectionState>,
         within timeout: Duration
@@ -120,12 +120,12 @@ extension FulcrumClientLifecycleValidator {
                 }
                 return true
             }
-            
+
             group.addTask {
                 try? await Task.sleep(for: timeout)
                 return false
             }
-            
+
             let result = await group.next() ?? false
             group.cancelAll()
             return result

@@ -14,13 +14,13 @@ extension WebSocketConnection {
 
         return stream
     }
-    
+
     func emitLifecycle(_ event: Lifecycle.Event) {
         for continuation in lifecycleContinuationsBySubscriberIdentifier.values {
             continuation.yield(event)
         }
     }
-    
+
     private func storeLifecycleContinuation(
         _ continuation: AsyncStream<Lifecycle.Event>.Continuation,
         forSubscriberIdentifier subscriberIdentifier: UUID
@@ -30,7 +30,7 @@ extension WebSocketConnection {
             Task { await self?.removeLifecycleContinuation(forSubscriberIdentifier: subscriberIdentifier) }
         }
     }
-    
+
     private func removeLifecycleContinuation(forSubscriberIdentifier subscriberIdentifier: UUID) {
         lifecycleContinuationsBySubscriberIdentifier.removeValue(forKey: subscriberIdentifier)
     }

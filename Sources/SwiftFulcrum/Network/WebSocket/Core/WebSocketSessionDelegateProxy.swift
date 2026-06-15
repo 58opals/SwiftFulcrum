@@ -64,7 +64,7 @@ final class WebSocketSessionDelegateProxy: NSObject, URLSessionWebSocketDelegate
             return SwiftFulcrum.Client.Error.transport(.connectionClosed(.invalid, nil))
         }
 
-        let reason = webSocketTask.closeReason.flatMap { String(data: $0, encoding: .utf8) }
+        let reason = webSocketTask.swiftFulcrumCloseReasonSummary
         return SwiftFulcrum.Client.Error.transport(.connectionClosed(webSocketTask.closeCode, reason))
     }
 }

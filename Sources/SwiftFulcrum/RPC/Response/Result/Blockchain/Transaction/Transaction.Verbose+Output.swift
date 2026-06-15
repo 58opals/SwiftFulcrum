@@ -10,7 +10,7 @@ extension SwiftFulcrum.Response.Blockchain.Transaction.Verbose {
 
         init(from payloadModel: SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Transaction.Get.Detailed.Output) throws {
             guard payloadModel.value.isFinite, payloadModel.value >= 0 else {
-                throw ResponseResultDecodeError.unexpectedFormat("Invalid transaction output value: \(payloadModel.value)")
+                throw ResponseResultDecodeError.unexpectedFormat("Invalid transaction output value")
             }
             self.index = payloadModel.n
             self.scriptPubKey = try ScriptPubKey(from: payloadModel.scriptPubKey)

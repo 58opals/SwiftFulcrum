@@ -9,7 +9,7 @@ struct FulcrumRequest {
     let method: String
     let requestedMethod: SwiftFulcrum.RPC.Method
     let params: Encodable
-    
+
     init(id: UUID, method: SwiftFulcrum.RPC.Method, params: Encodable) {
         self.id = id
         self.method = method.path
@@ -32,7 +32,7 @@ extension FulcrumRequest: Hashable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }
-    
+
     static func == (lhs: FulcrumRequest, rhs: FulcrumRequest) -> Bool {
         lhs.id == rhs.id
     }

@@ -22,7 +22,7 @@ extension SwiftFulcrum.Response.Mempool {
         private static func validateFee(_ value: Double?, field: String) throws -> Double? {
             guard let value else { return nil }
             guard value.isFinite, value >= 0 else {
-                throw ResponseResultDecodeError.unexpectedFormat("Invalid \(field): \(value)")
+                throw ResponseResultDecodeError.unexpectedFormat("Invalid \(field) value")
             }
             return value
         }
@@ -30,7 +30,7 @@ extension SwiftFulcrum.Response.Mempool {
         private static func validateCount(_ value: Int?, field: String) throws -> Int? {
             guard let value else { return nil }
             guard value >= 0 else {
-                throw ResponseResultDecodeError.unexpectedFormat("Invalid \(field): \(value)")
+                throw ResponseResultDecodeError.unexpectedFormat("Invalid \(field) value")
             }
             return value
         }

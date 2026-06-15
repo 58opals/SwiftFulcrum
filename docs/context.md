@@ -8,6 +8,10 @@ SwiftFulcrum exists to give Swift/BCH software a dedicated Fulcrum protocol adap
 
 The package is intentionally focused on the public Fulcrum server ecosystem used by Bitcoin Cash applications. It is a protocol-centered layer that stays close to the Fulcrum contract while exposing a Swift-first API surface.
 
+## Protocol Vocabulary
+
+SwiftFulcrum uses a small set of established Fulcrum, JSON-RPC, WebSocket, TLS, and BCH abbreviations when they are the protocol names users already expect: `API`, `BCH`, `DSProof`, `IDFromPos`, `JSONRPC`, `RPC`, `TLS`, and `UTXO`. These terms are accepted package vocabulary in strict implementation code and public facade API chains; avoid inventing expanded spellings that obscure the Fulcrum wire contract.
+
 ## Audience and Stakeholders
 
 - Swift package and app authors who need typed BCH network access through Fulcrum

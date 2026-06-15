@@ -63,7 +63,7 @@ extension SwiftFulcrum {
             }
 
             do {
-                try await awaitCancellableTask(startTask, cancelUnderlyingTask: false)
+                try await startTask.awaitCancellableValue(cancelUnderlyingTask: false)
             } catch {
                 if !desiredRunning, error is CancellationError {
                     return

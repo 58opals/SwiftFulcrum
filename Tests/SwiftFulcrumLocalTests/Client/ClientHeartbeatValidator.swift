@@ -174,7 +174,7 @@ struct ClientHeartbeatValidator {
     }
 }
 
-private extension ClientHeartbeatValidator {
+extension ClientHeartbeatValidator {
     func startAndNegotiate(client: FulcrumNetworkClient, transport: TransportTestActor) async throws {
         let startTask = Task { try await client.start() }
 

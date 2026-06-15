@@ -15,15 +15,10 @@ extension SwiftFulcrum.Response.Blockchain.Block.Header {
         }
 
         public init(from decoder: Decoder) throws {
-            let container = try decoder.container(keyedBy: CodingKeys.self)
-            let branch = try container.decode([String].self, forKey: .branch)
-            let root = try container.decode(String.self, forKey: .root)
+            let container = try decoder.container(keyedBy: JSONRPCResponseDecodeModel.CodingKey.self)
+            let branch = try container.decode([String].self, forKey: .init("branch"))
+            let root = try container.decode(String.self, forKey: .init("root"))
             try self.init(branch: branch, root: root)
-        }
-
-        private enum CodingKeys: String, CodingKey {
-            case branch
-            case root
         }
     }
 }

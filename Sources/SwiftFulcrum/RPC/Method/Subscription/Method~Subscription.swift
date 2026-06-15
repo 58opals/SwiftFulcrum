@@ -19,7 +19,7 @@ extension SwiftFulcrum.RPC.Method {
             return nil
         }
     }
-    
+
     var isSubscription: Bool {
         subscriptionPath != nil
     }

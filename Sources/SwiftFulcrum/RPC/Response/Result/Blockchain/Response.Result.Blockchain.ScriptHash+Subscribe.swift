@@ -17,7 +17,9 @@ extension SwiftFulcrum.Response.Blockchain.ScriptHash {
             case .status(let statusString):
                 self.status = statusString
             case .scripthashAndStatus(let pair):
-                throw ResponseResultDecodeError.unexpectedFormat("Expected a status string; got scripthash and status array for ScriptHash.Subscribe: \(pair.description)")
+                throw ResponseResultDecodeError.unexpectedFormat(
+                    "Expected a status string; got scripthash and status array with \(pair.count) values for ScriptHash.Subscribe"
+                )
             }
         }
     }

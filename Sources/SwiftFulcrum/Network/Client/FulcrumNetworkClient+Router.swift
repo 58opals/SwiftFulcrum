@@ -6,11 +6,11 @@ import OpalDiagnostics
 extension FulcrumNetworkClient {
     actor Router {
         private var table: [SwiftFulcrum.RPC.Response.Identifier: PendingEntry] = .init()
-        
-        
+
+
         private var inflightUnaryCallCount = 0
         func makeInflightUnaryCallCount() -> Int { inflightUnaryCallCount }
-        
+
         @discardableResult
         func addUnary(id: UUID, continuation: AsyncThrowingStream<Data, Swift.Error>.Continuation) throws -> Int {
             let key: SwiftFulcrum.RPC.Response.Identifier = .uuid(id)
@@ -19,13 +19,13 @@ extension FulcrumNetworkClient {
             inflightUnaryCallCount += 1
             return inflightUnaryCallCount
         }
-        
+
         func addStream(key: String, continuation: AsyncThrowingStream<Data, Swift.Error>.Continuation) throws {
             let identifier: SwiftFulcrum.RPC.Response.Identifier = .string(key)
             guard table[identifier] == nil else { throw SwiftFulcrum.Client.Error.client(.duplicateHandler) }
             table[identifier] = .stream(continuation)
         }
-        
+
         func handle(raw: Data) -> Int? {
             let id: SwiftFulcrum.RPC.Response.Identifier
             do {
@@ -47,7 +47,7 @@ extension FulcrumNetworkClient {
                 return resolve(identifier: .string(key), with: raw)
             }
         }
-        
+
         @discardableResult
         func cancel(identifier: SwiftFulcrum.RPC.Response.Identifier, error: Swift.Error? = nil) -> Int? {
             guard let entry = table.removeValue(forKey: identifier) else { return nil }
@@ -65,12 +65,12 @@ extension FulcrumNetworkClient {
             }
             return nil
         }
-        
+
         func failAll(with error: Swift.Error) -> Int {
             let entries = table
             table.removeAll()
             inflightUnaryCallCount = 0
-            
+
             for pending in entries.values {
                 switch pending {
                 case .unary(let continuation):
@@ -79,10 +79,10 @@ extension FulcrumNetworkClient {
                     continuation.finish(throwing: error)
                 }
             }
-            
+
             return inflightUnaryCallCount
         }
-        
+
         func failUnaries(with error: Swift.Error) -> Int {
             let current = table
             for (identifier, pending) in current {
@@ -95,10 +95,10 @@ extension FulcrumNetworkClient {
                     continue
                 }
             }
-            
+
             return inflightUnaryCallCount
         }
-        
+
         private func resolve(identifier: SwiftFulcrum.RPC.Response.Identifier, with raw: Data) -> Int? {
             guard let entry = table[identifier] else { return nil }
             switch entry {
@@ -111,7 +111,7 @@ extension FulcrumNetworkClient {
             case .stream(let continuation):
                 continuation.yield(raw)
             }
-            
+
             return nil
         }
 

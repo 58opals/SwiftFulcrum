@@ -17,7 +17,9 @@ extension SwiftFulcrum.Response.Blockchain.Headers {
                 self.height = batch[0].height
                 self.hex = batch[0].hex
             case .newHeader(let batch):
-                throw ResponseResultDecodeError.unexpectedFormat("Expected single top header; received batch of new headers: \(batch.description)")
+                throw ResponseResultDecodeError.unexpectedFormat(
+                    "Expected single top header; received batch with \(batch.count) headers"
+                )
             }
         }
     }

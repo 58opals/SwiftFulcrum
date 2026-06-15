@@ -16,7 +16,9 @@ extension SwiftFulcrum.Response.Blockchain.Address {
             case .status(let statusString):
                 self.status = statusString
             case .addressAndStatus(let pair):
-                throw ResponseResultDecodeError.unexpectedFormat("Expected a status string; got address and status array for Address.Subscribe: \(pair.description)")
+                throw ResponseResultDecodeError.unexpectedFormat(
+                    "Expected a status string; got address and status array with \(pair.count) values for Address.Subscribe"
+                )
             }
         }
     }

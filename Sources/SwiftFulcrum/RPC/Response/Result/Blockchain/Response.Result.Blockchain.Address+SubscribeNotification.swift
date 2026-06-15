@@ -13,7 +13,7 @@ extension SwiftFulcrum.Response.Blockchain.Address {
             case .addressAndStatus(let pair):
                 guard pair.count == 2 else {
                     throw ResponseResultDecodeError.unexpectedFormat(
-                        "Expected address notification payload to contain [address, status]; got \(pair.description)"
+                        "Expected address notification payload to contain [address, status]; got \(pair.count) values"
                     )
                 }
                 guard let first = pair.first, let address = first else {
@@ -21,8 +21,8 @@ extension SwiftFulcrum.Response.Blockchain.Address {
                 }
                 self.subscriptionIdentifier = address
                 self.status = (pair.count > 1) ? pair[1] : nil
-            case .status(let statusString):
-                throw ResponseResultDecodeError.unexpectedFormat("Expected address and status pair; got single status: \(statusString)")
+            case .status:
+                throw ResponseResultDecodeError.unexpectedFormat("Expected address and status pair; got single status string")
             }
         }
     }

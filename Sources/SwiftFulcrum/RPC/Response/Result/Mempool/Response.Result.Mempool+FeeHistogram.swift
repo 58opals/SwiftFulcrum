@@ -12,7 +12,7 @@ extension SwiftFulcrum.Response.Mempool {
                 do {
                     return try Result(from: pair)
                 } catch {
-                    throw ResponseResultDecodeError.unexpectedFormat("Malformed entry at index \(index): \(error)")
+                    throw ResponseResultDecodeError.unexpectedFormat("Malformed fee histogram entry at index \(index)")
                 }
             }
         }

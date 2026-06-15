@@ -25,7 +25,7 @@ extension SwiftFulcrum.RPC.Method.Blockchain { var path: String {
     case .headers(let headersPath): return "headers.\(headersPath.path)"
     case .transaction(let transactionPath): return "transaction.\(transactionPath.path)"
     case .utxo(let utxoPath): return "utxo.\(utxoPath.path)"
-        
+
     case .estimateFee: return "estimatefee"
     case .relayFee: return "relayfee"
     }}}
@@ -74,7 +74,7 @@ extension SwiftFulcrum.RPC.Method.Blockchain.Headers { var path: String {
 extension SwiftFulcrum.RPC.Method.Blockchain.Transaction { var path: String {
     switch self {
     case .dsProof(let dsProofPath): return "dsproof.\(dsProofPath.path)"
-        
+
     case .broadcast: return "broadcast"
     case .get: return "get"
     case .getConfirmedBlockHash: return "get_confirmed_blockhash"

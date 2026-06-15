@@ -11,7 +11,7 @@ extension SwiftFulcrum.ServerCatalog {
               endpoint.password == nil,
               endpoint.fragment == nil,
               endpoint.port.map({ (1 ... 65_535).contains($0) }) ?? true else {
-            throw SwiftFulcrum.Client.Error.client(.invalidURL(endpoint.absoluteString))
+            throw SwiftFulcrum.Client.Error.client(.invalidURL("Invalid WebSocket endpoint URL"))
         }
 
         return endpoint

@@ -11,60 +11,62 @@ extension WebSocketConnection {
             await connection.receiveContinuously()
         }
     }
-    
+
     func ensureAutomaticReceiving() {
         guard shouldAutomaticallyReceive else { return }
         if sharedMessagesStream == nil {
             _ = makeMessageStream(shouldEnableAutomaticResumption: true)
             return
         }
-        
+
         if receivedTask == nil { startReader() }
     }
-    
+
     func makeMessageStream(shouldEnableAutomaticResumption: Bool = true) -> AsyncThrowingStream<URLSessionWebSocketTask.Message, Swift.Error> {
         shouldAutomaticallyReceive = shouldEnableAutomaticResumption
-        
+
         if let stream = sharedMessagesStream {
             if shouldEnableAutomaticResumption && receivedTask == nil { startReader() }
             return stream
         }
-        
+
         let stream = AsyncThrowingStream<URLSessionWebSocketTask.Message, Swift.Error> { continuation in
             self.messageContinuation = continuation
             self.startReader()
-            continuation.onTermination = { @Sendable _ in
-                Task { await self.resetMessageStreamAndReader() }
+            continuation.onTermination = { @Sendable [weak self] _ in
+                Task { [weak self] in
+                    await self?.resetMessageStreamAndReader()
+                }
             }
         }
-        
+
         sharedMessagesStream = stream
-        
+
         return stream
     }
-    
+
     func resetMessageStreamAndReader() async {
         await cancelReceiverTask()
         sharedMessagesStream = nil
         messageContinuation = nil
     }
-    
+
     func makeOutgoingMessageIdentifier() -> UInt64 {
         nextOutgoingMessageIdentifier &+= 1
         return nextOutgoingMessageIdentifier
     }
-    
+
     private func makeIncomingMessageIdentifier() -> UInt64 {
         nextIncomingMessageIdentifier &+= 1
         return nextIncomingMessageIdentifier
     }
-    
+
     private func receiveContinuously() async {
         defer { receivedTask = nil }
-        
+
         while !Task.isCancelled {
             guard let task = task else { break }
-            
+
             do {
                 let message = try await withTaskCancellationHandler {
                     try await task.receive()
@@ -79,12 +81,10 @@ extension WebSocketConnection {
                         .swiftFulcrumField("message_id", messageIdentifier)
                     ])
                 )
-                switch messageContinuation?.yield(with: .success(message)) {
-                case .some(.enqueued): break
-                default:
+                guard case .some(.enqueued) = messageContinuation?.yield(with: .success(message)) else {
                     messageContinuation?.finish()
                     messageContinuation = nil
-                    break
+                    return
                 }
             } catch let urlError as URLError where urlError.code == .cancelled {
                 break
@@ -112,7 +112,7 @@ extension WebSocketConnection {
                     break
                 }
             }
-            
+
             await Task.yield()
         }
     }
