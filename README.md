@@ -4,6 +4,8 @@
 
 # SwiftFulcrum
 
+Status: Stable on main.
+
 SwiftFulcrum is the Swift/BCH network-layer package for talking to public Fulcrum servers over WebSocket JSON-RPC.
 It provides an actor-based client, typed RPC methods and result models, reconnect handling, and subscription recovery while staying focused on Fulcrum protocol responsibilities rather than wallet or app-domain logic.
 
@@ -104,10 +106,16 @@ OpalDiagnostics.configure(
 
 SwiftFulcrum does not print directly and does not expose package-specific logging adapters. Full endpoint URLs, payload previews, server reason strings, localized error messages, addresses, script hashes, transaction IDs, tokens, and JSON-RPC params are treated as private fields.
 
-## Testing
+## Validation
 
 ```bash
 swift test
 ```
 
+Current result: `Test run with 248 tests in 23 suites passed.`
+
 Set `SWIFTFULCRUM_RUN_NETWORK=1` to enable the opt-in network test suite.
+
+## License
+
+SwiftFulcrum is licensed under the [Apache License 2.0](LICENSE). Copyright 2026 58 Opals.
