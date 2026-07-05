@@ -4,7 +4,9 @@ import OpalDiagnostics
 
 extension OpalDiagnostics.ErrorCode {
     static let clientCancelled = Self(rawValue: "client.cancelled")
+    static let clientInvalidConfiguration = Self(rawValue: "client.invalid_configuration")
     static let clientInvalidState = Self(rawValue: "client.invalid_state")
+    static let clientSubscriptionBufferOverflow = Self(rawValue: "client.subscription_buffer_overflow")
     static let clientTimeout = Self(rawValue: "client.timeout")
     static let jsonRPCDecodeFailed = Self(rawValue: "jsonrpc.decode_failed")
     static let jsonRPCEmptyResponse = Self(rawValue: "jsonrpc.empty_response")

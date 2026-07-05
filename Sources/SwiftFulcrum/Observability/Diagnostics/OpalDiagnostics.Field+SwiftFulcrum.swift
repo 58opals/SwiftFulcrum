@@ -185,6 +185,10 @@ private extension SwiftFulcrum.Client.Error.ClientIssue {
             "Operation cancelled"
         case .timeout(let duration):
             "Operation timed out after \(duration)"
+        case .invalidSubscriptionBufferCapacity(let capacity):
+            "Subscription buffer capacity \(capacity) is invalid"
+        case .subscriptionUpdateBufferOverflow(let capacity):
+            "Subscription update buffer overflowed at capacity \(capacity)"
         case .emptyResponse:
             "JSON-RPC response was empty"
         case .protocolMismatch:

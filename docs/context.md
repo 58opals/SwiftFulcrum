@@ -46,7 +46,8 @@ Use `SwiftFulcrum.Client` as the primary entry point.
 
 - Construct `SwiftFulcrum.Client()` to use the bundled mainnet catalog by default
 - Pass `connectingTo:` when a consumer needs a fixed Fulcrum endpoint
-- Pass `configuration:` when a consumer needs testnet or chipnet selection, custom TLS behavior, reconnect tuning, bootstrap servers, protocol negotiation settings, or a custom server catalog loader
+- Pass `configuration:` when a consumer needs testnet or chipnet selection, reconnect tuning, bootstrap servers, protocol negotiation settings, or a custom server catalog loader
+- Custom TLS or server-trust policy is not currently exposed; SwiftFulcrum uses platform-default URLSession TLS behavior
 
 Use the client surface according to interaction style:
 
@@ -59,6 +60,7 @@ Common integration patterns:
 
 - App or package code can issue typed unary calls such as header, transaction, block, or mempool requests without owning raw JSON-RPC plumbing
 - Long-lived consumers can subscribe to address, scripthash, transaction, or proof-related updates while letting the client manage reconnect and subscription restore attempts
+- Subscription update streams are bounded by default and terminate with a client overflow error when consumers fall behind; callers should treat that as a signal to resubscribe and resync
 - Host apps can enable SwiftFulcrum diagnostics categories such as `fulcrum`, `fulcrum.jsonrpc`, `fulcrum.websocket`, and `fulcrum.reconnect`; SwiftFulcrum only emits structured events and does not decide app-layer diagnostics policy
 
 ## Boundaries and Non-Goals

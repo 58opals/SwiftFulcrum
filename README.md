@@ -83,6 +83,9 @@ let chipnetClient = try await SwiftFulcrum.Client(
 - Automatic protocol negotiation plus reconnect and failover with subscription recovery
 - Bundled public server catalogs for `mainnet`, `testnet`, and `chipnet`
 - Connection-state streams and OpalDiagnostics events for observability
+- Bounded subscription update buffers by default; slow consumers receive an explicit overflow error and should resubscribe/resync
+
+SwiftFulcrum currently uses platform-default URLSession TLS behavior. Custom trust or certificate policy is intentionally not exposed until there is a concrete URLSession-compatible trust API with security-focused tests.
 
 ## Diagnostics
 
@@ -111,8 +114,6 @@ SwiftFulcrum does not print directly and does not expose package-specific loggin
 ```bash
 swift test
 ```
-
-Current result: `Test run with 248 tests in 23 suites passed.`
 
 Set `SWIFTFULCRUM_RUN_NETWORK=1` to enable the opt-in network test suite.
 

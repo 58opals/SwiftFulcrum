@@ -20,10 +20,10 @@ public struct NetworkTestClient {
         }
     }
 
-    public static func detectStreamTermination<Element: Sendable>(
-        _ stream: AsyncThrowingStream<Element, Swift.Error>,
+    public static func detectStreamTermination<Stream: AsyncSequence & Sendable>(
+        _ stream: Stream,
         within timeout: Duration
-    ) async -> Bool {
+    ) async -> Bool where Stream.Element: Sendable {
         await withTaskGroup(of: Bool.self) { group in
             group.addTask {
                 var iterator = stream.makeAsyncIterator()

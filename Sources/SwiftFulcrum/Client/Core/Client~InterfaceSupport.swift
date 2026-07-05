@@ -84,7 +84,8 @@ extension SwiftFulcrum.Client {
         }
         let effectiveOptions = try FulcrumNetworkClient.Call.Options(
             timeout: remainingTimeout(until: deadline),
-            token: token
+            token: token,
+            subscriptionBufferPolicy: options.subscriptionBufferPolicy
         )
         do {
             let (_, initial, updates): (UUID, Initial, AsyncThrowingStream<Update, Swift.Error>) =
@@ -92,10 +93,12 @@ extension SwiftFulcrum.Client {
             if let callerCancellationToken, let callerCancellationRegistrationID {
                 await callerCancellationToken.unregister(callerCancellationRegistrationID)
             }
+            let cancellationState = SubscriptionUpdatesCancellationState {
+                await token.cancel()
+            }
             return Subscription(
                 initial: initial,
-                updates: updates,
-                cancellationHandler: { await token.cancel() }
+                updates: .init(stream: updates, cancellationState: cancellationState)
             )
         } catch {
             if let callerCancellationToken, let callerCancellationRegistrationID {

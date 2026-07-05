@@ -77,6 +77,8 @@ extension OpalDiagnostics.Field {
         switch error {
         case .tlsNegotiationFailed:
             return .networkTLSNegotiationFailed
+        case .urlSessionFailed:
+            return .networkFailure
         }
     }
 
@@ -101,6 +103,10 @@ extension OpalDiagnostics.Field {
             return .clientCancelled
         case .timeout:
             return .clientTimeout
+        case .invalidSubscriptionBufferCapacity:
+            return .clientInvalidConfiguration
+        case .subscriptionUpdateBufferOverflow:
+            return .clientSubscriptionBufferOverflow
         case .emptyResponse:
             return .jsonRPCEmptyResponse
         case .protocolMismatch:

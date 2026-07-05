@@ -42,8 +42,8 @@ extension WebSocketConnectionValidator {
         try await waitTask.value
     }
 
-    @Test("WebSocketSessionDelegateProxy resolves tracked completion failures", .timeLimit(.minutes(1)))
-    func resolveTrackedCompletionFailures() async {
+    @Test("WebSocketSessionDelegateProxy classifies non-certificate completion failures as URLSession failures", .timeLimit(.minutes(1)))
+    func classifyNonCertificateCompletionFailuresAsURLSessionFailures() async {
         let tracker = WebSocketConnectionEventTracker()
         let proxy = WebSocketSessionDelegateProxy(connectionEventTracker: tracker)
         let session = URLSession(configuration: .ephemeral)
@@ -51,6 +51,39 @@ extension WebSocketConnectionValidator {
 
         let task = session.webSocketTask(with: URL(string: "wss://example.invalid")!)
         let expectedError = URLError(.timedOut)
+        await tracker.beginTracking(taskIdentifier: task.taskIdentifier)
+
+        let waitTask = Task {
+            try await tracker.waitForOpen(taskIdentifier: task.taskIdentifier)
+        }
+
+        proxy.urlSession(session, task: task, didCompleteWithError: expectedError)
+
+        do {
+            try await waitTask.value
+            Issue.record("Expected tracked completion failure")
+        } catch let error as SwiftFulcrum.Client.Error.Network {
+            guard case .urlSessionFailed(let forwardedError) = error else {
+                Issue.record("Expected URLSession failure, got \(error)")
+                return
+            }
+
+            let forwardedURLError = try? #require(forwardedError as? URLError)
+            #expect(forwardedURLError?.code == expectedError.code)
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
+    @Test("WebSocketSessionDelegateProxy classifies certificate completion failures as TLS failures", .timeLimit(.minutes(1)))
+    func classifyCertificateCompletionFailuresAsTLSFailures() async {
+        let tracker = WebSocketConnectionEventTracker()
+        let proxy = WebSocketSessionDelegateProxy(connectionEventTracker: tracker)
+        let session = URLSession(configuration: .ephemeral)
+        defer { session.invalidateAndCancel() }
+
+        let task = session.webSocketTask(with: URL(string: "wss://example.invalid")!)
+        let expectedError = URLError(.serverCertificateUntrusted)
         await tracker.beginTracking(taskIdentifier: task.taskIdentifier)
 
         let waitTask = Task {

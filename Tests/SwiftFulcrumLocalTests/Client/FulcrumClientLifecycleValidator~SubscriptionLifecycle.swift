@@ -6,6 +6,195 @@ import SwiftFulcrumTestSupport
 @testable import SwiftFulcrum
 
 extension FulcrumClientLifecycleValidator {
+    @Test("subscription buffers default to bounded capacity 256")
+    func subscriptionBuffersDefaultToBoundedCapacity256() {
+        let options = SwiftFulcrum.Client.Call.Options()
+        #expect(options.subscriptionBufferPolicy == .bounded(capacity: 256))
+
+        let internalOptions = FulcrumNetworkClient.Call.Options()
+        #expect(internalOptions.subscriptionBufferPolicy == .bounded(capacity: 256))
+    }
+
+    @Test("invalid subscription buffer capacity fails before registry insert", .timeLimit(.minutes(1)))
+    func invalidSubscriptionBufferCapacityFailsBeforeRegistryInsert() async throws {
+        let (fulcrum, _) = try await makeStartedFulcrum()
+
+        do {
+            let _: HeadersSubscription = try await fulcrum.subscribe(
+                method: .blockchain(.headers(.subscribe)),
+                options: .init(timeout: .seconds(30), subscriptionBufferPolicy: .bounded(capacity: 0))
+            )
+            Issue.record("Expected invalid subscription buffer capacity to fail")
+        } catch let error as SwiftFulcrum.Client.Error {
+            guard case .client(.invalidSubscriptionBufferCapacity(let capacity)) = error else {
+                Issue.record("Expected invalid subscription buffer capacity, got \(error)")
+                await fulcrum.stop()
+                return
+            }
+            #expect(capacity == 0)
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+
+        #expect(await fulcrum.makeActiveSubscriptionStates().isEmpty)
+        await fulcrum.stop()
+    }
+
+    @Test("updates.cancel() emits unsubscribe and clears registry", .timeLimit(.minutes(1)))
+    func updatesCancelEmitsUnsubscribeAndClearsRegistry() async throws {
+        let (fulcrum, transport) = try await makeStartedFulcrum()
+        let subscribeMethod = SwiftFulcrum.RPC.Method.blockchain(.headers(.subscribe))
+        let unsubscribeMethodPath = SwiftFulcrum.RPC.Method.blockchain(.headers(.unsubscribe)).path
+
+        let subscribeTask = Task<HeadersSubscription, Swift.Error> {
+            try await fulcrum.subscribe(
+                method: subscribeMethod,
+                options: .init(timeout: .seconds(30))
+            )
+        }
+
+        let subscribeRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
+        let subscribeIdentifier = try extractRequestIdentifier(from: subscribeRequest)
+        let subscribePayload = try TransportTestActor.encodeResponsePayload(
+            identifier: subscribeIdentifier,
+            result: ["height": 934_000, "hex": String(repeating: "f", count: 160)]
+        )
+        await transport.enqueueIncoming(.data(subscribePayload))
+
+        let subscription = try await subscribeTask.value
+        let updates = subscription.updates
+        let baselineUnsubscribeCount = try await countSentMethodOccurrences(
+            unsubscribeMethodPath,
+            transport: transport
+        )
+
+        await updates.cancel()
+
+        let registryDidClear = await waitUntil(timeout: .seconds(5)) {
+            await fulcrum.makeActiveSubscriptionStates().isEmpty
+        }
+        #expect(registryDidClear)
+
+        let didSendUnsubscribe = await waitUntil(timeout: .seconds(5)) {
+            let unsubscribeCount = (try? await countSentMethodOccurrences(
+                unsubscribeMethodPath,
+                transport: transport
+            )) ?? 0
+            return unsubscribeCount == baselineUnsubscribeCount + 1
+        }
+        #expect(didSendUnsubscribe)
+        #expect(await NetworkTestClient.detectStreamTermination(updates, within: .seconds(5)))
+
+        await fulcrum.stop()
+    }
+
+    @Test("subscription update overflow terminates only affected stream", .timeLimit(.minutes(1)))
+    func subscriptionUpdateOverflowTerminatesOnlyAffectedStream() async throws {
+        let (fulcrum, transport) = try await makeStartedFulcrum()
+        let headersMethod = SwiftFulcrum.RPC.Method.blockchain(.headers(.subscribe))
+        let headersUnsubscribeMethodPath = SwiftFulcrum.RPC.Method.blockchain(.headers(.unsubscribe)).path
+        let scriptHash = String(repeating: "0", count: 64)
+        let scriptHashMethod = SwiftFulcrum.RPC.Method.blockchain(.scripthash(.subscribe(scripthash: scriptHash)))
+
+        let headersSubscribeTask = Task<HeadersSubscription, Swift.Error> {
+            try await fulcrum.subscribe(
+                method: headersMethod,
+                options: .init(timeout: .seconds(30), subscriptionBufferPolicy: .bounded(capacity: 1))
+            )
+        }
+
+        let headersSubscribeRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
+        let headersSubscribeIdentifier = try extractRequestIdentifier(from: headersSubscribeRequest)
+        let headersSubscribePayload = try TransportTestActor.encodeResponsePayload(
+            identifier: headersSubscribeIdentifier,
+            result: ["height": 940_000, "hex": String(repeating: "1", count: 160)]
+        )
+        await transport.enqueueIncoming(.data(headersSubscribePayload))
+        let headersSubscription = try await headersSubscribeTask.value
+        let headersUpdates = headersSubscription.updates
+
+        let scriptHashSubscribeTask = Task<ScriptHashSubscription, Swift.Error> {
+            try await fulcrum.subscribe(
+                method: scriptHashMethod,
+                options: .init(timeout: .seconds(30), subscriptionBufferPolicy: .bounded(capacity: 1))
+            )
+        }
+
+        let scriptHashSubscribeRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
+        let scriptHashSubscribeIdentifier = try extractRequestIdentifier(from: scriptHashSubscribeRequest)
+        let scriptHashSubscribePayload = try TransportTestActor.encodeResponsePayload(
+            identifier: scriptHashSubscribeIdentifier,
+            result: "initial-status"
+        )
+        await transport.enqueueIncoming(.data(scriptHashSubscribePayload))
+        let scriptHashSubscription = try await scriptHashSubscribeTask.value
+        let scriptHashUpdates = scriptHashSubscription.updates
+
+        let baselineHeadersUnsubscribeCount = try await countSentMethodOccurrences(
+            headersUnsubscribeMethodPath,
+            transport: transport
+        )
+
+        let firstHeadersNotificationPayload = try TransportTestActor.encodeSubscriptionNotification(
+            method: headersMethod.path,
+            parameters: [[
+                "height": 940_001,
+                "hex": String(repeating: "2", count: 160)
+            ]]
+        )
+        await transport.enqueueIncoming(.data(firstHeadersNotificationPayload))
+
+        let secondHeadersNotificationPayload = try TransportTestActor.encodeSubscriptionNotification(
+            method: headersMethod.path,
+            parameters: [[
+                "height": 940_002,
+                "hex": String(repeating: "3", count: 160)
+            ]]
+        )
+        await transport.enqueueIncoming(.data(secondHeadersNotificationPayload))
+
+        let registryContainsOnlyScriptHash = await waitUntil(timeout: .seconds(5)) {
+            let activeSubscriptions = await fulcrum.makeActiveSubscriptionStates()
+            return activeSubscriptions.count == 1
+                && activeSubscriptions.first?.methodPath == scriptHashMethod.path
+                && activeSubscriptions.first?.identifier == scriptHash
+        }
+        #expect(registryContainsOnlyScriptHash)
+
+        let didSendHeadersUnsubscribe = await waitUntil(timeout: .seconds(5)) {
+            let unsubscribeCount = (try? await countSentMethodOccurrences(
+                headersUnsubscribeMethodPath,
+                transport: transport
+            )) ?? 0
+            return unsubscribeCount == baselineHeadersUnsubscribeCount + 1
+        }
+        #expect(didSendHeadersUnsubscribe)
+
+        let overflowError = await waitForStreamTerminalError(headersUpdates, within: .seconds(5))
+        guard case .client(.subscriptionUpdateBufferOverflow(let capacity)) = overflowError as? SwiftFulcrum.Client.Error else {
+            Issue.record("Expected subscription update buffer overflow, got \(String(describing: overflowError))")
+            await scriptHashSubscription.cancel()
+            await fulcrum.stop()
+            return
+        }
+        #expect(capacity == 1)
+
+        let scriptHashNotificationPayload = try TransportTestActor.encodeSubscriptionNotification(
+            method: scriptHashMethod.path,
+            parameters: [scriptHash, "next-status"]
+        )
+        await transport.enqueueIncoming(.data(scriptHashNotificationPayload))
+
+        let scriptHashUpdate = try await waitForFirstStreamElement(scriptHashUpdates, within: .seconds(5))
+        #expect(scriptHashUpdate?.subscriptionIdentifier == scriptHash)
+        #expect(scriptHashUpdate?.status == "next-status")
+
+        await scriptHashSubscription.cancel()
+        #expect(await NetworkTestClient.detectStreamTermination(scriptHashUpdates, within: .seconds(5)))
+
+        await fulcrum.stop()
+    }
+
     @Test("cancel() allows immediate same-key resubscribe", .timeLimit(.minutes(1)))
     func cancellingSubscriptionAllowsImmediateSameKeyResubscribe() async throws {
         let (fulcrum, transport) = try await makeStartedFulcrum()
@@ -76,14 +265,7 @@ extension FulcrumClientLifecycleValidator {
         await fulcrum.stop()
     }
 
-    @Test(
-        "dropping decoded updates stream triggers unsubscribe cleanup",
-        .timeLimit(.minutes(1)),
-        .enabled(
-            if: false,
-            "Decoded stream drop cleanup is currently nondeterministic under Swift Testing task retention."
-        )
-    )
+    @Test("dropping decoded updates stream triggers unsubscribe cleanup", .timeLimit(.minutes(1)))
     func droppingDecodedUpdatesStreamTriggersUnsubscribeCleanup() async throws {
         let (fulcrum, transport) = try await makeStartedFulcrum()
 
@@ -109,10 +291,10 @@ extension FulcrumClientLifecycleValidator {
             result: ["height": 920_000, "hex": String(repeating: "d", count: 160)]
         )
         await transport.enqueueIncoming(.data(subscribePayload))
-        var updatesStream: AsyncThrowingStream<
-            SwiftFulcrum.Response.Blockchain.Headers.SubscribeNotification,
-            Swift.Error
-        >?
+        var updatesStream: SwiftFulcrum.Client.Subscription<
+            SwiftFulcrum.Response.Blockchain.Headers.Subscribe,
+            SwiftFulcrum.Response.Blockchain.Headers.SubscribeNotification
+        >.Updates?
         do {
             guard let task = subscribeTask else {
                 Issue.record("Subscribe task should exist while awaiting the initial response")

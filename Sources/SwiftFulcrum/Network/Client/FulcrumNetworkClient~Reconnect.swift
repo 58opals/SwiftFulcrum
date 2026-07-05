@@ -105,8 +105,8 @@ extension FulcrumNetworkClient {
     }
 
     func waitForAutomaticReconnectConnection() async throws {
-        while true {
-            let state = await transport.connectionState
+        let stream = await transport.makeConnectionStateEvents()
+        for await state in stream {
             switch state {
             case .connected:
                 let recoveryTask = makeOrReuseAutomaticReconnectRecoveryTask()
@@ -118,9 +118,11 @@ extension FulcrumNetworkClient {
             case .idle:
                 throw CancellationError()
             case .connecting, .reconnecting:
-                try await Task.sleep(for: .milliseconds(10))
+                continue
             }
         }
+
+        throw CancellationError()
     }
 
     func prepareForAutomaticReconnectRecovery() {

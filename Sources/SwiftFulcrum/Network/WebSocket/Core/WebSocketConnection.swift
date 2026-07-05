@@ -37,8 +37,6 @@ actor WebSocketConnection {
     let connectionEventTracker: WebSocketConnectionEventTracker
     let sessionDelegateProxy: WebSocketSessionDelegateProxy
 
-    private let tlsDescriptor: TLSDescriptor?
-
     init(url: URL,
          configuration: Configuration = .init(),
          reconnectConfiguration: Reconnector.Configuration = .basic,
@@ -60,7 +58,6 @@ actor WebSocketConnection {
         self.connectionTimeout = connectionTimeout
         self.network = configuration.network
 
-        self.tlsDescriptor = configuration.tlsDescriptor
         self.maximumMessageSize = configuration.maximumMessageSize
 
         let sessionConfiguration = URLSessionConfiguration.default

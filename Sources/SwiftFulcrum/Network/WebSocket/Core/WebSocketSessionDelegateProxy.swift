@@ -57,7 +57,7 @@ final class WebSocketSessionDelegateProxy: NSObject, URLSessionWebSocketDelegate
         error: (any Error)?
     ) -> Swift.Error {
         if let error {
-            return SwiftFulcrum.Client.Error.Network.tlsNegotiationFailed(error)
+            return makeNetworkError(for: error)
         }
 
         guard let webSocketTask = task as? URLSessionWebSocketTask else {
@@ -66,5 +66,24 @@ final class WebSocketSessionDelegateProxy: NSObject, URLSessionWebSocketDelegate
 
         let reason = webSocketTask.swiftFulcrumCloseReasonSummary
         return SwiftFulcrum.Client.Error.transport(.connectionClosed(webSocketTask.closeCode, reason))
+    }
+
+    private func makeNetworkError(for error: Swift.Error) -> SwiftFulcrum.Client.Error.Network {
+        guard let urlError = error as? URLError else {
+            return .urlSessionFailed(error)
+        }
+
+        switch urlError.code {
+        case .secureConnectionFailed,
+             .serverCertificateHasBadDate,
+             .serverCertificateUntrusted,
+             .serverCertificateHasUnknownRoot,
+             .serverCertificateNotYetValid,
+             .clientCertificateRejected,
+             .clientCertificateRequired:
+            return .tlsNegotiationFailed(error)
+        default:
+            return .urlSessionFailed(error)
+        }
     }
 }

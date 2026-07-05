@@ -12,7 +12,7 @@ extension WebSocketConnection.Reconnector {
         var isUnlimited: Bool { maximumReconnectionAttempts <= 0 }
 
         static let basic = Self(
-            maximumReconnectionAttempts: 1,
+            maximumReconnectionAttempts: 3,
             reconnectionDelay: 1.5,
             maximumDelay: 30,
             jitterRange: 0.8 ... 1.3

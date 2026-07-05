@@ -17,18 +17,27 @@ extension PublicAPIFacadeContractValidator {
         let network: SwiftFulcrum.Client.Configuration.Network = .chipnet
         _ = network
 
-        let tlsDescriptorType: SwiftFulcrum.Client.Configuration.TLSDescriptor.Type =
-            SwiftFulcrum.Client.Configuration.TLSDescriptor.self
-        _ = tlsDescriptorType
-
         let callOptionsType: SwiftFulcrum.Client.Call.Options.Type = SwiftFulcrum.Client.Call.Options.self
         _ = callOptionsType
+
+        let subscriptionBufferPolicyType: SwiftFulcrum.Client.SubscriptionBufferPolicy.Type =
+            SwiftFulcrum.Client.SubscriptionBufferPolicy.self
+        _ = subscriptionBufferPolicyType
 
         let subscriptionType: SwiftFulcrum.Client.Subscription<
             SwiftFulcrum.Response.Blockchain.Headers.Subscribe,
             SwiftFulcrum.Response.Blockchain.Headers.SubscribeNotification
         >.Type = SwiftFulcrum.Client.Subscription.self
         _ = subscriptionType
+
+        let subscriptionUpdatesType: SwiftFulcrum.Client.Subscription<
+            SwiftFulcrum.Response.Blockchain.Headers.Subscribe,
+            SwiftFulcrum.Response.Blockchain.Headers.SubscribeNotification
+        >.Updates.Type = SwiftFulcrum.Client.Subscription<
+            SwiftFulcrum.Response.Blockchain.Headers.Subscribe,
+            SwiftFulcrum.Response.Blockchain.Headers.SubscribeNotification
+        >.Updates.self
+        _ = subscriptionUpdatesType
 
         let diagnosticsCategory: OpalDiagnostics.Category = OpalDiagnostics.Category.fulcrum
         _ = diagnosticsCategory
@@ -82,11 +91,17 @@ extension PublicAPIFacadeContractValidator {
         let serverCatalogRepositoryType: SwiftFulcrum.ServerCatalog.Repository.Type = SwiftFulcrum.ServerCatalog.Repository.self
         _ = serverCatalogRepositoryType
 
-        let tlsDescriptor = SwiftFulcrum.Client.Configuration.TLSDescriptor()
-        _ = tlsDescriptor
-
-        let configuration = SwiftFulcrum.Client.Configuration(tlsDescriptor: tlsDescriptor)
+        let configuration = SwiftFulcrum.Client.Configuration(network: .chipnet)
         _ = configuration
+
+        let callOptions = SwiftFulcrum.Client.Call.Options(
+            timeout: .seconds(10),
+            subscriptionBufferPolicy: .bounded(capacity: 256)
+        )
+        _ = callOptions
+
+        let unboundedSubscriptionBufferPolicy: SwiftFulcrum.Client.SubscriptionBufferPolicy = .unbounded
+        _ = unboundedSubscriptionBufferPolicy
 
         let unaryRequest: @Sendable (SwiftFulcrum.Client) async throws -> SwiftFulcrum.Response.Blockchain.Headers.Tip = { client in
             try await client.request(SwiftFulcrum.API.blockchain.headers.tip)

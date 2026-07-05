@@ -8,7 +8,8 @@ extension FulcrumNetworkClient {
         rawContinuation: AsyncThrowingStream<Data, Swift.Error>.Continuation,
         subscriptionKey: SubscriptionKey,
         method: SwiftFulcrum.RPC.Method,
-        requestIdentifier: UUID
+        requestIdentifier: UUID,
+        subscriptionBufferPolicy: SwiftFulcrum.Client.SubscriptionBufferPolicy
     ) async throws {
         recordPendingSubscriptionRequestIdentifier(requestIdentifier, for: subscriptionKey)
         defer {
@@ -23,7 +24,19 @@ extension FulcrumNetworkClient {
         recordSubscriptionSetupRequestIdentifier(requestIdentifier, for: subscriptionKey)
         try await router.addStream(
             key: subscriptionKey.string,
-            continuation: rawContinuation
+            continuation: rawContinuation,
+            overflowError: subscriptionBufferPolicy.overflowError,
+            terminationAction: { [weak self] error in
+                guard let self else { return }
+                _ = await self.scheduleSubscriptionCleanup(
+                    for: subscriptionKey,
+                    requestIdentifier: requestIdentifier,
+                    error: error,
+                    sendUnsubscribe: true,
+                    preferCurrentSetupRequest: true,
+                    requireMatchingActiveRequestIdentifier: true
+                )
+            }
         )
         recordActiveSubscriptionRequestIdentifier(requestIdentifier, for: subscriptionKey)
         subscriptionMethods[subscriptionKey] = method

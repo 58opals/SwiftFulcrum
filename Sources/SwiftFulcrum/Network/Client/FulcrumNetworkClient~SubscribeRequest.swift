@@ -20,6 +20,8 @@ extension FulcrumNetworkClient {
 
         let id = UUID()
         let request = method.createRequest(with: id)
+        let streamBufferingPolicy: AsyncThrowingStream<Data, Swift.Error>.Continuation.BufferingPolicy =
+            try options.subscriptionBufferPolicy.makeBufferingPolicy()
         let subscriptionKey = SubscriptionKey(
             methodPath: subscriptionPath,
             identifier: deriveSubscriptionIdentifier(for: method)
@@ -36,13 +38,20 @@ extension FulcrumNetworkClient {
         let subscriptionTask = Task<(UUID, Initial, AsyncThrowingStream<Notification, Swift.Error>), Swift.Error> {
             do {
                 return try await withTaskCancellationHandler {
-                    let (rawStream, rawContinuation) = AsyncThrowingStream<Data, Swift.Error>.makeStream()
+                    var rawContinuationStorage: AsyncThrowingStream<Data, Swift.Error>.Continuation!
+                    let rawStream = AsyncThrowingStream<Data, Swift.Error>(
+                        bufferingPolicy: streamBufferingPolicy
+                    ) { continuation in
+                        rawContinuationStorage = continuation
+                    }
+                    let rawContinuation = rawContinuationStorage!
 
                     try await configureSubscriptionLifecycle(
                         rawContinuation: rawContinuation,
                         subscriptionKey: subscriptionKey,
                         method: method,
-                        requestIdentifier: id
+                        requestIdentifier: id,
+                        subscriptionBufferPolicy: options.subscriptionBufferPolicy
                     )
 
                     let initialRawStream = try await registerUnaryResponse(for: id)

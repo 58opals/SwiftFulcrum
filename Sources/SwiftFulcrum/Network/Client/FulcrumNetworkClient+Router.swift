@@ -20,10 +20,19 @@ extension FulcrumNetworkClient {
             return inflightUnaryCallCount
         }
 
-        func addStream(key: String, continuation: AsyncThrowingStream<Data, Swift.Error>.Continuation) throws {
+        func addStream(
+            key: String,
+            continuation: AsyncThrowingStream<Data, Swift.Error>.Continuation,
+            overflowError: Swift.Error?,
+            terminationAction: @escaping @Sendable (Swift.Error?) async -> Void
+        ) throws {
             let identifier: SwiftFulcrum.RPC.Response.Identifier = .string(key)
             guard table[identifier] == nil else { throw SwiftFulcrum.Client.Error.client(.duplicateHandler) }
-            table[identifier] = .stream(continuation)
+            table[identifier] = .stream(
+                continuation,
+                overflowError: overflowError,
+                terminationAction: terminationAction
+            )
         }
 
         func handle(raw: Data) -> Int? {
@@ -56,7 +65,7 @@ extension FulcrumNetworkClient {
                 continuation.finish(throwing: error ?? SwiftFulcrum.Client.Error.client(.cancelled))
                 inflightUnaryCallCount = max(inflightUnaryCallCount - 1, 0)
                 return inflightUnaryCallCount
-            case .stream(let continuation):
+            case .stream(let continuation, _, _):
                 if let error {
                     continuation.finish(throwing: error)
                 } else {
@@ -75,7 +84,7 @@ extension FulcrumNetworkClient {
                 switch pending {
                 case .unary(let continuation):
                     continuation.finish(throwing: error)
-                case .stream(let continuation):
+                case .stream(let continuation, _, _):
                     continuation.finish(throwing: error)
                 }
             }
@@ -108,8 +117,36 @@ extension FulcrumNetworkClient {
                 table.removeValue(forKey: identifier)
                 inflightUnaryCallCount = max(inflightUnaryCallCount - 1, 0)
                 return inflightUnaryCallCount
-            case .stream(let continuation):
-                continuation.yield(raw)
+            case .stream(let continuation, let overflowError, let terminationAction):
+                switch continuation.yield(raw) {
+                case .enqueued:
+                    break
+                case .dropped:
+                    table.removeValue(forKey: identifier)
+                    if let overflowError {
+                        continuation.finish(throwing: overflowError)
+                    } else {
+                        continuation.finish()
+                    }
+                    Task {
+                        await terminationAction(overflowError)
+                    }
+                case .terminated:
+                    table.removeValue(forKey: identifier)
+                    Task {
+                        await terminationAction(nil)
+                    }
+                @unknown default:
+                    table.removeValue(forKey: identifier)
+                    if let overflowError {
+                        continuation.finish(throwing: overflowError)
+                    } else {
+                        continuation.finish()
+                    }
+                    Task {
+                        await terminationAction(overflowError)
+                    }
+                }
             }
 
             return nil
