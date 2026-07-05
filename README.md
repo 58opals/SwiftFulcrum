@@ -8,6 +8,8 @@ Status: Stable on main.
 
 Current release: `v0.7.0`, focused on connection reliability through explicit reconnect recovery state, registry-owned subscription lifecycle, typed WebSocket attempt behavior, shared timeout/cancellation orchestration, and bounded subscription overflow failure.
 
+See [CHANGELOG.md](CHANGELOG.md) for release notes.
+
 SwiftFulcrum is the Swift/BCH network-layer package for talking to public Fulcrum servers over WebSocket JSON-RPC.
 It provides an actor-based client, typed RPC methods and result models, reconnect handling, and subscription recovery while staying focused on Fulcrum protocol responsibilities rather than wallet or app-domain logic.
 
