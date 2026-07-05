@@ -184,4 +184,59 @@ extension FulcrumClientLifecycleValidator {
 
         await fulcrum.stop()
     }
+
+    @Test("subscription overflow during reconnect restore removes subscription", .timeLimit(.minutes(1)))
+    func subscriptionOverflowDuringReconnectRestoreRemovesSubscription() async throws {
+        let (fulcrum, transport) = try await makeStartedFulcrum()
+        let networkClient = await fulcrum.client
+        let subscribeMethod = SwiftFulcrum.RPC.Method.blockchain(.headers(.subscribe))
+        let subscriptionKey = FulcrumNetworkClient.SubscriptionKey(methodPath: .headers, identifier: nil)
+
+        let subscribeTask = Task<HeadersSubscription, Swift.Error> {
+            try await fulcrum.subscribe(
+                method: subscribeMethod,
+                options: .init(timeout: .seconds(30), subscriptionBufferPolicy: .bounded(capacity: 1))
+            )
+        }
+
+        let subscribeRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
+        let subscribeIdentifier = try extractRequestIdentifier(from: subscribeRequest)
+        let subscribeRequestIdentifier = try #require(UUID(uuidString: subscribeIdentifier))
+        let subscribePayload = try TransportTestActor.encodeResponsePayload(
+            identifier: subscribeIdentifier,
+            result: ["height": 926_000, "hex": String(repeating: "f", count: 160)]
+        )
+        await transport.enqueueIncoming(.data(subscribePayload))
+        let subscription = try await subscribeTask.value
+        let updates = subscription.updates
+
+        let restoreRequestIdentifier = UUID()
+        await networkClient.recordSubscriptionSetupRequestIdentifier(
+            restoreRequestIdentifier,
+            for: subscriptionKey
+        )
+        let expectedOverflowError = SwiftFulcrum.Client.Error.client(
+            .subscriptionUpdateBufferOverflow(1)
+        )
+        let didRemove = await networkClient.cleanUpSubscriptionSetup(
+            for: subscriptionKey,
+            requestIdentifier: subscribeRequestIdentifier,
+            reason: .overflow(expectedOverflowError),
+            scope: .currentSetupThenActiveRequest
+        )
+
+        #expect(didRemove)
+
+        let overflowError = try #require(
+            await waitForStreamTerminalError(updates, within: .seconds(5)) as? SwiftFulcrum.Client.Error
+        )
+        #expect(overflowError == expectedOverflowError)
+
+        let didClearSubscriptions = await waitUntil(timeout: .seconds(2)) {
+            await fulcrum.makeActiveSubscriptionStates().isEmpty
+        }
+        #expect(didClearSubscriptions)
+
+        await fulcrum.stop()
+    }
 }

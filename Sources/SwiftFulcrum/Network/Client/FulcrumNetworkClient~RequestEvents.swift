@@ -6,7 +6,7 @@ import OpalDiagnostics
 extension FulcrumNetworkClient {
     func callFailureEvent(
         for error: Swift.Error,
-        timeoutState: RequestTimeoutState
+        timeoutState: FulcrumNetworkClient.Call.TimeoutState
     ) async -> OpalDiagnostics.Event {
         if await timeoutState.timeoutError != nil || isTimeoutError(error) {
             return OpalDiagnostics.Event.swiftFulcrumClientCallTimeout
@@ -21,7 +21,7 @@ extension FulcrumNetworkClient {
 
     func subscribeFailureEvent(
         for error: Swift.Error,
-        timeoutState: RequestTimeoutState
+        timeoutState: FulcrumNetworkClient.Call.TimeoutState
     ) async -> OpalDiagnostics.Event {
         if await timeoutState.timeoutError != nil || isTimeoutError(error) {
             return OpalDiagnostics.Event.swiftFulcrumClientSubscribeTimeout

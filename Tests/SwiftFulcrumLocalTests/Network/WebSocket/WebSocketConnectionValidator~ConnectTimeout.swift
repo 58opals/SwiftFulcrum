@@ -25,7 +25,7 @@ extension WebSocketConnectionValidator {
             OpalDiagnostics.clearRecentRecords()
 
             do {
-                try await webSocket.connect(shouldAllowFailover: false)
+                try await webSocket.connect(using: .initialWithoutFailover)
                 Issue.record("Expected connect() to fail when the socket never opens")
             } catch let error as SwiftFulcrum.Client.Error {
                 guard case .transport(.connectionClosed(let code, let reason)) = error else {

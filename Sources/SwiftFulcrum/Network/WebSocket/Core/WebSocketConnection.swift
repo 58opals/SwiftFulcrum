@@ -19,8 +19,10 @@ actor WebSocketConnection {
 
     var connectTask: Task<Void, Swift.Error>?
     var connectTaskWaitersByIdentifier = [UUID: CheckedContinuation<Void, Error>]()
+    var cancelledConnectTaskWaiterIdentifiers = Set<UUID>()
     var isConnectionInFlight = false
     var connectWaitersByIdentifier = [UUID: CheckedContinuation<Bool, Error>]()
+    var cancelledConnectWaiterIdentifiers = Set<UUID>()
     var isConnected: Bool { get async { await connectionStateTracker.state == .connected } }
 
     var nextOutgoingMessageIdentifier: UInt64 = 0

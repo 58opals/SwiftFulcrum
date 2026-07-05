@@ -26,7 +26,7 @@ extension FulcrumNetworkClient {
             methodPath: subscriptionPath,
             identifier: deriveSubscriptionIdentifier(for: method)
         )
-        let timeoutState = RequestTimeoutState()
+        let timeoutState = FulcrumNetworkClient.Call.TimeoutState()
         let token = options.token
         OpalDiagnostics.logger(category: .fulcrum).record(
             event: .swiftFulcrumClientSubscribeBegin,
@@ -89,7 +89,7 @@ extension FulcrumNetworkClient {
                         await self.cleanUpSubscriptionSetup(
                             for: subscriptionKey,
                             requestIdentifier: id,
-                            error: cancellationError
+                            reason: .cancellation(cancellationError)
                         )
                     }
                 }
@@ -110,11 +110,49 @@ extension FulcrumNetworkClient {
                 await self.cleanUpSubscriptionSetup(
                     for: subscriptionKey,
                     requestIdentifier: id,
-                    error: resolvedError
+                    reason: .streamTermination(resolvedError)
                 )
                 throw resolvedError
             }
         }
+        let executionContext = FulcrumNetworkClient.Call.ExecutionContext(
+            task: subscriptionTask,
+            token: token,
+            timeout: options.timeout,
+            timeoutState: timeoutState
+        ) { [weak self] cancellationError in
+            guard let self else { return }
+            let cleanupKey = SubscriptionKey(
+                methodPath: subscriptionPath,
+                identifier: subscriptionKey.identifier
+            )
+            let shouldSendUnsubscribe = await self.shouldSendUnsubscribeOnCancellation(for: cleanupKey)
+            _ = await self.scheduleSubscriptionCleanup(
+                for: cleanupKey,
+                requestIdentifier: id,
+                reason: .cancellation(cancellationError),
+                sendUnsubscribe: shouldSendUnsubscribe,
+                scope: .currentSetupThenRequest
+            )
+        }
+
+        let subscriptionResult: (UUID, Initial, AsyncThrowingStream<Notification, Swift.Error>)
+        do {
+            subscriptionResult = try await executionContext.value()
+        } catch {
+            if error is CancellationError {
+                let cancellationError = await makeRequestCancellationError(using: timeoutState)
+                OpalDiagnostics.logger(category: .fulcrum).record(
+                    event: await subscribeFailureEvent(for: cancellationError, timeoutState: timeoutState),
+                    level: .info,
+                    traceID: OpalDiagnostics.TraceID(swiftFulcrumRequestID: id),
+                    fields: makeRequestFailureDiagnosticFields(methodPath: method.path, error: cancellationError)
+                )
+                throw cancellationError
+            }
+            throw error
+        }
+
         let cancellationRegistrationID: FulcrumNetworkClient.Call.Token.RegistrationID?
         if let token {
             cancellationRegistrationID = await token.register { [weak self] in
@@ -130,9 +168,9 @@ extension FulcrumNetworkClient {
                     _ = await self.scheduleSubscriptionCleanup(
                         for: cleanupKey,
                         requestIdentifier: id,
-                        error: cancellationError,
+                        reason: .cancellation(cancellationError),
                         sendUnsubscribe: shouldSendUnsubscribe,
-                        preferCurrentSetupRequest: true
+                        scope: .currentSetupThenRequest
                     )
                 }
             }
@@ -145,74 +183,6 @@ extension FulcrumNetworkClient {
         } else {
             cancellationRegistration = nil
         }
-
-        let subscriptionResult: (UUID, Initial, AsyncThrowingStream<Notification, Swift.Error>)
-        do {
-            subscriptionResult = try await withTaskCancellationHandler {
-                if let token, await token.isCancelled {
-                    let cancellationError = await self.makeRequestCancellationError(using: timeoutState)
-                    subscriptionTask.cancel()
-                    await self.cleanUpSubscriptionSetup(
-                        for: subscriptionKey,
-                        requestIdentifier: id,
-                        error: cancellationError
-                    )
-                    throw cancellationError
-                }
-
-                if let limit = options.timeout {
-                    let timeoutError = SwiftFulcrum.Client.Error.client(.timeout(limit))
-                    return try await withThrowingTaskGroup(
-                        of: (UUID, Initial, AsyncThrowingStream<Notification, Swift.Error>).self
-                    ) { group in
-                        group.addTask { try await subscriptionTask.value }
-                        group.addTask {
-                            try await Task.sleep(for: limit)
-                            await timeoutState.mark(timeoutError)
-                            subscriptionTask.cancel()
-                            await self.cleanUpSubscriptionSetup(
-                                for: subscriptionKey,
-                                requestIdentifier: id,
-                                error: timeoutError
-                            )
-                            throw timeoutError
-                        }
-
-                        let value = try await group.next()!
-                        group.cancelAll()
-                        return value
-                    }
-                }
-
-                return try await subscriptionTask.value
-            } onCancel: {
-                subscriptionTask.cancel()
-                Task {
-                    let cancellationError = await self.makeRequestCancellationError(using: timeoutState)
-                    await self.cleanUpSubscriptionSetup(
-                        for: subscriptionKey,
-                        requestIdentifier: id,
-                        error: cancellationError
-                    )
-                }
-            }
-        } catch {
-            if let token, let cancellationRegistrationID {
-                await token.unregister(cancellationRegistrationID)
-            }
-            if error is CancellationError {
-                let cancellationError = await makeRequestCancellationError(using: timeoutState)
-                OpalDiagnostics.logger(category: .fulcrum).record(
-                    event: await subscribeFailureEvent(for: cancellationError, timeoutState: timeoutState),
-                    level: .info,
-                    traceID: OpalDiagnostics.TraceID(swiftFulcrumRequestID: id),
-                    fields: makeRequestFailureDiagnosticFields(methodPath: method.path, error: cancellationError)
-                )
-                throw cancellationError
-            }
-            throw error
-        }
-
         await recordSubscriptionCancellationRegistration(cancellationRegistration, for: subscriptionKey)
 
         return subscriptionResult

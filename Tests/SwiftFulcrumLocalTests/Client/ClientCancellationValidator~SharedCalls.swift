@@ -6,6 +6,37 @@ import SwiftFulcrumTestSupport
 @testable import SwiftFulcrum
 
 extension ClientCancellationValidator {
+    @Test("Pre-cancelled execution context runs cancellation action once", .timeLimit(.minutes(1)))
+    func preCancelledExecutionContextRunsCancellationActionOnce() async throws {
+        let token = FulcrumNetworkClient.Call.Token()
+        await token.cancel()
+        let timeoutState = FulcrumNetworkClient.Call.TimeoutState()
+        let cancellationCompletion = CancellationCompletionState()
+        let task = Task<Void, Swift.Error> {
+            try await Task.sleep(for: .seconds(30))
+        }
+        let executionContext = FulcrumNetworkClient.Call.ExecutionContext(
+            task: task,
+            token: token,
+            timeout: nil,
+            timeoutState: timeoutState
+        ) { error in
+            await cancellationCompletion.finish(with: error)
+        }
+
+        do {
+            try await executionContext.value()
+            Issue.record("Pre-cancelled execution context should throw cancelled.")
+        } catch let error as SwiftFulcrum.Client.Error {
+            #expect(error == .client(.cancelled))
+        } catch {
+            Issue.record("Expected client cancellation, got \(error)")
+        }
+
+        #expect(await cancellationCompletion.count == 1)
+        #expect(await cancellationCompletion.recordedError == .client(.cancelled))
+    }
+
     @Test("Shared cancellation cancels every in-flight unary call", .timeLimit(.minutes(1)))
     func sharedCancellationCancelsAllInflightUnaryCalls() async throws {
         let (fulcrum, transport) = try await makeStartedFulcrum()

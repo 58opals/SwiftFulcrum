@@ -133,8 +133,7 @@ extension OpalDiagnosticsSwiftFulcrumValidator {
             do {
                 try await webSocket.reconnector.attemptReconnection(
                     for: webSocket,
-                    shouldCancelReceiver: false,
-                    isInitialConnection: false
+                    attempt: .manualReconnect
                 )
                 Issue.record("Reconnection should exhaust against an unreachable endpoint.")
             } catch {

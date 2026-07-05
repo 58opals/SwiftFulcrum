@@ -16,7 +16,7 @@ extension FulcrumNetworkClient {
 
         let id = UUID()
         let request = method.createRequest(with: id)
-        let timeoutState = RequestTimeoutState()
+        let timeoutState = FulcrumNetworkClient.Call.TimeoutState()
         OpalDiagnostics.logger(category: .fulcrum).record(
             event: .swiftFulcrumClientCallBegin,
             level: .debug,
@@ -27,59 +27,19 @@ extension FulcrumNetworkClient {
         let callTask = Task<Data, Swift.Error> {
             try await executeUnaryRequest(id: id, request: request, timeoutState: timeoutState)
         }
-        let token = options.token
-        let cancellationRegistrationID: FulcrumNetworkClient.Call.Token.RegistrationID?
-        if let token {
-            cancellationRegistrationID = await token.register { [weak self] in
-                callTask.cancel()
-                guard let self else { return }
-                let cancellationError = await self.makeRequestCancellationError(using: timeoutState)
-                await self.cancelUnary(id, error: cancellationError)
-            }
-        } else {
-            cancellationRegistrationID = nil
+        let executionContext = FulcrumNetworkClient.Call.ExecutionContext(
+            task: callTask,
+            token: options.token,
+            timeout: options.timeout,
+            timeoutState: timeoutState
+        ) { [weak self] cancellationError in
+            await self?.cancelUnary(id, error: cancellationError)
         }
 
         let raw: Data
         do {
-            raw = try await withTaskCancellationHandler {
-                if let token, await token.isCancelled {
-                    let cancellationError = await self.makeRequestCancellationError(using: timeoutState)
-                    callTask.cancel()
-                    await self.cancelUnary(id, error: cancellationError)
-                    throw cancellationError
-                }
-
-                if let limit = options.timeout {
-                    let timeoutError = SwiftFulcrum.Client.Error.client(.timeout(limit))
-                    return try await withThrowingTaskGroup(of: Data.self) { group in
-                        group.addTask { try await callTask.value }
-                        group.addTask {
-                            try await Task.sleep(for: limit)
-                            await timeoutState.mark(timeoutError)
-                            callTask.cancel()
-                            await self.cancelUnary(id, error: timeoutError)
-                            throw timeoutError
-                        }
-
-                        let value = try await group.next()!
-                        group.cancelAll()
-                        return value
-                    }
-                }
-
-                return try await callTask.value
-            } onCancel: {
-                callTask.cancel()
-                Task {
-                    let cancellationError = await self.makeRequestCancellationError(using: timeoutState)
-                    await self.cancelUnary(id, error: cancellationError)
-                }
-            }
+            raw = try await executionContext.value()
         } catch {
-            if let token, let cancellationRegistrationID {
-                await token.unregister(cancellationRegistrationID)
-            }
             if error is CancellationError {
                 let cancellationError = await makeRequestCancellationError(using: timeoutState)
                 OpalDiagnostics.logger(category: .fulcrum).record(
@@ -97,10 +57,6 @@ extension FulcrumNetworkClient {
                 fields: makeRequestFailureDiagnosticFields(methodPath: method.path, error: error)
             )
             throw error
-        }
-
-        if let token, let cancellationRegistrationID {
-            await token.unregister(cancellationRegistrationID)
         }
 
         do {

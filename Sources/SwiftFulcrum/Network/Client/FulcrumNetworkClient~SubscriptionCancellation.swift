@@ -5,13 +5,12 @@ import OpalDiagnostics
 
 extension FulcrumNetworkClient {
     func awaitPendingSubscriptionCleanup(for key: SubscriptionKey) async {
-        guard let task = subscriptionCleanupTasks[key] else { return }
+        guard let task = subscriptionRegistry.cleanupTask(for: key) else { return }
         _ = await task.value
     }
 
     func awaitPendingSubscriptionCleanups() async {
-        let tasks = Array(subscriptionCleanupTasks.values)
-        for task in tasks {
+        for task in subscriptionRegistry.makeCleanupTasks() {
             _ = await task.value
         }
     }
@@ -24,16 +23,16 @@ extension FulcrumNetworkClient {
     ) async {
         guard let cancellationRegistration else { return }
 
-        if let existingRegistration = subscriptionCancellationRegistrations.updateValue(
+        if let existingRegistration = subscriptionRegistry.recordCancellationRegistration(
             cancellationRegistration,
-            forKey: subscriptionKey
+            for: subscriptionKey
         ) {
             await existingRegistration.token.unregister(existingRegistration.registrationID)
         }
     }
 
     func clearSubscriptionCancellationRegistration(for subscriptionKey: SubscriptionKey) async {
-        guard let cancellationRegistration = subscriptionCancellationRegistrations.removeValue(forKey: subscriptionKey) else {
+        guard let cancellationRegistration = subscriptionRegistry.removeCancellationRegistration(for: subscriptionKey) else {
             return
         }
 

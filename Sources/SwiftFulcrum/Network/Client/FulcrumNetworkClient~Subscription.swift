@@ -12,29 +12,20 @@ extension FulcrumNetworkClient {
 
 extension FulcrumNetworkClient {
     func dropAllStoredSubscriptions() async {
-        let setupTasks = Array(subscriptionSetupTasks.values)
-        pendingSubscriptionRequestIdentifiers.removeAll(keepingCapacity: false)
-        subscriptionSetupRequestIdentifiers.removeAll(keepingCapacity: false)
-        subscriptionSetupTasks.removeAll(keepingCapacity: false)
-        for task in setupTasks {
+        let removedSubscriptions = subscriptionRegistry.removeAllRecords()
+        for task in removedSubscriptions.setupTasks {
             task.cancel()
         }
 
-        let cleanupTasks = Array(subscriptionCleanupTasks.values)
-        subscriptionCleanupTasks.removeAll(keepingCapacity: false)
-        for task in cleanupTasks {
+        for task in removedSubscriptions.cleanupTasks {
             task.cancel()
         }
 
-        let cancellationRegistrations = Array(subscriptionCancellationRegistrations.values)
-        subscriptionCancellationRegistrations.removeAll(keepingCapacity: false)
-        for cancellationRegistration in cancellationRegistrations {
+        for cancellationRegistration in removedSubscriptions.cancellationRegistrations {
             await cancellationRegistration.token.unregister(cancellationRegistration.registrationID)
         }
 
-        guard !subscriptionMethods.isEmpty else { return }
-        subscriptionMethods.removeAll(keepingCapacity: false)
-        activeSubscriptionRequestIdentifiers.removeAll(keepingCapacity: false)
+        guard removedSubscriptions.didRemoveStoredSubscriptions else { return }
         await recordSubscriptionRegistry()
     }
 }

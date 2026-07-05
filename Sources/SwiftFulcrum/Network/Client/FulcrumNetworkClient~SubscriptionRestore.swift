@@ -5,13 +5,12 @@ import OpalDiagnostics
 
 extension FulcrumNetworkClient {
     func shouldSendUnsubscribeOnCancellation(for subscriptionKey: SubscriptionKey) -> Bool {
-        subscriptionMethods[subscriptionKey] != nil
-            && subscriptionSetupRequestIdentifiers[subscriptionKey] == nil
+        subscriptionRegistry.shouldSendUnsubscribeOnCancellation(for: subscriptionKey)
     }
 
     func resubscribeStoredMethods() async {
         await awaitPendingSubscriptionCleanups()
-        let methods = Array(subscriptionMethods)
+        let methods = subscriptionRegistry.makeStoredMethods()
         for (subscriptionKey, method) in methods {
             await restoreStoredSubscription(method, for: subscriptionKey)
         }
@@ -27,7 +26,7 @@ extension FulcrumNetworkClient {
             let didRemove = await cleanUpSubscriptionSetup(
                 for: subscriptionKey,
                 requestIdentifier: requestIdentifier,
-                error: error
+                reason: .streamTermination(error)
             )
             if didRemove {
                 OpalDiagnostics.logger(category: .fulcrum).record(
@@ -90,8 +89,7 @@ extension FulcrumNetworkClient {
             }
         }
 
-        recordSubscriptionSetupRequestIdentifier(requestIdentifier, for: subscriptionKey)
-        subscriptionSetupTasks[subscriptionKey] = restoreTask
+        recordSubscriptionSetupRequestIdentifier(requestIdentifier, task: restoreTask, for: subscriptionKey)
 
         do {
             try await restoreTask.value
@@ -103,7 +101,7 @@ extension FulcrumNetworkClient {
             let didRemove = await cleanUpSubscriptionSetup(
                 for: subscriptionKey,
                 requestIdentifier: requestIdentifier,
-                error: error
+                reason: .streamTermination(error)
             )
             guard shouldLogFailure || didRemove else { return }
 

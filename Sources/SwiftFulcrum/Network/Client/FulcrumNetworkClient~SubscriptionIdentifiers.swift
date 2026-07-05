@@ -8,63 +8,62 @@ extension FulcrumNetworkClient {
         _ requestIdentifier: UUID,
         for subscriptionKey: SubscriptionKey
     ) {
-        activeSubscriptionRequestIdentifiers[subscriptionKey] = requestIdentifier
+        subscriptionRegistry.recordActive(requestIdentifier, for: subscriptionKey)
     }
 
     func isCurrentActiveSubscriptionRequestIdentifier(
         _ requestIdentifier: UUID,
         for subscriptionKey: SubscriptionKey
     ) -> Bool {
-        activeSubscriptionRequestIdentifiers[subscriptionKey] == requestIdentifier
+        subscriptionRegistry.isCurrentRoutableRequest(requestIdentifier, for: subscriptionKey)
     }
 }
 
 extension FulcrumNetworkClient {
     func recordPendingSubscriptionRequestIdentifier(
         _ requestIdentifier: UUID,
+        method: SwiftFulcrum.RPC.Method,
         for subscriptionKey: SubscriptionKey
     ) {
-        pendingSubscriptionRequestIdentifiers[subscriptionKey] = requestIdentifier
+        subscriptionRegistry.recordPending(requestIdentifier, method: method, for: subscriptionKey)
     }
 
     func isCurrentPendingSubscriptionRequestIdentifier(
         _ requestIdentifier: UUID,
         for subscriptionKey: SubscriptionKey
     ) -> Bool {
-        pendingSubscriptionRequestIdentifiers[subscriptionKey] == requestIdentifier
+        subscriptionRegistry.isCurrentPendingRequest(requestIdentifier, for: subscriptionKey)
     }
 
     func clearPendingSubscriptionRequestIdentifier(
         _ requestIdentifier: UUID,
         for subscriptionKey: SubscriptionKey
     ) {
-        guard pendingSubscriptionRequestIdentifiers[subscriptionKey] == requestIdentifier else { return }
-        pendingSubscriptionRequestIdentifiers.removeValue(forKey: subscriptionKey)
+        subscriptionRegistry.clearPending(requestIdentifier, for: subscriptionKey)
     }
 }
 
 extension FulcrumNetworkClient {
     func recordSubscriptionSetupRequestIdentifier(
         _ requestIdentifier: UUID,
+        task: Task<Void, Swift.Error>? = nil,
         for subscriptionKey: SubscriptionKey
     ) {
-        subscriptionSetupRequestIdentifiers[subscriptionKey] = requestIdentifier
+        subscriptionRegistry.recordSetup(requestIdentifier, task: task, for: subscriptionKey)
     }
 
     func isCurrentSubscriptionSetupRequestIdentifier(
         _ requestIdentifier: UUID,
         for subscriptionKey: SubscriptionKey
     ) -> Bool {
-        subscriptionSetupRequestIdentifiers[subscriptionKey] == requestIdentifier
+        subscriptionRegistry.isCurrentSetupRequest(requestIdentifier, for: subscriptionKey)
     }
 
     func clearSubscriptionSetupRequestIdentifier(
         _ requestIdentifier: UUID,
         for subscriptionKey: SubscriptionKey
     ) {
-        guard subscriptionSetupRequestIdentifiers[subscriptionKey] == requestIdentifier else { return }
-        subscriptionSetupRequestIdentifiers.removeValue(forKey: subscriptionKey)
-        subscriptionSetupTasks.removeValue(forKey: subscriptionKey)
+        subscriptionRegistry.clearSetup(requestIdentifier, for: subscriptionKey)
     }
 
     @discardableResult
@@ -73,16 +72,13 @@ extension FulcrumNetworkClient {
         expectedRequestIdentifier: UUID? = nil,
         error: Swift.Error? = nil
     ) async -> Int? {
-        guard let currentRequestIdentifier = subscriptionSetupRequestIdentifiers[subscriptionKey] else {
-            return nil
-        }
-        if let expectedRequestIdentifier, currentRequestIdentifier != expectedRequestIdentifier {
+        guard let setup = subscriptionRegistry.cancelSetupRequest(
+            for: subscriptionKey,
+            expectedRequestIdentifier: expectedRequestIdentifier
+        ) else {
             return nil
         }
 
-        let setupTask = subscriptionSetupTasks.removeValue(forKey: subscriptionKey)
-        subscriptionSetupRequestIdentifiers.removeValue(forKey: subscriptionKey)
-        setupTask?.cancel()
-        return await router.cancel(identifier: .uuid(currentRequestIdentifier), error: error)
+        return await router.cancel(identifier: .uuid(setup.requestIdentifier), error: error)
     }
 }

@@ -5,10 +5,15 @@ import Foundation
 extension WebSocketConnection {
     func updateURL(_ newURL: URL) { self.url = newURL }
 
-    func createNewTask(with url: URL? = nil, shouldCancelReceiver: Bool = true) async {
+    func createNewTask(with url: URL? = nil, receiverCancellation: ReceiverCancellation = .cancel) async {
         if let url { self.url = url }
 
-        if shouldCancelReceiver { await cancelReceiverTask() }
+        switch receiverCancellation {
+        case .cancel:
+            await cancelReceiverTask()
+        case .preserve:
+            break
+        }
         if let task {
             lastCloseInformation = closeInformation
             await connectionEventTracker.stopTracking(taskIdentifier: task.taskIdentifier)

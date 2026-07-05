@@ -12,20 +12,13 @@ actor FulcrumNetworkClient {
 
     var state: State
 
-    var subscriptionMethods: [SubscriptionKey: SwiftFulcrum.RPC.Method]
-    var activeSubscriptionRequestIdentifiers: [SubscriptionKey: UUID]
-    var pendingSubscriptionRequestIdentifiers: [SubscriptionKey: UUID]
-    var subscriptionCancellationRegistrations: [SubscriptionKey: SubscriptionCancellationRegistration]
-    var subscriptionCleanupTasks: [SubscriptionKey: Task<Bool, Never>]
-    var subscriptionSetupRequestIdentifiers: [SubscriptionKey: UUID]
-    var subscriptionSetupTasks: [SubscriptionKey: Task<Void, Swift.Error>]
+    var subscriptionRegistry: SubscriptionRegistry
 
     var receiveTask: Task<Void, Never>?
     private var startupTask: Task<Void, Swift.Error>?
     private var startupWaiterCount = 0
     var reconnectTask: Task<Void, Swift.Error>?
-    var automaticReconnectRecoveryTask: Task<Void, Swift.Error>?
-    var needsAutomaticReconnectRecovery = false
+    var reconnectRecoveryState: ReconnectRecoveryState
     var lifecycleTask: Task<Void, Never>?
     var diagnosticsStateTask: Task<Void, Never>?
 
@@ -43,15 +36,10 @@ actor FulcrumNetworkClient {
         self.transport = transport
         self.jsonRPC = .init()
         self.router = .init()
-        self.subscriptionMethods = .init()
-        self.activeSubscriptionRequestIdentifiers = .init()
-        self.pendingSubscriptionRequestIdentifiers = .init()
-        self.subscriptionCancellationRegistrations = .init()
-        self.subscriptionCleanupTasks = .init()
-        self.subscriptionSetupRequestIdentifiers = .init()
-        self.subscriptionSetupTasks = .init()
+        self.subscriptionRegistry = .init()
         self.protocolNegotiation = protocolNegotiation
         self.state = .init()
+        self.reconnectRecoveryState = .idle
         self.rpcHeartbeatInterval = heartbeatInterval
         self.rpcHeartbeatTimeout = heartbeatTimeout
     }

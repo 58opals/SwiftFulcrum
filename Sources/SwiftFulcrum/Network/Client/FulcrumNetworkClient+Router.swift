@@ -14,7 +14,7 @@ extension FulcrumNetworkClient {
         @discardableResult
         func addUnary(id: UUID, continuation: AsyncThrowingStream<Data, Swift.Error>.Continuation) throws -> Int {
             let key: SwiftFulcrum.RPC.Response.Identifier = .uuid(id)
-            guard table[key] == nil else { throw SwiftFulcrum.Client.Error.client(.duplicateHandler) }
+            guard table[key] == nil else { throw SwiftFulcrum.Client.Error.client(.duplicateRegistration) }
             table[key] = .unary(continuation)
             inflightUnaryCallCount += 1
             return inflightUnaryCallCount
@@ -27,7 +27,7 @@ extension FulcrumNetworkClient {
             terminationAction: @escaping @Sendable (Swift.Error?) async -> Void
         ) throws {
             let identifier: SwiftFulcrum.RPC.Response.Identifier = .string(key)
-            guard table[identifier] == nil else { throw SwiftFulcrum.Client.Error.client(.duplicateHandler) }
+            guard table[identifier] == nil else { throw SwiftFulcrum.Client.Error.client(.duplicateRegistration) }
             table[identifier] = .stream(
                 continuation,
                 overflowError: overflowError,

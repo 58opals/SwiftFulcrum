@@ -97,7 +97,7 @@ extension OpalDiagnostics.Field {
             return .networkURLNotFound
         case .invalidURL:
             return .networkInvalidURL
-        case .duplicateHandler:
+        case .duplicateRegistration:
             return .clientInvalidState
         case .cancelled:
             return .clientCancelled

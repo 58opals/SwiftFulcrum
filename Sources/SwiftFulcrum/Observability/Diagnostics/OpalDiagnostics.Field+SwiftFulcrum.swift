@@ -179,8 +179,8 @@ private extension SwiftFulcrum.Client.Error.ClientIssue {
             "Endpoint URL not found"
         case .invalidURL:
             "Endpoint URL is invalid"
-        case .duplicateHandler:
-            "Duplicate response handler"
+        case .duplicateRegistration:
+            "Duplicate response registration"
         case .cancelled:
             "Operation cancelled"
         case .timeout(let duration):

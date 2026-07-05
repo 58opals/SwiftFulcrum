@@ -22,7 +22,7 @@ extension SwiftFulcrum {
         /// Creates a Fulcrum client that connects to a specific server endpoint.
         /// - Parameters:
         ///   - endpoint: WebSocket endpoint for the Fulcrum server.
-        ///   - configuration: Custom connection behavior including TLS, reconnection, catalog lookup, and protocol negotiation.
+        ///   - configuration: Custom connection behavior including reconnection, catalog lookup, and protocol negotiation.
         /// - Throws: ``SwiftFulcrum.Client.Error`` when the transport cannot be prepared.
         public init(connectingTo endpoint: URL, configuration: Configuration = .init()) async throws {
             self.client = try Self.makeClient(connectingTo: endpoint, configuration: configuration)
@@ -30,7 +30,7 @@ extension SwiftFulcrum {
         }
 
         /// Creates a Fulcrum client that resolves a server from the configured catalog.
-        /// - Parameter configuration: Custom connection behavior including catalog lookup, TLS, reconnection, and protocol negotiation.
+        /// - Parameter configuration: Custom connection behavior including catalog lookup, reconnection, and protocol negotiation.
         /// - Throws: ``SwiftFulcrum.Client.Error`` when no usable server can be loaded or the transport cannot be prepared.
         public init(configuration: Configuration = .init()) async throws {
             let endpoint = try await Self.selectServerEndpoint(using: configuration)

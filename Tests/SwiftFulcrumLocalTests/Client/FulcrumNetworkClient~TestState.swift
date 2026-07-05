@@ -4,10 +4,11 @@
 
 extension FulcrumNetworkClient {
     func makeActiveSubscriptionStates() -> [ClientSubscriptionState] {
-        subscriptionMethods.map { entry in
+        subscriptionRegistry.makeRecords().map { entry in
             ClientSubscriptionState(
                 methodPath: entry.key.methodPath.rawValue,
-                identifier: entry.key.identifier
+                identifier: entry.key.identifier,
+                phase: String(describing: entry.value.phase)
             )
         }
     }

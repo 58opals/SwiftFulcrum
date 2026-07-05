@@ -18,16 +18,7 @@ extension FulcrumNetworkClient {
                 case .connected(let isReconnect) where isReconnect:
                     await owner.markAutomaticReconnectRecoveryNeeded()
                     let recoveryTask = await owner.makeOrReuseAutomaticReconnectRecoveryTask()
-                    do {
-                        try await recoveryTask.value
-                    } catch {
-                        OpalDiagnostics.logger(category: .swiftFulcrumReconnect).record(
-                            event: .swiftFulcrumClientReconnectRecoveryFailed,
-                            level: .info,
-                            fields: await owner.makeClientTransportDiagnosticFields(OpalDiagnostics.Field.swiftFulcrumErrorFields(error))
-                        )
-                        await owner.handleAutomaticReconnectRecoveryFailure(error)
-                    }
+                    _ = try? await recoveryTask.value
                 case .disconnected:
                     await owner.resetNegotiatedSession()
                 default: break

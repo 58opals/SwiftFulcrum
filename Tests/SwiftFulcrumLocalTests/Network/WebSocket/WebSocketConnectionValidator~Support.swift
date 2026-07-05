@@ -42,6 +42,23 @@ extension WebSocketConnectionValidator {
         }
     }
 
+    func expectCancelledConnectWaiter(_ task: Task<Void, Swift.Error>) async {
+        await #expect(throws: CancellationError.self) {
+            try await withThrowingTaskGroup(of: Void.self) { group in
+                group.addTask {
+                    try await task.value
+                }
+                group.addTask {
+                    try await Task.sleep(for: .milliseconds(250))
+                    throw TimeoutError.missingSocketTask
+                }
+
+                try await group.next()
+                group.cancelAll()
+            }
+        }
+    }
+
     static let diagnosticsConfiguration = OpalDiagnostics.Configuration(
         minimumLevel: .debug,
         categoryFilter: .enabledIncludingSubcategories([OpalDiagnostics.Category.fulcrum]),

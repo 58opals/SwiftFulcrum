@@ -35,8 +35,7 @@ extension WebSocketReconnectorValidator {
             do {
                 try await webSocket.reconnector.attemptReconnection(
                     for: webSocket,
-                    shouldCancelReceiver: false,
-                    isInitialConnection: false
+                    attempt: .manualReconnect
                 )
                 Issue.record("Reconnector should exhaust instead of succeeding")
             } catch {

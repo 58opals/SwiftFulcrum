@@ -40,6 +40,61 @@ extension FulcrumClientLifecycleValidator {
         await fulcrum.stop()
     }
 
+    @Test("duplicate same-key subscribe failure preserves active subscription", .timeLimit(.minutes(1)))
+    func duplicateSameKeySubscribeFailurePreservesActiveSubscription() async throws {
+        let (fulcrum, transport) = try await makeStartedFulcrum()
+        let subscribeMethod = SwiftFulcrum.RPC.Method.blockchain(.headers(.subscribe))
+        let unsubscribeMethodPath = SwiftFulcrum.RPC.Method.blockchain(.headers(.unsubscribe)).path
+
+        let firstSubscribeTask = Task<HeadersSubscription, Swift.Error> {
+            try await fulcrum.subscribe(
+                method: subscribeMethod,
+                options: .init(timeout: .seconds(30))
+            )
+        }
+
+        let firstSubscribeRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
+        let firstSubscribeIdentifier = try extractRequestIdentifier(from: firstSubscribeRequest)
+        let firstSubscribePayload = try TransportTestActor.encodeResponsePayload(
+            identifier: firstSubscribeIdentifier,
+            result: ["height": 934_100, "hex": String(repeating: "a", count: 160)]
+        )
+        await transport.enqueueIncoming(.data(firstSubscribePayload))
+
+        let firstSubscription = try await firstSubscribeTask.value
+
+        await #expect(throws: SwiftFulcrum.Client.Error.client(.duplicateRegistration)) {
+            let _: HeadersSubscription = try await fulcrum.subscribe(
+                method: subscribeMethod,
+                options: .init(timeout: .seconds(30))
+            )
+        }
+
+        #expect(await fulcrum.makeActiveSubscriptionCount() == 1)
+
+        let baselineUnsubscribeCount = try await countSentMethodOccurrences(
+            unsubscribeMethodPath,
+            transport: transport
+        )
+        await firstSubscription.cancel()
+
+        let didClearRegistry = await waitUntil(timeout: .seconds(5)) {
+            await fulcrum.makeActiveSubscriptionStates().isEmpty
+        }
+        #expect(didClearRegistry)
+
+        let didSendUnsubscribe = await waitUntil(timeout: .seconds(5)) {
+            let unsubscribeCount = (try? await countSentMethodOccurrences(
+                unsubscribeMethodPath,
+                transport: transport
+            )) ?? 0
+            return unsubscribeCount == baselineUnsubscribeCount + 1
+        }
+        #expect(didSendUnsubscribe)
+
+        await fulcrum.stop()
+    }
+
     @Test("updates.cancel() emits unsubscribe and clears registry", .timeLimit(.minutes(1)))
     func updatesCancelEmitsUnsubscribeAndClearsRegistry() async throws {
         let (fulcrum, transport) = try await makeStartedFulcrum()

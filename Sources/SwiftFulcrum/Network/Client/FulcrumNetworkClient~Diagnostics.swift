@@ -41,7 +41,7 @@ extension FulcrumNetworkClient {
         }
         let fields = await makeClientTransportDiagnosticFields([
             .swiftFulcrumField("inflight_unary_call_count", inflightCount),
-            .swiftFulcrumField("active_subscription_count", subscriptionMethods.count)
+            .swiftFulcrumField("active_subscription_count", subscriptionRegistry.count)
         ])
 
         OpalDiagnostics.logger(category: .fulcrum).record(
@@ -56,7 +56,7 @@ extension FulcrumNetworkClient {
         let fields: [OpalDiagnostics.Field] = [
             .swiftFulcrumField("client_id", id),
             .swiftFulcrumEndpointURL(endpoint),
-            .swiftFulcrumField("subscription_count", subscriptionMethods.count)
+            .swiftFulcrumField("subscription_count", subscriptionRegistry.count)
         ]
 
         OpalDiagnostics.logger(category: .fulcrum).record(

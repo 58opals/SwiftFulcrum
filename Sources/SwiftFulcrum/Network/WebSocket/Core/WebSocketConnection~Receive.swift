@@ -97,7 +97,7 @@ extension WebSocketConnection {
                 )
                 do {
                     await updateConnectionState(.reconnecting)
-                    try await reconnector.attemptReconnection(for: self, shouldCancelReceiver: false)
+                    try await reconnector.attemptReconnection(for: self, attempt: .automaticReconnect)
                     OpalDiagnostics.logger(category: .swiftFulcrumWebSocket).record(
                         event: .swiftFulcrumWebSocketReceiveReconnected,
                         level: .info,

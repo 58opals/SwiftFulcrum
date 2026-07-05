@@ -7,8 +7,7 @@ extension WebSocketConnection.Reconnector {
     func attemptReconnection(
         for webSocket: WebSocketConnection,
         with url: URL? = nil,
-        shouldCancelReceiver: Bool = true,
-        isInitialConnection: Bool = false
+        attempt: ReconnectionAttempt = .manualReconnect
     ) async throws {
         resetReconnectionAttemptCount()
         let traceID = OpalDiagnostics.TraceID()
@@ -60,21 +59,21 @@ extension WebSocketConnection.Reconnector {
                     .swiftFulcrumField("attempt", reconnectionAttempts),
                     .swiftFulcrumField("reconnect_attempts", reconnectAttempts),
                     .swiftFulcrumField("reconnect_successes", reconnectSuccesses),
-                    .swiftFulcrumField("phase", isInitialConnection ? "initial" : "reconnect"),
+                    .swiftFulcrumField("phase", attempt.diagnosticsPhase),
                     .swiftFulcrumField("unlimited", configuration.isUnlimited),
                     .swiftFulcrumPrivateField("candidate_url", candidateURL.absoluteString)
                 ])
             )
 
             do {
-                if shouldCancelReceiver { await webSocket.cancelReceiverTask() }
+                switch attempt.receiverCancellation {
+                case .cancel:
+                    await webSocket.cancelReceiverTask()
+                case .preserve:
+                    break
+                }
                 await webSocket.updateURL(candidateURL)
-                try await webSocket.performConnect(
-                    shouldEmitLifecycle: false,
-                    shouldAllowFailover: false,
-                    shouldCancelReceiver: shouldCancelReceiver,
-                    failureState: .reconnecting
-                )
+                try await webSocket.performConnect(using: attempt.connectionAttempt)
                 await webSocket.recordReconnectSuccess()
                 let reconnectAttempts = await webSocket.reconnectAttempts
                 let reconnectSuccesses = await webSocket.reconnectSuccesses
@@ -85,12 +84,12 @@ extension WebSocketConnection.Reconnector {
                     traceID: traceID,
                     fields: webSocket.webSocketDiagnosticFields([
                         .swiftFulcrumField("reconnect_attempts", reconnectAttempts),
-                        .swiftFulcrumField("phase", isInitialConnection ? "initial" : "reconnect"),
+                        .swiftFulcrumField("phase", attempt.diagnosticsPhase),
                         .swiftFulcrumField("reconnect_successes", reconnectSuccesses),
                         .swiftFulcrumPrivateField("candidate_url", candidateURL.absoluteString)
                     ])
                 )
-                await webSocket.emitLifecycle(.connected(isReconnect: !isInitialConnection))
+                await webSocket.emitLifecycle(attempt.connectedLifecycleEvent)
                 return
             } catch {
                 await OpalDiagnostics.logger(category: .swiftFulcrumReconnect).record(
@@ -100,7 +99,7 @@ extension WebSocketConnection.Reconnector {
                     fields: webSocket.webSocketDiagnosticFields([
                         .swiftFulcrumField("attempt", reconnectionAttempts),
                         .swiftFulcrumField("reconnect_attempts", reconnectAttempts),
-                        .swiftFulcrumField("phase", isInitialConnection ? "initial" : "reconnect"),
+                        .swiftFulcrumField("phase", attempt.diagnosticsPhase),
                         .swiftFulcrumField("reconnect_successes", reconnectSuccesses),
                         .swiftFulcrumPrivateField("candidate_url", candidateURL.absoluteString)
                     ] + OpalDiagnostics.Field.swiftFulcrumErrorFields(error))
@@ -113,7 +112,7 @@ extension WebSocketConnection.Reconnector {
             level: .info,
             traceID: traceID,
             fields: webSocket.webSocketDiagnosticFields([
-                .swiftFulcrumField("phase", isInitialConnection ? "initial" : "reconnect"),
+                .swiftFulcrumField("phase", attempt.diagnosticsPhase),
                 .swiftFulcrumField("reconnect_attempts", await webSocket.reconnectAttempts),
                 .swiftFulcrumField("reconnect_successes", await webSocket.reconnectSuccesses),
                 .swiftFulcrumPrivateField("endpoint_url", currentURL.absoluteString)

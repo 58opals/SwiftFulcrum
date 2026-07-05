@@ -29,8 +29,7 @@ extension WebSocketReconnectorValidator {
         do {
             try await webSocket.reconnector.attemptReconnection(
                 for: webSocket,
-                shouldCancelReceiver: false,
-                isInitialConnection: false
+                attempt: .manualReconnect
             )
             Issue.record("Reconnector should exhaust instead of succeeding")
         } catch let error as SwiftFulcrum.Client.Error {
@@ -76,8 +75,7 @@ extension WebSocketReconnectorValidator {
             try await webSocket.reconnector.attemptReconnection(
                 for: webSocket,
                 with: nil,
-                shouldCancelReceiver: false,
-                isInitialConnection: false
+                attempt: .manualReconnect
             )
             Issue.record("Reconnection should exhaust attempts")
         } catch {
@@ -123,8 +121,7 @@ extension WebSocketReconnectorValidator {
             try await webSocket.reconnector.attemptReconnection(
                 for: webSocket,
                 with: nil,
-                shouldCancelReceiver: false,
-                isInitialConnection: false
+                attempt: .manualReconnect
             )
             Issue.record("Reconnection should exhaust attempts")
         } catch {

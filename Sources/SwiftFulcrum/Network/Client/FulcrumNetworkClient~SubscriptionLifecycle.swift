@@ -11,13 +11,17 @@ extension FulcrumNetworkClient {
         requestIdentifier: UUID,
         subscriptionBufferPolicy: SwiftFulcrum.Client.SubscriptionBufferPolicy
     ) async throws {
-        recordPendingSubscriptionRequestIdentifier(requestIdentifier, for: subscriptionKey)
+        await awaitPendingSubscriptionCleanup(for: subscriptionKey)
+        try Task.checkCancellation()
+        guard subscriptionRegistry.method(for: subscriptionKey) == nil else {
+            throw SwiftFulcrum.Client.Error.client(.duplicateRegistration)
+        }
+
+        recordPendingSubscriptionRequestIdentifier(requestIdentifier, method: method, for: subscriptionKey)
         defer {
             clearPendingSubscriptionRequestIdentifier(requestIdentifier, for: subscriptionKey)
         }
 
-        await awaitPendingSubscriptionCleanup(for: subscriptionKey)
-        try Task.checkCancellation()
         guard isCurrentPendingSubscriptionRequestIdentifier(requestIdentifier, for: subscriptionKey) else {
             throw CancellationError()
         }
@@ -31,15 +35,12 @@ extension FulcrumNetworkClient {
                 _ = await self.scheduleSubscriptionCleanup(
                     for: subscriptionKey,
                     requestIdentifier: requestIdentifier,
-                    error: error,
+                    reason: error.map { .overflow($0) } ?? .streamTermination(nil),
                     sendUnsubscribe: true,
-                    preferCurrentSetupRequest: true,
-                    requireMatchingActiveRequestIdentifier: true
+                    scope: .currentSetupThenActiveRequest
                 )
             }
         )
-        recordActiveSubscriptionRequestIdentifier(requestIdentifier, for: subscriptionKey)
-        subscriptionMethods[subscriptionKey] = method
 
         OpalDiagnostics.logger(category: .fulcrum).record(
             event: .swiftFulcrumClientSubscriptionAdded,
@@ -48,7 +49,7 @@ extension FulcrumNetworkClient {
             fields: makeClientDiagnosticFields([
                 .swiftFulcrumPrivateField("subscription_identifier", subscriptionKey.identifier ?? ""),
                 .swiftFulcrumMethodPath(method.path),
-                .swiftFulcrumField("subscription_count", subscriptionMethods.count)
+                .swiftFulcrumField("subscription_count", subscriptionRegistry.count)
             ])
         )
         await recordSubscriptionRegistry()
@@ -58,12 +59,12 @@ extension FulcrumNetworkClient {
             guard let self else { return }
 
             Task {
-                _ = await self.scheduleSubscriptionCleanup(
-                    for: subscriptionKey,
-                    requestIdentifier: requestIdentifier,
-                    sendUnsubscribe: true,
-                    preferCurrentSetupRequest: true,
-                    requireMatchingActiveRequestIdentifier: true
+                    _ = await self.scheduleSubscriptionCleanup(
+                        for: subscriptionKey,
+                        requestIdentifier: requestIdentifier,
+                        reason: .streamTermination(nil),
+                        sendUnsubscribe: true,
+                        scope: .currentSetupThenActiveRequest
                 )
             }
         }

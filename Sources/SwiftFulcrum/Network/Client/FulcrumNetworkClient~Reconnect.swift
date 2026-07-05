@@ -28,7 +28,7 @@ extension FulcrumNetworkClient {
                     event: .swiftFulcrumClientReconnectRecoverySucceeded,
                     level: .info,
                     fields: await owner.makeClientTransportDiagnosticFields([
-                        .swiftFulcrumField("subscription_count", owner.subscriptionMethods.count)
+                        .swiftFulcrumField("subscription_count", owner.subscriptionRegistry.count)
                     ])
                 )
                 await owner.clearAutomaticReconnectRecoveryNeed()
@@ -60,75 +60,79 @@ extension FulcrumNetworkClient {
             return
         }
 
+        if let recoveryTask = reconnectRecoveryState.recoveryTask {
+            try await awaitAutomaticReconnectRecoveryTask(recoveryTask)
+            return
+        }
+
         if await transport.connectionState == .reconnecting {
             prepareForAutomaticReconnectRecovery()
             try await waitForAutomaticReconnectConnection()
             return
         }
 
-        if let automaticReconnectRecoveryTask {
-            try await automaticReconnectRecoveryTask.value
-            return
-        }
-
-        guard needsAutomaticReconnectRecovery else { return }
+        guard reconnectRecoveryState.needsRecovery else { return }
         try await awaitAutomaticReconnectRecovery()
     }
 
     func awaitAutomaticReconnectRecovery() async throws {
-        var didPrepareForReconnect = false
-
-        while true {
-            let state = await transport.connectionState
+        let state = await transport.connectionState
             switch state {
             case .connected:
                 let recoveryTask = makeOrReuseAutomaticReconnectRecoveryTask()
-                try await recoveryTask.value
-                return
+                try await awaitAutomaticReconnectRecoveryTask(recoveryTask)
             case .reconnecting:
-                if !didPrepareForReconnect {
-                    prepareForAutomaticReconnectRecovery()
-                    didPrepareForReconnect = true
-                }
+                prepareForAutomaticReconnectRecovery()
                 try await waitForAutomaticReconnectConnection()
-                return
-            case .connecting:
-                try await waitForAutomaticReconnectConnection()
-                return
-            case .disconnected:
-                let info = await transport.closeInformation
-                throw SwiftFulcrum.Client.Error.transport(.connectionClosed(info.code, info.reason))
-            case .idle:
-                throw CancellationError()
-            }
+        case .connecting:
+            try await waitForAutomaticReconnectConnection()
+        case .disconnected:
+            reconnectRecoveryState = .idle
+            let info = await transport.closeInformation
+            throw SwiftFulcrum.Client.Error.transport(.connectionClosed(info.code, info.reason))
+        case .idle:
+            reconnectRecoveryState = .idle
+            throw CancellationError()
         }
     }
 
     func waitForAutomaticReconnectConnection() async throws {
+        reconnectRecoveryState = .waitingForConnection
         let stream = await transport.makeConnectionStateEvents()
         for await state in stream {
             switch state {
             case .connected:
                 let recoveryTask = makeOrReuseAutomaticReconnectRecoveryTask()
-                try await recoveryTask.value
+                try await awaitAutomaticReconnectRecoveryTask(recoveryTask)
                 return
             case .disconnected:
+                reconnectRecoveryState = .idle
                 let info = await transport.closeInformation
                 throw SwiftFulcrum.Client.Error.transport(.connectionClosed(info.code, info.reason))
             case .idle:
+                reconnectRecoveryState = .idle
                 throw CancellationError()
             case .connecting, .reconnecting:
                 continue
             }
         }
 
+        reconnectRecoveryState = .idle
         throw CancellationError()
     }
 
+    func awaitAutomaticReconnectRecoveryTask(_ recoveryTask: Task<Void, Swift.Error>) async throws {
+        do {
+            try await recoveryTask.value
+        } catch is CancellationError {
+            guard reconnectRecoveryState.needsRecovery else { throw CancellationError() }
+            try await awaitAutomaticReconnectRecovery()
+        }
+    }
+
     func prepareForAutomaticReconnectRecovery() {
-        automaticReconnectRecoveryTask?.cancel()
-        automaticReconnectRecoveryTask = nil
-        needsAutomaticReconnectRecovery = true
+        reconnectRecoveryState.recoveryTask?.cancel()
+        reconnectRecoveryState = .needed
     }
 
     func prepareForAutomaticReconnectRecoveryIfNeeded() {
@@ -138,21 +142,33 @@ extension FulcrumNetworkClient {
 
     func markAutomaticReconnectRecoveryNeeded() {
         guard reconnectTask == nil else { return }
-        if automaticReconnectRecoveryTask == nil {
-            needsAutomaticReconnectRecovery = true
+        if reconnectRecoveryState.recoveryTask == nil {
+            reconnectRecoveryState = .needed
         }
     }
 
     func makeOrReuseAutomaticReconnectRecoveryTask() -> Task<Void, Swift.Error> {
-        if let automaticReconnectRecoveryTask {
-            return automaticReconnectRecoveryTask
+        if let recoveryTask = reconnectRecoveryState.recoveryTask {
+            return recoveryTask
         }
 
         let owner = self
         let task = Task<Void, Swift.Error> {
-            try await owner.performAutomaticReconnectRecovery()
+            do {
+                try await owner.performAutomaticReconnectRecovery()
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch {
+                OpalDiagnostics.logger(category: .swiftFulcrumReconnect).record(
+                    event: .swiftFulcrumClientReconnectRecoveryFailed,
+                    level: .info,
+                    fields: await owner.makeClientTransportDiagnosticFields(OpalDiagnostics.Field.swiftFulcrumErrorFields(error))
+                )
+                await owner.handleAutomaticReconnectRecoveryFailure(error)
+                throw error
+            }
         }
-        automaticReconnectRecoveryTask = task
+        reconnectRecoveryState = .recovering(task)
         return task
     }
 
@@ -166,19 +182,18 @@ extension FulcrumNetworkClient {
 
         _ = try await ensureNegotiatedProtocol()
         await resubscribeStoredMethods()
-        needsAutomaticReconnectRecovery = false
+        reconnectRecoveryState = .idle
         OpalDiagnostics.logger(category: .swiftFulcrumReconnect).record(
             event: .swiftFulcrumClientReconnectRecoverySucceeded,
             level: .info,
             fields: await makeClientTransportDiagnosticFields([
-                .swiftFulcrumField("subscription_count", subscriptionMethods.count)
+                .swiftFulcrumField("subscription_count", subscriptionRegistry.count)
             ])
         )
     }
 
     func handleAutomaticReconnectRecoveryFailure(_ error: Swift.Error) async {
-        automaticReconnectRecoveryTask = nil
-        needsAutomaticReconnectRecovery = false
+        reconnectRecoveryState = .idle
         resetNegotiatedSession()
 
         let inflightCount = await router.failAll(with: error)
@@ -188,17 +203,16 @@ extension FulcrumNetworkClient {
     }
 
     func clearAutomaticReconnectRecoveryNeed() {
-        needsAutomaticReconnectRecovery = false
+        reconnectRecoveryState = .idle
     }
 
     func cancelAutomaticReconnectRecoveryTask() async {
-        guard let automaticReconnectRecoveryTask else {
-            needsAutomaticReconnectRecovery = false
+        guard let recoveryTask = reconnectRecoveryState.recoveryTask else {
+            reconnectRecoveryState = .idle
             return
         }
-        automaticReconnectRecoveryTask.cancel()
-        _ = try? await automaticReconnectRecoveryTask.value
-        self.automaticReconnectRecoveryTask = nil
-        needsAutomaticReconnectRecovery = false
+        recoveryTask.cancel()
+        _ = try? await recoveryTask.value
+        reconnectRecoveryState = .idle
     }
 }

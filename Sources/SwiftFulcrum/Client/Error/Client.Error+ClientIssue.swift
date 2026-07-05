@@ -6,7 +6,7 @@ extension SwiftFulcrum.Client.Error {
     public enum ClientIssue {
         case urlNotFound
         case invalidURL(String)
-        case duplicateHandler
+        case duplicateRegistration
         case cancelled
         case timeout(Duration)
         case invalidSubscriptionBufferCapacity(Int)
@@ -25,7 +25,7 @@ extension SwiftFulcrum.Client.Error.ClientIssue: Swift.Error, Equatable, Sendabl
     public static func == (lhs: SwiftFulcrum.Client.Error.ClientIssue, rhs: SwiftFulcrum.Client.Error.ClientIssue) -> Bool {
         switch (lhs, rhs) {
         case (.urlNotFound, .urlNotFound),
-            (.duplicateHandler, .duplicateHandler),
+            (.duplicateRegistration, .duplicateRegistration),
             (.cancelled, .cancelled):
             return true
         case (.invalidURL(let leftURL), .invalidURL(let rightURL)):

@@ -6,20 +6,29 @@ extension WebSocketConnection {
     func finishConnectTaskWaiters(_ result: Result<Void, Error>) {
         let waiters = connectTaskWaitersByIdentifier.values
         connectTaskWaitersByIdentifier.removeAll(keepingCapacity: false)
+        cancelledConnectTaskWaiterIdentifiers.removeAll(keepingCapacity: false)
         for continuation in waiters {
             continuation.resume(with: result)
         }
     }
 
     func cancelConnectTaskWaiter(identifier: UUID) {
-        guard let continuation = connectTaskWaitersByIdentifier.removeValue(forKey: identifier) else { return }
+        guard let continuation = connectTaskWaitersByIdentifier.removeValue(forKey: identifier) else {
+            cancelledConnectTaskWaiterIdentifiers.insert(identifier)
+            return
+        }
         continuation.resume(throwing: CancellationError())
     }
 
     func waitForActiveConnectTask() async throws {
         let waiterIdentifier = UUID()
+        try Task.checkCancellation()
         return try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { continuation in
+                if cancelledConnectTaskWaiterIdentifiers.remove(waiterIdentifier) != nil {
+                    continuation.resume(throwing: CancellationError())
+                    return
+                }
                 connectTaskWaitersByIdentifier[waiterIdentifier] = continuation
             }
         } onCancel: {
@@ -32,6 +41,7 @@ extension WebSocketConnection {
     func finishConnectWaiters(_ result: Result<Bool, Error>) {
         let waiters = connectWaitersByIdentifier.values
         connectWaitersByIdentifier.removeAll(keepingCapacity: false)
+        cancelledConnectWaiterIdentifiers.removeAll(keepingCapacity: false)
         isConnectionInFlight = false
         for continuation in waiters {
             switch result {
@@ -42,7 +52,10 @@ extension WebSocketConnection {
     }
 
     func cancelConnectWaiter(identifier: UUID) {
-        guard let continuation = connectWaitersByIdentifier.removeValue(forKey: identifier) else { return }
+        guard let continuation = connectWaitersByIdentifier.removeValue(forKey: identifier) else {
+            cancelledConnectWaiterIdentifiers.insert(identifier)
+            return
+        }
         continuation.resume(throwing: CancellationError())
     }
 
@@ -51,8 +64,13 @@ extension WebSocketConnection {
 
         if isConnectionInFlight {
             let waiterIdentifier = UUID()
+            try Task.checkCancellation()
             return try await withTaskCancellationHandler {
                 try await withCheckedThrowingContinuation { continuation in
+                    if cancelledConnectWaiterIdentifiers.remove(waiterIdentifier) != nil {
+                        continuation.resume(throwing: CancellationError())
+                        return
+                    }
                     connectWaitersByIdentifier[waiterIdentifier] = continuation
                 }
             } onCancel: {
