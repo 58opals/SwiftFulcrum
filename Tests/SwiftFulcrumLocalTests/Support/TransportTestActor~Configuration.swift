@@ -31,8 +31,60 @@ extension TransportTestActor {
         connectDelay = delay
     }
 
+    func configureDisconnectPaused(_ isPaused: Bool) {
+        shouldPauseDisconnect = isPaused
+        if !isPaused {
+            let continuations = pendingDisconnectContinuations
+            pendingDisconnectContinuations.removeAll(keepingCapacity: false)
+            for continuation in continuations {
+                continuation.resume()
+            }
+        }
+    }
+
     func configureConnectionState(_ state: SwiftFulcrum.Client.ConnectionState) {
         updateConnectionState(to: state)
+    }
+
+    func pauseNextConnectionStateRead() {
+        shouldPauseNextConnectionStateRead = true
+    }
+
+    func resumePendingConnectionStateReads() {
+        let continuations = pendingConnectionStateReadContinuations
+        pendingConnectionStateReadContinuations.removeAll(keepingCapacity: false)
+        for continuation in continuations {
+            continuation.resume()
+        }
+    }
+
+    func pauseEndpointRead(afterUnpausedReads: Int = 0) {
+        endpointReadsBeforePause = afterUnpausedReads
+    }
+
+    func resumePendingEndpointReads(pausingNextRead: Bool = false) {
+        if pausingNextRead {
+            endpointReadsBeforePause = 0
+        }
+        let continuations = pendingEndpointReadContinuations
+        pendingEndpointReadContinuations.removeAll(keepingCapacity: false)
+        for continuation in continuations {
+            continuation.resume()
+        }
+    }
+
+    func pauseReconnectSuccessRead(afterUnpausedReads: Int = 0) {
+        reconnectSuccessReadsBeforePause = afterUnpausedReads
+    }
+
+    func resumePendingReconnectSuccessReads() {
+        let continuations = pendingReconnectSuccessReadContinuations
+        pendingReconnectSuccessReadContinuations.removeAll(
+            keepingCapacity: false
+        )
+        for continuation in continuations {
+            continuation.resume()
+        }
     }
 
     func makeReconnectAttempts() -> Int {
@@ -41,5 +93,21 @@ extension TransportTestActor {
 
     func makePendingOutgoingSendCount() -> Int {
         pendingOutgoingSendGateContinuations.count
+    }
+
+    func makePendingDisconnectCount() -> Int {
+        pendingDisconnectContinuations.count
+    }
+
+    func makePendingConnectionStateReadCount() -> Int {
+        pendingConnectionStateReadContinuations.count
+    }
+
+    func makePendingEndpointReadCount() -> Int {
+        pendingEndpointReadContinuations.count
+    }
+
+    func makePendingReconnectSuccessReadCount() -> Int {
+        pendingReconnectSuccessReadContinuations.count
     }
 }

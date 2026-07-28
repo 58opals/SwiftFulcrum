@@ -11,7 +11,9 @@ extension FulcrumNetworkClient {
             return .blockchain(.scripthash(.unsubscribe(scripthash: id)))
         case .address:
             guard let id = key.identifier else { return nil }
-            return .blockchain(.address(.unsubscribe(address: id)))
+            return .blockchain(
+                .address(.unsubscribe(address: Self.normalizeAddressSubscriptionIdentifier(id)))
+            )
         case .headers:
             return .blockchain(.headers(.unsubscribe))
         case .transaction:
@@ -30,7 +32,7 @@ extension FulcrumNetworkClient {
         case .blockchain(.scripthash(.subscribe(scripthash: let scripthash))):
             return scripthash
         case .blockchain(.address(.subscribe(let address))):
-            return address
+            return Self.normalizeAddressSubscriptionIdentifier(address)
         case .blockchain(.transaction(.subscribe(let txid))):
             return txid
         case .blockchain(.transaction(.dsProof(.subscribe(let txid)))):
@@ -38,5 +40,9 @@ extension FulcrumNetworkClient {
         default:
             return nil
         }
+    }
+
+    static func normalizeAddressSubscriptionIdentifier(_ identifier: String) -> String {
+        identifier.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }

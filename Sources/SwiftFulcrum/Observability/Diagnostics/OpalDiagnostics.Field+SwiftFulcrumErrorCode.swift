@@ -103,6 +103,8 @@ extension OpalDiagnostics.Field {
             return .clientCancelled
         case .timeout:
             return .clientTimeout
+        case .invalidConfiguration:
+            return .clientInvalidConfiguration
         case .invalidSubscriptionBufferCapacity:
             return .clientInvalidConfiguration
         case .subscriptionUpdateBufferOverflow:

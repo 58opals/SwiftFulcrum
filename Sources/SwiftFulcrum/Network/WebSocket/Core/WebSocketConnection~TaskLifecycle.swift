@@ -8,11 +8,20 @@ extension WebSocketConnection {
     func createNewTask(with url: URL? = nil, receiverCancellation: ReceiverCancellation = .cancel) async {
         if let url { self.url = url }
 
+        let suppressesReaderStart: Bool
         switch receiverCancellation {
         case .cancel:
+            suppressesReaderStart = true
+            readerStartSuppressionCount += 1
             await cancelReceiverTask()
         case .preserve:
+            suppressesReaderStart = false
             break
+        }
+        defer {
+            if suppressesReaderStart {
+                readerStartSuppressionCount -= 1
+            }
         }
         if let task {
             lastCloseInformation = closeInformation
@@ -27,9 +36,18 @@ extension WebSocketConnection {
     }
 
     func cancelReceiverTask() async {
-        receivedTask?.cancel()
-        await receivedTask?.value
-        receivedTask = nil
+        guard let receiverMessageStreamGenerationIdentifier,
+              let receivedTask else {
+            return
+        }
+        receivedTask.cancel()
+        await receivedTask.value
+        guard self.receiverMessageStreamGenerationIdentifier
+                == receiverMessageStreamGenerationIdentifier else {
+            return
+        }
+        self.receivedTask = nil
+        self.receiverMessageStreamGenerationIdentifier = nil
     }
 
     var closeInformation: (code: URLSessionWebSocketTask.CloseCode, reason: String?) {

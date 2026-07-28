@@ -36,6 +36,8 @@ extension FulcrumClientLifecycleValidator {
         )
 
         await transport.enqueueLifecycleEvent(.disconnected(code: .goingAway, reason: "transport reconnect test"))
+        try await transport.reconnect(with: nil)
+        await transport.configureConnectionState(.connected)
         await transport.enqueueLifecycleEvent(.connected(isReconnect: true))
 
         let versionRequest = try await decodeRequestObject(await transport.dequeueOutgoing())

@@ -9,19 +9,19 @@ extension OpalDiagnostics.Field {
     }
 
     static func swiftFulcrumField(_ name: String, _ value: Int) -> Self {
-        Self(name: name, value: value)
+        Self(name: name, value: value, privacy: .public)
     }
 
     static func swiftFulcrumField(_ name: String, _ value: UInt64) -> Self {
-        Self(name: name, value: value)
+        Self(name: name, value: value, privacy: .public)
     }
 
     static func swiftFulcrumField(_ name: String, _ value: Bool) -> Self {
-        Self(name: name, value: value)
+        Self(name: name, value: value, privacy: .public)
     }
 
     static func swiftFulcrumField(_ name: String, _ value: UUID) -> Self {
-        Self(name: name, value: value)
+        Self(name: name, value: value, privacy: .public)
     }
 
     static func swiftFulcrumPrivateField(_ name: String, _ value: String) -> Self {
@@ -46,24 +46,6 @@ extension OpalDiagnostics.Field {
             OpalDiagnostics.Field.errorType(error),
             OpalDiagnostics.Field.errorMessage(swiftFulcrumErrorSummary(error))
         ]
-    }
-
-    static func swiftFulcrumPayloadFields(payloadType: String, byteCount: Int) -> [Self] {
-        [
-            swiftFulcrumField("payload_type", payloadType),
-            swiftFulcrumField("byte_count", byteCount)
-        ]
-    }
-
-    static func swiftFulcrumPayloadFields(for message: URLSessionWebSocketTask.Message) -> [Self] {
-        switch message {
-        case .data(let data):
-            swiftFulcrumPayloadFields(payloadType: "data", byteCount: data.count)
-        case .string(let string):
-            swiftFulcrumPayloadFields(payloadType: "string", byteCount: string.utf8.count)
-        @unknown default:
-            swiftFulcrumPayloadFields(payloadType: "unknown", byteCount: 0)
-        }
     }
 }
 
@@ -185,6 +167,8 @@ private extension SwiftFulcrum.Client.Error.ClientIssue {
             "Operation cancelled"
         case .timeout(let duration):
             "Operation timed out after \(duration)"
+        case .invalidConfiguration(let reason):
+            "Invalid client configuration: \(reason)"
         case .invalidSubscriptionBufferCapacity(let capacity):
             "Subscription buffer capacity \(capacity) is invalid"
         case .subscriptionUpdateBufferOverflow(let capacity):

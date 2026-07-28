@@ -10,52 +10,58 @@ extension SwiftFulcrumNetworkValidator {
 struct WebSocketValidator {
     @Test(
         "WebSocketConnection connects and exchanges a unary request",
-        .timeLimit(.minutes(1)),
-        .enabled(if: TestExecutionPolicy.shouldRunNetwork, "Network tests are opt-in. Set SWIFTFULCRUM_RUN_NETWORK=1 to enable them.")
+        .timeLimit(.minutes(1))
     )
     func connectAndExchangeUnaryRequest() async throws {
         let url = try await NetworkTestClient.pickServerURL()
         let webSocket = WebSocketConnection(url: url)
         let stream = await webSocket.makeMessageStream()
 
-        try await webSocket.connect()
-        #expect(await webSocket.connectionState == .connected)
+        do {
+            try await webSocket.connect()
+            #expect(await webSocket.connectionState == .connected)
 
-        let method: SwiftFulcrum.RPC.Method = .blockchain(.headers(.getTip))
-        let request = method.createRequest(with: UUID())
-        guard let data = request.data else {
-            Issue.record("Failed to encode blockchain.headers.get_tip request")
-            return
-        }
+            let method: SwiftFulcrum.RPC.Method = .blockchain(.headers(.getTip))
+            let request = method.createRequest(with: UUID())
+            let data = try #require(
+                request.data,
+                "Failed to encode blockchain.headers.get_tip request"
+            )
 
-        try await webSocket.send(data: data)
+            try await webSocket.send(data: data)
 
-        var iterator = stream.makeAsyncIterator()
-        var receivedTip: SwiftFulcrum.Response.Blockchain.Headers.Tip?
-        while let message = try await iterator.next() {
-            let payload: Data?
-            switch message {
-            case .data(let data):
-                payload = data
-            case .string(let string):
-                payload = string.data(using: .utf8)
-            @unknown default:
-                payload = nil
+            var iterator = stream.makeAsyncIterator()
+            var receivedTip: SwiftFulcrum.Response.Blockchain.Headers.Tip?
+            while let message = try await iterator.next() {
+                let payload: Data?
+                switch message {
+                case .data(let data):
+                    payload = data
+                case .string(let string):
+                    payload = string.data(using: .utf8)
+                @unknown default:
+                    payload = nil
+                }
+
+                if let payload,
+                    let decoded = try? payload.decode(
+                        SwiftFulcrum.Response.Blockchain.Headers.Tip.self
+                    ) {
+                    receivedTip = decoded
+                    break
+                }
             }
 
-            if let payload, let decoded = try? payload.decode(SwiftFulcrum.Response.Blockchain.Headers.Tip.self) {
-                receivedTip = decoded
-                break
-            }
+            let tip = try #require(
+                receivedTip,
+                "Did not receive a headers.get_tip response"
+            )
+            #expect(tip.height > 0)
+            #expect(tip.hex.count == 160)
+        } catch {
+            await webSocket.disconnect(with: "Test failed")
+            throw error
         }
-
-        guard let tip = receivedTip else {
-            Issue.record("Did not receive a headers.get_tip response")
-            return
-        }
-
-        #expect(tip.height > 0)
-        #expect(tip.hex.count == 160)
 
         await webSocket.disconnect(with: "Test complete")
         #expect(await webSocket.connectionState == .disconnected)
@@ -63,15 +69,20 @@ struct WebSocketValidator {
 
     @Test(
         "WebSocketConnection message stream ends after disconnect",
-        .timeLimit(.minutes(1)),
-        .enabled(if: TestExecutionPolicy.shouldRunNetwork, "Network tests are opt-in. Set SWIFTFULCRUM_RUN_NETWORK=1 to enable them.")
+        .timeLimit(.minutes(1))
     )
     func terminateMessageStreamAfterDisconnect() async throws {
         let url = try await NetworkTestClient.pickServerURL()
         let webSocket = WebSocketConnection(url: url)
         let stream = await webSocket.makeMessageStream()
 
-        try await webSocket.connect()
+        do {
+            try await webSocket.connect()
+        } catch {
+            await webSocket.disconnect(with: "Test failed")
+            throw error
+        }
+
         await webSocket.disconnect(with: "message stream termination check")
 
         let terminated = await NetworkTestClient.detectStreamTermination(

@@ -4,6 +4,14 @@ import Foundation
 @testable import SwiftFulcrum
 
 extension TransportTestActor {
+    func failIncomingStreamForHeartbeatStopTest() {
+        incomingContinuation?.finish(
+            throwing: SwiftFulcrum.Client.Error.transport(
+                .connectionClosed(.goingAway, "Test teardown")
+            )
+        )
+    }
+
     func makeMessageStream() async -> AsyncThrowingStream<URLSessionWebSocketTask.Message, Swift.Error> {
         if let incomingStream { return incomingStream }
         var continuation: AsyncThrowingStream<URLSessionWebSocketTask.Message, Swift.Error>.Continuation!
@@ -20,17 +28,19 @@ extension TransportTestActor {
     }
 
     func makeLifecycleEvents() async -> AsyncStream<SwiftFulcrum.Transport.State.Event> {
-        if let lifecycleStream { return lifecycleStream }
+        let subscriberIdentifier = UUID()
         var continuation: AsyncStream<SwiftFulcrum.Transport.State.Event>.Continuation!
         let stream = AsyncStream<SwiftFulcrum.Transport.State.Event> { innerContinuation in
             continuation = innerContinuation
             innerContinuation.onTermination = { @Sendable [weak self] _ in
-                Task { await self?.resetLifecycleStream() }
+                Task {
+                    await self?.removeLifecycleContinuation(
+                        for: subscriberIdentifier
+                    )
+                }
             }
         }
-        lifecycleStream = stream
-        lifecycleContinuation = continuation
-        flushLifecycleBuffer()
+        lifecycleContinuationsBySubscriberIdentifier[subscriberIdentifier] = continuation
         return stream
     }
 
@@ -54,12 +64,11 @@ extension TransportTestActor {
         incomingContinuation = nil
     }
 
-    func resetLifecycleStream() async {
-        lifecycleStream = nil
-        lifecycleContinuation = nil
-    }
-
     func removeConnectionStateContinuation(for subscriberIdentifier: UUID) {
         connectionStateContinuationsBySubscriberIdentifier.removeValue(forKey: subscriberIdentifier)
+    }
+
+    func removeLifecycleContinuation(for subscriberIdentifier: UUID) {
+        lifecycleContinuationsBySubscriberIdentifier.removeValue(forKey: subscriberIdentifier)
     }
 }

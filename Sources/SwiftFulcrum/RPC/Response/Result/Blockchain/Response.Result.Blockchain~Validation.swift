@@ -71,6 +71,14 @@ extension SwiftFulcrum.Response.Blockchain {
         try validateHex(hash, expectedLength: transactionHashCharacterLength, description: "merkle root hash")
     }
 
+    static func validateHistoryTransactionHeight(_ height: Int) throws {
+        guard height >= -1 else {
+            throw ResponseResultDecodeError.unexpectedFormat(
+                "Expected history transaction height to be -1 or greater"
+            )
+        }
+    }
+
     static func validateMempoolTransactionHeight(_ height: Int) throws {
         guard height == -1 || height == 0 else {
             throw ResponseResultDecodeError.unexpectedFormat("Expected mempool transaction height to be -1 or 0")

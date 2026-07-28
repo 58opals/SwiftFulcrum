@@ -13,26 +13,37 @@ extension SwiftFulcrum {
 
         private(set) var isRunning = false
         var desiredRunning = false
+        var stopGeneration: UInt64 = 0
         var startTask: Task<Void, Swift.Error>?
-        var startTaskWaiterCount = 0
+        var startTaskGenerationIdentifier: UUID?
+        var startTaskWaiterCountsByGeneration = [UUID: Int]()
+        var stopTask: Task<Void, Never>?
         var currentConnectionState: ConnectionState = .idle
         var connectionStateObservationTask: Task<Void, Never>?
         var connectionStateContinuationsBySubscriberIdentifier: [UUID: AsyncStream<ConnectionState>.Continuation] = .init()
+
+        func markAsRunning() {
+            isRunning = true
+        }
 
         /// Creates a Fulcrum client that connects to a specific server endpoint.
         /// - Parameters:
         ///   - endpoint: WebSocket endpoint for the Fulcrum server.
         ///   - configuration: Custom connection behavior including reconnection, catalog lookup, and protocol negotiation.
-        /// - Throws: ``SwiftFulcrum.Client.Error`` when the transport cannot be prepared.
+        /// - Throws: ``SwiftFulcrum.Client.Error`` when the configuration or endpoint is invalid,
+        ///   or when the transport cannot be prepared.
         public init(connectingTo endpoint: URL, configuration: Configuration = .init()) async throws {
+            try configuration.validate()
             self.client = try Self.makeClient(connectingTo: endpoint, configuration: configuration)
             startConnectionStateObservation()
         }
 
         /// Creates a Fulcrum client that resolves a server from the configured catalog.
         /// - Parameter configuration: Custom connection behavior including catalog lookup, reconnection, and protocol negotiation.
-        /// - Throws: ``SwiftFulcrum.Client.Error`` when no usable server can be loaded or the transport cannot be prepared.
+        /// - Throws: ``SwiftFulcrum.Client.Error`` when the configuration is invalid, no usable
+        ///   server can be loaded, or the transport cannot be prepared.
         public init(configuration: Configuration = .init()) async throws {
+            try configuration.validate()
             let endpoint = try await Self.selectServerEndpoint(using: configuration)
             self.client = try Self.makeClient(connectingTo: endpoint, configuration: configuration)
             startConnectionStateObservation()
@@ -43,45 +54,24 @@ extension SwiftFulcrum {
             startConnectionStateObservation()
         }
 
-        /// Establishes the WebSocketConnection connection and prepares automatic subscription restoration.
+        deinit {
+            connectionStateObservationTask?.cancel()
+            for continuation in connectionStateContinuationsBySubscriberIdentifier.values {
+                continuation.finish()
+            }
+            let client = self.client
+            Task {
+                await client.stop()
+            }
+        }
+
+        /// Establishes the WebSocket connection and prepares automatic subscription restoration.
         ///
         /// This call is idempotent and safe to invoke from concurrent tasks. It suspends until the
         /// underlying socket is connected or fails. If ``stop()`` is called while ``start()`` is in
         /// flight, stop takes precedence and this method returns without leaving the client running.
         public func start() async throws {
-            desiredRunning = true
-            guard !self.isRunning else { return }
-
-            let startTask = makeOrReuseStartTask()
-            startTaskWaiterCount += 1
-            defer {
-                startTaskWaiterCount -= 1
-                if Task.isCancelled, startTaskWaiterCount == 0 {
-                    startTask.cancel()
-                    self.startTask = nil
-                }
-            }
-
-            do {
-                try await startTask.awaitCancellableValue(cancelUnderlyingTask: false)
-            } catch {
-                if !desiredRunning, error is CancellationError {
-                    return
-                }
-                if Task.isCancelled, error is CancellationError {
-                    throw error
-                }
-                self.startTask = nil
-                throw error
-            }
-            self.startTask = nil
-
-            guard desiredRunning else { return }
-            self.isRunning = true
-
-            if connectionStateObservationTask == nil {
-                startConnectionStateObservation()
-            }
+            try await performStart()
         }
 
         /// Cancels outstanding requests, closes the WebSocketConnection, and resets subscription state.
@@ -89,38 +79,31 @@ extension SwiftFulcrum {
         /// This call is idempotent and deterministic. It cancels any in-flight ``start()`` and always
         /// performs teardown so the client is not left running.
         public func stop() async {
-            let networkConnectionState = await client.connectionState
-            let inFlightStartTask = startTask
-            let shouldPreserveIdleState =
-                !isRunning &&
-                inFlightStartTask == nil &&
-                currentConnectionState == .idle &&
-                networkConnectionState == .idle
-
+            stopGeneration &+= 1
             desiredRunning = false
             self.isRunning = false
+
+            if let stopTask {
+                await stopTask.value
+                return
+            }
+
+            let inFlightStartTask = startTask
 
             if let inFlightStartTask {
                 inFlightStartTask.cancel()
                 self.startTask = nil
+                self.startTaskGenerationIdentifier = nil
             }
 
-            if shouldPreserveIdleState {
-                await stopConnectionStateObservation()
+            let owner = self
+            let stopTask = Task<Void, Never> {
+                await owner.performStop(
+                    inFlightStartTask: inFlightStartTask
+                )
             }
-
-            await self.client.stop()
-            if let inFlightStartTask {
-                _ = try? await inFlightStartTask.value
-            }
-            desiredRunning = false
-
-            if !shouldPreserveIdleState {
-                await stopConnectionStateObservation()
-            } else {
-                currentConnectionState = .idle
-            }
-            await resetConnectionStateStream()
+            self.stopTask = stopTask
+            await stopTask.value
         }
 
         /// Forces a reconnect to the active or next available server while preserving subscription intent.
@@ -175,18 +158,6 @@ private extension SwiftFulcrum.Client {
             reconnectConfiguration: configuration.reconnect.reconnectorConfiguration,
             connectionTimeout: configuration.connectionTimeout
         )
-    }
-
-    func makeOrReuseStartTask() -> Task<Void, Swift.Error> {
-        if let startTask {
-            return startTask
-        }
-
-        let startTask = Task<Void, Swift.Error> { [client] in
-            try await client.start()
-        }
-        self.startTask = startTask
-        return startTask
     }
 
 }

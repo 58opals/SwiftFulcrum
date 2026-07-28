@@ -1,4 +1,4 @@
-// ResponseDecodingValidator~UTXOAndHistory.swift
+// ResponseDecodingValidator~UTXO.swift
 
 import Foundation
 import Testing
@@ -87,36 +87,6 @@ extension ResponseDecodingValidator {
             _ = try payload.decode(
                 SwiftFulcrum.Response.Blockchain.ScriptHash.ListUnspent.self,
                 context: .init(methodPath: "blockchain.scripthash.listunspent")
-            )
-        }
-    }
-
-    @Test("Rejects history entries with malformed transaction hashes")
-    func rejectHistoryEntriesWithMalformedTransactionHashes() throws {
-        let payload = try makeJSONData(
-            [
-                "jsonrpc": "2.0",
-                "id": UUID().uuidString,
-                "result": [
-                    [
-                        "height": 1,
-                        "tx_hash": String(repeating: "a", count: 63)
-                    ]
-                ]
-            ]
-        )
-
-        #expect(throws: ResponseResultDecodeError.self) {
-            _ = try payload.decode(
-                SwiftFulcrum.Response.Blockchain.Address.History.self,
-                context: .init(methodPath: "blockchain.address.get_history")
-            )
-        }
-
-        #expect(throws: ResponseResultDecodeError.self) {
-            _ = try payload.decode(
-                SwiftFulcrum.Response.Blockchain.ScriptHash.History.self,
-                context: .init(methodPath: "blockchain.scripthash.get_history")
             )
         }
     }

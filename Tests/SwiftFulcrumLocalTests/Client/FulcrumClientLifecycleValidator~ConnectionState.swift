@@ -47,4 +47,38 @@ extension FulcrumClientLifecycleValidator {
         )
         #expect(terminated)
     }
+
+    @Test("abandoned Client releases its observation task and disconnects transport", .timeLimit(.minutes(1)))
+    func releaseAbandonedClientAndDisconnectTransport() async throws {
+        let transport = TransportTestActor()
+        weak var abandonedClient: SwiftFulcrum.Client?
+        var connectionStateStream: AsyncStream<SwiftFulcrum.Client.ConnectionState>?
+
+        do {
+            let networkClient = FulcrumNetworkClient(transport: transport, protocolNegotiation: .init())
+            let client = await SwiftFulcrum.Client(client: networkClient)
+            abandonedClient = client
+            connectionStateStream = await client.makeConnectionStateStream()
+            await Task.yield()
+        }
+
+        let clock = ContinuousClock()
+        let releaseDeadline = clock.now + .seconds(2)
+        while abandonedClient != nil, clock.now < releaseDeadline {
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+        #expect(abandonedClient == nil)
+
+        let stream = try #require(connectionStateStream)
+        let didTerminateStream = await detectConnectionStateStreamTermination(
+            stream,
+            within: .seconds(1)
+        )
+        #expect(didTerminateStream)
+
+        let didDisconnect = await waitUntil(timeout: .seconds(2)) {
+            await transport.connectionState == .disconnected
+        }
+        #expect(didDisconnect)
+    }
 }

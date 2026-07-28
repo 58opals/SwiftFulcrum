@@ -48,6 +48,11 @@ extension ClientCancellationValidator {
     func startAndNegotiate(_ fulcrum: SwiftFulcrum.Client, transport: TransportTestActor) async throws {
         let startTask = Task { try await fulcrum.start() }
 
+        try await completeProtocolNegotiation(on: transport)
+        _ = try await startTask.value
+    }
+
+    func completeProtocolNegotiation(on transport: TransportTestActor) async throws {
         let versionObject = try TransportTestActor.decodeJSONObject(from: await transport.dequeueOutgoing())
         let versionIdentifier = try extractRequestIdentifier(from: versionObject)
         let versionPayload = try TransportTestActor.encodeResponsePayload(
@@ -69,8 +74,6 @@ extension ClientCancellationValidator {
             ]
         )
         await transport.enqueueIncoming(.data(featuresPayload))
-
-        _ = try await startTask.value
     }
 
     func extractRequestIdentifier(from object: [String: Any]) throws -> String {

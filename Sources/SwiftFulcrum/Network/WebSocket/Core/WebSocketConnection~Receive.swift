@@ -4,12 +4,19 @@ import Foundation
 import OpalDiagnostics
 
 extension WebSocketConnection {
-    private func startReader() {
-        guard receivedTask == nil else { return }
+    private func startReader(generationIdentifier: UUID) {
+        guard receivedTask == nil,
+              readerStartSuppressionCount == 0,
+              messageStreamGenerationIdentifier == generationIdentifier else {
+            return
+        }
         let connection = self
         receivedTask = Task {
-            await connection.receiveContinuously()
+            await connection.receiveContinuously(
+                generationIdentifier: generationIdentifier
+            )
         }
+        receiverMessageStreamGenerationIdentifier = generationIdentifier
     }
 
     func ensureAutomaticReceiving() {
@@ -19,23 +26,33 @@ extension WebSocketConnection {
             return
         }
 
-        if receivedTask == nil { startReader() }
+        if receivedTask == nil, let messageStreamGenerationIdentifier {
+            startReader(generationIdentifier: messageStreamGenerationIdentifier)
+        }
     }
 
     func makeMessageStream(shouldEnableAutomaticResumption: Bool = true) -> AsyncThrowingStream<URLSessionWebSocketTask.Message, Swift.Error> {
         shouldAutomaticallyReceive = shouldEnableAutomaticResumption
 
         if let stream = sharedMessagesStream {
-            if shouldEnableAutomaticResumption && receivedTask == nil { startReader() }
+            if shouldEnableAutomaticResumption,
+               receivedTask == nil,
+               let messageStreamGenerationIdentifier {
+                startReader(generationIdentifier: messageStreamGenerationIdentifier)
+            }
             return stream
         }
 
+        let generationIdentifier = UUID()
         let stream = AsyncThrowingStream<URLSessionWebSocketTask.Message, Swift.Error> { continuation in
+            self.messageStreamGenerationIdentifier = generationIdentifier
             self.messageContinuation = continuation
-            self.startReader()
+            self.startReader(generationIdentifier: generationIdentifier)
             continuation.onTermination = { @Sendable [weak self] _ in
                 Task { [weak self] in
-                    await self?.resetMessageStreamAndReader()
+                    await self?.resetMessageStreamAndReader(
+                        generationIdentifier: generationIdentifier
+                    )
                 }
             }
         }
@@ -45,10 +62,19 @@ extension WebSocketConnection {
         return stream
     }
 
-    func resetMessageStreamAndReader() async {
-        await cancelReceiverTask()
+    func resetMessageStreamAndReader(generationIdentifier: UUID) async {
+        guard messageStreamGenerationIdentifier == generationIdentifier else { return }
+        readerStartSuppressionCount += 1
+        defer {
+            readerStartSuppressionCount -= 1
+        }
+        if receiverMessageStreamGenerationIdentifier == generationIdentifier {
+            await cancelReceiverTask()
+        }
+        guard messageStreamGenerationIdentifier == generationIdentifier else { return }
         sharedMessagesStream = nil
         messageContinuation = nil
+        messageStreamGenerationIdentifier = nil
     }
 
     func makeOutgoingMessageIdentifier() -> UInt64 {
@@ -61,10 +87,16 @@ extension WebSocketConnection {
         return nextIncomingMessageIdentifier
     }
 
-    private func receiveContinuously() async {
-        defer { receivedTask = nil }
+    private func receiveContinuously(generationIdentifier: UUID) async {
+        defer {
+            if receiverMessageStreamGenerationIdentifier == generationIdentifier {
+                receivedTask = nil
+                receiverMessageStreamGenerationIdentifier = nil
+            }
+        }
 
         while !Task.isCancelled {
+            guard messageStreamGenerationIdentifier == generationIdentifier else { break }
             guard let task = task else { break }
 
             do {
@@ -81,9 +113,9 @@ extension WebSocketConnection {
                         .swiftFulcrumField("message_id", messageIdentifier)
                     ])
                 )
-                guard case .some(.enqueued) = messageContinuation?.yield(with: .success(message)) else {
-                    messageContinuation?.finish()
-                    messageContinuation = nil
+                guard messageStreamGenerationIdentifier == generationIdentifier,
+                      case .some(.enqueued) = messageContinuation?.yield(with: .success(message)) else {
+                    finishMessageStream(generationIdentifier: generationIdentifier)
                     return
                 }
             } catch let urlError as URLError where urlError.code == .cancelled {
@@ -107,13 +139,30 @@ extension WebSocketConnection {
                     continue
                 } catch {
                     await updateConnectionState(.disconnected)
-                    messageContinuation?.finish(throwing: error)
-                    messageContinuation = nil
+                    finishMessageStream(
+                        generationIdentifier: generationIdentifier,
+                        throwing: error
+                    )
                     break
                 }
             }
 
             await Task.yield()
         }
+    }
+
+    private func finishMessageStream(
+        generationIdentifier: UUID,
+        throwing error: Swift.Error? = nil
+    ) {
+        guard messageStreamGenerationIdentifier == generationIdentifier else { return }
+        if let error {
+            messageContinuation?.finish(throwing: error)
+        } else {
+            messageContinuation?.finish()
+        }
+        sharedMessagesStream = nil
+        messageContinuation = nil
+        messageStreamGenerationIdentifier = nil
     }
 }

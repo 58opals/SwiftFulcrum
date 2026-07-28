@@ -2,7 +2,7 @@
 
 import Foundation
 
-extension Task where Failure == Swift.Error, Success: Sendable {
+extension Task where Success: Sendable {
     func awaitCancellableValue(
         cancelUnderlyingTask: Bool = true
     ) async throws -> Success {
@@ -23,10 +23,10 @@ extension Task where Failure == Swift.Error, Success: Sendable {
 
         let waitState = CancellableTaskWaitState<Success>()
         _ = Task<Void, Never> {
-            do {
-                let value = try await self.value
+            switch await self.result {
+            case .success(let value):
                 waitState.resolve(.success(value))
-            } catch {
+            case .failure(let error):
                 waitState.resolve(.failure(error))
             }
         }

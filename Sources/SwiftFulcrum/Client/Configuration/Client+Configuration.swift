@@ -35,6 +35,31 @@ extension SwiftFulcrum.Client {
 }
 
 extension SwiftFulcrum.Client.Configuration {
+    static let maximumScheduledIntervalSeconds: TimeInterval = 365 * 24 * 60 * 60
+
+    func validate() throws {
+        try validateDuration(connectionTimeout, named: "connectionTimeout")
+
+        guard maximumMessageSize > 0 else {
+            throw SwiftFulcrum.Client.Error.client(
+                .invalidConfiguration("maximumMessageSize must be greater than zero.")
+            )
+        }
+
+        try validateDuration(reconnect.reconnectionDelay, named: "reconnect.reconnectionDelay")
+        try validateDuration(reconnect.maximumDelay, named: "reconnect.maximumDelay")
+
+        let jitterRange = reconnect.jitterRange
+        guard jitterRange.lowerBound.isFinite,
+              jitterRange.upperBound.isFinite,
+              jitterRange.lowerBound >= 0,
+              jitterRange.upperBound >= 0 else {
+            throw SwiftFulcrum.Client.Error.client(
+                .invalidConfiguration("reconnect.jitterRange bounds must be finite and nonnegative.")
+            )
+        }
+    }
+
     func convertToWebSocketConfiguration() -> WebSocketConnection.Configuration {
         return WebSocketConnection.Configuration(
             maximumMessageSize: maximumMessageSize,
@@ -42,5 +67,18 @@ extension SwiftFulcrum.Client.Configuration {
             serverCatalogLoader: serverCatalogLoader,
             network: network
         )
+    }
+
+    private func validateDuration(_ value: TimeInterval, named name: String) throws {
+        guard value.isFinite,
+              value >= 0,
+              value <= Self.maximumScheduledIntervalSeconds else {
+            throw SwiftFulcrum.Client.Error.client(
+                .invalidConfiguration(
+                    "\(name) must be finite and between zero and "
+                        + "\(Self.maximumScheduledIntervalSeconds) seconds."
+                )
+            )
+        }
     }
 }

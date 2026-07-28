@@ -13,12 +13,19 @@ extension SwiftFulcrum.Client {
         _ endpoint: SwiftFulcrum.API.Request<ResponsePayload>,
         options: SwiftFulcrum.Client.Call.Options = .init()
     ) async throws -> ResponsePayload {
+        let observedStopGeneration = stopGeneration
         let method = endpoint.method
         let cancellationToken = options.cancellation?.token
         try await throwIfCancelled(cancellationToken)
-        let deadline = makeDeadline(for: options.timeout)
-        try await prepareClientForRequests(until: deadline)
+        let deadline = try makeDeadline(for: options.timeout)
+        try await prepareClientForRequests(
+            until: deadline,
+            observedStopGeneration: observedStopGeneration
+        )
         try await throwIfCancelled(cancellationToken)
+        try ensureRequestPreparationIsCurrent(
+            observedStopGeneration: observedStopGeneration
+        )
 
         do {
             let (_, result): (UUID, ResponsePayload) = try await client.call(
@@ -44,12 +51,14 @@ extension SwiftFulcrum.Client {
         _ endpoint: SwiftFulcrum.API.Subscription<Initial, Update>,
         options: SwiftFulcrum.Client.Call.Options = .init()
     ) async throws -> Subscription<Initial, Update> {
+        let observedStopGeneration = stopGeneration
         try await throwIfCancelled(options.cancellation?.token)
-        let deadline = makeDeadline(for: options.timeout)
+        let deadline = try makeDeadline(for: options.timeout)
         return try await makeSubscription(
             method: endpoint.method,
             options: options,
-            deadline: deadline
+            deadline: deadline,
+            observedStopGeneration: observedStopGeneration
         )
     }
 

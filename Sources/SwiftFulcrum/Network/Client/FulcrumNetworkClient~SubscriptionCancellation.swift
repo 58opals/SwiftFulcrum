@@ -4,14 +4,22 @@ import Foundation
 import OpalDiagnostics
 
 extension FulcrumNetworkClient {
-    func awaitPendingSubscriptionCleanup(for key: SubscriptionKey) async {
-        guard let task = subscriptionRegistry.cleanupTask(for: key) else { return }
-        _ = await task.value
+    func shouldSendUnsubscribeOnCancellation(
+        for subscriptionKey: SubscriptionKey
+    ) -> Bool {
+        subscriptionRegistry.shouldSendUnsubscribeOnCancellation(
+            for: subscriptionKey
+        )
     }
 
-    func awaitPendingSubscriptionCleanups() async {
+    func awaitPendingSubscriptionCleanup(for key: SubscriptionKey) async throws {
+        guard let task = subscriptionRegistry.cleanupTask(for: key) else { return }
+        _ = try await task.awaitCancellableValue(cancelUnderlyingTask: false)
+    }
+
+    func awaitPendingSubscriptionCleanups() async throws {
         for task in subscriptionRegistry.makeCleanupTasks() {
-            _ = await task.value
+            _ = try await task.awaitCancellableValue(cancelUnderlyingTask: false)
         }
     }
 }

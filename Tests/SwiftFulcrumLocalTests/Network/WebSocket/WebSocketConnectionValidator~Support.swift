@@ -7,6 +7,24 @@ import Testing
 @testable import SwiftFulcrum
 
 extension WebSocketConnectionValidator {
+    func waitUntil(
+        timeout: Duration,
+        pollingInterval: Duration = .milliseconds(10),
+        _ condition: @Sendable @escaping () async -> Bool
+    ) async -> Bool {
+        let clock = ContinuousClock()
+        let deadline = clock.now + timeout
+
+        while clock.now < deadline {
+            if await condition() {
+                return true
+            }
+            try? await Task.sleep(for: pollingInterval)
+        }
+
+        return await condition()
+    }
+
     func waitForCurrentTaskIdentifier(
         on webSocket: WebSocketConnection,
         timeout: Duration = .seconds(1)
@@ -26,7 +44,7 @@ extension WebSocketConnectionValidator {
 
     func assertCancelledConnect(_ task: Task<Void, Swift.Error>) async {
         do {
-            try await task.value
+            try await awaitConnectTask(task, timeout: .milliseconds(250))
             Issue.record("Expected connect() task to terminate after explicit disconnect")
         } catch is CancellationError {
             return
@@ -44,18 +62,25 @@ extension WebSocketConnectionValidator {
 
     func expectCancelledConnectWaiter(_ task: Task<Void, Swift.Error>) async {
         await #expect(throws: CancellationError.self) {
-            try await withThrowingTaskGroup(of: Void.self) { group in
-                group.addTask {
-                    try await task.value
-                }
-                group.addTask {
-                    try await Task.sleep(for: .milliseconds(250))
-                    throw TimeoutError.missingSocketTask
-                }
+            try await awaitConnectTask(task, timeout: .milliseconds(250))
+        }
+    }
 
-                try await group.next()
-                group.cancelAll()
+    func awaitConnectTask(
+        _ task: Task<Void, Swift.Error>,
+        timeout: Duration
+    ) async throws {
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            group.addTask {
+                try await task.awaitCancellableValue(cancelUnderlyingTask: false)
             }
+            group.addTask {
+                try await Task.sleep(for: timeout)
+                throw TimeoutError.missingSocketTask
+            }
+
+            try await group.next()
+            group.cancelAll()
         }
     }
 

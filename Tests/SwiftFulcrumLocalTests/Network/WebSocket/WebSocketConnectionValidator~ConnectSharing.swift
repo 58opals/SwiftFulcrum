@@ -85,6 +85,60 @@ extension WebSocketConnectionValidator {
         session.invalidateAndCancel()
     }
 
+    @Test("Cancelling the final shared connect waiter cancels the socket attempt", .timeLimit(.minutes(1)))
+    func cancelSocketAttemptWhenFinalSharedConnectWaiterCancels() async throws {
+        let hangingServer = try LocalHangingTCPServer()
+        let endpoint = try await hangingServer.start()
+        let webSocket = WebSocketConnection(
+            url: endpoint,
+            connectionTimeout: 5
+        )
+
+        let firstConnectTask = Task {
+            try await webSocket.connect(using: .initialWithoutFailover)
+        }
+        let firstTaskIdentifier = try await waitForCurrentTaskIdentifier(
+            on: webSocket
+        )
+        let secondConnectTask = Task {
+            try await webSocket.connect(using: .initialWithoutFailover)
+        }
+
+        let didRegisterBothWaiters = await waitUntil(timeout: .seconds(2)) {
+            guard let generationIdentifier =
+                    await webSocket.connectTaskGenerationIdentifier else {
+                return false
+            }
+            return await webSocket
+                .connectTaskWaiterCountsByGeneration[generationIdentifier] == 2
+        }
+        #expect(didRegisterBothWaiters)
+
+        secondConnectTask.cancel()
+        await expectCancelledConnectWaiter(secondConnectTask)
+        #expect(
+            try await waitForCurrentTaskIdentifier(on: webSocket)
+                == firstTaskIdentifier
+        )
+
+        firstConnectTask.cancel()
+        await expectCancelledConnectWaiter(firstConnectTask)
+        let didCancelSocketAttempt = await waitUntil(timeout: .seconds(2)) {
+            let connectionState = await webSocket.connectionState
+            let socketTask = await webSocket.task
+            let connectTask = await webSocket.connectTask
+            return connectionState == .disconnected
+                && socketTask == nil
+                && connectTask == nil
+        }
+        #expect(didCancelSocketAttempt)
+
+        await webSocket.disconnect(with: "test teardown")
+        let session = await webSocket.session
+        session.invalidateAndCancel()
+        await hangingServer.stop()
+    }
+
     @Test("Immediately cancelling a shared connect waiter terminates promptly", .timeLimit(.minutes(1)))
     func immediatelyCancellingSharedConnectWaiterTerminatesPromptly() async throws {
         let hangingServer = try LocalHangingTCPServer()

@@ -16,8 +16,12 @@ extension FulcrumNetworkClient {
         }
 
         switch methodPath {
-        case .scriptHash, .address, .transaction:
+        case .scriptHash, .transaction:
             return firstParameter as? String
+
+        case .address:
+            guard let address = firstParameter as? String else { return nil }
+            return normalizeAddressSubscriptionIdentifier(address)
 
         case .transactionDoubleSpendProof:
             if let string = firstParameter as? String {

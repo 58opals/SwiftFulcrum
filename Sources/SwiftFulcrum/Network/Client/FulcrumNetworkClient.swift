@@ -15,10 +15,22 @@ actor FulcrumNetworkClient {
     var subscriptionRegistry: SubscriptionRegistry
 
     var receiveTask: Task<Void, Never>?
-    private var startupTask: Task<Void, Swift.Error>?
-    private var startupWaiterCount = 0
+    var startupTask: Task<Void, Swift.Error>?
+    var startupTaskGenerationIdentifier: UUID?
+    var startupTaskWaiterCountsByGeneration = [UUID: Int]()
     var reconnectTask: Task<Void, Swift.Error>?
+    var reconnectTaskGenerationIdentifier: UUID?
+    var reconnectTaskWaiterCountsByGeneration = [UUID: Int]()
     var reconnectRecoveryState: ReconnectRecoveryState
+    var reconnectRecoveryTaskGenerationIdentifier: UUID?
+    var automaticReconnectRecoveryPredecessorTask: Task<Void, Swift.Error>?
+    var automaticReconnectRecoverySuccessCount: Int?
+    var automaticReconnectRecoveryGeneration: UInt64?
+    var manualReconnectRecoverySuccessCount: Int?
+    var pendingManualReconnectRecoverySuccessCount: Int?
+    var automaticReconnectConnectionGeneration: UInt64 = 0
+    var connectionRecoveryGeneration: UInt64 = 0
+    var recoveredReconnectSuccessCount = 0
     var lifecycleTask: Task<Void, Never>?
     var diagnosticsStateTask: Task<Void, Never>?
 
@@ -44,73 +56,56 @@ actor FulcrumNetworkClient {
         self.rpcHeartbeatTimeout = heartbeatTimeout
     }
 
-    func start() async throws {
-        let startupTask: Task<Void, Swift.Error>
-        if let existingStartupTask = self.startupTask {
-            startupTask = existingStartupTask
-        } else {
-            let owner = self
-            startupTask = Task<Void, Swift.Error> {
-                try await owner.performStart()
-            }
-            self.startupTask = startupTask
-        }
-
-        startupWaiterCount += 1
-        defer {
-            startupWaiterCount -= 1
-            if Task.isCancelled, startupWaiterCount == 0 {
-                startupTask.cancel()
-                self.startupTask = nil
-            }
-        }
-
-        do {
-            try await startupTask.awaitCancellableValue(cancelUnderlyingTask: false)
-            self.startupTask = nil
-        } catch {
-            if Task.isCancelled, error is CancellationError {
-                throw error
-            }
-            self.startupTask = nil
-            throw error
-        }
-    }
-
-    private func performStart() async throws {
-        guard receiveTask == nil else { return }
-        resetNegotiatedSession()
-
-        try await self.transport.connect()
-        startReceivingTask()
-        startLifecycleObservationTasks()
-
-        do {
-            _ = try await ensureNegotiatedProtocol()
-
-            startRPCHeartbeat()
-            await recordClientState()
-        } catch {
-            await cancelBackgroundTasks()
-            await transport.disconnect(with: "FulcrumNetworkClient.start() negotiation failed")
-            throw error
-        }
-    }
-
     func stop() async {
-        if let startupTask {
-            startupTask.cancel()
-            _ = try? await startupTask.value
-            self.startupTask = nil
+        let startupTask = self.startupTask
+        let startupTaskGenerationIdentifier = self.startupTaskGenerationIdentifier
+
+        startupTask?.cancel()
+        await stopRPCHeartbeat()
+
+        let reconnectTask = self.reconnectTask
+        let reconnectTaskGenerationIdentifier = self.reconnectTaskGenerationIdentifier
+        reconnectTask?.cancel()
+        if reconnectTask != nil {
+            resetNegotiatedSession()
         }
+
+        await transport.disconnect(with: "FulcrumNetworkClient.stop() called")
+
+        if let startupTask {
+            _ = try? await startupTask.value
+            if self.startupTaskGenerationIdentifier == startupTaskGenerationIdentifier {
+                self.startupTask = nil
+                self.startupTaskGenerationIdentifier = nil
+            }
+        }
+
+        await stopRPCHeartbeat()
 
         if let reconnectTask {
-            resetNegotiatedSession()
-            reconnectTask.cancel()
             _ = try? await reconnectTask.value
-            self.reconnectTask = nil
+            if self.reconnectTaskGenerationIdentifier == reconnectTaskGenerationIdentifier {
+                self.reconnectTask = nil
+                self.reconnectTaskGenerationIdentifier = nil
+            }
         }
-        await cancelAutomaticReconnectRecoveryTask()
+
+        let lateReconnectTask = self.reconnectTask
+        let lateReconnectTaskGenerationIdentifier =
+            self.reconnectTaskGenerationIdentifier
+        if let lateReconnectTask {
+            lateReconnectTask.cancel()
+            resetNegotiatedSession()
+            _ = try? await lateReconnectTask.value
+            if self.reconnectTaskGenerationIdentifier
+                == lateReconnectTaskGenerationIdentifier {
+                self.reconnectTask = nil
+                self.reconnectTaskGenerationIdentifier = nil
+            }
+        }
+
+        await cancelBackgroundTasks()
+        await transport.disconnect(with: "FulcrumNetworkClient.stop() called")
 
         let info = await transport.closeInformation
         let closedError = await SwiftFulcrum.Client.Error.transport(.connectionClosed(info.code, info.reason))
@@ -118,9 +113,6 @@ actor FulcrumNetworkClient {
         let inflightCount = await router.failAll(with: closedError)
         await recordClientState(inflightUnaryCallCount: inflightCount)
 
-        await stopRPCHeartbeat()
-        await cancelBackgroundTasks()
-        await transport.disconnect(with: "FulcrumNetworkClient.stop() called")
         resetNegotiatedSession()
     }
 

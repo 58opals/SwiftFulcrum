@@ -10,8 +10,7 @@ extension SwiftFulcrumNetworkValidator {
 struct ClientWebSocketValidator {
     @Test(
         "FulcrumNetworkClient.start() relays unary responses over WebSocketConnection",
-        .timeLimit(.minutes(1)),
-        .enabled(if: TestExecutionPolicy.shouldRunNetwork, "Network tests are opt-in. Set SWIFTFULCRUM_RUN_NETWORK=1 to enable them.")
+        .timeLimit(.minutes(1))
     )
     func startClientAndReceiveUnaryResponses() async throws {
         let url = try await NetworkTestClient.pickServerURL()
@@ -21,15 +20,21 @@ struct ClientWebSocketValidator {
             protocolNegotiation: .init()
         )
 
-        try await client.start()
+        do {
+            try await client.start()
 
-        let (_, tip): (UUID, SwiftFulcrum.Response.Blockchain.Headers.Tip) = try await client.call(
-            method: .blockchain(.headers(.getTip)),
-            options: .init(timeout: .seconds(30))
-        )
+            let (_, tip): (UUID, SwiftFulcrum.Response.Blockchain.Headers.Tip) =
+                try await client.call(
+                    method: .blockchain(.headers(.getTip)),
+                    options: .init(timeout: .seconds(30))
+                )
 
-        #expect(tip.height > 0)
-        #expect(await client.connectionState == .connected)
+            #expect(tip.height > 0)
+            #expect(await client.connectionState == .connected)
+        } catch {
+            await client.stop()
+            throw error
+        }
 
         await client.stop()
         #expect(await client.connectionState == .disconnected)
@@ -37,8 +42,7 @@ struct ClientWebSocketValidator {
 
     @Test(
         "FulcrumNetworkClient.stop() cancels active subscription streams",
-        .timeLimit(.minutes(1)),
-        .enabled(if: TestExecutionPolicy.shouldRunNetwork, "Network tests are opt-in. Set SWIFTFULCRUM_RUN_NETWORK=1 to enable them.")
+        .timeLimit(.minutes(1))
     )
     func stopClientAndTerminateSubscriptions() async throws {
         let url = try await NetworkTestClient.pickServerURL()
@@ -48,21 +52,34 @@ struct ClientWebSocketValidator {
             protocolNegotiation: .init()
         )
 
-        try await client.start()
+        let updates: AsyncThrowingStream<
+            SwiftFulcrum.Response.Blockchain.Headers.SubscribeNotification,
+            Swift.Error
+        >
 
-        let (_, initial, updates): (
-            UUID,
-            SwiftFulcrum.Response.Blockchain.Headers.Subscribe,
-            AsyncThrowingStream<SwiftFulcrum.Response.Blockchain.Headers.SubscribeNotification, Swift.Error>
-        ) = try await client.subscribe(
-            method: .blockchain(.headers(.subscribe)),
-            options: .init(timeout: .seconds(30))
-        )
+        do {
+            try await client.start()
 
-        #expect(initial.height > 0)
+            let (_, initial, subscriptionUpdates): (
+                UUID,
+                SwiftFulcrum.Response.Blockchain.Headers.Subscribe,
+                AsyncThrowingStream<
+                    SwiftFulcrum.Response.Blockchain.Headers.SubscribeNotification,
+                    Swift.Error
+                >
+            ) = try await client.subscribe(
+                method: .blockchain(.headers(.subscribe)),
+                options: .init(timeout: .seconds(30))
+            )
+
+            #expect(initial.height > 0)
+            updates = subscriptionUpdates
+        } catch {
+            await client.stop()
+            throw error
+        }
 
         await client.stop()
-
         let terminated = await NetworkTestClient.detectStreamTermination(
             updates,
             within: .seconds(10)

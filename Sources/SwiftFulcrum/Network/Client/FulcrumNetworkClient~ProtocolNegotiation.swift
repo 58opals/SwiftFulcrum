@@ -8,11 +8,16 @@ extension FulcrumNetworkClient {
             return state.negotiatedSession
         }
 
+        let generationIdentifier = state.negotiatedSession.generationIdentifier
         let negotiationTask: Task<NegotiatedSession, Swift.Error>
         if let existingNegotiationTask = state.negotiatedSession.negotiationTask {
             negotiationTask = existingNegotiationTask
         } else {
-            negotiationTask = Task { try await self.performProtocolNegotiation() }
+            negotiationTask = Task {
+                try await self.performProtocolNegotiation(
+                    generationIdentifier: generationIdentifier
+                )
+            }
             state.negotiatedSession.negotiationTask = negotiationTask
         }
 
@@ -21,10 +26,12 @@ extension FulcrumNetworkClient {
         cancellationCoordinator.addWaiter()
         defer {
             let remainingWaiterCount = cancellationCoordinator.removeWaiter()
-            state.negotiatedSession.negotiationWaiterCount -= 1
-            if Task.isCancelled, remainingWaiterCount == 0 {
-                negotiationTask.cancel()
-                clearNegotiatedSession()
+            if state.negotiatedSession.generationIdentifier == generationIdentifier {
+                state.negotiatedSession.negotiationWaiterCount -= 1
+                if Task.isCancelled, remainingWaiterCount == 0 {
+                    negotiationTask.cancel()
+                    clearNegotiatedSession(generationIdentifier: generationIdentifier)
+                }
             }
         }
 
@@ -34,28 +41,33 @@ extension FulcrumNetworkClient {
                     cancellationCoordinator.shouldCancelUnderlyingTaskForCancellingWaiter
                 }
             )
+            guard state.negotiatedSession.generationIdentifier == generationIdentifier else {
+                throw CancellationError()
+            }
             state.negotiatedSession.negotiatedProtocol = negotiatedSession.negotiatedProtocol
             state.negotiatedSession.serverSoftwareVersion = negotiatedSession.serverSoftwareVersion
             state.negotiatedSession.serverFeatures = negotiatedSession.serverFeatures
             state.negotiatedSession.negotiationTask = nil
-            return negotiatedSession
+            return state.negotiatedSession
         } catch {
             if Task.isCancelled, error is CancellationError {
                 throw error
             }
-            clearNegotiatedSession()
+            clearNegotiatedSession(generationIdentifier: generationIdentifier)
             throw error
         }
     }
 
-    private func clearNegotiatedSession() {
-        state.negotiatedSession.negotiatedProtocol = nil
-        state.negotiatedSession.serverSoftwareVersion = nil
-        state.negotiatedSession.serverFeatures = nil
-        state.negotiatedSession.negotiationTask = nil
+    private func clearNegotiatedSession(generationIdentifier: UUID) {
+        guard state.negotiatedSession.generationIdentifier == generationIdentifier else {
+            return
+        }
+        state.negotiatedSession = .init()
     }
 
-    private func performProtocolNegotiation() async throws -> NegotiatedSession {
+    private func performProtocolNegotiation(
+        generationIdentifier: UUID
+    ) async throws -> NegotiatedSession {
         let negotiationArgument = protocolNegotiation.makeArgument()
         let supportedRange = protocolNegotiation.supportedRange
 
@@ -72,17 +84,35 @@ extension FulcrumNetworkClient {
             version.negotiatedProtocolVersion
         )
 
-        var negotiatedSession = NegotiatedSession()
+        guard state.negotiatedSession.generationIdentifier == generationIdentifier else {
+            throw CancellationError()
+        }
+
+        var negotiatedSession = NegotiatedSession(
+            generationIdentifier: generationIdentifier
+        )
         negotiatedSession.negotiatedProtocol = negotiatedProtocol
         negotiatedSession.serverSoftwareVersion = version.serverVersion
         state.negotiatedSession.negotiatedProtocol = negotiatedSession.negotiatedProtocol
         state.negotiatedSession.serverSoftwareVersion = negotiatedSession.serverSoftwareVersion
 
-        if let features = try? await fetchServerFeatures() {
+        do {
+            try Task.checkCancellation()
+            let features = try await fetchServerFeatures()
+            guard state.negotiatedSession.generationIdentifier == generationIdentifier else {
+                throw CancellationError()
+            }
             negotiatedSession.serverFeatures = features
             state.negotiatedSession.serverFeatures = features
+        } catch {
+            guard state.negotiatedSession.generationIdentifier == generationIdentifier else {
+                throw CancellationError()
+            }
         }
 
+        guard state.negotiatedSession.generationIdentifier == generationIdentifier else {
+            throw CancellationError()
+        }
         return negotiatedSession
     }
 

@@ -11,6 +11,7 @@ actor WebSocketConnection {
 
     var sharedMessagesStream: AsyncThrowingStream<URLSessionWebSocketTask.Message, Swift.Error>?
     var messageContinuation: AsyncThrowingStream<URLSessionWebSocketTask.Message, Swift.Error>.Continuation?
+    var messageStreamGenerationIdentifier: UUID?
 
     let reconnector: Reconnector
 
@@ -18,17 +19,16 @@ actor WebSocketConnection {
     var reconnectSuccessCount = 0
 
     var connectTask: Task<Void, Swift.Error>?
-    var connectTaskWaitersByIdentifier = [UUID: CheckedContinuation<Void, Error>]()
-    var cancelledConnectTaskWaiterIdentifiers = Set<UUID>()
-    var isConnectionInFlight = false
-    var connectWaitersByIdentifier = [UUID: CheckedContinuation<Bool, Error>]()
-    var cancelledConnectWaiterIdentifiers = Set<UUID>()
+    var connectTaskGenerationIdentifier: UUID?
+    var connectTaskWaiterCountsByGeneration = [UUID: Int]()
     var isConnected: Bool { get async { await connectionStateTracker.state == .connected } }
 
     var nextOutgoingMessageIdentifier: UInt64 = 0
     var nextIncomingMessageIdentifier: UInt64 = 0
 
     var receivedTask: Task<Void, Never>?
+    var receiverMessageStreamGenerationIdentifier: UUID?
+    var readerStartSuppressionCount = 0
     var shouldAutomaticallyReceive = false
 
     var lifecycleContinuationsBySubscriberIdentifier: [UUID: AsyncStream<Lifecycle.Event>.Continuation] = .init()

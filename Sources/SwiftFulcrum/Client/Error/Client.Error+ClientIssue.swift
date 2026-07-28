@@ -9,6 +9,7 @@ extension SwiftFulcrum.Client.Error {
         case duplicateRegistration
         case cancelled
         case timeout(Duration)
+        case invalidConfiguration(String)
         case invalidSubscriptionBufferCapacity(Int)
         case subscriptionUpdateBufferOverflow(Int)
         case emptyResponse(UUID?)
@@ -32,6 +33,8 @@ extension SwiftFulcrum.Client.Error.ClientIssue: Swift.Error, Equatable, Sendabl
             return leftURL == rightURL
         case (.timeout(let leftDuration), .timeout(let rightDuration)):
             return leftDuration == rightDuration
+        case (.invalidConfiguration(let leftReason), .invalidConfiguration(let rightReason)):
+            return leftReason == rightReason
         case (.invalidSubscriptionBufferCapacity(let leftCapacity), .invalidSubscriptionBufferCapacity(let rightCapacity)):
             return leftCapacity == rightCapacity
         case (.subscriptionUpdateBufferOverflow(let leftCapacity), .subscriptionUpdateBufferOverflow(let rightCapacity)):

@@ -4,19 +4,19 @@ import Foundation
 
 extension SwiftFulcrum.ServerCatalog {
     public struct Repository: Sendable {
-        let usesBundledCatalog: Bool
+        let isBundledCatalogBacked: Bool
         private let loadCatalog: @Sendable (SwiftFulcrum.Client.Configuration.Network, [URL]) async throws -> [URL]
 
         public init(load: @escaping @Sendable (SwiftFulcrum.Client.Configuration.Network, [URL]) async throws -> [URL]) {
-            self.init(load: load, usesBundledCatalog: false)
+            self.init(load: load, isBundledCatalogBacked: false)
         }
 
         init(
             load: @escaping @Sendable (SwiftFulcrum.Client.Configuration.Network, [URL]) async throws -> [URL],
-            usesBundledCatalog: Bool
+            isBundledCatalogBacked: Bool
         ) {
             self.loadCatalog = load
-            self.usesBundledCatalog = usesBundledCatalog
+            self.isBundledCatalogBacked = isBundledCatalogBacked
         }
 
         public func loadServers(
@@ -31,13 +31,13 @@ extension SwiftFulcrum.ServerCatalog {
 extension SwiftFulcrum.ServerCatalog.Repository {
     public static let bundled = Self(load: { network, fallback in
         try BundledCatalogLoader.loadServers(for: network, fallback: fallback)
-    }, usesBundledCatalog: true)
+    }, isBundledCatalogBacked: true)
 
     public static func makeConstant(_ servers: [URL]) -> Self {
         let sanitizedServers = sanitizeServers(servers)
         return Self(load: { _, _ in
             try requireServers(sanitizedServers)
-        }, usesBundledCatalog: false)
+        }, isBundledCatalogBacked: false)
     }
 
     public static func sanitizeServers(_ servers: [URL]) -> [URL] {

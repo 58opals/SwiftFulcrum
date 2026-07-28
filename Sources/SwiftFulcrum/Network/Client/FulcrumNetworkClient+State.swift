@@ -18,7 +18,8 @@ extension FulcrumNetworkClient {
     typealias ServerFeatures = SwiftFulcrum.Response.Server.Features
 
     func resetNegotiatedSession() {
-        state.negotiatedSession.negotiationTask?.cancel()
+        let negotiationTask = state.negotiatedSession.negotiationTask
         state.negotiatedSession = .init()
+        negotiationTask?.cancel()
     }
 }

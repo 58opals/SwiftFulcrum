@@ -11,7 +11,7 @@ extension FulcrumNetworkClient {
         requestIdentifier: UUID,
         subscriptionBufferPolicy: SwiftFulcrum.Client.SubscriptionBufferPolicy
     ) async throws {
-        await awaitPendingSubscriptionCleanup(for: subscriptionKey)
+        try await awaitPendingSubscriptionCleanup(for: subscriptionKey)
         try Task.checkCancellation()
         guard subscriptionRegistry.method(for: subscriptionKey) == nil else {
             throw SwiftFulcrum.Client.Error.client(.duplicateRegistration)

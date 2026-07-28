@@ -11,6 +11,11 @@ extension TransportTestActor {
     }
 
     func disconnect(with reason: String?) async {
+        if shouldPauseDisconnect {
+            await withCheckedContinuation { continuation in
+                pendingDisconnectContinuations.append(continuation)
+            }
+        }
         closeInformationValue = (.normalClosure, reason)
         updateConnectionState(to: .disconnected)
         enqueueLifecycleEvent(.disconnected(code: .normalClosure, reason: reason))
@@ -21,7 +26,7 @@ extension TransportTestActor {
         if let reconnectFailure {
             throw reconnectFailure
         }
-        reconnectSuccesses += 1
+        reconnectSuccessCount += 1
         if let url { currentEndpoint = url }
         updateConnectionState(to: .reconnecting)
     }

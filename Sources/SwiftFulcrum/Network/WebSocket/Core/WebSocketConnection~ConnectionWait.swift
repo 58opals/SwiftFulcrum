@@ -3,92 +3,73 @@
 import Foundation
 
 extension WebSocketConnection {
-    func finishConnectTaskWaiters(_ result: Result<Void, Error>) {
-        let waiters = connectTaskWaitersByIdentifier.values
-        connectTaskWaitersByIdentifier.removeAll(keepingCapacity: false)
-        cancelledConnectTaskWaiterIdentifiers.removeAll(keepingCapacity: false)
-        for continuation in waiters {
-            continuation.resume(with: result)
+    func makeOrReuseConnectTask(
+        using attempt: ConnectionAttempt
+    ) -> (identifier: UUID, task: Task<Void, Swift.Error>) {
+        if let connectTask,
+           !connectTask.isCancelled,
+           let connectTaskGenerationIdentifier {
+            return (connectTaskGenerationIdentifier, connectTask)
         }
-    }
 
-    func cancelConnectTaskWaiter(identifier: UUID) {
-        guard let continuation = connectTaskWaitersByIdentifier.removeValue(forKey: identifier) else {
-            cancelledConnectTaskWaiterIdentifiers.insert(identifier)
-            return
-        }
-        continuation.resume(throwing: CancellationError())
-    }
-
-    func waitForActiveConnectTask() async throws {
-        let waiterIdentifier = UUID()
-        try Task.checkCancellation()
-        return try await withTaskCancellationHandler {
-            try await withCheckedThrowingContinuation { continuation in
-                if cancelledConnectTaskWaiterIdentifiers.remove(waiterIdentifier) != nil {
-                    continuation.resume(throwing: CancellationError())
-                    return
+        let precedingConnectTask = connectTask
+        let generationIdentifier = UUID()
+        let connection = self
+        let connectTask = Task<Void, Swift.Error> {
+            do {
+                if let precedingConnectTask {
+                    _ = await precedingConnectTask.result
                 }
-                connectTaskWaitersByIdentifier[waiterIdentifier] = continuation
-            }
-        } onCancel: {
-            Task {
-                await self.cancelConnectTaskWaiter(identifier: waiterIdentifier)
+                try Task.checkCancellation()
+                try await connection.performConnect(using: attempt)
+                await connection.completeConnectTask(
+                    generationIdentifier: generationIdentifier
+                )
+            } catch {
+                await connection.completeConnectTask(
+                    generationIdentifier: generationIdentifier
+                )
+                throw error
             }
         }
+        self.connectTask = connectTask
+        connectTaskGenerationIdentifier = generationIdentifier
+
+        return (generationIdentifier, connectTask)
     }
 
-    func finishConnectWaiters(_ result: Result<Bool, Error>) {
-        let waiters = connectWaitersByIdentifier.values
-        connectWaitersByIdentifier.removeAll(keepingCapacity: false)
-        cancelledConnectWaiterIdentifiers.removeAll(keepingCapacity: false)
-        isConnectionInFlight = false
-        for continuation in waiters {
-            switch result {
-            case .success(let isSuccessful): continuation.resume(returning: isSuccessful)
-            case .failure(let error): continuation.resume(throwing: error)
+    func waitForConnectTask(
+        _ connectTask: Task<Void, Swift.Error>,
+        generationIdentifier: UUID
+    ) async throws {
+        connectTaskWaiterCountsByGeneration[generationIdentifier, default: 0] += 1
+        defer {
+            let remainingWaiterCount =
+                connectTaskWaiterCountsByGeneration[generationIdentifier, default: 1] - 1
+            if remainingWaiterCount == 0 {
+                connectTaskWaiterCountsByGeneration.removeValue(forKey: generationIdentifier)
+            } else {
+                connectTaskWaiterCountsByGeneration[generationIdentifier] = remainingWaiterCount
+            }
+
+            if Task.isCancelled, remainingWaiterCount == 0 {
+                connectTask.cancel()
             }
         }
+
+        try await connectTask.awaitCancellableValue(cancelUnderlyingTask: false)
     }
 
-    func cancelConnectWaiter(identifier: UUID) {
-        guard let continuation = connectWaitersByIdentifier.removeValue(forKey: identifier) else {
-            cancelledConnectWaiterIdentifiers.insert(identifier)
-            return
-        }
-        continuation.resume(throwing: CancellationError())
+    func completeConnectTask(generationIdentifier: UUID) {
+        guard connectTaskGenerationIdentifier == generationIdentifier else { return }
+        connectTask = nil
+        connectTaskGenerationIdentifier = nil
     }
 
     func waitForConnection(timeout: TimeInterval) async throws -> Bool {
         if await isConnected { return true }
 
-        if isConnectionInFlight {
-            let waiterIdentifier = UUID()
-            try Task.checkCancellation()
-            return try await withTaskCancellationHandler {
-                try await withCheckedThrowingContinuation { continuation in
-                    if cancelledConnectWaiterIdentifiers.remove(waiterIdentifier) != nil {
-                        continuation.resume(throwing: CancellationError())
-                        return
-                    }
-                    connectWaitersByIdentifier[waiterIdentifier] = continuation
-                }
-            } onCancel: {
-                Task {
-                    await self.cancelConnectWaiter(identifier: waiterIdentifier)
-                }
-            }
-        }
-
-        isConnectionInFlight = true
-        do {
-            let isSuccessful = try await waitForConnectionOnce(timeout: timeout)
-            finishConnectWaiters(.success(isSuccessful))
-            return isSuccessful
-        } catch {
-            finishConnectWaiters(.failure(error))
-            throw error
-        }
+        return try await waitForConnectionOnce(timeout: timeout)
     }
 
     private func waitForConnectionOnce(timeout: TimeInterval) async throws -> Bool {

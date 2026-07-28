@@ -5,69 +5,11 @@ import Foundation
 extension SwiftFulcrum.Client {
     typealias TimeoutDeadline = (limit: Duration, instant: ContinuousClock.Instant)
 
-    func throwIfCancelled(_ token: FulcrumNetworkClient.Call.Token?) async throws {
-        guard let token, await token.isCancelled else { return }
-        throw SwiftFulcrum.Client.Error.client(.cancelled)
-    }
-
-    func prepareClientForRequests(until deadline: TimeoutDeadline?) async throws {
-        if !isRunning {
-            try await executeBeforeDeadline(deadline) {
-                try await self.start()
-            }
-        }
-
-        let state = await client.connectionState
-        await updateConnectionState(state)
-
-        switch state {
-        case .connected:
-            try await executeBeforeDeadline(deadline) {
-                try await self.client.awaitReconnectReadiness()
-            }
-            return
-        case .connecting:
-            try await executeBeforeDeadline(deadline) {
-                try await self.waitForClientConnectionToBecomeReady()
-            }
-        case .reconnecting:
-            try await executeBeforeDeadline(deadline) {
-                try await self.client.awaitReconnectReadiness()
-            }
-        case .idle:
-            try await executeBeforeDeadline(deadline) {
-                try await self.client.start()
-            }
-        case .disconnected:
-            try await executeBeforeDeadline(deadline) {
-                try await self.client.reconnect()
-            }
-        }
-    }
-
-    func waitForClientConnectionToBecomeReady() async throws {
-        for await state in makeConnectionStateStream() {
-            switch state {
-            case .connected:
-                return
-            case .idle:
-                try await client.start()
-                return
-            case .disconnected:
-                try await client.reconnect()
-                return
-            case .connecting, .reconnecting:
-                continue
-            }
-        }
-
-        throw CancellationError()
-    }
-
     func makeSubscription<Initial: Decodable & Sendable, Update: Decodable & Sendable>(
         method: SwiftFulcrum.RPC.Method,
         options: SwiftFulcrum.Client.Call.Options,
-        deadline: TimeoutDeadline?
+        deadline: TimeoutDeadline?,
+        observedStopGeneration: UInt64
     ) async throws -> Subscription<Initial, Update> {
         if !method.isSubscription {
             throw SwiftFulcrum.Client.Error.client(
@@ -75,21 +17,27 @@ extension SwiftFulcrum.Client {
             )
         }
 
-        try await prepareClientForRequests(until: deadline)
+        try await prepareClientForRequests(
+            until: deadline,
+            observedStopGeneration: observedStopGeneration
+        )
 
         let token = FulcrumNetworkClient.Call.Token()
         let callerCancellationToken = options.cancellation?.token
         let callerCancellationRegistrationID = await callerCancellationToken?.register {
             await token.cancel()
         }
-        let effectiveOptions = try FulcrumNetworkClient.Call.Options(
-            timeout: remainingTimeout(until: deadline),
-            token: token,
-            subscriptionBufferPolicy: options.subscriptionBufferPolicy
-        )
         do {
+            let effectiveOptions = try FulcrumNetworkClient.Call.Options(
+                timeout: remainingTimeout(until: deadline),
+                token: token,
+                subscriptionBufferPolicy: options.subscriptionBufferPolicy
+            )
+            try ensureRequestPreparationIsCurrent(
+                observedStopGeneration: observedStopGeneration
+            )
             let (_, initial, updates): (UUID, Initial, AsyncThrowingStream<Update, Swift.Error>) =
-            try await client.subscribe(method: method, options: effectiveOptions)
+                try await client.subscribe(method: method, options: effectiveOptions)
             if let callerCancellationToken, let callerCancellationRegistrationID {
                 await callerCancellationToken.unregister(callerCancellationRegistrationID)
             }
@@ -108,8 +56,19 @@ extension SwiftFulcrum.Client {
         }
     }
 
-    func makeDeadline(for limit: Duration?) -> TimeoutDeadline? {
+    func makeDeadline(for limit: Duration?) throws -> TimeoutDeadline? {
         guard let limit else { return nil }
+        let maximumLimit = Duration.seconds(
+            SwiftFulcrum.Client.Configuration.maximumScheduledIntervalSeconds
+        )
+        guard limit > .zero, limit <= maximumLimit else {
+            throw SwiftFulcrum.Client.Error.client(
+                .invalidConfiguration(
+                    "Call timeout must be greater than zero and no more than "
+                        + "\(SwiftFulcrum.Client.Configuration.maximumScheduledIntervalSeconds) seconds."
+                )
+            )
+        }
 
         let clock = ContinuousClock()
         return (limit: limit, instant: clock.now.advanced(by: limit))

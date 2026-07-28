@@ -20,12 +20,13 @@ extension WebSocketConnection.Reconnector {
         let maximumAttempts: Int
         if configuration.isUnlimited {
             maximumAttempts = Int.max
-        } else if serverCatalogLoader.usesBundledCatalog, overrideURL == nil {
+        } else if serverCatalogLoader.isBundledCatalogBacked, overrideURL == nil {
             maximumAttempts = max(configuration.maximumReconnectionAttempts, rotation.count)
         } else {
             maximumAttempts = configuration.maximumReconnectionAttempts
         }
         while reconnectionAttempts < maximumAttempts {
+            try Task.checkCancellation()
             let candidateURL: URL
 
             if let overrideURL {
@@ -66,15 +67,8 @@ extension WebSocketConnection.Reconnector {
             )
 
             do {
-                switch attempt.receiverCancellation {
-                case .cancel:
-                    await webSocket.cancelReceiverTask()
-                case .preserve:
-                    break
-                }
                 await webSocket.updateURL(candidateURL)
                 try await webSocket.performConnect(using: attempt.connectionAttempt)
-                await webSocket.recordReconnectSuccess()
                 let reconnectAttempts = await webSocket.reconnectAttempts
                 let reconnectSuccesses = await webSocket.reconnectSuccesses
                 resetReconnectionAttemptCount()
@@ -91,6 +85,8 @@ extension WebSocketConnection.Reconnector {
                 )
                 await webSocket.emitLifecycle(attempt.connectedLifecycleEvent)
                 return
+            } catch is CancellationError {
+                throw CancellationError()
             } catch {
                 await OpalDiagnostics.logger(category: .swiftFulcrumReconnect).record(
                     event: .swiftFulcrumReconnectFailed,
@@ -119,7 +115,11 @@ extension WebSocketConnection.Reconnector {
             ])
         )
         let exhaustionReason = "Reconnection attempts exhausted."
-        await webSocket.disconnect(with: exhaustionReason)
+        await webSocket.disconnect(
+            with: exhaustionReason,
+            cancellingConnectTask: false,
+            receiverCancellation: attempt.receiverCancellation
+        )
         throw SwiftFulcrum.Client.Error.transport(.connectionClosed(.goingAway, exhaustionReason))
     }
 }

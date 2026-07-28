@@ -26,10 +26,30 @@ extension FulcrumNetworkClient {
                     // If we were cancelled while handling an error, bail out.
                     if Task.isCancelled { break }
 
+                    if await owner.isReconnectSupersededRouteError(error) {
+                        do {
+                            try await owner.awaitReconnectReadiness()
+                        } catch is CancellationError {
+                            if Task.isCancelled { break }
+                        } catch {
+                            break
+                        }
+                        continue
+                    }
+
                     OpalDiagnostics.logger(category: .fulcrum).record(
                         event: .swiftFulcrumClientHeartbeatTimeout,
                         level: .info,
                         fields: await owner.makeClientTransportDiagnosticFields(OpalDiagnostics.Field.swiftFulcrumErrorFields(error))
+                    )
+
+                    let heartbeatTimeoutError =
+                        SwiftFulcrum.Client.Error.transport(.heartbeatTimeout)
+                    let inflightCount = await owner.router.failUnaries(
+                        with: heartbeatTimeoutError
+                    )
+                    await owner.recordClientState(
+                        inflightUnaryCallCount: inflightCount
                     )
 
                     do {
@@ -38,8 +58,9 @@ extension FulcrumNetworkClient {
                     } catch is CancellationError {
                         break
                     } catch {
-                        let heartbeatTimeoutError = SwiftFulcrum.Client.Error.transport(.heartbeatTimeout)
-                        let inflightCount = await owner.router.failAll(with: heartbeatTimeoutError)
+                        let inflightCount = await owner.router.failAll(
+                            with: heartbeatTimeoutError
+                        )
                         await owner.dropAllStoredSubscriptions()
                         await owner.recordClientState(inflightUnaryCallCount: inflightCount)
                         break
@@ -50,8 +71,10 @@ extension FulcrumNetworkClient {
     }
 
     func stopRPCHeartbeat() async {
-        rpcHeartbeatTask?.cancel()
-        await rpcHeartbeatTask?.value
-        rpcHeartbeatTask = nil
+        while let heartbeatTask = rpcHeartbeatTask {
+            rpcHeartbeatTask = nil
+            heartbeatTask.cancel()
+            await heartbeatTask.value
+        }
     }
 }

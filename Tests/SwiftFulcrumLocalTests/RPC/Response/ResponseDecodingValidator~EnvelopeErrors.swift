@@ -68,4 +68,24 @@ extension ResponseDecodingValidator {
             _ = try SwiftFulcrum.RPC.Response.JSONRPC.classifyErasedResponse(from: payload)
         }
     }
+
+    @Test("Rejects regular envelopes with null method members")
+    func rejectRegularEnvelopesWithNullMethodMembers() throws {
+        let payload = try makeJSONData(
+            [
+                "jsonrpc": "2.0",
+                "id": UUID().uuidString,
+                "result": "status",
+                "method": NSNull()
+            ]
+        )
+
+        #expect(throws: JSONRPCResponseDecodeError.self) {
+            _ = try payload.decode(String.self, context: .init(methodPath: "server.banner"))
+        }
+
+        #expect(throws: JSONRPCResponseDecodeError.self) {
+            _ = try SwiftFulcrum.RPC.Response.JSONRPC.classifyErasedResponse(from: payload)
+        }
+    }
 }

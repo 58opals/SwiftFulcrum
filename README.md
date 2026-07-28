@@ -61,9 +61,14 @@ Task {
     do {
         let client = try await SwiftFulcrum.Client()
 
-        let tip = try await client.request(SwiftFulcrum.API.blockchain.headers.tip)
-        await client.stop()
-        // Update application state with tip.height.
+        do {
+            let tip = try await client.request(SwiftFulcrum.API.blockchain.headers.tip)
+            await client.stop()
+            // Update application state with tip.height.
+        } catch {
+            await client.stop()
+            throw error
+        }
     } catch {
         // Surface the error through application-owned handling.
     }
@@ -77,6 +82,8 @@ let configuration = SwiftFulcrum.Client.Configuration(network: .chipnet)
 let chipnetClient = try await SwiftFulcrum.Client(
     configuration: configuration
 )
+// Use chipnetClient, then release its network resources deterministically.
+await chipnetClient.stop()
 ```
 
 ## Core Capabilities

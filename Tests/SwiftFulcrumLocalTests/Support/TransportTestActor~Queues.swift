@@ -10,9 +10,10 @@ extension TransportTestActor {
     }
 
     func enqueueLifecycleEvent(_ event: SwiftFulcrum.Transport.State.Event) {
-        lifecycleBuffer.append(event)
         apply(event)
-        flushLifecycleBuffer()
+        for continuation in lifecycleContinuationsBySubscriberIdentifier.values {
+            continuation.yield(event)
+        }
     }
 
     func dequeueOutgoing() async -> URLSessionWebSocketTask.Message {
@@ -35,14 +36,6 @@ extension TransportTestActor {
             }
         }
         incomingBuffer.removeAll()
-    }
-
-    func flushLifecycleBuffer() {
-        guard let lifecycleContinuation else { return }
-        for event in lifecycleBuffer {
-            lifecycleContinuation.yield(event)
-        }
-        lifecycleBuffer.removeAll()
     }
 
     func flushConnectionStateBuffer() {

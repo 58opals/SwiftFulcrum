@@ -28,6 +28,8 @@ extension FulcrumClientLifecycleValidator {
         let baselineSubscribeCount = try await countSentMethodOccurrences(subscribeMethod.path, transport: transport)
 
         await transport.enqueueLifecycleEvent(.disconnected(code: .goingAway, reason: "same-key reconnect test"))
+        try await transport.reconnect(with: nil)
+        await transport.configureConnectionState(.connected)
         await transport.enqueueLifecycleEvent(.connected(isReconnect: true))
 
         let versionRequest = try await decodeRequestObject(await transport.dequeueOutgoing())

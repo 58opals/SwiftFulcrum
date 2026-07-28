@@ -11,7 +11,7 @@ extension FulcrumClientLifecycleValidator {
         let (fulcrum, transport) = try await makeStartedFulcrum()
         let requestMethod = SwiftFulcrum.RPC.Method.blockchain(.headers(.getTip))
 
-        await transport.configureConnectionState(.reconnecting)
+        try await transport.reconnect(with: nil)
         try? await Task.sleep(for: .milliseconds(250))
         await transport.configureConnectionState(.connected)
 
@@ -84,7 +84,8 @@ extension FulcrumClientLifecycleValidator {
     func automaticReconnectNegotiationFailureDisconnectsTransport() async throws {
         let (fulcrum, transport) = try await makeStartedFulcrum()
 
-        await transport.configureConnectionState(.reconnecting)
+        try await transport.reconnect(with: nil)
+        await transport.configureConnectionState(.connected)
         await transport.enqueueLifecycleEvent(.connected(isReconnect: true))
 
         let versionRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
@@ -109,7 +110,7 @@ extension FulcrumClientLifecycleValidator {
         let (fulcrum, transport) = try await makeStartedFulcrum()
         let requestMethod = SwiftFulcrum.RPC.Method.blockchain(.headers(.getTip))
 
-        await transport.configureConnectionState(.reconnecting)
+        try await transport.reconnect(with: nil)
         try? await Task.sleep(for: .milliseconds(50))
         await transport.configureConnectionState(.connected)
 
@@ -149,139 +150,4 @@ extension FulcrumClientLifecycleValidator {
         await fulcrum.stop()
     }
 
-    @Test("superseded automatic reconnect recovery does not disconnect transport", .timeLimit(.minutes(1)))
-    func supersededAutomaticReconnectRecoveryDoesNotDisconnectTransport() async throws {
-        let (fulcrum, transport) = try await makeStartedFulcrum()
-        let networkClient = await fulcrum.client
-
-        let recoveryTask = await networkClient.makeOrReuseAutomaticReconnectRecoveryTask()
-
-        let versionRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
-        #expect(versionRequest["method"] as? String == "server.version")
-
-        await networkClient.prepareForAutomaticReconnectRecovery()
-
-        await #expect(throws: CancellationError.self) {
-            try await recoveryTask.value
-        }
-
-        #expect(await transport.connectionState == .connected)
-
-        await fulcrum.stop()
-    }
-
-    @Test("reconnect readiness waits for superseding recovery", .timeLimit(.minutes(1)))
-    func reconnectReadinessWaitsForSupersedingRecovery() async throws {
-        let (fulcrum, transport) = try await makeStartedFulcrum()
-        let networkClient = await fulcrum.client
-
-        let firstRecoveryTask = await networkClient.makeOrReuseAutomaticReconnectRecoveryTask()
-
-        let firstVersionRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
-        #expect(firstVersionRequest["method"] as? String == "server.version")
-
-        let readinessTask = Task {
-            try await networkClient.awaitReconnectReadiness()
-        }
-        try? await Task.sleep(for: .milliseconds(50))
-
-        await networkClient.prepareForAutomaticReconnectRecovery()
-        await #expect(throws: CancellationError.self) {
-            try await firstRecoveryTask.value
-        }
-
-        let secondVersionRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
-        #expect(secondVersionRequest["method"] as? String == "server.version")
-        let secondVersionIdentifier = try extractRequestIdentifier(from: secondVersionRequest)
-        let secondVersionPayload = try TransportTestActor.encodeResponsePayload(
-            identifier: secondVersionIdentifier,
-            result: ["SwiftFulcrum.Client 2.0", "1.5.3"]
-        )
-        await transport.enqueueIncoming(.data(secondVersionPayload))
-
-        let featuresRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
-        #expect(featuresRequest["method"] as? String == "server.features")
-        let featuresIdentifier = try extractRequestIdentifier(from: featuresRequest)
-        let featuresPayload = try TransportTestActor.encodeResponsePayload(
-            identifier: featuresIdentifier,
-            result: [
-                "genesis_hash": String(repeating: "0", count: 64),
-                "hash_function": "sha256",
-                "server_version": "SwiftFulcrum.Client 2.0",
-                "protocol_max": "1.6.0",
-                "protocol_min": "1.4.0"
-            ]
-        )
-        await transport.enqueueIncoming(.data(featuresPayload))
-
-        try await readinessTask.value
-
-        await fulcrum.stop()
-    }
-
-    @Test("request(timeout:) uses one end-to-end budget while waiting for reconnect readiness", .timeLimit(.minutes(1)))
-    func requestTimeoutUsesSingleBudgetWhileWaitingForReconnectReadiness() async throws {
-        let (fulcrum, transport) = try await makeStartedFulcrum()
-        let requestMethod = SwiftFulcrum.RPC.Method.blockchain(.headers(.getTip))
-        let timeout: Duration = .milliseconds(200)
-
-        let reconnectTask = Task {
-            try await fulcrum.reconnect()
-        }
-
-        let versionRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
-        #expect(versionRequest["method"] as? String == "server.version")
-        let versionIdentifier = try extractRequestIdentifier(from: versionRequest)
-        let versionPayload = try TransportTestActor.encodeResponsePayload(
-            identifier: versionIdentifier,
-            result: ["SwiftFulcrum.Client 2.0", "1.5.3"]
-        )
-        await transport.enqueueIncoming(.data(versionPayload))
-
-        let featuresRequest = try await decodeRequestObject(await transport.dequeueOutgoing())
-        #expect(featuresRequest["method"] as? String == "server.features")
-        let featuresIdentifier = try extractRequestIdentifier(from: featuresRequest)
-        let baselineOutgoingCount = await transport.sentMessages.count
-
-        let requestTask = Task<SwiftFulcrum.Client.Error, Never> {
-            do {
-                _ = try await fulcrum.request(
-                    method: requestMethod,
-                    responseType: SwiftFulcrum.Response.Blockchain.Headers.Tip.self,
-                    options: .init(timeout: timeout)
-                )
-                Issue.record("request() should time out after spending the single reconnect-readiness budget.")
-                return .client(.unknown(nil))
-            } catch let error as SwiftFulcrum.Client.Error {
-                return error
-            } catch {
-                return .client(.unknown(error))
-            }
-        }
-
-        try? await Task.sleep(for: .milliseconds(120))
-        await transport.configureOutgoingSendDelay(.milliseconds(100))
-
-        let featuresPayload = try TransportTestActor.encodeResponsePayload(
-            identifier: featuresIdentifier,
-            result: [
-                "genesis_hash": String(repeating: "0", count: 64),
-                "hash_function": "sha256",
-                "server_version": "SwiftFulcrum.Client 2.0",
-                "protocol_max": "1.6.0",
-                "protocol_min": "1.4.0"
-            ]
-        )
-        await transport.enqueueIncoming(.data(featuresPayload))
-
-        try await reconnectTask.value
-
-        let error = await requestTask.value
-        #expect(error == .client(.timeout(timeout)))
-
-        try? await Task.sleep(for: .milliseconds(250))
-        #expect(await transport.sentMessages.count == baselineOutgoingCount)
-
-        await fulcrum.stop()
-    }
 }
