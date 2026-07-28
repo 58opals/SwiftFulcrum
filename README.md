@@ -6,7 +6,7 @@
 
 Status: Stable on main.
 
-Current release: `v0.7.0`, focused on connection reliability through explicit reconnect recovery state, registry-owned subscription lifecycle, typed WebSocket attempt behavior, shared timeout/cancellation orchestration, and bounded subscription overflow failure.
+Current release: `v0.8.0`, focused on generation-fenced client lifecycle handling, configuration and response validation, simplified WebSocket coordination, and stable OpalDiagnostics 0.2.0 integration.
 
 See [CHANGELOG.md](CHANGELOG.md) for release notes.
 
@@ -38,7 +38,7 @@ For deeper package context, audience, and integration expectations, see [docs/co
 ```swift
 // Package.swift
 dependencies: [
-    .package(url: "https://github.com/58opals/SwiftFulcrum.git", from: "0.7.0")
+    .package(url: "https://github.com/58opals/SwiftFulcrum.git", from: "0.8.0")
 ],
 targets: [
     .target(

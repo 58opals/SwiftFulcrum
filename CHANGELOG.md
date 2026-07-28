@@ -6,9 +6,23 @@ This changelog starts with the currently curated public release history. Earlier
 
 ## [Unreleased]
 
+## [v0.8.0] - 2026-07-28
+
 ### Added
 
+- Client configuration validation with a public `invalidConfiguration` issue for invalid timeouts, message sizes, and reconnect jitter.
 - Changelog file for curated release notes, with a README link from the package front door.
+
+### Changed
+
+- Client start, stop, reconnect, heartbeat, negotiation, and subscription-recovery work is fenced by generation so stale tasks cannot mutate newer sessions.
+- WebSocket connection, disconnection, receive, and task coordination is simpler and more deterministic across cancellation and failover.
+- OpalDiagnostics now uses its stable 0.2.0 release with normalized error and payload metadata.
+
+### Fixed
+
+- JSON-RPC response envelopes and blockchain history heights now reject invalid or ambiguous shapes.
+- Server-catalog loading, task cancellation, reconnect supersession, and subscription routing handle additional lifecycle edge cases.
 
 ## [v0.7.0] - 2026-07-05
 
@@ -42,7 +56,8 @@ This changelog starts with the currently curated public release history. Earlier
 
 - Last release before the curated changelog history. Earlier public tags are available in Git history.
 
-[Unreleased]: https://github.com/58opals/SwiftFulcrum/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/58opals/SwiftFulcrum/compare/v0.8.0...HEAD
+[v0.8.0]: https://github.com/58opals/SwiftFulcrum/compare/v0.7.0...v0.8.0
 [v0.7.0]: https://github.com/58opals/SwiftFulcrum/compare/v0.6.0...v0.7.0
 [v0.6.0]: https://github.com/58opals/SwiftFulcrum/compare/v0.5.5...v0.6.0
 [v0.5.5]: https://github.com/58opals/SwiftFulcrum/releases/tag/v0.5.5
