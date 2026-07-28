@@ -35,7 +35,8 @@ struct ClientInterfaceNetworkValidator {
 
             await subscription.cancel()
 
-            #expect(await cancellation.isCancelled)
+            // Call cancellation governs subscription setup; the active stream owns its cancellation.
+            #expect(await cancellation.isCancelled == false)
 
             let terminated = await NetworkTestClient.detectStreamTermination(
                 updates,
