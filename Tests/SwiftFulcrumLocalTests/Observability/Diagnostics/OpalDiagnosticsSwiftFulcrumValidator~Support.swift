@@ -50,39 +50,59 @@ extension OpalDiagnosticsSwiftFulcrumValidator {
 
     func startAndCompleteProtocolNegotiation(
         client: FulcrumNetworkClient,
-        transport: TransportTestActor
+        transport: TransportTestActor,
+        negotiatedProtocolVersion: String = "1.5.3",
+        includesRPA: Bool = false
     ) async throws {
         let startTask = Task {
             try await client.start()
         }
-        try await completeProtocolNegotiation(transport: transport)
+        try await completeProtocolNegotiation(
+            transport: transport,
+            negotiatedProtocolVersion: negotiatedProtocolVersion,
+            includesRPA: includesRPA
+        )
         try await startTask.value
     }
 
-    func completeProtocolNegotiation(transport: TransportTestActor) async throws {
+    func completeProtocolNegotiation(
+        transport: TransportTestActor,
+        negotiatedProtocolVersion: String = "1.5.3",
+        includesRPA: Bool = false
+    ) async throws {
         let versionRequest = try TransportTestActor.decodeJSONObject(from: await transport.dequeueOutgoing())
         #expect(versionRequest["method"] as? String == "server.version")
         let versionIdentifier = try makeRequestIdentifier(from: versionRequest)
         let versionPayload = try makeJSONData([
             "jsonrpc": "2.0",
             "id": versionIdentifier.uuidString,
-            "result": ["SwiftFulcrum.Client 2.0", "1.5.3"]
+            "result": ["SwiftFulcrum.Client 2.0", negotiatedProtocolVersion]
         ])
         await transport.enqueueIncoming(.data(versionPayload))
 
         let featuresRequest = try TransportTestActor.decodeJSONObject(from: await transport.dequeueOutgoing())
         #expect(featuresRequest["method"] as? String == "server.features")
         let featuresIdentifier = try makeRequestIdentifier(from: featuresRequest)
+        var features: [String: Any] = [
+            "genesis_hash": String(repeating: "0", count: 64),
+            "hash_function": "sha256",
+            "server_version": "SwiftFulcrum.Client 2.0",
+            "protocol_max": "1.6.0",
+            "protocol_min": "1.4.0"
+        ]
+        if includesRPA {
+            features["rpa"] = [
+                "history_block_limit": 60,
+                "max_history": 125_000,
+                "prefix_bits": 16,
+                "prefix_bits_min": 8,
+                "starting_height": 825_000
+            ]
+        }
         let featuresPayload = try makeJSONData([
             "jsonrpc": "2.0",
             "id": featuresIdentifier.uuidString,
-            "result": [
-                "genesis_hash": String(repeating: "0", count: 64),
-                "hash_function": "sha256",
-                "server_version": "SwiftFulcrum.Client 2.0",
-                "protocol_max": "1.6.0",
-                "protocol_min": "1.4.0"
-            ]
+            "result": features
         ])
         await transport.enqueueIncoming(.data(featuresPayload))
     }

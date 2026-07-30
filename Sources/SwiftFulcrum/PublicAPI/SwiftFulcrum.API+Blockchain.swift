@@ -4,6 +4,7 @@ extension SwiftFulcrum.API {
     public struct Blockchain: Sendable {
         public var scriptHash: ScriptHash { .init() }
         public var address: Address { .init() }
+        public var rpa: RPA { .init() }
         public var block: Block { .init() }
         public var header: Header { .init() }
         public var headers: Headers { .init() }

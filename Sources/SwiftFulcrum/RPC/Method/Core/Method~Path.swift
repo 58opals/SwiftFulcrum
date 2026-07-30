@@ -20,6 +20,7 @@ extension SwiftFulcrum.RPC.Method.Blockchain { var path: String {
     switch self {
     case .scripthash(let scripthashPath): return "scripthash.\(scripthashPath.path)"
     case .address(let addressPath): return "address.\(addressPath.path)"
+    case .rpa(let rpaPath): return "rpa.\(rpaPath.path)"
     case .block(let blockPath): return "block.\(blockPath.path)"
     case .header(let headerPath): return "header.\(headerPath.path)"
     case .headers(let headersPath): return "headers.\(headersPath.path)"
@@ -51,6 +52,12 @@ extension SwiftFulcrum.RPC.Method.Blockchain.Address { var path: String {
     case .listUnspent: return "listunspent"
     case .subscribe: return "subscribe"
     case .unsubscribe: return "unsubscribe"
+    }}}
+
+extension SwiftFulcrum.RPC.Method.Blockchain.RPA { var path: String {
+    switch self {
+    case .getHistory: return "get_history"
+    case .getMempool: return "get_mempool"
     }}}
 
 extension SwiftFulcrum.RPC.Method.Blockchain.Block { var path: String {

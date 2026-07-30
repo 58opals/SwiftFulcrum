@@ -61,6 +61,7 @@ extension FulcrumNetworkClient {
 
         do {
             let response = try raw.decode(ResponsePayload.self, context: .init(methodPath: method.path))
+            try validateResponseSupport(response, for: method)
             OpalDiagnostics.logger(category: .fulcrum).record(
                 event: .swiftFulcrumClientCallResponseDecoded,
                 level: .debug,

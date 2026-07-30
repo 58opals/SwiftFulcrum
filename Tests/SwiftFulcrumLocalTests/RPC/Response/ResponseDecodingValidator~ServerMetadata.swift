@@ -38,6 +38,37 @@ extension ResponseDecodingValidator {
         #expect(features.hasDoubleSpendProofs == true)
     }
 
+    @Test("Decodes every advertised RPA server constraint")
+    func decodeReusablePaymentAddressServerConstraints() throws {
+        let payload = try makeJSONData(
+            [
+                "jsonrpc": "2.0",
+                "id": UUID().uuidString,
+                "result": makeServerFeaturesResult([
+                    "rpa": [
+                        "history_block_limit": 60,
+                        "max_history": 125_000,
+                        "prefix_bits": 16,
+                        "prefix_bits_min": 8,
+                        "starting_height": 825_000
+                    ]
+                ])
+            ]
+        )
+
+        let features = try payload.decode(
+            SwiftFulcrum.Response.Server.Features.self,
+            context: .init(methodPath: "server.features")
+        )
+        let rpa = try #require(features.reusablePaymentAddress)
+
+        #expect(rpa.historyBlockLimit == 60)
+        #expect(rpa.maximumHistoryItems == 125_000)
+        #expect(rpa.indexedPrefixBits == 16)
+        #expect(rpa.minimumPrefixBits == 8)
+        #expect(rpa.startingHeight == 825_000)
+    }
+
     @Test("Rejects server.features with an inverted protocol range")
     func rejectServerFeaturesWithInvertedProtocolRange() throws {
         try expectServerFeaturesResultDecodeFailure([

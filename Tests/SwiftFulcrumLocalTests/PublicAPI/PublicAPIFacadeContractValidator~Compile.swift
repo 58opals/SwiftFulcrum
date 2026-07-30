@@ -65,9 +65,30 @@ extension PublicAPIFacadeContractValidator {
         let endpoint = SwiftFulcrum.API.blockchain.headers.tip
         _ = endpoint
 
+        let rpaHistoryEndpoint = SwiftFulcrum.API.blockchain.rpa.history(
+            prefix: "ab",
+            fromHeight: 825_000
+        )
+        _ = rpaHistoryEndpoint
+
+        let rpaMempoolEndpoint = SwiftFulcrum.API.blockchain.rpa.mempool(
+            prefix: "ab"
+        )
+        _ = rpaMempoolEndpoint
+
         let responseType: SwiftFulcrum.Response.Blockchain.Headers.Tip.Type =
             SwiftFulcrum.Response.Blockchain.Headers.Tip.self
         _ = responseType
+
+        let rpaHistoryResponseType:
+            SwiftFulcrum.Response.Blockchain.RPA.History.Type =
+                SwiftFulcrum.Response.Blockchain.RPA.History.self
+        _ = rpaHistoryResponseType
+
+        let rpaMempoolResponseType:
+            SwiftFulcrum.Response.Blockchain.RPA.Mempool.Type =
+                SwiftFulcrum.Response.Blockchain.RPA.Mempool.self
+        _ = rpaMempoolResponseType
 
         let tokenFilter: SwiftFulcrum.CashTokens.TokenFilter = .include
         _ = tokenFilter
@@ -120,6 +141,18 @@ extension PublicAPIFacadeContractValidator {
             try await client.request(SwiftFulcrum.API.blockchain.transaction.raw(transactionHash: "00"))
         }
         _ = rawTransactionRequest
+
+        let rpaHistoryRequest:
+            @Sendable (SwiftFulcrum.Client) async throws
+                -> SwiftFulcrum.Response.Blockchain.RPA.History = { client in
+                    try await client.request(
+                        SwiftFulcrum.API.blockchain.rpa.history(
+                            prefix: "ab",
+                            fromHeight: 825_000
+                        )
+                    )
+                }
+        _ = rpaHistoryRequest
 
         let verboseTransactionRequest:
             @Sendable (SwiftFulcrum.Client) async throws -> SwiftFulcrum.Response.Blockchain.Transaction.Verbose = { client in

@@ -8,6 +8,7 @@ extension SwiftFulcrum.RPC.Method {
         case relayFee
         case scripthash(ScriptHash)
         case address(Address)
+        case rpa(RPA)
         case block(Block)
         case header(Header)
         case headers(Headers)

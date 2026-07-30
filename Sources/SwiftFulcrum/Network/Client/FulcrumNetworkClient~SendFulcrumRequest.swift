@@ -24,7 +24,12 @@ extension FulcrumNetworkClient {
             return
         }
 
-        _ = try await ensureNegotiatedProtocol()
+        let negotiatedSession = try await ensureNegotiatedProtocol()
+        try Task.checkCancellation()
+        try validateRequestSupport(
+            for: request.requestedMethod,
+            in: negotiatedSession
+        )
 
         guard let data = request.data else { throw SwiftFulcrum.Client.Error.coding(.encode(nil)) }
         try Task.checkCancellation()

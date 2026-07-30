@@ -19,6 +19,8 @@ extension SwiftFulcrum.RPC.Method {
             return createScriptHashRequest(scripthash, uuid: uuid)
         case .address(let address):
             return createAddressRequest(address, uuid: uuid)
+        case .rpa(let rpa):
+            return createRPARequest(rpa, uuid: uuid)
         case .block(let block):
             return createBlockRequest(block, uuid: uuid)
         case .header(let header):
