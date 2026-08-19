@@ -1,4 +1,4 @@
-![Swift 6.2](https://img.shields.io/badge/swift-6.2-orange)
+![Swift 6.4](https://img.shields.io/badge/swift-6.4-orange)
 ![SPM](https://img.shields.io/badge/Package%20Manager-SPM-informational)
 ![Platforms](https://img.shields.io/badge/platforms-iOS%20|%20macOS%20|%20watchOS%20|%20tvOS%20|%20visionOS-blue)
 
@@ -25,7 +25,7 @@ For deeper package context, audience, and integration expectations, see [docs/co
 
 ## Requirements
 
-- Swift tools version: `6.2`
+- Swift tools version: `6.4`
 - Platforms:
   - `iOS 26`
   - `macOS 26`
@@ -38,7 +38,7 @@ For deeper package context, audience, and integration expectations, see [docs/co
 ```swift
 // Package.swift
 dependencies: [
-    .package(url: "https://github.com/58opals/SwiftFulcrum.git", from: "0.8.0")
+    .package(url: "https://github.com/58opals/SwiftFulcrum.git", branch: "develop")
 ],
 targets: [
     .target(
@@ -50,7 +50,7 @@ targets: [
 ]
 ```
 
-If you need unreleased changes, pin a branch or revision instead of a release tag.
+The current `develop` manifest follows `OpalDiagnostics` on `develop`. The published `v0.8.0` release remains available to version-based consumers; no new SemVer tag is prepared by the Swift 6.4 migration.
 
 ## Quick Start
 

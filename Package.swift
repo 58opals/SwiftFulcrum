@@ -1,4 +1,4 @@
-// swift-tools-version: 6.2
+// swift-tools-version: 6.4
 
 import PackageDescription
 
@@ -17,7 +17,7 @@ let package = Package(
             targets: ["SwiftFulcrum"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/58opals/OpalDiagnostics.git", from: "0.2.0")
+        .package(url: "https://github.com/58opals/OpalDiagnostics.git", branch: "develop")
     ],
     targets: [
         .target(
