@@ -7,8 +7,6 @@ DerivedData/
 xcuserdata/
 
 # Local tool/runtime state
-.codex/
-/.codex-cache/
 configuration/registries.json
 
 # Machine-local files
