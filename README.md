@@ -122,6 +122,8 @@ SwiftFulcrum does not print directly and does not expose package-specific loggin
 
 ## Validation
 
+Tests own JSON-RPC mapping, response validation, transport lifecycle, reconnect generations, cancellation, subscriptions, and server catalogs. Preserve boundary failures and late-result races even when their setup resembles another suite. Keep test support local to its consumers and remove helpers only after their last caller disappears.
+
 ```bash
 swift test
 ```

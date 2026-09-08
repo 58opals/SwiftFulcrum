@@ -45,15 +45,6 @@ extension TransportTestActor {
         )
     }
 
-    static func encodeEmptyPayload(identifier: String) throws -> Data {
-        try JSONSerialization.data(
-            withJSONObject: [
-                "jsonrpc": "2.0",
-                "id": identifier
-            ]
-        )
-    }
-
     static func encodeSubscriptionNotification(
         method: String,
         parameters: [Any]
