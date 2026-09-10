@@ -27,11 +27,11 @@ For deeper package context, audience, and integration expectations, see [docs/co
 
 - Swift tools version: `6.4`
 - Platforms:
-  - `iOS 26`
-  - `macOS 26`
-  - `watchOS 26`
-  - `tvOS 26`
-  - `visionOS 26`
+  - `iOS 27`
+  - `macOS 27`
+  - `watchOS 27`
+  - `tvOS 27`
+  - `visionOS 27`
 
 ## Installation (Swift Package Manager)
 
