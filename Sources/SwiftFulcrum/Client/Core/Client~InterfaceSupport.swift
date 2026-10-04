@@ -11,6 +11,17 @@ extension SwiftFulcrum.Client {
         deadline: TimeoutDeadline?,
         observedStopGeneration: UInt64
     ) async throws -> Subscription<Initial, Update> {
+        try await makeSubscription(method: method, options: options, deadline: deadline,
+            observedStopGeneration: observedStopGeneration) { client, options in
+                try await client.subscribe(method: method, options: options)
+            }
+    }
+
+    func makeSubscription<Initial: Sendable, Update: Sendable>(
+        method: SwiftFulcrum.RPC.Method, options: SwiftFulcrum.Client.Call.Options,
+        deadline: TimeoutDeadline?, observedStopGeneration: UInt64,
+        subscribe: @Sendable (FulcrumNetworkClient, FulcrumNetworkClient.Call.Options) async throws -> (UUID, Initial, AsyncThrowingStream<Update, Swift.Error>)
+    ) async throws -> Subscription<Initial, Update> {
         if !method.isSubscription {
             throw SwiftFulcrum.Client.Error.client(
                 .protocolMismatch("subscribe() requires subscription methods. Use request(...) for unary calls.")
@@ -37,7 +48,7 @@ extension SwiftFulcrum.Client {
                 observedStopGeneration: observedStopGeneration
             )
             let (_, initial, updates): (UUID, Initial, AsyncThrowingStream<Update, Swift.Error>) =
-                try await client.subscribe(method: method, options: effectiveOptions)
+                try await subscribe(client, effectiveOptions)
             if let callerCancellationToken, let callerCancellationRegistrationID {
                 await callerCancellationToken.unregister(callerCancellationRegistrationID)
             }

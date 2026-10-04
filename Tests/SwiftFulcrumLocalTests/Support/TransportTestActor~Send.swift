@@ -11,6 +11,7 @@ extension TransportTestActor {
             throw error
         }
         recordOutgoing(.data(data))
+        await pauseSendCompletionIfNeeded(data)
     }
 
     func send(string: String) async throws {
@@ -20,7 +21,24 @@ extension TransportTestActor {
             throw error
         }
         recordOutgoing(.string(string))
+        if let data = string.data(using: .utf8) { await pauseSendCompletionIfNeeded(data) }
     }
+
+    func pauseSendCompletionIfNeeded(_ data: Data) async {
+        guard let method = pausedSendCompletionMethod,
+              let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              object["method"] as? String == method else { return }
+        pausedSendCompletionMethod = nil
+        await withCheckedContinuation { pausedSendCompletionContinuations.append($0) }
+    }
+
+    func resumeSendCompletion() {
+        let pending = pausedSendCompletionContinuations
+        pausedSendCompletionContinuations.removeAll()
+        for continuation in pending { continuation.resume() }
+    }
+
+    func pauseNextSendCompletion(method: String) { pausedSendCompletionMethod = method }
 
     func recordOutgoing(_ message: URLSessionWebSocketTask.Message) {
         sentMessages.append(message)

@@ -71,6 +71,7 @@ extension FulcrumNetworkClient {
                 reconnectSuccessCount = pendingReconnectSuccessCount
                 continue
             }
+            publishRecoveryReady(generation: recoveryGeneration)
             return
         }
     }

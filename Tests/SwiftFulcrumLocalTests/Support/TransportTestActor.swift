@@ -4,6 +4,8 @@ import Foundation
 @testable import SwiftFulcrum
 
 actor TransportTestActor: TransportAdapter {
+    var pausedSendCompletionMethod: String?
+    var pausedSendCompletionContinuations: [CheckedContinuation<Void, Never>] = []
     var connectionStateValue: SwiftFulcrum.Client.ConnectionState = .idle
     var closeInformationValue: CloseInformation = (.invalid, nil)
     var currentEndpoint: URL

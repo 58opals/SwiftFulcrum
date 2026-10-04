@@ -78,6 +78,7 @@ extension FulcrumNetworkClient {
                 )
             )
             await transport.disconnect(with: "FulcrumNetworkClient.reconnect() failed")
+            if connectionRecoveryGeneration == recoveryGeneration { publishRecoveryState(.unavailable) }
             throw error
         }
     }

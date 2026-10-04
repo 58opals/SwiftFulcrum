@@ -27,6 +27,8 @@ extension FulcrumNetworkClient {
         diagnosticsStateTask = Task {
             let stream = await owner.transport.makeConnectionStateEvents()
             for await state in stream {
+                guard !Task.isCancelled else { return }
+                await owner.observeRecoveryTransportState(state)
                 if state == .reconnecting {
                     await owner.prepareForAutomaticReconnectRecoveryIfNeeded()
                 }
@@ -85,8 +87,9 @@ extension FulcrumNetworkClient {
 
     @discardableResult
     func advanceConnectionRecoveryGeneration() -> UInt64 {
-        connectionRecoveryGeneration &+= 1
-        return connectionRecoveryGeneration
+        let generation = connectionRecoveryGenerationAuthority.advance()
+        publishRecoveryState(.recovering)
+        return generation
     }
 
     func failInflightUnaryCallsForReconnect() async {

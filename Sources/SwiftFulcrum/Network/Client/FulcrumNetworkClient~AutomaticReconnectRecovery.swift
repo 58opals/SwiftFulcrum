@@ -153,6 +153,7 @@ extension FulcrumNetworkClient {
               ) else {
             throw CancellationError()
         }
+        publishRecoveryReady(generation: recoveryGeneration)
         recoveredReconnectSuccessCount = reconnectSuccessCount
         automaticReconnectRecoverySuccessCount = nil
         automaticReconnectRecoveryGeneration = nil
@@ -188,6 +189,7 @@ extension FulcrumNetworkClient {
         await dropAllStoredSubscriptions()
         await recordClientState(inflightUnaryCallCount: inflightCount)
         await transport.disconnect(with: "FulcrumNetworkClient automatic reconnect recovery failed")
+        if connectionRecoveryGeneration == recoveryGeneration { publishRecoveryState(.unavailable) }
     }
 
 }

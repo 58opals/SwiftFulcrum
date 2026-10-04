@@ -5,8 +5,25 @@ import OpalDiagnostics
 
 extension FulcrumNetworkClient {
     func subscribe<Initial: Decodable & Sendable, Notification: Decodable & Sendable>(
-        method: SwiftFulcrum.RPC.Method,
-        options: Call.Options = .init()
+        method: SwiftFulcrum.RPC.Method, options: Call.Options = .init()
+    ) async throws -> (UUID, Initial, AsyncThrowingStream<Notification, Swift.Error>) {
+        try await subscribe(method: method, options: options,
+            decodeInitial: { data, _ in try data.decode(Initial.self, context: .init(methodPath: method.path)) },
+            decodeNotification: { data, _ in try data.decode(Notification.self, context: .init(methodPath: method.path)) })
+    }
+
+    func subscribeObserved<Initial: Decodable & Sendable, Notification: Decodable & Sendable>(
+        method: SwiftFulcrum.RPC.Method, options: Call.Options = .init()
+    ) async throws -> (UUID, SwiftFulcrum.Client.SubscriptionObservation<Initial>, AsyncThrowingStream<SwiftFulcrum.Client.SubscriptionObservation<Notification>, Swift.Error>) {
+        try await subscribe(method: method, options: options,
+            decodeInitial: { data, generation in .init(value: try data.decode(Initial.self, context: .init(methodPath: method.path)), generation: generation) },
+            decodeNotification: { data, generation in .init(value: try data.decode(Notification.self, context: .init(methodPath: method.path)), generation: generation) })
+    }
+
+    private func subscribe<Initial: Sendable, Notification: Sendable>(
+        method: SwiftFulcrum.RPC.Method, options: Call.Options,
+        decodeInitial: @escaping @Sendable (Data, UInt64) throws -> Initial,
+        decodeNotification: @escaping @Sendable (Data, UInt64) throws -> Notification
     ) async throws -> (UUID, Initial, AsyncThrowingStream<Notification, Swift.Error>) {
         if !method.isSubscription {
             throw SwiftFulcrum.Client.Error.client(
@@ -20,7 +37,7 @@ extension FulcrumNetworkClient {
 
         let id = UUID()
         let request = method.createRequest(with: id)
-        let streamBufferingPolicy: AsyncThrowingStream<Data, Swift.Error>.Continuation.BufferingPolicy =
+        let streamBufferingPolicy: AsyncThrowingStream<SubscriptionResponse, Swift.Error>.Continuation.BufferingPolicy =
             try options.subscriptionBufferPolicy.makeBufferingPolicy()
         let subscriptionKey = SubscriptionKey(
             methodPath: subscriptionPath,
@@ -38,8 +55,8 @@ extension FulcrumNetworkClient {
         let subscriptionTask = Task<(UUID, Initial, AsyncThrowingStream<Notification, Swift.Error>), Swift.Error> {
             do {
                 return try await withTaskCancellationHandler {
-                    var rawContinuationStorage: AsyncThrowingStream<Data, Swift.Error>.Continuation!
-                    let rawStream = AsyncThrowingStream<Data, Swift.Error>(
+                    var rawContinuationStorage: AsyncThrowingStream<SubscriptionResponse, Swift.Error>.Continuation!
+                    let rawStream = AsyncThrowingStream<SubscriptionResponse, Swift.Error>(
                         bufferingPolicy: streamBufferingPolicy
                     ) { continuation in
                         rawContinuationStorage = continuation
@@ -54,16 +71,16 @@ extension FulcrumNetworkClient {
                         subscriptionBufferPolicy: options.subscriptionBufferPolicy
                     )
 
+                    let setupGeneration = connectionRecoveryGeneration
                     let initialRawStream = try await registerUnaryResponse(for: id)
 
                     try Task.checkCancellation()
                     try await send(request: request)
 
                     let initialRaw = try await awaitUnaryResponse(from: initialRawStream)
-                    let initial = try initialRaw.decode(
-                        Initial.self,
-                        context: .init(methodPath: method.path)
-                    )
+                    try Task.checkCancellation()
+                    guard setupGeneration == connectionRecoveryGeneration else { throw makeReconnectSupersededRouteError() }
+                    let initial = try decodeInitial(initialRaw, setupGeneration)
                     OpalDiagnostics.logger(category: .fulcrum).record(
                         event: .swiftFulcrumClientSubscribeInitialDecoded,
                         level: .debug,
@@ -75,8 +92,7 @@ extension FulcrumNetworkClient {
                     clearSubscriptionSetupRequestIdentifier(id, for: subscriptionKey)
 
                     let typedStream = rawStream.decode(
-                        Notification.self,
-                        context: .init(methodPath: method.path),
+                        using: decodeNotification,
                         onTermination: { @Sendable in
                             rawContinuation.finish()
                         }

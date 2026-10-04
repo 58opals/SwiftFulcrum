@@ -47,6 +47,8 @@ extension SwiftFulcrum.Client {
     ///   Reconnect restore is best-effort, so downstream callers usually do not need to resubscribe
     ///   manually. If a restore is rejected, the affected updates stream terminates and requires a
     ///   fresh ``subscribe(...)`` call to resume.
+    ///   Each successful restore publishes the server's current snapshot through the existing
+    ///   updates stream before subsequent notifications, even when its value is unchanged.
     public func subscribe<Initial: Decodable & Sendable, Update: Decodable & Sendable>(
         _ endpoint: SwiftFulcrum.API.Subscription<Initial, Update>,
         options: SwiftFulcrum.Client.Call.Options = .init()

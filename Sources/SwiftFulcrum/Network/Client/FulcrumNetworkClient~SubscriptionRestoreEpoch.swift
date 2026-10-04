@@ -3,6 +3,20 @@
 import Foundation
 
 extension FulcrumNetworkClient {
+    func isSubscriptionRestoreCurrent(_ restore: SubscriptionRestoreContext) async -> Bool {
+        guard isCurrentSubscriptionSetupRequestIdentifier(
+            restore.requestIdentifier,
+            for: restore.subscriptionKey
+        ) else { return false }
+        let reconnectSuccessCount = await transport.reconnectSuccesses
+        return connectionRecoveryGeneration == restore.recoveryGeneration
+            && reconnectSuccessCount == restore.reconnectSuccessCount
+            && isCurrentSubscriptionSetupRequestIdentifier(
+                restore.requestIdentifier,
+                for: restore.subscriptionKey
+            )
+    }
+
     func ensureSubscriptionRestoreIsCurrent(
         reconnectSuccessCount: Int,
         recoveryGeneration: UInt64

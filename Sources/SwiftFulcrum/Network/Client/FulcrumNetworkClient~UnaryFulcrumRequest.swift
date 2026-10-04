@@ -32,9 +32,16 @@ extension FulcrumNetworkClient {
         }
     }
 
-    func registerUnaryResponse(for id: UUID) async throws -> AsyncThrowingStream<Data, Swift.Error> {
+    func registerUnaryResponse(
+        for id: UUID,
+        subscriptionRestore: SubscriptionRestoreContext? = nil
+    ) async throws -> AsyncThrowingStream<Data, Swift.Error> {
         let (responseStream, responseContinuation) = AsyncThrowingStream<Data, Swift.Error>.makeStream()
-        let inflightCount = try await router.addUnary(id: id, continuation: responseContinuation)
+        let inflightCount = try await router.addUnary(
+            id: id,
+            continuation: responseContinuation,
+            subscriptionRestore: subscriptionRestore
+        )
         await recordClientState(inflightUnaryCallCount: inflightCount)
         return responseStream
     }

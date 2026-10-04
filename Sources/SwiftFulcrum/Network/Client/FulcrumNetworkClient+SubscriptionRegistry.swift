@@ -21,6 +21,10 @@ extension FulcrumNetworkClient {
             records[key]?.method
         }
 
+        func originRequestIdentifier(for key: SubscriptionKey) -> UUID? {
+            records[key]?.originRequestIdentifier
+        }
+
         func cleanupTask(for key: SubscriptionKey) -> Task<Bool, Never>? {
             cleanupTasks[key]
         }

@@ -31,6 +31,7 @@ extension FulcrumClientLifecycleValidator {
             await transport.dequeueOutgoing()
         )
         #expect(firstRestoreRequest["method"] as? String == method.path)
+        let firstRestoreIdentifier = try extractRequestIdentifier(from: firstRestoreRequest)
         let didRegisterFirstRestoreRoute = await waitUntil(timeout: .seconds(2)) {
             await fulcrum.makeInflightUnaryCallCount() == 1
         }
@@ -107,6 +108,11 @@ extension FulcrumClientLifecycleValidator {
         let secondRestoreIdentifier = try extractRequestIdentifier(
             from: secondRestoreRequest
         )
+        let obsoleteRestorePayload = try TransportTestActor.encodeResponsePayload(
+            identifier: firstRestoreIdentifier,
+            result: ["height": 920_000, "hex": String(repeating: "a", count: 160)]
+        )
+        await transport.enqueueIncoming(.data(obsoleteRestorePayload))
         let secondRestorePayload = try TransportTestActor.encodeResponsePayload(
             identifier: secondRestoreIdentifier,
             result: [
@@ -118,6 +124,8 @@ extension FulcrumClientLifecycleValidator {
 
         try await secondRecoveryTask.value
         #expect(await fulcrum.makeActiveSubscriptionCount() == 1)
+        let restoredUpdate = try await waitForFirstStreamElement(updates, within: .seconds(2))
+        #expect(restoredUpdate?.blocks.first?.height == 930_000)
 
         let notificationPayload = try TransportTestActor.encodeSubscriptionNotification(
             method: method.path,

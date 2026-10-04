@@ -7,10 +7,10 @@ extension FulcrumNetworkClient {
     func handleMessage(_ message: URLSessionWebSocketTask.Message) async -> Int? {
         switch message {
         case .data(let data):
-            return await router.handle(raw: data)
+            return await routeMessageData(data)
         case .string(let string):
             if let data = string.data(using: .utf8) {
-                return await router.handle(raw: data)
+                return await routeMessageData(data)
             }
             else {
                 OpalDiagnostics.logger(category: .swiftFulcrumWebSocket).record(
@@ -32,5 +32,12 @@ extension FulcrumNetworkClient {
         }
 
         return nil
+    }
+
+    private func routeMessageData(_ data: Data) async -> Int? {
+        await router.handle(raw: data, publicationGeneration: connectionRecoveryGeneration, generationAuthority: connectionRecoveryGenerationAuthority) { [weak self] restore in
+            guard let self else { return false }
+            return await self.isSubscriptionRestoreCurrent(restore)
+        }
     }
 }

@@ -96,6 +96,10 @@ await chipnetClient.stop()
 - Connection-state streams and OpalDiagnostics events for observability
 - Bounded subscription update buffers by default; slow consumers receive an explicit overflow error and should resubscribe/resync
 
+After a successful reconnect restore, each subscription's existing updates stream receives the current server snapshot before subsequent notifications. Restore snapshots use the same update type as notifications and are emitted even when unchanged, including a null script-hash or address status. Consumers may deduplicate values when appropriate; consumers that need to confirm data freshness should process every restored snapshot. Rejected or malformed restore responses terminate the affected stream and require a fresh subscription.
+
+`Client.subscribeObserved` provides an additive subscription alternative whose initial payload and updates include their producer publication generation. Pair it with `makeConnectionRecoveryStream()` when independently consumed state and data streams must agree across reconnects. Recovery observations carry a monotonic phase sequence and the same generation authority used to fence restore publication; listener installation and the initial snapshot occur in one producer actor turn. Slow or cancelled recovery-stream readers do not delay recovery. The existing `subscribe`, `Subscription.Updates`, and raw connection-state APIs retain their signatures and defaults. Stamps describe publication generation, not the physical socket origin of untagged transport messages buffered across reconnects. A consumer should reject already-published older generations and must not invalidate hydrated data again for a delayed phase in an adopted generation; the ready phase alone does not establish downstream data freshness.
+
 SwiftFulcrum currently uses platform-default URLSession TLS behavior. Custom trust or certificate policy is intentionally not exposed until there is a concrete URLSession-compatible trust API with security-focused tests.
 
 ## Diagnostics

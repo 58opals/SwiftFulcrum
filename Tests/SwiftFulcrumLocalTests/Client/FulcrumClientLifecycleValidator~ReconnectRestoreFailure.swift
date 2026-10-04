@@ -122,6 +122,8 @@ extension FulcrumClientLifecycleValidator {
         await transport.enqueueIncoming(.data(notificationPayload))
 
         var headersIterator = headersUpdates.makeAsyncIterator()
+        let restoredUpdate = try await headersIterator.next()
+        #expect(restoredUpdate?.blocks.first?.height == 950_000)
         let update = try await headersIterator.next()
         #expect(update?.blocks.first?.height == 950_001)
 

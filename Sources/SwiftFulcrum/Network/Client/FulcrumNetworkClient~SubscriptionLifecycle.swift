@@ -5,7 +5,7 @@ import OpalDiagnostics
 
 extension FulcrumNetworkClient {
     func configureSubscriptionLifecycle(
-        rawContinuation: AsyncThrowingStream<Data, Swift.Error>.Continuation,
+        rawContinuation: AsyncThrowingStream<SubscriptionResponse, Swift.Error>.Continuation,
         subscriptionKey: SubscriptionKey,
         method: SwiftFulcrum.RPC.Method,
         requestIdentifier: UUID,
@@ -26,9 +26,10 @@ extension FulcrumNetworkClient {
             throw CancellationError()
         }
         recordSubscriptionSetupRequestIdentifier(requestIdentifier, for: subscriptionKey)
-        try await router.addStream(
+        try await router.addObservedStream(
             key: subscriptionKey.string,
             continuation: rawContinuation,
+            registrationIdentifier: requestIdentifier,
             overflowError: subscriptionBufferPolicy.overflowError,
             terminationAction: { [weak self] error in
                 guard let self else { return }

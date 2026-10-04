@@ -82,6 +82,9 @@ extension FulcrumClientLifecycleValidator {
         )
         await transport.enqueueIncoming(.data(reconnectResubscribePayload))
         #expect(await fulcrum.makeActiveSubscriptionCount() == 1)
+        var iterator = updates.makeAsyncIterator()
+        let restoredUpdate = try await iterator.next()
+        #expect(restoredUpdate?.blocks.first?.height == 930_000)
 
         let notificationPayload = try TransportTestActor.encodeSubscriptionNotification(
             method: subscribeMethodPath,
@@ -92,7 +95,6 @@ extension FulcrumClientLifecycleValidator {
         )
         await transport.enqueueIncoming(.data(notificationPayload))
 
-        var iterator = updates.makeAsyncIterator()
         let update = try await iterator.next()
         #expect(update?.blocks.first?.height == 930_001)
 

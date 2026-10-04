@@ -56,6 +56,14 @@ extension FulcrumNetworkClient {
         )
 
         let requestIdentifier = UUID()
+        let restoreContext = SubscriptionRestoreContext(
+            subscriptionKey: subscriptionKey,
+            requestIdentifier: requestIdentifier,
+            streamRegistrationIdentifier: subscriptionRegistry.originRequestIdentifier(for: subscriptionKey) ?? requestIdentifier,
+            reconnectSuccessCount: restoreReconnectSuccessCount,
+            recoveryGeneration: restoreRecoveryGeneration,
+            recoveryGenerationAuthority: connectionRecoveryGenerationAuthority
+        )
         let request = method.createRequest(with: requestIdentifier)
         guard let requestData = request.data else {
             let error = SwiftFulcrum.Client.Error.coding(.encode(nil))
@@ -85,7 +93,10 @@ extension FulcrumNetworkClient {
                 reconnectSuccessCount: restoreReconnectSuccessCount,
                 recoveryGeneration: restoreRecoveryGeneration
             )
-            let rawResponseStream = try await owner.registerUnaryResponse(for: requestIdentifier)
+            let rawResponseStream = try await owner.registerUnaryResponse(
+                for: requestIdentifier,
+                subscriptionRestore: restoreContext
+            )
             guard await owner.isCurrentSubscriptionSetupRequestIdentifier(
                 requestIdentifier,
                 for: subscriptionKey

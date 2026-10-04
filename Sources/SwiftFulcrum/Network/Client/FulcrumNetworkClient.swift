@@ -29,8 +29,12 @@ actor FulcrumNetworkClient {
     var manualReconnectRecoverySuccessCount: Int?
     var pendingManualReconnectRecoverySuccessCount: Int?
     var automaticReconnectConnectionGeneration: UInt64 = 0
-    var connectionRecoveryGeneration: UInt64 = 0
+    let connectionRecoveryGenerationAuthority = ConnectionRecoveryGeneration()
+    var connectionRecoveryGeneration: UInt64 { connectionRecoveryGenerationAuthority.value }
     var recoveredReconnectSuccessCount = 0
+    var recoveryObservationState: SwiftFulcrum.Client.ConnectionRecoveryObservation.State = .unavailable
+    var recoveryObservationSequence: UInt64 = 0
+    var recoveryObservationContinuations: [UUID: AsyncStream<SwiftFulcrum.Client.ConnectionRecoveryObservation>.Continuation] = [:]
     var lifecycleTask: Task<Void, Never>?
     var diagnosticsStateTask: Task<Void, Never>?
 
@@ -57,6 +61,8 @@ actor FulcrumNetworkClient {
     }
 
     func stop() async {
+        _ = advanceConnectionRecoveryGeneration()
+        publishRecoveryState(.unavailable)
         let startupTask = self.startupTask
         let startupTaskGenerationIdentifier = self.startupTaskGenerationIdentifier
 

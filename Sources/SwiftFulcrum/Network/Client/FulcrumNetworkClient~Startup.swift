@@ -32,6 +32,7 @@ private extension FulcrumNetworkClient {
                 try await awaitReconnectReadiness()
             }
 
+            publishRecoveryReady(generation: connectionRecoveryGeneration)
             startRPCHeartbeat()
             await recordClientState()
         } catch {
@@ -39,6 +40,7 @@ private extension FulcrumNetworkClient {
             await transport.disconnect(
                 with: "FulcrumNetworkClient.start() negotiation failed"
             )
+            publishRecoveryState(.unavailable)
             throw error
         }
     }
