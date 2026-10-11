@@ -20,7 +20,8 @@ extension SwiftFulcrum.Client {
         let deadline = try makeDeadline(for: options.timeout)
         try await prepareClientForRequests(
             until: deadline,
-            observedStopGeneration: observedStopGeneration
+            observedStopGeneration: observedStopGeneration,
+            cancellationToken: cancellationToken
         )
         try await throwIfCancelled(cancellationToken)
         try ensureRequestPreparationIsCurrent(

@@ -10,6 +10,50 @@ extension SwiftFulcrum.Client {
 
     func prepareClientForRequests(
         until deadline: TimeoutDeadline?,
+        observedStopGeneration: UInt64,
+        cancellationToken: FulcrumNetworkClient.Call.Token?
+    ) async throws {
+        guard let cancellationToken else {
+            return try await prepareClientForRequests(
+                until: deadline,
+                observedStopGeneration: observedStopGeneration
+            )
+        }
+
+        // Cancel this caller's wait; shared startup and recovery retain their own ownership rules.
+        let preparation = Task {
+            try Task.checkCancellation()
+            try await prepareClientForRequests(
+                until: deadline,
+                observedStopGeneration: observedStopGeneration
+            )
+        }
+        let registrationID = await cancellationToken.register {
+            preparation.cancel()
+        }
+        do {
+            try await withTaskCancellationHandler {
+                try await preparation.value
+            } onCancel: {
+                preparation.cancel()
+            }
+            try await throwIfCancelled(cancellationToken)
+        } catch {
+            if let registrationID {
+                await cancellationToken.unregister(registrationID)
+            }
+            if error is CancellationError {
+                throw SwiftFulcrum.Client.Error.client(.cancelled)
+            }
+            throw error
+        }
+        if let registrationID {
+            await cancellationToken.unregister(registrationID)
+        }
+    }
+
+    func prepareClientForRequests(
+        until deadline: TimeoutDeadline?,
         observedStopGeneration: UInt64
     ) async throws {
         if !isRunning {

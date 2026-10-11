@@ -30,7 +30,8 @@ extension SwiftFulcrum.Client {
 
         try await prepareClientForRequests(
             until: deadline,
-            observedStopGeneration: observedStopGeneration
+            observedStopGeneration: observedStopGeneration,
+            cancellationToken: options.cancellation?.token
         )
 
         let token = FulcrumNetworkClient.Call.Token()
