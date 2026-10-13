@@ -13,9 +13,7 @@ extension SwiftFulcrum.Response.Blockchain.Transaction {
 
         private static func decodeHex(_ hex: String) throws -> Data {
             let string = hex.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard string.count % 2 == 0 else {
-                throw ResponseResultDecodeError.unexpectedFormat("txid has odd hex length: \(string.count)")
-            }
+            try SwiftFulcrum.Response.Blockchain.validateTransactionHash(string)
 
             var data = Data()
             data.reserveCapacity(string.count / 2)
