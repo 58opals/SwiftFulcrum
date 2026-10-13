@@ -17,7 +17,8 @@ extension SwiftFulcrum.Response.Blockchain.Transaction.DSProof {
                    case .dsProof(let proofValue) = pairs[1] {
                     try SwiftFulcrum.Response.Blockchain.validateTransactionHash(hash)
                     let proof = try proofValue.map { try Lookup(from: $0) }
-                    if let proofTransactionHash = proof?.transactionID, proofTransactionHash != hash {
+                    if let proofTransactionHash = proof?.transactionID,
+                       proofTransactionHash.lowercased() != hash.lowercased() {
                         throw ResponseResultDecodeError.unexpectedFormat(
                             "Expected DSProof notification hash to match proof transaction hash"
                         )

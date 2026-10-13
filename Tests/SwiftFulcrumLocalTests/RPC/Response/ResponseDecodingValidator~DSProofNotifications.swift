@@ -65,6 +65,37 @@ extension ResponseDecodingValidator {
         }
     }
 
+    @Test(
+        "Decodes case-equivalent DSProof hashes while preserving their spelling",
+        arguments: [
+            (String(repeating: "a", count: 64), String(repeating: "A", count: 64)),
+            (String(repeating: "A", count: 64), String(repeating: "a", count: 64)),
+            (String(repeating: "aB", count: 32), String(repeating: "Ab", count: 32))
+        ]
+    )
+    func decodeCaseEquivalentDSProofNotificationHashes(
+        routeTransactionHash: String,
+        proofTransactionHash: String
+    ) throws {
+        let payload = try makeJSONData([
+            "jsonrpc": "2.0",
+            "method": "blockchain.transaction.dsproof.subscribe",
+            "params": [
+                routeTransactionHash,
+                makeDSProofResult(transactionHash: proofTransactionHash)
+            ]
+        ])
+        let notification = try payload.decode(
+            SwiftFulcrum.Response.Blockchain.Transaction.DSProof.SubscribeNotification.self,
+            context: .init(methodPath: "blockchain.transaction.dsproof.subscribe")
+        )
+        let proof = try #require(notification.proof)
+
+        #expect(notification.subscriptionIdentifier == routeTransactionHash)
+        #expect(notification.transactionHash == routeTransactionHash)
+        #expect(proof.transactionID == proofTransactionHash)
+    }
+
     @Test("Rejects mismatched DSProof subscribe notification proof hashes")
     func rejectMismatchedDSProofSubscribeNotificationProofHashes() throws {
         let routeTransactionHash = String(repeating: "1", count: 64)
