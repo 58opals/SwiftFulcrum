@@ -25,6 +25,11 @@ extension FulcrumNetworkClient {
         decodeInitial: @escaping @Sendable (Data, UInt64) throws -> Initial,
         decodeNotification: @escaping @Sendable (Data, UInt64) throws -> Notification
     ) async throws -> (UUID, Initial, AsyncThrowingStream<Notification, Swift.Error>) {
+        if options.sendAuthorization != nil {
+            throw SwiftFulcrum.Client.Error.client(
+                .invalidConfiguration("sendAuthorization is supported only for unary requests.")
+            )
+        }
         if !method.isSubscription {
             throw SwiftFulcrum.Client.Error.client(
                 .protocolMismatch("subscribe() requires subscription methods. Use request(...) for unary calls.")

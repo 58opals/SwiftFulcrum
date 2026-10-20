@@ -15,8 +15,8 @@ protocol TransportAdapter: Sendable {
     func disconnect(with reason: String?) async
     func reconnect(with url: URL?) async throws
 
-    func send(data: Data) async throws
-    func send(string: String) async throws
+    func send(data: Data, sendAuthorization: SwiftFulcrum.Client.Call.SendAuthorization?) async throws
+    func send(string: String, sendAuthorization: SwiftFulcrum.Client.Call.SendAuthorization?) async throws
 
     func makeMessageStream() async -> AsyncThrowingStream<URLSessionWebSocketTask.Message, Swift.Error>
     func makeLifecycleEvents() async -> AsyncStream<SwiftFulcrum.Transport.State.Event>

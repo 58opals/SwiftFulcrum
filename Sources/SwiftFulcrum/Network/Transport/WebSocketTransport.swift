@@ -21,9 +21,13 @@ actor WebSocketTransport: TransportAdapter {
 
     func reconnect(with url: URL?) async throws { try await webSocket.reconnect(with: url) }
 
-    func send(data: Data) async throws { try await webSocket.send(data: data) }
+    func send(data: Data, sendAuthorization: SwiftFulcrum.Client.Call.SendAuthorization?) async throws {
+        try await webSocket.send(data: data, sendAuthorization: sendAuthorization)
+    }
 
-    func send(string: String) async throws { try await webSocket.send(string: string) }
+    func send(string: String, sendAuthorization: SwiftFulcrum.Client.Call.SendAuthorization?) async throws {
+        try await webSocket.send(string: string, sendAuthorization: sendAuthorization)
+    }
 
     func makeMessageStream() async -> AsyncThrowingStream<URLSessionWebSocketTask.Message, Swift.Error> {
         await webSocket.makeMessageStream()

@@ -101,6 +101,8 @@ extension OpalDiagnostics.Field {
             return .clientInvalidState
         case .cancelled:
             return .clientCancelled
+        case .sendNotAuthorized:
+            return .clientSendNotAuthorized
         case .timeout:
             return .clientTimeout
         case .invalidConfiguration:

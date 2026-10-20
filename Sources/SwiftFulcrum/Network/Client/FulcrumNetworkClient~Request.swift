@@ -25,7 +25,8 @@ extension FulcrumNetworkClient {
         )
 
         let callTask = Task<Data, Swift.Error> {
-            try await executeUnaryRequest(id: id, request: request, timeoutState: timeoutState)
+            try await executeUnaryRequest(id: id, request: request, timeoutState: timeoutState,
+                sendAuthorization: options.sendAuthorization)
         }
         let executionContext = FulcrumNetworkClient.Call.ExecutionContext(
             task: callTask,

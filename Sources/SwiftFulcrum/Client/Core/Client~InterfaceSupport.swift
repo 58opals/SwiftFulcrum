@@ -22,6 +22,11 @@ extension SwiftFulcrum.Client {
         deadline: TimeoutDeadline?, observedStopGeneration: UInt64,
         subscribe: @Sendable (FulcrumNetworkClient, FulcrumNetworkClient.Call.Options) async throws -> (UUID, Initial, AsyncThrowingStream<Update, Swift.Error>)
     ) async throws -> Subscription<Initial, Update> {
+        if options.sendAuthorization != nil {
+            throw SwiftFulcrum.Client.Error.client(
+                .invalidConfiguration("sendAuthorization is supported only for unary requests.")
+            )
+        }
         if !method.isSubscription {
             throw SwiftFulcrum.Client.Error.client(
                 .protocolMismatch("subscribe() requires subscription methods. Use request(...) for unary calls.")
@@ -43,7 +48,8 @@ extension SwiftFulcrum.Client {
             let effectiveOptions = try FulcrumNetworkClient.Call.Options(
                 timeout: remainingTimeout(until: deadline),
                 token: token,
-                subscriptionBufferPolicy: options.subscriptionBufferPolicy
+                subscriptionBufferPolicy: options.subscriptionBufferPolicy,
+                sendAuthorization: options.sendAuthorization
             )
             try ensureRequestPreparationIsCurrent(
                 observedStopGeneration: observedStopGeneration
@@ -90,7 +96,9 @@ extension SwiftFulcrum.Client {
         from options: SwiftFulcrum.Client.Call.Options,
         constrainedBy deadline: TimeoutDeadline?
     ) throws -> FulcrumNetworkClient.Call.Options {
-        .init(timeout: try remainingTimeout(until: deadline), token: options.cancellation?.token)
+        .init(timeout: try remainingTimeout(until: deadline), token: options.cancellation?.token,
+            subscriptionBufferPolicy: options.subscriptionBufferPolicy,
+            sendAuthorization: options.sendAuthorization)
     }
 
     func remainingTimeout(until deadline: TimeoutDeadline?) throws -> Duration? {

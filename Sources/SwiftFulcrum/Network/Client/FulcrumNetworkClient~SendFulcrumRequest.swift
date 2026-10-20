@@ -4,13 +4,14 @@ import Foundation
 import OpalDiagnostics
 
 extension FulcrumNetworkClient {
-    func send(request: FulcrumRequest) async throws {
+    func send(request: FulcrumRequest,
+              sendAuthorization: SwiftFulcrum.Client.Call.SendAuthorization? = nil) async throws {
         try Task.checkCancellation()
 
         if case .server(.version) = request.requestedMethod {
             guard let data = request.data else { throw SwiftFulcrum.Client.Error.coding(.encode(nil)) }
             try Task.checkCancellation()
-            try await self.send(data: data)
+            try await self.send(data: data, sendAuthorization: sendAuthorization)
             OpalDiagnostics.logger(category: .fulcrum).record(
                 event: request.requestedMethod.isSubscription
                     ? .swiftFulcrumClientSubscribeSent
@@ -33,7 +34,7 @@ extension FulcrumNetworkClient {
 
         guard let data = request.data else { throw SwiftFulcrum.Client.Error.coding(.encode(nil)) }
         try Task.checkCancellation()
-        try await self.send(data: data)
+        try await self.send(data: data, sendAuthorization: sendAuthorization)
         OpalDiagnostics.logger(category: .fulcrum).record(
             event: request.requestedMethod.isSubscription
                 ? .swiftFulcrumClientSubscribeSent

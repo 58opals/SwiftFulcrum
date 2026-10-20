@@ -8,6 +8,7 @@ extension SwiftFulcrum.Client.Error {
         case invalidURL(String)
         case duplicateRegistration
         case cancelled
+        case sendNotAuthorized
         case timeout(Duration)
         case invalidConfiguration(String)
         case invalidSubscriptionBufferCapacity(Int)
@@ -27,7 +28,8 @@ extension SwiftFulcrum.Client.Error.ClientIssue: Swift.Error, Equatable, Sendabl
         switch (lhs, rhs) {
         case (.urlNotFound, .urlNotFound),
             (.duplicateRegistration, .duplicateRegistration),
-            (.cancelled, .cancelled):
+            (.cancelled, .cancelled),
+            (.sendNotAuthorized, .sendNotAuthorized):
             return true
         case (.invalidURL(let leftURL), .invalidURL(let rightURL)):
             return leftURL == rightURL

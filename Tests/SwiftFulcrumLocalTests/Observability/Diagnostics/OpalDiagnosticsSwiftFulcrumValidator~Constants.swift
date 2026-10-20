@@ -40,6 +40,11 @@ extension OpalDiagnosticsSwiftFulcrumValidator {
     func mapDiagnosticsErrorCodeCatalogToKnownFailures() {
         let mappings = [
             (
+                OpalDiagnostics.Field.errorCode(for: SwiftFulcrum.Client.Error.client(.sendNotAuthorized)),
+                OpalDiagnostics.ErrorCode.clientSendNotAuthorized,
+                "client.send_not_authorized"
+            ),
+            (
                 OpalDiagnostics.Field.errorCode(for: SwiftFulcrum.Client.Error.client(.cancelled)),
                 OpalDiagnostics.ErrorCode.clientCancelled,
                 "client.cancelled"

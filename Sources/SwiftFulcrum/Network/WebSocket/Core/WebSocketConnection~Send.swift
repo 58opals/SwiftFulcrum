@@ -4,19 +4,22 @@ import Foundation
 import OpalDiagnostics
 
 extension WebSocketConnection {
-    func send(data: Data) async throws {
+    func send(data: Data, sendAuthorization: SwiftFulcrum.Client.Call.SendAuthorization? = nil) async throws {
         let message = URLSessionWebSocketTask.Message.data(data)
-        try await sendMessage(message, fields: OpalDiagnostics.Field.swiftFulcrumPayloadFields(payloadType: "data", byteCount: data.count))
+        try await sendMessage(message, fields: OpalDiagnostics.Field.swiftFulcrumPayloadFields(payloadType: "data", byteCount: data.count),
+            sendAuthorization: sendAuthorization)
     }
 
-    func send(string: String) async throws {
+    func send(string: String, sendAuthorization: SwiftFulcrum.Client.Call.SendAuthorization? = nil) async throws {
         let message = URLSessionWebSocketTask.Message.string(string)
-        try await sendMessage(message, fields: OpalDiagnostics.Field.swiftFulcrumPayloadFields(payloadType: "string", byteCount: string.utf8.count))
+        try await sendMessage(message, fields: OpalDiagnostics.Field.swiftFulcrumPayloadFields(payloadType: "string", byteCount: string.utf8.count),
+            sendAuthorization: sendAuthorization)
     }
 
     private func sendMessage(
         _ message: URLSessionWebSocketTask.Message,
-        fields: [OpalDiagnostics.Field]
+        fields: [OpalDiagnostics.Field],
+        sendAuthorization: SwiftFulcrum.Client.Call.SendAuthorization?
     ) async throws {
         guard let task else {
             let error = SwiftFulcrum.Client.Error.transport(.connectionClosed(closeInformation.code, closeInformation.reason))
@@ -39,7 +42,21 @@ extension WebSocketConnection {
             fields: webSocketDiagnosticFields(eventFields)
         )
         do {
-            try await task.send(message)
+            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Swift.Error>) in
+                do {
+                    try Task.checkCancellation()
+                    try sendAuthorization?.validate()
+                    task.send(message) { error in
+                        if let error {
+                            continuation.resume(throwing: error)
+                        } else {
+                            continuation.resume()
+                        }
+                    }
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
             OpalDiagnostics.logger(category: .swiftFulcrumWebSocket).record(
                 event: .swiftFulcrumWebSocketSendSucceeded,
                 level: .debug,

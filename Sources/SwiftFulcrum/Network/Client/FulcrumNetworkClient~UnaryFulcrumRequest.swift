@@ -6,14 +6,15 @@ extension FulcrumNetworkClient {
     func executeUnaryRequest(
         id: UUID,
         request: FulcrumRequest,
-        timeoutState: FulcrumNetworkClient.Call.TimeoutState? = nil
+        timeoutState: FulcrumNetworkClient.Call.TimeoutState? = nil,
+        sendAuthorization: SwiftFulcrum.Client.Call.SendAuthorization? = nil
     ) async throws -> Data {
         try await withTaskCancellationHandler {
             let responseStream = try await registerUnaryResponse(for: id)
 
             do {
                 try Task.checkCancellation()
-                try await send(request: request)
+                try await send(request: request, sendAuthorization: sendAuthorization)
                 return try await awaitUnaryResponse(from: responseStream, timeoutState: timeoutState)
             } catch {
                 if error is CancellationError {

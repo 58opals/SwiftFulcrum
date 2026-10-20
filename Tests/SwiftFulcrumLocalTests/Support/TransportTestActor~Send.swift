@@ -4,22 +4,26 @@ import Foundation
 @testable import SwiftFulcrum
 
 extension TransportTestActor {
-    func send(data: Data) async throws {
+    func send(data: Data, sendAuthorization: SwiftFulcrum.Client.Call.SendAuthorization?) async throws {
         try await applyOutgoingSendDelayIfNeeded()
         try await applyOutgoingSendPauseIfNeeded()
         if let error = consumeOutgoingSendFailure(from: data) {
             throw error
         }
+        try Task.checkCancellation()
+        try sendAuthorization?.validate()
         recordOutgoing(.data(data))
         await pauseSendCompletionIfNeeded(data)
     }
 
-    func send(string: String) async throws {
+    func send(string: String, sendAuthorization: SwiftFulcrum.Client.Call.SendAuthorization?) async throws {
         try await applyOutgoingSendDelayIfNeeded()
         try await applyOutgoingSendPauseIfNeeded()
         if let data = string.data(using: .utf8), let error = consumeOutgoingSendFailure(from: data) {
             throw error
         }
+        try Task.checkCancellation()
+        try sendAuthorization?.validate()
         recordOutgoing(.string(string))
         if let data = string.data(using: .utf8) { await pauseSendCompletionIfNeeded(data) }
     }

@@ -165,6 +165,8 @@ private extension SwiftFulcrum.Client.Error.ClientIssue {
             "Duplicate response registration"
         case .cancelled:
             "Operation cancelled"
+        case .sendNotAuthorized:
+            "Outbound call is not authorized"
         case .timeout(let duration):
             "Operation timed out after \(duration)"
         case .invalidConfiguration(let reason):

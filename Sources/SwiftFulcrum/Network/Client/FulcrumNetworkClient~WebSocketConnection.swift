@@ -4,12 +4,12 @@ import Foundation
 import OpalDiagnostics
 
 extension FulcrumNetworkClient {
-    func send(data: Data) async throws {
-        try await transport.send(data: data)
+    func send(data: Data, sendAuthorization: SwiftFulcrum.Client.Call.SendAuthorization? = nil) async throws {
+        try await transport.send(data: data, sendAuthorization: sendAuthorization)
     }
 
-    func send(string: String) async throws {
-        try await transport.send(string: string)
+    func send(string: String, sendAuthorization: SwiftFulcrum.Client.Call.SendAuthorization? = nil) async throws {
+        try await transport.send(string: string, sendAuthorization: sendAuthorization)
     }
 }
 

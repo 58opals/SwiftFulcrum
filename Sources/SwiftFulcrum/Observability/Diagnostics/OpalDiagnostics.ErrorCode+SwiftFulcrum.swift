@@ -4,6 +4,7 @@ import OpalDiagnostics
 
 extension OpalDiagnostics.ErrorCode {
     static let clientCancelled = Self(rawValue: "client.cancelled")
+    static let clientSendNotAuthorized = Self(rawValue: "client.send_not_authorized")
     static let clientInvalidConfiguration = Self(rawValue: "client.invalid_configuration")
     static let clientInvalidState = Self(rawValue: "client.invalid_state")
     static let clientSubscriptionBufferOverflow = Self(rawValue: "client.subscription_buffer_overflow")
