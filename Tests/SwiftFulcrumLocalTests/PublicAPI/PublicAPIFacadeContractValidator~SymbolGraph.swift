@@ -19,7 +19,7 @@ extension PublicAPIFacadeContractValidator {
             "SwiftFulcrum.Client.Configuration",
             "SwiftFulcrum.Client.Configuration.init(reconnect:connectionTimeout:maximumMessageSize:bootstrapServers:serverCatalogLoader:network:protocolNegotiation:)",
             "SwiftFulcrum.Client.Call.Options",
-            "SwiftFulcrum.Client.Call.Options.init(timeout:cancellation:subscriptionBufferPolicy:)",
+            "SwiftFulcrum.Client.Call.Options.init(timeout:cancellation:subscriptionBufferPolicy:sendAuthorization:)",
             "SwiftFulcrum.Client.SubscriptionBufferPolicy",
             "SwiftFulcrum.Client.SubscriptionBufferPolicy.bounded(capacity:)",
             "SwiftFulcrum.Client.SubscriptionBufferPolicy.unbounded",

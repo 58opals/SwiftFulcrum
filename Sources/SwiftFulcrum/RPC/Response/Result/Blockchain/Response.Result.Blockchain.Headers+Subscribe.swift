@@ -11,9 +11,11 @@ extension SwiftFulcrum.Response.Blockchain.Headers {
             let payloadModel = try SwiftFulcrum.RPC.Response.JSONRPC.Result.Blockchain.Headers.Subscribe(from: decoder)
             switch payloadModel {
             case .topHeader(let tip):
+                try SwiftFulcrum.Response.Blockchain.validateBlockHeader(tip.hex)
                 self.height = tip.height
                 self.hex = tip.hex
             case .newHeader(let batch) where batch.count == 1:
+                try SwiftFulcrum.Response.Blockchain.validateBlockHeader(batch[0].hex)
                 self.height = batch[0].height
                 self.hex = batch[0].hex
             case .newHeader(let batch):

@@ -112,4 +112,54 @@ extension ResponseDecodingValidator {
             )
         }
     }
+
+    @Test(
+        "Rejects initial header subscriptions without an 80-byte hexadecimal header",
+        arguments: [false, true], [
+            String(repeating: "ab", count: 79),
+            String(repeating: "g", count: 160)
+        ]
+    )
+    func rejectMalformedInitialHeadersSubscription(
+        usesSingletonArray: Bool,
+        headerHex: String
+    ) throws {
+        let header: [String: Any] = ["height": 42, "hex": headerHex]
+        let result: Any = usesSingletonArray ? [header] : header
+        let payload = try makeJSONData([
+            "jsonrpc": "2.0",
+            "id": UUID().uuidString,
+            "result": result
+        ])
+
+        #expect(throws: ResponseResultDecodeError.self) {
+            _ = try payload.decode(
+                SwiftFulcrum.Response.Blockchain.Headers.Subscribe.self,
+                context: .init(methodPath: "blockchain.headers.subscribe")
+            )
+        }
+    }
+
+    @Test(
+        "Decodes exact initial header subscriptions in both supported shapes",
+        arguments: [false, true]
+    )
+    func decodeInitialHeadersSubscription(usesSingletonArray: Bool) throws {
+        let headerHex = String(repeating: "aB", count: 80)
+        let header: [String: Any] = ["height": 42, "hex": headerHex]
+        let result: Any = usesSingletonArray ? [header] : header
+        let payload = try makeJSONData([
+            "jsonrpc": "2.0",
+            "id": UUID().uuidString,
+            "result": result
+        ])
+
+        let initial = try payload.decode(
+            SwiftFulcrum.Response.Blockchain.Headers.Subscribe.self,
+            context: .init(methodPath: "blockchain.headers.subscribe")
+        )
+
+        #expect(initial.height == 42)
+        #expect(initial.hex == headerHex)
+    }
 }
