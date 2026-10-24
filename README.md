@@ -33,6 +33,8 @@ For deeper package context, audience, and integration expectations, see [docs/co
   - `tvOS 27`
   - `visionOS 27`
 
+Use the Xcode 27 family with a compiler supporting Swift tools 6.4 and Swift 6 language mode. The supported platform versions above are 27.0 deployment minimums; a newer selected 27.x SDK does not raise them. Before validation, record the active developer-directory selection and overrides, Xcode build, effective Swift compiler and each selected SDK version/path. After any of these inputs changes, use a new external scratch or derived-data lane and rerun the affected builds and tests against the existing dependency lock. Preserve earlier receipts and normal signing/security settings; an IDE update does not silently change package pins or enable live-network test opt-ins. SwiftFulcrum itself does not require Metal; consumers that add it must record that component separately.
+
 ## Installation (Swift Package Manager)
 
 ```swift
