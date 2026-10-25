@@ -130,15 +130,28 @@ SwiftFulcrum does not print directly and does not expose package-specific loggin
 
 Tests own JSON-RPC mapping, response validation, transport lifecycle, reconnect generations, cancellation, subscriptions, and server catalogs. Preserve boundary failures and late-result races even when their setup resembles another suite. Keep test support local to its consumers and remove helpers only after their last caller disappears.
 
-Resolve the published dependency graph and require the tracked lock to remain unchanged before compilation. The dependency-resolution CI job runs this inexpensive gate on pushes and pull requests.
+The default development command builds/discovers once and runs focused configuration, protocol-generation, response-decoding and diagnostics contracts from that same build. It reports its selected definition count and does not claim complete lifecycle, cancellation or reconnect assurance.
+
+```sh
+sh scripts/validate.sh
+sh scripts/validate.sh focused ClientCancellationValidator
+sh scripts/validate.sh --list assurance
+sh scripts/validate.sh assurance
+```
+
+`focused` accepts a literal substring of a discovered local suite or test identifier, including a complete identifier. Empty, malformed and unmatched selections fail. Successful discovery alone is insufficient: execution must produce a native result containing non-skipped tests. `--list` prints the exact selection after discovery without executing it. `assurance` selects every `SwiftFulcrumLocalTests` definition, including late-result races, cancellation and reconnect behavior. All runner lanes explicitly disable the existing live-network opt-ins, even if inherited from the calling shell; live tests remain a separate operation below.
+
+Set `OPAL_VALIDATION_SCRATCH_PATH` to a per-repository, toolchain-compatible cache when needed; the default is `.build/validation`. Only the current invocation uses `--skip-build`, immediately after discovery has built the same path and options. No persistent receipt bypasses later builds. The tracked dependency lock must exist, resolved versions are forced and lock drift fails validation.
+
+CI resolves the unchanged published graph before compilation, then runs development checks on pull requests and branch pushes. `main`, tags and an explicit `workflow_dispatch` assurance selection run the complete offline local suite. For a raw SwiftPM invocation, preserve the published graph:
 
 ```bash
 swift package resolve
 git diff --exit-code -- Package.resolved
-swift test
+swift test --force-resolved-versions --filter '^SwiftFulcrumLocalTests[./]'
 ```
 
-Set `SWIFTFULCRUM_RUN_NETWORK=1` to enable the opt-in network test suite.
+To run live-network tests separately, use `SWIFTFULCRUM_RUN_NETWORK=1 swift test --force-resolved-versions --filter '^SwiftFulcrumNetworkTests[./]'`. Existing slow-network gates remain independently opt-in. Offline assurance does not establish live-server acceptance.
 
 ## License
 

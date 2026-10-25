@@ -1,8 +1,15 @@
-name: Dependency Resolution
+name: Development Validation
 
 on:
   pull_request:
   push:
+  workflow_dispatch:
+    inputs:
+      lane:
+        description: Offline validation lane
+        type: choice
+        default: develop
+        options: [develop, assurance]
 
 concurrency:
   group: dependency-resolution-${{ github.workflow }}-${{ github.ref }}
@@ -34,6 +41,7 @@ jobs:
           case "$CI_EVENT" in
             pull_request) [[ "$CI_REF" =~ ^refs/pull/[0-9]+/merge$ ]] || exit 1 ;;
             push) [[ "$CI_REF" == refs/heads/* || "$CI_REF" == refs/tags/* ]] || exit 1 ;;
+            workflow_dispatch) [[ "$CI_REF" == refs/heads/* ]] || exit 1 ;;
             *) exit 1 ;;
           esac
           git check-ref-format "$CI_REF"
@@ -57,3 +65,7 @@ jobs:
           git ls-files --error-unmatch -- Package.resolved > /dev/null
           env -u SDKROOT /usr/bin/xcrun swift package resolve
           git diff --exit-code -- Package.resolved
+      - name: Run the selected offline validation lane
+        env:
+          VALIDATION_LANE: ${{ (startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main') && 'assurance' || github.event_name == 'workflow_dispatch' && inputs.lane || 'develop' }}
+        run: sh scripts/validate.sh "$VALIDATION_LANE"
