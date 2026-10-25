@@ -52,7 +52,7 @@ targets: [
 ]
 ```
 
-The current `develop` manifest follows `OpalDiagnostics` on `develop`. The published `v0.8.0` release remains available to version-based consumers; no new SemVer tag is prepared by the Swift 6.4 migration.
+The current integration manifest pins `OpalDiagnostics` to public revision `aa56dec5d6c8581beb2b3cef43b03dd577ccd9f1`. The published `v0.8.0` release remains available to version-based consumers; no new SemVer tag is prepared by this migration.
 
 ## Quick Start
 
@@ -130,7 +130,11 @@ SwiftFulcrum does not print directly and does not expose package-specific loggin
 
 Tests own JSON-RPC mapping, response validation, transport lifecycle, reconnect generations, cancellation, subscriptions, and server catalogs. Preserve boundary failures and late-result races even when their setup resembles another suite. Keep test support local to its consumers and remove helpers only after their last caller disappears.
 
+Resolve the published dependency graph and require the tracked lock to remain unchanged before compilation. The dependency-resolution CI job runs this inexpensive gate on pushes and pull requests.
+
 ```bash
+swift package resolve
+git diff --exit-code -- Package.resolved
 swift test
 ```
 

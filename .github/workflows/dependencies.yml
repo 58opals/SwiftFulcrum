@@ -1,0 +1,59 @@
+name: Dependency Resolution
+
+on:
+  pull_request:
+  push:
+
+concurrency:
+  group: dependency-resolution-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  dependencies:
+    runs-on: xcode-27
+    steps:
+      - name: Check out the exact workflow commit
+        shell: bash
+        env:
+          CI_REPOSITORY: ${{ github.repository }}
+          CI_SHA: ${{ github.sha }}
+          CI_REF: ${{ github.ref }}
+          CI_EVENT: ${{ github.event_name }}
+          CI_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          set +x
+          checkout_token="$CI_TOKEN"
+          unset CI_TOKEN
+          export GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null GIT_TERMINAL_PROMPT=0
+          [[ "$CI_REPOSITORY" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || exit 1
+          [[ "$CI_SHA" =~ ^[0-9a-f]{40}$ ]] || exit 1
+          case "$CI_EVENT" in
+            pull_request) [[ "$CI_REF" =~ ^refs/pull/[0-9]+/merge$ ]] || exit 1 ;;
+            push) [[ "$CI_REF" == refs/heads/* || "$CI_REF" == refs/tags/* ]] || exit 1 ;;
+            *) exit 1 ;;
+          esac
+          git check-ref-format "$CI_REF"
+          [[ -n "$GITHUB_WORKSPACE" && "$GITHUB_WORKSPACE" != / && ! -L "$GITHUB_WORKSPACE" ]] || exit 1
+          cd "$GITHUB_WORKSPACE"
+          [[ "$(pwd -P)" == "$GITHUB_WORKSPACE" ]] || exit 1
+          # Clean only the runner-provided checkout directory, including old Git config/hooks.
+          find . -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
+          git init --quiet --template=
+          git remote add origin "https://github.com/$CI_REPOSITORY.git"
+          authorization="$(printf 'x-access-token:%s' "$checkout_token" | base64 | tr -d '\r\n')"
+          git -c credential.helper= -c core.hooksPath=/dev/null \
+            -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $authorization" \
+            fetch --no-tags --depth=1 origin "$CI_SHA"
+          unset checkout_token authorization
+          [[ "$(git rev-parse 'FETCH_HEAD^{commit}')" == "$CI_SHA" ]] || exit 1
+          git -c core.hooksPath=/dev/null checkout --quiet --force --detach "$CI_SHA"
+          [[ "$(git rev-parse HEAD)" == "$CI_SHA" ]] || exit 1
+      - name: Resolve the published dependency graph
+        run: |
+          git ls-files --error-unmatch -- Package.resolved > /dev/null
+          env -u SDKROOT /usr/bin/xcrun swift package resolve
+          git diff --exit-code -- Package.resolved
