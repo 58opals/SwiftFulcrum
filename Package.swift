@@ -17,7 +17,7 @@ let package = Package(
             targets: ["SwiftFulcrum"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/58opals/OpalDiagnostics.git", revision: "aa56dec5d6c8581beb2b3cef43b03dd577ccd9f1")
+        .package(url: "https://github.com/58opals/OpalDiagnostics.git", revision: "4147c6191a4d25624c4f4f7e4e97eaeb8010a8fd")
     ],
     targets: [
         .target(
