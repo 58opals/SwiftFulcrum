@@ -81,6 +81,8 @@ Task {
 
 `request(...)` starts the client automatically when idle. `SwiftFulcrum.Client()` uses the bundled mainnet server catalog by default; pass `connectingTo:` or `configuration:` when you need a fixed endpoint or different network settings. Bundled catalogs are available for `mainnet`, `testnet`, and `chipnet`.
 
+The [peer catalog contract](docs/peer-catalogs.md) records exact source hashes and ordered inventories, unknown historical upstream/operator provenance, and the separate review and live-qualification process. Catalog inclusion and offline integrity checks do not establish live qualification.
+
 ```swift
 let configuration = SwiftFulcrum.Client.Configuration(network: .chipnet)
 let chipnetClient = try await SwiftFulcrum.Client(

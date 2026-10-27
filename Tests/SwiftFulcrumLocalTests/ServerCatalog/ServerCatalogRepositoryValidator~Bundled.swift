@@ -1,11 +1,50 @@
 // ServerCatalogRepositoryValidator~Bundled.swift
 
+import CryptoKit
 import Foundation
 import Testing
 import SwiftFulcrumTestSupport
 @testable import SwiftFulcrum
 
 extension ServerCatalogRepositoryValidator {
+    @Test(
+        "Reviewed catalog bytes and ordered peers require an explicit snapshot update",
+        arguments: [SwiftFulcrum.Client.Configuration.Network.mainnet, .testnet, .chipnet]
+    )
+    func reviewedCatalogSnapshot(_ network: SwiftFulcrum.Client.Configuration.Network) async throws {
+        let expectedDigest: String
+        let expectedURLs: [String]
+        switch network {
+        case .mainnet:
+            expectedDigest = "57bed7a91c4b5fa8feb26a9e149735a928cdedbc5c74ebafc8f7dab257f52f59"
+            expectedURLs = [
+                "wss://bch.imaginary.cash:50004",
+                "wss://fulcrum.greyh.at:50004",
+                "wss://cashnode.bch.ninja:50004",
+                "wss://fulcrum.fountainhead.cash:50002",
+                "wss://electrum.imaginary.cash:50004",
+                "wss://electroncash.dk:50004",
+                "wss://bch.loping.net:50004",
+                "wss://fulcrum.jettscythe.xyz:50004"
+            ]
+        case .testnet:
+            expectedDigest = "e5e46e61f09c20b3149e498a2ac0d15ad36eb7beee10b93f2263b24d0613b759"
+            expectedURLs = ["wss://testnet.imaginary.cash:50004", "wss://testnet.bch.loping.net:51004"]
+        case .chipnet:
+            expectedDigest = "a8096798611a0814db629a4b5d0e0e25d5b73540feb7b10945ffcb7fc88cd524"
+            expectedURLs = ["wss://chipnet.imaginary.cash:50004"]
+        }
+        let root = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent()
+            .deletingLastPathComponent().deletingLastPathComponent()
+        let source = root.appendingPathComponent("Sources/SwiftFulcrum/Network/WebSocket/\(network.resourceName).json")
+        let digest = SHA256.hash(data: try Data(contentsOf: source))
+            .map { String(format: "%02x", $0) }.joined()
+        #expect(digest == expectedDigest)
+        let bundled = try await SwiftFulcrum.ServerCatalog.Repository.bundled.loadServers(for: network, fallback: [])
+        #expect(bundled.map(\.absoluteString) == expectedURLs)
+    }
+
     @Test("Loads bundled catalogs when available")
     func loadBundledCatalogs() async throws {
         let networks: [SwiftFulcrum.Client.Configuration.Network] = [.mainnet, .testnet, .chipnet]
