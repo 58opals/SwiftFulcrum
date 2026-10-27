@@ -37,10 +37,12 @@ Use the Xcode 27 family with a compiler supporting Swift tools 6.4 and Swift 6 l
 
 ## Installation (Swift Package Manager)
 
+For reproducible review of the current Swift 6.4 / OS 27 integration, replace the placeholder below with the full commit hash of a reviewed public `develop` candidate.
+
 ```swift
 // Package.swift
 dependencies: [
-    .package(url: "https://github.com/58opals/SwiftFulcrum.git", branch: "develop")
+    .package(url: "https://github.com/58opals/SwiftFulcrum.git", revision: "<reviewed-public-develop-commit>")
 ],
 targets: [
     .target(
@@ -52,7 +54,7 @@ targets: [
 ]
 ```
 
-The current integration manifest pins `OpalDiagnostics` to public revision `aa56dec5d6c8581beb2b3cef43b03dd577ccd9f1`. The published `v0.8.0` release remains available to version-based consumers; no new SemVer tag is prepared by this migration.
+The current [Package.swift](Package.swift) pins `OpalDiagnostics` to an exact public integration revision; retain [Package.resolved](Package.resolved) for the complete graph. Applications that also require Diagnostics directly should reuse the manifest's selected revision. The published `v0.8.0` release remains available to version-based consumers; this integration snapshot is not a new SemVer release.
 
 ## Quick Start
 
